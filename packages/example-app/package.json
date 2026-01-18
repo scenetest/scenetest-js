@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "scenetest": "workspace:*"

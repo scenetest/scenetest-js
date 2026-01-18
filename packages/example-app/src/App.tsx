@@ -1,51 +1,44 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { pass, fail } from 'scenetest'
-
-/**
- * Simulates fetching a user profile (like useProfile hook)
- */
-function useProfile() {
-  const [profile, setProfile] = useState<{ name: string; email: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    // Simulate async fetch
-    const timer = setTimeout(() => {
-      setProfile({ name: 'Test User', email: 'test@example.com' })
-      setIsLoading(false)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [])
-
-  return { profile, isLoading }
-}
+import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
+import { getProfileFromDb, type Profile } from './db'
 
 function ProfileForm() {
-  const { profile, isLoading } = useProfile()
+  const queryClient = useQueryClient()
+  const { data: profile, isLoading } = useProfile()
+  const updateProfile = useUpdateProfile()
+
+  // Local form state
   const [name, setName] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  // Inline Assertions - these run every render and report to the test runner
-  pass('ProfileForm rendered successfully', true)
-  fail('ProfileForm should not have error on initial render', error !== null && !submitted)
+  // Refs to access DOM values for assertions
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const displayNameRef = useRef<HTMLSpanElement>(null)
+  const displayEmailRef = useRef<HTMLSpanElement>(null)
 
-  // Once loaded, sync the name field
+  // Sync form state when profile loads
   useEffect(() => {
     if (profile) {
       setName(profile.name)
+      setEmail(profile.email)
     }
   }, [profile])
 
-  // Assertion after profile loads
+  // Basic render assertions
+  pass('ProfileForm rendered', true)
+
+  // Assertion: profile should be loaded before we can edit
   if (!isLoading && profile) {
-    pass('Profile loaded with name', profile.name.length > 0)
-    pass('Profile loaded with email', profile.email.includes('@'))
+    pass('Profile loaded from cache', profile.name.length > 0)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setError(null)
 
     // Validate
     if (name.trim().length < 2) {
@@ -54,8 +47,81 @@ function ProfileForm() {
       return
     }
 
-    setError(null)
-    pass('Form submitted successfully', true)
+    // Submit the update
+    updateProfile.mutate(
+      { name: name.trim(), email },
+      {
+        onSuccess: (savedProfile) => {
+          pass('Mutation completed successfully', true)
+
+          // ========================================
+          // MULTI-CONTEXT ASSERTIONS
+          // Compare data across 4 different contexts:
+          // 1. DOM (what the user sees)
+          // 2. Component state (React's local state)
+          // 3. React Query cache (client-side cache)
+          // 4. localStorage (the "database")
+          //
+          // We use requestAnimationFrame to wait for React to re-render
+          // the DOM with the new cache values before checking.
+          // ========================================
+
+          requestAnimationFrame(() => {
+            // Get data from all contexts
+            const domName = displayNameRef.current?.textContent ?? ''
+            const domEmail = displayEmailRef.current?.textContent ?? ''
+            const stateName = name.trim()
+            const stateEmail = email
+            const cacheName = queryClient.getQueryData<Profile>(PROFILE_QUERY_KEY)?.name ?? ''
+            const cacheEmail = queryClient.getQueryData<Profile>(PROFILE_QUERY_KEY)?.email ?? ''
+            const dbProfile = getProfileFromDb()
+            const dbName = dbProfile.name
+            const dbEmail = dbProfile.email
+
+            // Log all values for debugging
+            console.log('[scenetest] Multi-context comparison:', {
+              dom: { name: domName, email: domEmail },
+              state: { name: stateName, email: stateEmail },
+              cache: { name: cacheName, email: cacheEmail },
+              db: { name: dbName, email: dbEmail },
+              saved: { name: savedProfile.name, email: savedProfile.email },
+            })
+
+            // Assert: DOM matches what was saved
+            pass('DOM name matches saved value', domName === savedProfile.name)
+            pass('DOM email matches saved value', domEmail === savedProfile.email)
+
+            // Assert: Component state matches saved
+            pass('State name matches saved value', stateName === savedProfile.name)
+            pass('State email matches saved value', stateEmail === savedProfile.email)
+
+            // Assert: React Query cache is updated
+            pass('Cache name matches saved value', cacheName === savedProfile.name)
+            pass('Cache email matches saved value', cacheEmail === savedProfile.email)
+
+            // Assert: localStorage (database) is updated
+            pass('DB name matches saved value', dbName === savedProfile.name)
+            pass('DB email matches saved value', dbEmail === savedProfile.email)
+
+            // Assert: All contexts are in sync with each other
+            const allNamesMatch = domName === stateName && stateName === cacheName && cacheName === dbName
+            const allEmailsMatch = domEmail === stateEmail && stateEmail === cacheEmail && cacheEmail === dbEmail
+
+            pass('All contexts have matching name', allNamesMatch)
+            pass('All contexts have matching email', allEmailsMatch)
+
+            // Fail assertions for mismatches (these detect bugs!)
+            fail('DOM out of sync with database', domName !== dbName || domEmail !== dbEmail)
+            fail('Cache out of sync with database', cacheName !== dbName || cacheEmail !== dbEmail)
+            fail('State out of sync with database', stateName !== dbName || stateEmail !== dbEmail)
+          })
+        },
+        onError: (err) => {
+          setError(err instanceof Error ? err.message : 'Update failed')
+          fail('Mutation failed with error', true)
+        },
+      }
+    )
   }
 
   if (isLoading) {
@@ -63,53 +129,119 @@ function ProfileForm() {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '400px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto', fontFamily: 'system-ui' }}>
       <h1>Edit Profile</h1>
+
+      {/* Display current values (for DOM assertions) */}
+      <div
+        style={{
+          marginBottom: '20px',
+          padding: '12px',
+          background: '#f5f5f5',
+          borderRadius: '8px',
+        }}
+      >
+        <div style={{ marginBottom: '8px' }}>
+          <strong>Current Name: </strong>
+          <span ref={displayNameRef} data-testid="display-name">
+            {profile?.name}
+          </span>
+        </div>
+        <div>
+          <strong>Current Email: </strong>
+          <span ref={displayEmailRef} data-testid="display-email">
+            {profile?.email}
+          </span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="name" style={{ display: 'block', marginBottom: '4px' }}>
+          <label htmlFor="name" style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
             Name
           </label>
           <input
+            ref={nameInputRef}
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             data-testid="name-input"
-            style={{ width: '100%', padding: '8px' }}
+            style={{ width: '100%', padding: '8px', fontSize: '16px', boxSizing: 'border-box' }}
           />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>
+          <label htmlFor="email" style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
             Email
           </label>
           <input
+            ref={emailInputRef}
             id="email"
             type="email"
-            value={profile?.email ?? ''}
-            disabled
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             data-testid="email-input"
-            style={{ width: '100%', padding: '8px', background: '#eee' }}
+            style={{ width: '100%', padding: '8px', fontSize: '16px', boxSizing: 'border-box' }}
           />
         </div>
 
         {error && (
-          <div data-testid="error" style={{ color: 'red', marginBottom: '16px' }}>
+          <div data-testid="error" style={{ color: '#dc2626', marginBottom: '16px', padding: '8px', background: '#fef2f2', borderRadius: '4px' }}>
             {error}
           </div>
         )}
 
-        {submitted && !error && (
-          <div data-testid="success" style={{ color: 'green', marginBottom: '16px' }}>
+        {updateProfile.isSuccess && (
+          <div data-testid="success" style={{ color: '#16a34a', marginBottom: '16px', padding: '8px', background: '#f0fdf4', borderRadius: '4px' }}>
             Profile updated successfully!
           </div>
         )}
 
-        <button type="submit" data-testid="submit-button" style={{ padding: '8px 16px' }}>
-          Save Changes
+        <button
+          type="submit"
+          disabled={updateProfile.isPending}
+          data-testid="submit-button"
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            background: updateProfile.isPending ? '#9ca3af' : '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: updateProfile.isPending ? 'wait' : 'pointer',
+          }}
+        >
+          {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
         </button>
       </form>
+
+      {/* Debug panel showing all contexts */}
+      <details style={{ marginTop: '24px' }}>
+        <summary style={{ cursor: 'pointer', color: '#6b7280' }}>Debug: View All Contexts</summary>
+        <pre
+          data-testid="debug-contexts"
+          style={{
+            marginTop: '8px',
+            padding: '12px',
+            background: '#1f2937',
+            color: '#e5e7eb',
+            borderRadius: '8px',
+            fontSize: '12px',
+            overflow: 'auto',
+          }}
+        >
+          {JSON.stringify(
+            {
+              componentState: { name, email },
+              reactQueryCache: queryClient.getQueryData(PROFILE_QUERY_KEY),
+              localStorage: getProfileFromDb(),
+            },
+            null,
+            2
+          )}
+        </pre>
+      </details>
     </div>
   )
 }
