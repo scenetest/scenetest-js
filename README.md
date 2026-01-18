@@ -8,14 +8,14 @@ _Evaluate your product, not your tests. Write friendly little Scenes for your Ac
 
 Scenetest began from picking at the idea that end-to-end testing kind of seems to be confusing two very different and important things:
 
-1. Start to Finish (StF): Test a set of user interactions from beginning to end so we can codify key user journeys and flows, edge cases and strange user inputs, and make sure they still work as code changes.
-2. Client to Server (CtS): Compare data across different contexts to ensure that what you find in your database matches what shows up on screen, as well as in your browser cache, localStorage, or any other context.
+1. **Scenes**: Test a set of user interactions from beginning to end so we can codify key user journeys and flows, edge cases and strange user inputs, and make sure they still work as code changes.
+2. **Inline Assertions**: Compare data across different contexts to ensure that what you find in your database matches what shows up on screen, as well as in your browser cache, localStorage, or any other context.
 
-Often times, when you ask someone to define End-to-End testing they will say "testing a workflow from start to finish," and then if you pause and give them time to speak, they will end up adding in something about "comparing the database to the browser". But conceptually these two are _very different_, so we won't be using the term E2E here, we have invented our own little terms called Client to Server and Start to Finish, which we will abbreviate here as CtS and StF.
+Often times, when you ask someone to define End-to-End testing they will say "testing a workflow from start to finish," and then if you pause and give them time to speak, they will end up adding in something about "comparing the database to the browser". But conceptually these two are _very different_, so we won't be using the term E2E here. We call these two concepts **Scenes** and **Inline Assertions**.
 
 ## Starting Point
 
-We use Playwright in our work because it allows us to test Client-to-Server and Start-to-Finish. We can test what's on the page with `page.locator`, drive interactions forward with `page.click('#my-button')`-style interactions, and then run queries in our superuser context to ensure the database matches with our expectations and assertions. This is really nice!
+We use Playwright in our work because it allows us to write Scenes and make multi-context assertions. We can test what's on the page with `page.locator`, drive interactions forward with `page.click('#my-button')`-style interactions, and then run queries in our superuser context to ensure the database matches with our expectations and assertions. This is really nice!
 
 But having these assertions declared side by side with browser orchestration is confusing, and in today's increasingly local-first meta, you often need to examine not only text on the screen of your simulated users but also the contents of the browser cache or localStorage. So it's not enough to just check that the database has a record and the screen has our updated username on it, we want to look into our local pgLite or localDb or our tanstack/db collections and check that the data is there. What now?
 
@@ -56,7 +56,7 @@ test.describe.serial('Create a deck and modify it a few different ways', () => {
 })
 ```
 
-This works, and it gets us to the goal -- multi-context assertions that compare data from Client to Server. But notice the ugly `window.__decksCollection` -- where does this even come from? The answer, dear reader, is that I had to go into my application code and attach the `decksCollection` to the `window` so I can access it from these `page.evaluate` functions. That is... a problem.
+This works, and it gets us to the goal -- multi-context assertions that compare data from client to server. But notice the ugly `window.__decksCollection` -- where does this even come from? The answer, dear reader, is that I had to go into my application code and attach the `decksCollection` to the `window` so I can access it from these `page.evaluate` functions. That is... a problem.
 
 And if I wanted to return the data that the actual app is using, say from some line in my component like `const allMyDecks = useDecks()`, I absolutely cannot do it. The closest I can get is I can wire up a bunch of tooling to run this `useDecks()` hook in my evaluation function, but it will not be the same exact result as the one used in the component because I have no way of triggering the evaluation to run using the exact value that I'm expecting in my component code at the exact moment it expects it use it -- which is a _very_ common problem that our tests should be able to help us with.
 
@@ -102,15 +102,15 @@ export function add(...args: number[]) {
 
 ```
 
-Here we're testing something very different. This is not real code or an end-to-end test, or even a client-to-server test, but it's starting to scratch at the surface of what changes when you run your test inside the application itself. Now we're testing the mental model of the engineers who maintain the product.
+Here we're testing something very different. This is not real code or an end-to-end test, or even an inline assertion, but it's starting to scratch at the surface of what changes when you run your test inside the application itself. Now we're testing the mental model of the engineers who maintain the product.
 
-Consider a different question: why do I even need end-to-end tests that are able to compare the screen with the server? Aside from Playwright, most popular test frameworks do not prioritize this multi-context, client-to-server comparison at all. And of course we want to know that the updated username has been persisted to the database, but if that's the only reason, shouldn't we be able to have our simulated user actor simply refresh the page and expect the new username to still be there? Why do we want to check the `updated_at` field at all after making a change, if the user never sees that on the screen?
+Consider a different question: why do I even need end-to-end tests that are able to compare the screen with the server? Aside from Playwright, most popular test frameworks do not prioritize this kind of multi-context comparison at all. And of course we want to know that the updated username has been persisted to the database, but if that's the only reason, shouldn't we be able to have our simulated user actor simply refresh the page and expect the new username to still be there? Why do we want to check the `updated_at` field at all after making a change, if the user never sees that on the screen?
 
-I think we care about these things because what we're validating with client-to-server tests is not the _user journey_ but the _developers' mental model_ for how the system functions. We are validating implementation details, side effects and triggers and **validating that the system works the way we think it works**.
+I think we care about these things because what we're validating with Inline Assertions is not the _user journey_ but the _developers' mental model_ for how the system functions. We are validating implementation details, side effects and triggers and **validating that the system works the way we think it works**.
 
-This is very different from the start-to-finish approach, which cares primarily that the _user_'s experience of the product matches what we set out to build (and hasn't broken with our recent refactor).
+This is very different from Scenes, which care primarily that the _user_'s experience of the product matches what we set out to build (and hasn't broken with our recent refactor).
 
-## Core Considerations For E2E (StF + CtS)
+## Core Considerations (Scenes + Inline Assertions)
 
 1. Spec files should be nice and clean -- separating expectation logic from browser orchestration so that our spec files can focus only on the latter: orchestrating user interactions with the product. this allows us to write our scenes from start to finish without having full knowledge of the implentation works.
 2. Multi-context evaluations allow us to define expectations about both client and server, comparing data from not only the DOM and the database, but also from component props, stores or collections, a query client or cache.
@@ -121,7 +121,7 @@ This is very different from the start-to-finish approach, which cares primarily 
 
 Fine! Here.
 
-### In-Scope Test Assertions
+### Inline Assertions
 
 ```javascript
 import { useProfile } from '~lib/hooks'
@@ -158,7 +158,7 @@ We don't have to do anything to "simulate" the useProfile hook in our testing sc
 
 Because the assertions are decoupled from the orchestration scripts, they'll run (and report results) regardless of whether the page is being used by the test-runner UserAgent, or if it's just you, our beloved developer (and target audience), trying to fix this form and visiting `localhost:5173/profile` to see that it looks right.
 
-The `pass` function is stripped out by our Vite plugin so it never runs in production, but when you run in dev or test mode, it evaluates every time this component renders and reports results to the test suite. Having decoupled _Assertion logic_ from _Scene flow_ leads us to the next two really interesting benefits of this approach:
+The `pass` function is stripped out by our Vite plugin so it never runs in production, but when you run in dev or test mode, it evaluates every time this component renders and reports results to the test suite. Having decoupled _Inline Assertions_ from _Scenes_ leads us to the next two really interesting benefits of this approach:
 
 <div style="background: rgba(50, 50, 180, 0.3); padding-left: 2rem; padding: 0.5rem 2rem; border-left: 4px solid rgba(50, 50, 180, 0.9); border-radius: 6px;">
 
@@ -173,7 +173,7 @@ This speaks to one of our biggest concerns with modern test tooling: Test your p
 
 ### Writing Scenes
 
-So far we've discussed the in-scope, in-app, in-component assertions, but not the scene orchestration that is essential for doing Start-to-Finish tests. Imagine you have written your assertions in the component already, and now it's time to write a scene where a fake user logs in and attempts to edit their username:
+So far we've discussed Inline Assertions, but not the Scene orchestration that is essential for testing user journeys. Imagine you have written your assertions in the component already, and now it's time to write a scene where a fake user logs in and attempts to edit their username:
 
 ```javascript
 // ~tests/scenes/edit-profile.spec.ts
@@ -219,9 +219,9 @@ This code should look strikingly similar to a Playwright spec. And it would work
 
 But imagine a situation where the profile is being stored in a collection, cache or store that doesn't update properly, and the username's `h3` element is written as `<h3>{mutation.data?.username ?? profile.username }</h3>`. In this scenario, the test would pass because the mutation data contains the new username, but if the profile page unmounts and remounts, the old value will still show until we refresh the page, refetch the queries, and rebuild the local cache. This is exactly, _exactly_ the kind of thing we need tests for, and exactly the kind of thing that is so difficult to do with mainstream test tooling.
 
-### Client-to-Server & In-Scope Tests
+### Multi-Context Inline Assertions
 
-Now that we've seen how the scene flow works, here's our profile form, with assertions that will test our expectations about how the form works, with assertions that compare data from client and server:
+Now that we've seen how Scenes work, here's our profile form, with Inline Assertions that will test our expectations about how the form works, comparing data from client and server:
 
 ```javascript
 // ~components/profile-form.ts
@@ -289,12 +289,12 @@ This is where we are getting back to the initial concept of `page.evaluate` from
 A couple of key things to note here:
 
 1. This assertion will also run when a tester is improvising their own test scenes or clicking randomly throughout the app trying to break things. Updated the profile? The test running will evaluate the appData fn, ship it to the test server, and run the assertFn to make sure everything went as planned.
-2. Now that we are fully separating Scene Flow from Assertion Logic, anything that doesn't break the flow of the script doesn't have to end the test. If the flow succeeds but the assertions fail, this tells us "Your product is probably working but your mental model is off". I think this is where people will really love the developer-experience benefits of behind Scenetest; it should actually make your job easier.
-3. As promised: our Client-to-Server testing doesn't have to wire up special infrastructure to access props or state of the React component, and we can access the form's inputs directly, rather than hard-coding them into our spec file as `PROFILE_1_UPDATE_PROFILE_OLD_USERNAME` and `PROFILE_1_UPDATE_PROFILE_NEW_USERNAME`.
+2. Now that we are fully separating Scenes from Inline Assertions, anything that doesn't break the flow of the Scene doesn't have to end the test. If the flow succeeds but the assertions fail, this tells us "Your product is probably working but your mental model is off". I think this is where people will really love the developer-experience benefits of behind Scenetest; it should actually make your job easier.
+3. As promised: our Inline Assertions don't have to wire up special infrastructure to access props or state of the React component, and we can access the form's inputs directly, rather than hard-coding them into our spec file as `PROFILE_1_UPDATE_PROFILE_OLD_USERNAME` and `PROFILE_1_UPDATE_PROFILE_NEW_USERNAME`.
 
-### Friendly Little Scripts
+### Friendly Little Scene Scripts
 
-Now that we've seen the full store from Client to Server and Start to Finish, we should go back and look at the example scene given above. This is the same code, but focusing only on the `sceneFn`:
+Now that we've seen the full picture with Scenes and Inline Assertions, we should go back and look at the example Scene given above. This is the same code, but focusing only on the `sceneFn`:
 
 ```javascript
 // ~tests/scenes/edit-profile.spec.ts
@@ -328,7 +328,7 @@ When you first saw this, you might have thought it looks really simple because i
 
 And further, your orchestration code is going to be intermingled with a thousand different decisions you have to make about whether you should include assertions for this side effect or that one -- "did we already test this side effect in a different spec, or is this different enough that we should test it again?" It's dealer's choice with every one of these tiny decisions along the way, leading to a kind of core conceptual inconsistency that keeps you constantly consulting your senior or delaying PRs while discussions about test coverage run their course.
 
-Our example above works without these awaits and expect-to-be-visibles, and without skimping on any assertion logic, because the vast majority of the awaiting and expecting has already been handled in the in-scope tests. Now, when our user actor in our scene does `await form.submit()`, we know this triggers network requests, promises, and assertions which also trigger round-trips to the test server and back again, and Scenetest knows to await all of that activity before resolving the promise from `form.submit()` and attempting to proceed. In our case, the `assertion` triggers when the form is settled, after the database and the local collection have been updated. And, crucially, the person in charge of the form component was the one who wrote that in that way; the person who wrote the scene didn't have to know any of it.
+Our example above works without these awaits and expect-to-be-visibles, and without skimping on any assertion logic, because the vast majority of the awaiting and expecting has already been handled in the Inline Assertions. Now, when our user actor in our scene does `await form.submit()`, we know this triggers network requests, promises, and assertions which also trigger round-trips to the test server and back again, and Scenetest knows to await all of that activity before resolving the promise from `form.submit()` and attempting to proceed. In our case, the `assertion` triggers when the form is settled, after the database and the local collection have been updated. And, crucially, the person in charge of the form component was the one who wrote that in that way; the person who wrote the scene didn't have to know any of it.
 
 ## Conclusion
 
@@ -345,6 +345,6 @@ Flesh out the concept, talk to friends.
 1. Actors -- we want to have a formal concept of Actors that make it possible to write one scene where two actors interact with the app. This should allow easier testing of: chat interfaces, friend requests, live editing experiences, and more.
 2. Technical Architecture -- documenting the specific architecture of how everything will work. These are mostly solved problems so I haven't bothered yet. Playwright and Tanstack Start exist, so everything in this doc should be doable with existing / proven approaches.
 3. Possible ease of testing with browser plugin -- plenty of other systems have browser-plugin approaches where you orchestrate user interactions/scripts by clicking things; this approach could be quite powerful here because if the devs write assertions based on the mental model of the feature they're writing, then anyone on the team can make new scripts by recording point-and-click, giving a ton of extra rigor to the ease-of-use that this "record your session" approach provides.
-4. Impact on AI-assisted programming -- it seems quite plausible that this approach will make it easier to use natural language prompts to generate both Scene specs and in-scope Assertions.
+4. Impact on AI-assisted programming -- it seems quite plausible that this approach will make it easier to use natural language prompts to generate both Scenes and Inline Assertions.
 	* Scene specs will be easier to write for all the reasons described in this document: they will be far simpler and more readable.
-	* Assertions will be easier to write because they will be colocated with the feature code, and the LLM can write them in response to the same prompts. For example: a developer might write a prompt that says, "a user needs to [this thing]. build me a form that shows [this data] and lets me do [this action] to create a new [this item]. after submitting the form the user should see [this message], the database should have [this record] and the app's local storage should have [this item], and the hook that provides state to the component should now return [this state]". In this way, a good prompt that explains to the LLM what features to write is already giving all of the information it would need to write in-scope tests at the same time.
+	* Inline Assertions will be easier to write because they will be colocated with the feature code, and the LLM can write them in response to the same prompts. For example: a developer might write a prompt that says, "a user needs to [this thing]. build me a form that shows [this data] and lets me do [this action] to create a new [this item]. after submitting the form the user should see [this message], the database should have [this record] and the app's local storage should have [this item], and the hook that provides state to the component should now return [this state]". In this way, a good prompt that explains to the LLM what features to write is already giving all of the information it would need to write in-scope tests at the same time.
