@@ -190,6 +190,11 @@ export const devPanelScript = `
           display: flex;
           gap: 8px;
           align-items: flex-start;
+          cursor: pointer;
+          position: relative;
+        }
+        .scenetest-item:hover {
+          background: #252545;
         }
         .scenetest-item:last-child {
           border-bottom: none;
@@ -205,8 +210,11 @@ export const devPanelScript = `
           width: 14px;
           text-align: center;
         }
-        .scenetest-desc {
+        .scenetest-content {
           flex: 1;
+          min-width: 0;
+        }
+        .scenetest-desc {
           word-break: break-word;
         }
         .scenetest-item.fail .scenetest-desc {
@@ -215,6 +223,31 @@ export const devPanelScript = `
         .scenetest-desc.negated {
           text-decoration: line-through;
           opacity: 0.7;
+        }
+        .scenetest-location {
+          font-size: 9px;
+          color: #6a6a8a;
+          margin-top: 2px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .scenetest-location:hover {
+          color: #a0a0ff;
+          text-decoration: underline;
+        }
+        .scenetest-context {
+          font-size: 10px;
+          color: #8a8aaa;
+          margin-top: 3px;
+          padding: 4px 6px;
+          background: #12122a;
+          border-radius: 3px;
+          font-family: ui-monospace, monospace;
+          max-height: 60px;
+          overflow: auto;
+          white-space: pre-wrap;
+          word-break: break-all;
         }
         .scenetest-time {
           color: #6a6a8a;
@@ -583,6 +616,28 @@ export const devPanelScript = `
             text-decoration: line-through;
             opacity: 0.7;
           }
+          .location {
+            font-size: 11px;
+            color: #6a6a8a;
+            margin-top: 4px;
+            cursor: pointer;
+          }
+          .location:hover {
+            color: #a0a0ff;
+            text-decoration: underline;
+          }
+          .context {
+            margin-top: 8px;
+            padding: 8px;
+            background: #0a0a12;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #a0a0c0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 100px;
+            overflow: auto;
+          }
           .meta {
             font-size: 11px;
             color: #6a6a8a;
@@ -684,7 +739,9 @@ export const devPanelScript = `
               <span class="icon">\${a.result ? '✓' : '✗'}</span>
               <div class="content">
                 <div class="desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
-                \${a.stack ? '<div class="stack">' + escapeHtml(a.stack.split('\\n').slice(0, 3).join('\\n')) + '</div>' : ''}
+                \${a.location ? '<div class="location" onclick="window.opener && window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(' + JSON.stringify(a.location).replace(/"/g, '&quot;') + ')">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
+                \${a.context ? '<div class="context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
+                \${a.stack && !a.context ? '<div class="stack">' + escapeHtml(a.stack.split('\\n').slice(0, 3).join('\\n')) + '</div>' : ''}
               </div>
             </div>
           \`).join('')}
@@ -734,10 +791,14 @@ export const devPanelScript = `
             <span class="scenetest-group-toggle">▼</span>
           </div>
           <div class="scenetest-group-items">
-            \${g.items.map((a) => \`
-              <div class="scenetest-item \${a.result ? 'pass' : 'fail'}">
+            \${g.items.map((a, i) => \`
+              <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.location ? escapeHtml(formatLocation(a.location)) : ''}">
                 <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
-                <span class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</span>
+                <div class="scenetest-content">
+                  <div class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
+                  \${a.location ? '<div class="scenetest-location">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
+                  \${a.context ? '<div class="scenetest-context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
+                </div>
               </div>
             \`).join('')}
           </div>
@@ -747,9 +808,13 @@ export const devPanelScript = `
       // Flat list (ungrouped)
       const allFiltered = filterItems(assertions);
       listEl.innerHTML = '<div class="scenetest-ungrouped">' + allFiltered.map((a) => \`
-        <div class="scenetest-item \${a.result ? 'pass' : 'fail'}">
+        <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.location ? escapeHtml(formatLocation(a.location)) : ''}">
           <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
-          <span class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</span>
+          <div class="scenetest-content">
+            <div class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
+            \${a.location ? '<div class="scenetest-location">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
+            \${a.context ? '<div class="scenetest-context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
+          </div>
           <span class="scenetest-time">\${formatTime(a.timestamp)}</span>
         </div>
       \`).reverse().join('') + '</div>';
@@ -759,6 +824,34 @@ export const devPanelScript = `
   function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+
+  function formatContext(ctx) {
+    if (!ctx) return '';
+    try {
+      return JSON.stringify(ctx, null, 2);
+    } catch {
+      return String(ctx);
+    }
+  }
+
+  function formatLocation(loc) {
+    if (!loc) return '';
+    const file = loc.file.replace(/^.*\\/src\\//, 'src/');
+    return file + ':' + loc.line + (loc.column ? ':' + loc.column : '');
+  }
+
+  function openInEditor(loc) {
+    if (!loc) return;
+    // Vite's built-in editor opening endpoint
+    fetch('/__open-in-editor?file=' + encodeURIComponent(loc.file) + '&line=' + loc.line + (loc.column ? '&column=' + loc.column : ''))
+      .catch(() => {
+        // Fallback: try vscode:// protocol
+        window.open('vscode://file' + loc.file + ':' + loc.line + (loc.column ? ':' + loc.column : ''));
+      });
+  }
+
+  // Make openInEditor available globally for onclick handlers
+  window.__scenetest_openInEditor = openInEditor;
 
   function formatTime(ts) {
     const d = new Date(ts);

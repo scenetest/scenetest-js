@@ -8,6 +8,14 @@ export interface AssertionResult {
   timestamp: number
   /** Stack trace to locate where the assertion was called */
   stack?: string
+  /** Optional context data for debugging */
+  context?: Record<string, unknown>
+  /** Parsed source location for click-to-open */
+  location?: {
+    file: string
+    line: number
+    column?: number
+  }
 }
 
 /**

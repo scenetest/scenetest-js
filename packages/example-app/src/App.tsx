@@ -52,7 +52,7 @@ function ProfileForm() {
       { name: name.trim(), email },
       {
         onSuccess: (savedProfile) => {
-          pass('Mutation completed successfully', true)
+          pass('Mutation completed successfully', true, { savedProfile })
 
           // ========================================
           // MULTI-CONTEXT ASSERTIONS
@@ -62,59 +62,69 @@ function ProfileForm() {
           // 3. React Query cache (client-side cache)
           // 4. localStorage (the "database")
           //
-          // We use requestAnimationFrame to wait for React to re-render
-          // the DOM with the new cache values before checking.
+          // We run assertions twice:
+          // 1. After rAF + microtask to catch immediate state
+          // 2. After a short delay to verify the settled state
           // ========================================
 
-          requestAnimationFrame(() => {
+          const runAssertions = (phase: 'immediate' | 'settled') => {
             // Get data from all contexts
             const domName = displayNameRef.current?.textContent ?? ''
             const domEmail = displayEmailRef.current?.textContent ?? ''
             const stateName = name.trim()
             const stateEmail = email
-            const cacheName = queryClient.getQueryData<Profile>(PROFILE_QUERY_KEY)?.name ?? ''
-            const cacheEmail = queryClient.getQueryData<Profile>(PROFILE_QUERY_KEY)?.email ?? ''
+            const cacheData = queryClient.getQueryData<Profile>(PROFILE_QUERY_KEY)
+            const cacheName = cacheData?.name ?? ''
+            const cacheEmail = cacheData?.email ?? ''
             const dbProfile = getProfileFromDb()
             const dbName = dbProfile.name
             const dbEmail = dbProfile.email
 
-            // Log all values for debugging
-            console.log('[scenetest] Multi-context comparison:', {
+            // Context for debugging
+            const ctx = {
+              phase,
               dom: { name: domName, email: domEmail },
               state: { name: stateName, email: stateEmail },
               cache: { name: cacheName, email: cacheEmail },
               db: { name: dbName, email: dbEmail },
-              saved: { name: savedProfile.name, email: savedProfile.email },
-            })
+            }
 
             // Assert: DOM matches what was saved
-            pass('DOM name matches saved value', domName === savedProfile.name)
-            pass('DOM email matches saved value', domEmail === savedProfile.email)
+            pass('DOM name matches saved value', domName === savedProfile.name, ctx)
+            pass('DOM email matches saved value', domEmail === savedProfile.email, ctx)
 
             // Assert: Component state matches saved
-            pass('State name matches saved value', stateName === savedProfile.name)
-            pass('State email matches saved value', stateEmail === savedProfile.email)
+            pass('State name matches saved value', stateName === savedProfile.name, ctx)
+            pass('State email matches saved value', stateEmail === savedProfile.email, ctx)
 
             // Assert: React Query cache is updated
-            pass('Cache name matches saved value', cacheName === savedProfile.name)
-            pass('Cache email matches saved value', cacheEmail === savedProfile.email)
+            pass('Cache name matches saved value', cacheName === savedProfile.name, ctx)
+            pass('Cache email matches saved value', cacheEmail === savedProfile.email, ctx)
 
             // Assert: localStorage (database) is updated
-            pass('DB name matches saved value', dbName === savedProfile.name)
-            pass('DB email matches saved value', dbEmail === savedProfile.email)
+            pass('DB name matches saved value', dbName === savedProfile.name, ctx)
+            pass('DB email matches saved value', dbEmail === savedProfile.email, ctx)
 
             // Assert: All contexts are in sync with each other
             const allNamesMatch = domName === stateName && stateName === cacheName && cacheName === dbName
             const allEmailsMatch = domEmail === stateEmail && stateEmail === cacheEmail && cacheEmail === dbEmail
 
-            pass('All contexts have matching name', allNamesMatch)
-            pass('All contexts have matching email', allEmailsMatch)
+            pass('All contexts have matching name', allNamesMatch, ctx)
+            pass('All contexts have matching email', allEmailsMatch, ctx)
 
             // Fail assertions for mismatches (these detect bugs!)
-            fail('DOM out of sync with database', domName !== dbName || domEmail !== dbEmail)
-            fail('Cache out of sync with database', cacheName !== dbName || cacheEmail !== dbEmail)
-            fail('State out of sync with database', stateName !== dbName || stateEmail !== dbEmail)
+            fail('DOM out of sync with database', domName !== dbName || domEmail !== dbEmail, ctx)
+            fail('Cache out of sync with database', cacheName !== dbName || cacheEmail !== dbEmail, ctx)
+            fail('State out of sync with database', stateName !== dbName || stateEmail !== dbEmail, ctx)
+          }
+
+          // Run immediately after React flushes (rAF + microtask)
+          requestAnimationFrame(() => {
+            queueMicrotask(() => runAssertions('immediate'))
           })
+
+          // Run again after settling to confirm final state
+          setTimeout(() => runAssertions('settled'), 100)
         },
         onError: (err) => {
           setError(err instanceof Error ? err.message : 'Update failed')
