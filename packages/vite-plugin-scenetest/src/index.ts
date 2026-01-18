@@ -1,10 +1,10 @@
 import type { Plugin } from 'vite'
+import { stripScenetest } from './strip.js'
 
 export interface ScenetestPluginOptions {
   /**
    * Whether to strip scenetest code in this build.
-   * Defaults to false (runtime detection handles it).
-   * Set to true to enable build-time stripping (requires AST parser - not yet implemented).
+   * Defaults to true in production builds, false otherwise.
    */
   strip?: boolean
 }
@@ -12,29 +12,71 @@ export interface ScenetestPluginOptions {
 /**
  * Vite plugin for Scenetest
  *
- * Currently this plugin is minimal - it just ensures proper configuration.
- * The scenetest runtime functions (pass/fail) are no-ops when window.__scenetest_report
- * is not defined, so they're safe to include in production builds.
- *
- * TODO: Add AST-based code stripping for production builds to reduce bundle size.
+ * In development/test mode: leaves code as-is (assertions report to test runner)
+ * In production mode: strips all scenetest imports and function calls via AST transform
  */
-export function scenetest(_options: ScenetestPluginOptions = {}): Plugin {
+export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
+  let shouldStrip = false
+  let mode = 'development'
+
   return {
     name: 'vite-plugin-scenetest',
 
-    config(_config, { mode }) {
-      // Log mode for debugging
-      if (mode === 'production') {
-        console.log('[vite-plugin-scenetest] Production build - scenetest calls will be no-ops at runtime')
+    config(_config, env) {
+      mode = env.mode
+      // Default: strip in production, keep in dev/test
+      shouldStrip = options.strip ?? env.mode === 'production'
+    },
+
+    transform(code, id) {
+      // Only process JS/TS files
+      if (!/\.(js|mjs|cjs|ts|mts|cts|jsx|tsx)$/.test(id)) {
+        return null
+      }
+
+      // Skip node_modules
+      if (id.includes('node_modules')) {
+        return null
+      }
+
+      // Quick check - skip if no scenetest
+      if (!code.includes('scenetest')) {
+        return null
+      }
+
+      if (!shouldStrip) {
+        // In dev/test mode, leave code as-is
+        // The runtime checks for window.__scenetest_report
+        return null
+      }
+
+      // Production mode: strip scenetest code via AST transform
+      const result = stripScenetest(code, {
+        filename: id,
+        sourceMap: true,
+      })
+
+      if (!result) {
+        return null
+      }
+
+      return {
+        code: result.code,
+        map: result.map,
+      }
+    },
+
+    buildStart() {
+      if (shouldStrip) {
+        console.log('[vite-plugin-scenetest] Production build - stripping scenetest code')
       } else {
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
       }
     },
-
-    // For now, we don't transform anything.
-    // The runtime handles detection of window.__scenetest_report.
-    // In the future, we can add AST-based stripping for smaller production bundles.
   }
 }
+
+// Re-export strip function for testing
+export { stripScenetest } from './strip.js'
 
 export default scenetest

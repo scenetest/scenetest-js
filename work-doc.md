@@ -6,11 +6,12 @@
 - [x] Decide on Playwright for POC (see research notes below)
 - [x] Create project structure (monorepo with pnpm workspaces)
 - [x] Implement core `scenetest` package with `pass`/`fail` functions
-- [x] Implement Vite plugin (simplified - runtime detection, no stripping yet)
+- [x] Implement Vite plugin (runtime detection for dev mode)
 - [x] Implement Playwright fixtures for assertion collection
 - [x] Create example app to test against
 - [x] Write first Scene that uses Inline Assertions
 - [x] **POC WORKING!** Tests pass, 37 assertions collected
+- [x] **AST-based code stripping** - Production builds strip all scenetest code (30 unit tests)
 
 ## Instructions for the coding agent
 
@@ -158,11 +159,11 @@ packages/
 - **Difficulty**: 1
 - **Notes**: `pass()` and `fail()` call `window.__scenetest_report` if available. Also captures stack trace for debugging.
 
-### 3. Vite Plugin - Basic Transform
-- **Status**: DONE (simplified)
+### 3. Vite Plugin - AST Transform
+- **Status**: DONE
 - **Complexity**: 3
-- **Difficulty**: 2 (would be 3+ with AST stripping)
-- **Notes**: Simplified to runtime detection only. Regex-based stripping was buggy (created invalid syntax). For POC, the runtime handles it - `pass()`/`fail()` are no-ops when reporter isn't exposed. TODO: Add proper AST-based stripping for prod bundles.
+- **Difficulty**: 3
+- **Notes**: Full AST-based stripping using @babel/parser + @babel/traverse + magic-string. 30 unit tests covering edge cases (imports, aliases, namespace imports, JSX, TypeScript, expression contexts). Production build strips all scenetest code. Dev mode leaves code as-is for runtime detection.
 
 ### 4. Playwright Fixtures
 - **Status**: DONE
