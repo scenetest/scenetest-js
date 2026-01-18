@@ -321,16 +321,12 @@ export const devPanelScript = `
     if (pendingGroup && (now - pendingGroup.timestamp) < GROUP_THRESHOLD_MS) {
       // Add to existing group
       pendingGroup.items.push(result);
-      if (result.result) pendingGroup.passCount++;
-      else pendingGroup.failCount++;
     } else {
       // Start a new group
       pendingGroup = {
         id: groups.length,
         timestamp: now,
         items: [result],
-        passCount: result.result ? 1 : 0,
-        failCount: result.result ? 0 : 1,
         collapsed: false
       };
       groups.push(pendingGroup);
@@ -343,6 +339,17 @@ export const devPanelScript = `
       updatePanel();
       updateFullscreenWindow();
     }, GROUP_THRESHOLD_MS);
+  }
+
+  // Compute pass/fail counts from items (avoids sync issues)
+  function getGroupStats(items) {
+    let passCount = 0;
+    let failCount = 0;
+    for (const item of items) {
+      if (item.result) passCount++;
+      else failCount++;
+    }
+    return { passCount, failCount };
   }
 
   function openFullscreen() {
@@ -648,14 +655,16 @@ export const devPanelScript = `
       return;
     }
 
-    listEl.innerHTML = filteredGroups.map((g) => \`
+    listEl.innerHTML = filteredGroups.map((g) => {
+      const stats = getGroupStats(g.items);
+      return \`
       <div class="group" data-group-id="\${g.id}">
         <div class="group-header" onclick="this.parentElement.classList.toggle('collapsed')">
           <div class="group-info">
             <span class="group-time">\${formatTime(g.timestamp)}</span>
             <div class="group-stats">
-              \${g.passCount > 0 ? '<span class="group-stat pass">✓ ' + g.passCount + '</span>' : ''}
-              \${g.failCount > 0 ? '<span class="group-stat fail">✗ ' + g.failCount + '</span>' : ''}
+              \${stats.passCount > 0 ? '<span class="group-stat pass">✓ ' + stats.passCount + '</span>' : ''}
+              \${stats.failCount > 0 ? '<span class="group-stat fail">✗ ' + stats.failCount + '</span>' : ''}
             </div>
             <span style="color: #6a6a8a">\${g.items.length} assertion\${g.items.length === 1 ? '' : 's'}</span>
           </div>
@@ -673,7 +682,7 @@ export const devPanelScript = `
           \`).join('')}
         </div>
       </div>
-    \`).reverse().join('');
+    \`}).reverse().join('');
   }
 
   function filterItems(items) {
@@ -702,14 +711,16 @@ export const devPanelScript = `
     }
 
     if (groupingEnabled) {
-      listEl.innerHTML = filteredGroups.map((g) => \`
+      listEl.innerHTML = filteredGroups.map((g) => {
+        const stats = getGroupStats(g.items);
+        return \`
         <div class="scenetest-group\${g.collapsed ? ' collapsed' : ''}" data-group-id="\${g.id}">
           <div class="scenetest-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
             <div class="scenetest-group-summary">
               <span class="scenetest-group-time">\${formatTime(g.timestamp)}</span>
               <div class="scenetest-group-stats">
-                \${g.passCount > 0 ? '<span class="scenetest-group-stat pass">✓' + g.passCount + '</span>' : ''}
-                \${g.failCount > 0 ? '<span class="scenetest-group-stat fail">✗' + g.failCount + '</span>' : ''}
+                \${stats.passCount > 0 ? '<span class="scenetest-group-stat pass">✓' + stats.passCount + '</span>' : ''}
+                \${stats.failCount > 0 ? '<span class="scenetest-group-stat fail">✗' + stats.failCount + '</span>' : ''}
               </div>
             </div>
             <span class="scenetest-group-toggle">▼</span>
@@ -723,7 +734,7 @@ export const devPanelScript = `
             \`).join('')}
           </div>
         </div>
-      \`).reverse().join('');
+      \`}).reverse().join('');
     } else {
       // Flat list (ungrouped)
       const allFiltered = filterItems(assertions);
