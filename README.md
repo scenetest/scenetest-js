@@ -4,6 +4,125 @@ _Evaluate your product, not your tests. Write friendly little Scenes for your Ac
 
 ---
 
+## Usage
+
+### Installation
+
+```bash
+npm install scenetest vite-plugin-scenetest playwright-scenetest
+```
+
+### 1. Add the Vite Plugin
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import scenetest from 'vite-plugin-scenetest'
+
+export default defineConfig({
+  plugins: [react(), scenetest()],
+})
+```
+
+The plugin automatically strips all scenetest code from production builds.
+
+### 2. Write Inline Assertions in Your Components
+
+```tsx
+// src/components/ProfileForm.tsx
+import { useState } from 'react'
+import { pass, fail } from 'scenetest'
+
+export function ProfileForm({ user }) {
+  const [name, setName] = useState(user.name)
+
+  // These assertions run every render in dev/test mode
+  pass('user object is available', user !== undefined)
+  fail('user should not be in error state', user?.error)
+
+  return (
+    <form>
+      <input value={name} onChange={e => setName(e.target.value)} />
+    </form>
+  )
+}
+```
+
+### 3. Write Scenes with Playwright
+
+```typescript
+// tests/profile.scene.ts
+import { test, expect } from 'playwright-scenetest'
+
+test('User updates their profile', async ({ scenePage }) => {
+  await scenePage.goto('/profile')
+
+  // Interact with the app
+  await scenePage.getByLabel('Name').fill('New Name')
+  await scenePage.getByRole('button', { name: 'Save' }).click()
+
+  // Check inline assertions were collected
+  console.log(`Collected ${scenePage.assertions.length} assertions`)
+
+  // All assertions should have passed
+  expect(scenePage.failed).toHaveLength(0)
+
+  // Check specific assertions ran
+  const userAvailable = scenePage.assertions.find(
+    a => a.description === 'user object is available'
+  )
+  expect(userAvailable?.result).toBe(true)
+})
+```
+
+### 4. Configure Playwright
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  testDir: './tests',
+  testMatch: '**/*.scene.ts',
+  use: {
+    baseURL: 'http://localhost:5173',
+  },
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+  },
+})
+```
+
+### 5. Run Your Scenes
+
+```bash
+# Start dev server and run tests
+npx playwright test
+
+# Example output:
+# Collected 37 inline assertions:
+#   - Passed: 37
+#   - Failed: 0
+```
+
+### API Reference
+
+#### `pass(description, condition)`
+Records a passing assertion when `condition` is truthy.
+
+#### `fail(description, condition)`
+Records a failing assertion when `condition` is truthy. Use this to assert something should NOT happen.
+
+#### `scenePage` fixture
+Extended Playwright `page` with:
+- `scenePage.assertions` - All collected assertions
+- `scenePage.passed` - Assertions that passed
+- `scenePage.failed` - Assertions that failed
+
+---
+
 ## Concept
 
 Scenetest began from picking at the idea that end-to-end testing kind of seems to be confusing two very different and important things:
