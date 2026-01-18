@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite'
 import { stripScenetest } from './strip.js'
+import { devPanelScript } from './dev-panel.js'
 
 export interface ScenetestPluginOptions {
   /**
@@ -7,6 +8,12 @@ export interface ScenetestPluginOptions {
    * Defaults to true in production builds, false otherwise.
    */
   strip?: boolean
+
+  /**
+   * Show the dev panel UI for viewing assertions in real-time.
+   * Defaults to true in development mode.
+   */
+  devPanel?: boolean
 }
 
 /**
@@ -17,6 +24,7 @@ export interface ScenetestPluginOptions {
  */
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
+  let showDevPanel = false
   let mode = 'development'
 
   return {
@@ -26,6 +34,8 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       mode = env.mode
       // Default: strip in production, keep in dev/test
       shouldStrip = options.strip ?? env.mode === 'production'
+      // Default: show dev panel in development (not in test mode - Playwright handles that)
+      showDevPanel = options.devPanel ?? (env.mode === 'development' && !process.env.PLAYWRIGHT_TEST)
     },
 
     transform(code, id) {
@@ -66,11 +76,24 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       }
     },
 
+    transformIndexHtml(html) {
+      if (!showDevPanel) {
+        return html
+      }
+
+      // Inject the dev panel script before </body>
+      const script = `<script>${devPanelScript}</script>`
+      return html.replace('</body>', `${script}</body>`)
+    },
+
     buildStart() {
       if (shouldStrip) {
         console.log('[vite-plugin-scenetest] Production build - stripping scenetest code')
       } else {
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
+        if (showDevPanel) {
+          console.log('[vite-plugin-scenetest] Dev panel enabled - open your app to see assertions')
+        }
       }
     },
   }

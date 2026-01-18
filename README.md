@@ -27,6 +27,8 @@ export default defineConfig({
 
 The plugin automatically strips all scenetest code from production builds.
 
+In development mode, a floating panel appears in your app showing assertions in real-time.
+
 ### 2. Write Inline Assertions in Your Components
 
 ```tsx
@@ -105,6 +107,30 @@ npx playwright test
 # Collected 37 inline assertions:
 #   - Passed: 37
 #   - Failed: 0
+```
+
+### Dev Panel
+
+When running your app in development mode (`npm run dev`), Scenetest injects a floating panel that shows inline assertions in real-time as you interact with your app.
+
+![Dev Panel Screenshot](docs/images/dev-panel.png)
+
+**Features:**
+- **Live assertion feed**: See `pass()` and `fail()` results as they fire
+- **Pass/fail counts**: Quick summary of assertion results
+- **Collapsible**: Click the header to minimize
+- **Fullscreen mode**: Click the fullscreen button to open assertions in a dedicated window with stack traces
+- **Clear button**: Reset assertions to start fresh
+
+This lets you validate assertions without running Playwright tests - just click around your app and watch the assertions fire.
+
+**Configuration:**
+```typescript
+// Disable the dev panel
+scenetest({ devPanel: false })
+
+// Force-enable in test mode (normally disabled for Playwright)
+scenetest({ devPanel: true })
 ```
 
 ### API Reference

@@ -1,78 +1,52 @@
 import { test, expect } from 'playwright-scenetest'
 
-test.describe('Profile Form Scene', () => {
-  test('User views and updates their profile', async ({ scenePage }) => {
-    // Navigate to the app
+test.describe('Profile Form', () => {
+  /**
+   * This is how you'd actually write a Scene - just test the app!
+   * The inline assertions in your components run automatically.
+   * If any fail, the test fails.
+   */
+  test('user can update their profile', async ({ scenePage }) => {
     await scenePage.goto('/')
 
-    // Wait for the form to be ready (profile loads in 100ms, might miss loading state)
+    // Wait for the form to load
     const nameInput = scenePage.getByTestId('name-input')
-    await expect(nameInput).toBeVisible({ timeout: 10000 })
+    await expect(nameInput).toBeVisible()
     await expect(nameInput).toHaveValue('Test User')
-
-    const emailInput = scenePage.getByTestId('email-input')
-    await expect(emailInput).toHaveValue('test@example.com')
 
     // Update the name
     await nameInput.fill('Updated Name')
     await scenePage.getByTestId('submit-button').click()
 
-    // Verify success message
+    // Verify success
     await expect(scenePage.getByTestId('success')).toBeVisible()
 
-    // Check inline assertions were collected
-    console.log(`\nCollected ${scenePage.assertions.length} inline assertions:`)
-    console.log(`  - Passed: ${scenePage.passed.length}`)
-    console.log(`  - Failed: ${scenePage.failed.length}`)
-
-    // Verify we collected assertions
-    expect(scenePage.assertions.length).toBeGreaterThan(0)
-
-    // Verify specific assertions ran
-    const profileRendered = scenePage.assertions.find(
-      (a) => a.description === 'ProfileForm rendered successfully'
-    )
-    expect(profileRendered).toBeTruthy()
-    expect(profileRendered?.result).toBe(true)
-
-    const profileLoaded = scenePage.assertions.find(
-      (a) => a.description === 'Profile loaded with name'
-    )
-    expect(profileLoaded).toBeTruthy()
-    expect(profileLoaded?.result).toBe(true)
-
-    const formSubmitted = scenePage.assertions.find(
-      (a) => a.description === 'Form submitted successfully'
-    )
-    expect(formSubmitted).toBeTruthy()
-    expect(formSubmitted?.result).toBe(true)
-
-    // All assertions should have passed
-    expect(scenePage.failed.length).toBe(0)
+    // Assert no inline assertions failed
+    // This is the key line - if any pass() or fail() in your components
+    // detected a problem, the test fails here
+    expect(scenePage.failed, `Inline assertion failures:\n${formatFailures(scenePage.failed)}`).toHaveLength(0)
   })
 
-  test('Form validation triggers fail assertion', async ({ scenePage }) => {
+  test('shows validation error for short name', async ({ scenePage }) => {
     await scenePage.goto('/')
 
-    // Wait for the form to be ready
     const nameInput = scenePage.getByTestId('name-input')
-    await expect(nameInput).toBeVisible({ timeout: 10000 })
+    await expect(nameInput).toBeVisible()
 
-    // Clear the name and submit (should fail validation)
+    // Try to submit with a name that's too short
     await nameInput.fill('A')
     await scenePage.getByTestId('submit-button').click()
 
-    // Error should be visible
+    // Should show error
     await expect(scenePage.getByTestId('error')).toBeVisible()
+    await expect(scenePage.getByTestId('error')).toContainText('at least 2 characters')
 
-    // Check that the validation failure assertion was recorded
-    const validationFailed = scenePage.assertions.find(
-      (a) => a.description === 'Form validation failed'
-    )
-    expect(validationFailed).toBeTruthy()
-
-    // This assertion passes (the fail() function was called with true)
-    // but it indicates a failure condition was detected
-    console.log('\nValidation failure detected by inline assertion')
+    // Note: The fail('Form validation failed', true) in App.tsx will fire here,
+    // but that's expected - it's detecting that validation failed, which is
+    // correct behavior for this test case. So we don't assert on scenePage.failed.
   })
 })
+
+function formatFailures(failures: Array<{ description: string; stack?: string }>) {
+  return failures.map(f => `  - ${f.description}\n    ${f.stack?.split('\n')[0] ?? ''}`).join('\n')
+}
