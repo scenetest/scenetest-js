@@ -212,6 +212,10 @@ export const devPanelScript = `
         .scenetest-item.fail .scenetest-desc {
           color: #f87171;
         }
+        .scenetest-desc.negated {
+          text-decoration: line-through;
+          opacity: 0.7;
+        }
         .scenetest-time {
           color: #6a6a8a;
           flex-shrink: 0;
@@ -575,6 +579,10 @@ export const devPanelScript = `
           .item.fail .desc {
             color: #f87171;
           }
+          .desc.negated {
+            text-decoration: line-through;
+            opacity: 0.7;
+          }
           .meta {
             font-size: 11px;
             color: #6a6a8a;
@@ -675,7 +683,7 @@ export const devPanelScript = `
             <div class="item \${a.result ? 'pass' : 'fail'}">
               <span class="icon">\${a.result ? '✓' : '✗'}</span>
               <div class="content">
-                <div class="desc">\${escapeHtml(a.description)}</div>
+                <div class="desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
                 \${a.stack ? '<div class="stack">' + escapeHtml(a.stack.split('\\n').slice(0, 3).join('\\n')) + '</div>' : ''}
               </div>
             </div>
@@ -729,7 +737,7 @@ export const devPanelScript = `
             \${g.items.map((a) => \`
               <div class="scenetest-item \${a.result ? 'pass' : 'fail'}">
                 <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
-                <span class="scenetest-desc">\${escapeHtml(a.description)}</span>
+                <span class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</span>
               </div>
             \`).join('')}
           </div>
@@ -741,7 +749,7 @@ export const devPanelScript = `
       listEl.innerHTML = '<div class="scenetest-ungrouped">' + allFiltered.map((a) => \`
         <div class="scenetest-item \${a.result ? 'pass' : 'fail'}">
           <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
-          <span class="scenetest-desc">\${escapeHtml(a.description)}</span>
+          <span class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</span>
           <span class="scenetest-time">\${formatTime(a.timestamp)}</span>
         </div>
       \`).reverse().join('') + '</div>';
