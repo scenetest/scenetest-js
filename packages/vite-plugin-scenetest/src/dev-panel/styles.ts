@@ -338,10 +338,34 @@ body {
 }
 #filters {
   display: flex;
-  gap: 8px;
+  gap: 0;
+}
+.btn-group {
+  display: flex;
+  border: 1px solid #4a4a6a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.btn-group .btn {
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid #4a4a6a;
+}
+.btn-group .btn:last-child {
+  border-right: none;
+}
+.separator {
+  width: 1px;
+  height: 24px;
+  background: #4a4a6a;
 }
 #list {
   padding: 16px;
+}
+.ungrouped-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .group {
   margin-bottom: 16px;

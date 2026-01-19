@@ -11,6 +11,7 @@ import {
   GROUP_THRESHOLD_MS,
   pendingGroup,
   groupTimeout,
+  collapsedMode,
   setPendingGroup,
   setGroupTimeout,
   incrementPassCount,
@@ -43,7 +44,7 @@ if (!window.__scenetest_panel) {
         id: groups.length,
         timestamp: now,
         items: [result],
-        collapsed: false,
+        collapsed: collapsedMode, // Use collapsedMode to determine initial state
       }
       setPendingGroup(newGroup)
       groups.push(newGroup)

@@ -12,10 +12,14 @@ import {
   listEl,
   filter,
   groupingEnabled,
+  collapsedMode,
   setPanel,
   setListEl,
   setFilter,
   toggleGrouping,
+  toggleCollapsedMode,
+  collapseAllGroups,
+  expandAllGroups,
   clearAll,
 } from './state'
 import { filterItems } from './utils'
@@ -42,7 +46,11 @@ function getPanelHTML(): string {
         <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
       </div>
       <span class="scenetest-separator"></span>
-      <button class="scenetest-btn active" id="scenetest-group-toggle">grouped</button>
+      <div class="scenetest-btn-group">
+        <button class="scenetest-btn active" id="scenetest-group-toggle">grouped</button>
+        <button class="scenetest-btn" id="scenetest-collapsed-toggle">collapsed</button>
+      </div>
+      <span class="scenetest-separator"></span>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
       <button class="scenetest-btn" id="scenetest-clear">clear</button>
     </div>
@@ -114,6 +122,22 @@ export function createPanel(): void {
     const target = e.target as HTMLElement
     target.classList.toggle('active', isGrouped)
     target.textContent = isGrouped ? 'grouped' : 'ungrouped'
+    updatePanel()
+    updateFullscreenWindow()
+  })
+
+  // Collapsed mode toggle
+  panelEl.querySelector('#scenetest-collapsed-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const isCollapsed = toggleCollapsedMode()
+    const target = e.target as HTMLElement
+    target.classList.toggle('active', isCollapsed)
+    // When turning on collapsed mode, collapse all existing groups
+    if (isCollapsed) {
+      collapseAllGroups()
+    } else {
+      expandAllGroups()
+    }
     updatePanel()
     updateFullscreenWindow()
   })

@@ -9,13 +9,20 @@ import {
   failCount,
   fullscreenWindow,
   filter,
+  groupingEnabled,
+  collapsedMode,
   setFullscreenWindow,
   setFilter,
+  toggleGrouping,
+  toggleCollapsedMode,
+  collapseAllGroups,
+  expandAllGroups,
   clearAll,
   panel,
+  assertions,
 } from './state'
 import { filterItems } from './utils'
-import { renderFullscreenGroup } from './render'
+import { renderFullscreenGroup, renderFullscreenItem } from './render'
 import { fullscreenStyles } from './styles'
 import { updatePanel } from './panel'
 
@@ -38,12 +45,18 @@ function getFullscreenHTML(): string {
             <span class="count pass" id="pass-count">\u2713 0</span>
             <span class="count fail" id="fail-count">\u2717 0</span>
           </div>
-          <div id="filters">
+          <div id="filters" class="btn-group">
             <button class="btn active" id="filter-all">All</button>
-            <button class="btn" id="filter-fails">Errors Only</button>
-            <button class="btn" id="filter-passes">Passes Only</button>
+            <button class="btn" id="filter-fails">Errors</button>
+            <button class="btn" id="filter-passes">Passes</button>
           </div>
-          <button class="btn" id="scenetest-clear-full">Clear All</button>
+          <span class="separator"></span>
+          <div class="btn-group">
+            <button class="btn active" id="toggle-grouped">Grouped</button>
+            <button class="btn" id="toggle-collapsed">Collapsed</button>
+          </div>
+          <span class="separator"></span>
+          <button class="btn" id="scenetest-clear-full">Clear</button>
         </div>
       </div>
       <div id="list">
@@ -112,6 +125,48 @@ export function openFullscreen(): void {
     setFullscreenFilter('passes')
   })
 
+  doc.getElementById('toggle-grouped')?.addEventListener('click', () => {
+    const isGrouped = toggleGrouping()
+    const btn = doc.getElementById('toggle-grouped')
+    if (btn) {
+      btn.classList.toggle('active', isGrouped)
+      btn.textContent = isGrouped ? 'Grouped' : 'Ungrouped'
+    }
+    // Sync to main panel
+    if (panel) {
+      const panelBtn = panel.querySelector('#scenetest-group-toggle') as HTMLButtonElement
+      if (panelBtn) {
+        panelBtn.classList.toggle('active', isGrouped)
+        panelBtn.textContent = isGrouped ? 'grouped' : 'ungrouped'
+      }
+    }
+    updatePanel()
+    updateFullscreenWindow()
+  })
+
+  doc.getElementById('toggle-collapsed')?.addEventListener('click', () => {
+    const isCollapsed = toggleCollapsedMode()
+    const btn = doc.getElementById('toggle-collapsed')
+    if (btn) {
+      btn.classList.toggle('active', isCollapsed)
+    }
+    // When turning on collapsed mode, collapse all existing groups
+    if (isCollapsed) {
+      collapseAllGroups()
+    } else {
+      expandAllGroups()
+    }
+    // Sync to main panel if it has the button
+    if (panel) {
+      const panelBtn = panel.querySelector('#scenetest-collapsed-toggle') as HTMLButtonElement
+      if (panelBtn) {
+        panelBtn.classList.toggle('active', isCollapsed)
+      }
+    }
+    updatePanel()
+    updateFullscreenWindow()
+  })
+
   updateFullscreenWindow()
 }
 
@@ -133,6 +188,19 @@ export function updateFullscreenWindow(): void {
   doc.getElementById('filter-fails')?.classList.toggle('active', filter === 'fails')
   doc.getElementById('filter-passes')?.classList.toggle('active', filter === 'passes')
 
+  // Update grouped toggle state
+  const groupedBtn = doc.getElementById('toggle-grouped')
+  if (groupedBtn) {
+    groupedBtn.classList.toggle('active', groupingEnabled)
+    groupedBtn.textContent = groupingEnabled ? 'Grouped' : 'Ungrouped'
+  }
+
+  // Update collapsed toggle state
+  const collapsedBtn = doc.getElementById('toggle-collapsed')
+  if (collapsedBtn) {
+    collapsedBtn.classList.toggle('active', collapsedMode)
+  }
+
   const listEl = doc.getElementById('list')
   if (!listEl) return
 
@@ -143,23 +211,49 @@ export function updateFullscreenWindow(): void {
     }))
     .filter(g => g.items.length > 0)
 
-  if (filteredGroups.length === 0) {
-    const icon = filter === 'fails' ? '\u2713' : '\uD83C\uDFAC'
-    const message =
-      filter === 'fails'
-        ? 'No errors! All assertions passed.'
-        : 'Interact with your app to see inline assertions appear here...'
-    listEl.innerHTML = `
-      <div id="empty">
-        <div id="empty-icon">${icon}</div>
-        <div>${message}</div>
-      </div>
-    `
-    return
-  }
+  if (groupingEnabled) {
+    if (filteredGroups.length === 0) {
+      const icon = filter === 'fails' ? '\u2713' : '\uD83C\uDFAC'
+      const message =
+        filter === 'fails'
+          ? 'No errors! All assertions passed.'
+          : 'Interact with your app to see inline assertions appear here...'
+      listEl.innerHTML = `
+        <div id="empty">
+          <div id="empty-icon">${icon}</div>
+          <div>${message}</div>
+        </div>
+      `
+      return
+    }
 
-  listEl.innerHTML = filteredGroups
-    .map(g => renderFullscreenGroup(g))
-    .reverse()
-    .join('')
+    listEl.innerHTML = filteredGroups
+      .map(g => renderFullscreenGroup(g))
+      .reverse()
+      .join('')
+  } else {
+    // Ungrouped mode - flat list
+    const allFiltered = filterItems(assertions)
+    if (allFiltered.length === 0) {
+      const icon = filter === 'fails' ? '\u2713' : '\uD83C\uDFAC'
+      const message =
+        filter === 'fails'
+          ? 'No errors! All assertions passed.'
+          : 'Interact with your app to see inline assertions appear here...'
+      listEl.innerHTML = `
+        <div id="empty">
+          <div id="empty-icon">${icon}</div>
+          <div>${message}</div>
+        </div>
+      `
+      return
+    }
+
+    listEl.innerHTML = '<div class="ungrouped-list">' +
+      allFiltered
+        .map(a => renderFullscreenItem(a))
+        .reverse()
+        .join('') +
+      '</div>'
+  }
 }

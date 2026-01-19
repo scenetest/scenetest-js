@@ -27,6 +27,7 @@ export let listEl: HTMLElement | null = null
 export let fullscreenWindow: Window | null = null
 export let filter: FilterMode = 'all'
 export let groupingEnabled = true
+export let collapsedMode = false // When true, new groups start collapsed
 
 export function setPanel(el: HTMLDivElement): void {
   panel = el
@@ -47,6 +48,23 @@ export function setFilter(newFilter: FilterMode): void {
 export function toggleGrouping(): boolean {
   groupingEnabled = !groupingEnabled
   return groupingEnabled
+}
+
+export function toggleCollapsedMode(): boolean {
+  collapsedMode = !collapsedMode
+  return collapsedMode
+}
+
+export function collapseAllGroups(): void {
+  for (const g of groups) {
+    g.collapsed = true
+  }
+}
+
+export function expandAllGroups(): void {
+  for (const g of groups) {
+    g.collapsed = false
+  }
 }
 
 // Grouping state
