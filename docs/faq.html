@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scenetest - FAQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #faf9f7;
+      --text: #1a1a1a;
+      --text-light: #555;
+      --accent: #5046e5;
+      --code-bg: #f0eeeb;
+      --border: #e0ddd8;
+    }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 19px;
+      line-height: 1.7;
+    }
+
+    article {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+    }
+
+    h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+    }
+
+    h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin-top: 56px;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    h2:first-of-type {
+      margin-top: 0;
+    }
+
+    p {
+      margin-bottom: 24px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.88em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 28px 0;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .back {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      margin-bottom: 40px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <a href="index.html" class="back">&larr; Back</a>
+
+    <h1>FAQ</h1>
+
+    <h2>Isn't this like Playwright's page.evaluate?</h2>
+
+    <p>
+      In Playwright, if you want to compare browser state with server state, you use
+      <code>page.evaluate()</code>. You write a function in your test file that gets sent to
+      the browser, runs in the global context, and sends data back to your test server.
+    </p>
+
+    <p>
+      This works, but it has a problem: the data you need often isn't available in the global context.
+      If you want to check the value returned by <code>useProfile()</code> at the exact moment
+      your component uses it, you can't. The closest you can get is to attach things to
+      <code>window</code> and hope for the best:
+    </p>
+
+    <pre><code>// In your app code (gross)
+window.__profileData = profile
+
+// In your test file
+const profile = await page.evaluate(() => window.__profileData)</code></pre>
+
+    <p>
+      And even this doesn't give you the right timing. You're not getting the value at the moment
+      the component rendered&mdash;you're getting whatever value happens to be there when your
+      test remembers to check. The more complex your app, the more this matters.
+    </p>
+
+    <p>
+      Scenetest assertions run <em>inside</em> your components, at the exact point in the lifecycle
+      where you expect certain things to be true. No window hacks. No timing guesswork.
+    </p>
+
+    <h2>Isn't this like Vitest's in-source testing?</h2>
+
+    <p>
+      Vitest has an in-source testing feature that lets you colocate tests with your code:
+    </p>
+
+    <pre><code>export function add(...args: number[]) {
+  return args.reduce((a, b) => a + b, 0)
+}
+
+if (import.meta.vitest) {
+  const { it, expect } = import.meta.vitest
+  it('add', () => {
+    expect(add(1, 2, 3)).toBe(6)
+  })
+}</code></pre>
+
+    <p>
+      This is great for unit tests, and the colocation is nice. But these tests don't run
+      <em>in the application context</em>. They run in Vitest's test environment, not in your
+      actual React app with your actual state and your actual data.
+    </p>
+
+    <p>
+      Scenetest assertions run when the code runs in the browser. They have access to
+      component props, hook return values, callback arguments&mdash;the real data at the real
+      moment in the real app. It's not in-source testing, it's <em>in-app</em> testing.
+    </p>
+
+    <h2>What about Cypress component testing?</h2>
+
+    <p>
+      Cypress component testing mounts individual components in isolation. That's useful
+      for testing components as units, but it's not the same as testing them in the context
+      of your full application&mdash;with your real data fetching, your real state management,
+      your real routing.
+    </p>
+
+    <p>
+      Scenetest assertions fire when you're running your actual app. The component is mounted
+      in its real environment, with real data flowing through it.
+    </p>
+
+  </article>
+</body>
+</html>
