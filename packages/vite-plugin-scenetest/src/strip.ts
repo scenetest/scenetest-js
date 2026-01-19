@@ -113,12 +113,14 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
 
       let isScenetestCall = false
 
-      // Direct call: pass(...) or fail(...)
+      // Functions to strip
+      const strippableFunctions = ['pass', 'fail', 'assertion', 'useAssertEffect', 'usePassEffect', 'useFailEffect', 'useServerAssert']
+
+      // Direct call: pass(...), fail(...), assertion(...), useAssertEffect(...)
       if (t.isIdentifier(callee)) {
         if (scenetestImports.has(callee.name)) {
           const imported = scenetestImports.get(callee.name)
-          // Only strip pass and fail
-          if (imported === 'pass' || imported === 'fail') {
+          if (imported && strippableFunctions.includes(imported)) {
             isScenetestCall = true
           }
         }
@@ -129,7 +131,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
         if (scenetestImports.get(objectName) === '*') {
           if (t.isIdentifier(callee.property)) {
             const propName = callee.property.name
-            if (propName === 'pass' || propName === 'fail') {
+            if (strippableFunctions.includes(propName)) {
               isScenetestCall = true
             }
           }

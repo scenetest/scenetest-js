@@ -1,4 +1,4 @@
-import type { AssertionResult } from './types.js'
+import type { AssertionResult, AssertionConfig } from './types.js'
 
 /**
  * Get a simplified stack trace for debugging
@@ -95,4 +95,30 @@ export function fail(description: string, condition: boolean, context?: Record<s
     context,
     location: parseLocation(stack),
   })
+}
+
+/**
+ * Multi-context assertion that compares browser and server data.
+ *
+ * This function is a stub that gets transformed by vite-plugin-scenetest.
+ * In dev mode, the Vite plugin:
+ * 1. Extracts the assertFn to a server-side virtual module
+ * 2. Replaces this call with __scenetest_rpc() from scenetest/runtime
+ *
+ * @example
+ * ```tsx
+ * assertion({
+ *   title: 'User profile matches database',
+ *   appData: () => ({ userId: profile.id, name: profile.name }),
+ *   assertFn: (server, fromApp) => {
+ *     const dbUser = server.db.getUser(fromApp.userId)
+ *     pass('name matches', fromApp.name === dbUser.name)
+ *   },
+ * })
+ * ```
+ */
+export function assertion<TAppData>(_config: AssertionConfig<TAppData>): void {
+  // This function is transformed by vite-plugin-scenetest
+  // If this runs, it means the plugin is not configured or we're in production
+  // In production, this will be stripped out
 }

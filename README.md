@@ -51,7 +51,69 @@ export function ProfileForm({ user }) {
 }
 ```
 
-### 3. Write Scenes with Playwright
+### 3. Multi-Context Assertions with `useAssertEffect`
+
+For assertions that need to compare browser data with server data:
+
+```tsx
+// src/components/ProfileForm.tsx
+import { useAssertEffect, pass } from 'scenetest'
+
+export function ProfileForm({ userId }) {
+	const { profile, isLoading } = useProfile(userOd)
+  // Runs when user.email changes, compares browser and server data
+	useServerAssert(
+		async (server, fromApp) => {
+			if (isLoading) return undefined // no test
+			const dbProfile = await server.db.get(userId)
+			pass('DB matches local', dbProfile.name === fromApp.localProfile.name)
+			fail(
+				'Context mismatching user id, possible flash of skewed session',
+				userId !== dbProfile.user_id
+				|| userId !== localCollection.userId
+				|| userId !== state.userId
+			)
+		},
+		{
+			localProfile: profilesCollection.get(id), // local collection
+			state: profile, // component state
+		},
+		[isLoading, profile?.id] // re-run deps
+	)
+
+  return <form>{/* ... */}</form>
+}
+```
+
+Configure server functions in `scenetest.config.ts`:
+
+```typescript
+// scenetest.config.ts
+import { defineScenetestConfig } from 'vite-plugin-scenetest'
+
+export default defineScenetestConfig({
+  serverFunctions: {
+    validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+    getUser: (id) => db.users.findById(id),
+  },
+})
+```
+
+### 4. Orchestrate However You Want
+
+Scenetest doesn't care how you drive your app. The assertions fire whenever the code runs. Use whatever works for you:
+
+- **Playwright** - automated browser testing
+- **Cypress** - another great automation tool
+- **AI agents** - let an LLM click around your app
+- **Human testers** - QA team exploring edge cases
+- **You, the developer** - just use your app normally
+- **Your cat walking on the keyboard** - valid test input
+- **Improv sessions** - "yes, and... what if I click this?"
+
+The `playwright-scenetest` package provides a convenient `scenePage` fixture, but it's just one option. Any tool that can drive a browser will trigger your inline assertions.
+
+### 5. Write Scenes with Playwright (Optional)
 
 ```typescript
 // tests/profile.scene.ts
@@ -78,7 +140,7 @@ test('User updates their profile', async ({ scenePage }) => {
 })
 ```
 
-### 4. Configure Playwright
+### 6. Configure Playwright
 
 ```typescript
 // playwright.config.ts
@@ -97,7 +159,7 @@ export default defineConfig({
 })
 ```
 
-### 5. Run Your Scenes
+### 7. Run Your Scenes
 
 ```bash
 # Start dev server and run tests
@@ -135,17 +197,80 @@ scenetest({ devPanel: true })
 
 ### API Reference
 
-#### `pass(description, condition)`
-Records a passing assertion when `condition` is truthy.
+#### `pass(description, condition, context?)`
+Records a passing assertion when `condition` is truthy. Optional `context` object for debugging.
 
-#### `fail(description, condition)`
+#### `fail(description, condition, context?)`
 Records a failing assertion when `condition` is truthy. Use this to assert something should NOT happen.
+
+#### `usePassEffect(factory, deps)`
+React hook for simple browser-side pass assertions. Returns `[description, condition]` or `null`/`undefined` to skip.
+
+```tsx
+usePassEffect(() => {
+  if (isLoading) return undefined
+  return ['user is loaded', user !== null]
+}, [user, isLoading])
+```
+
+#### `useFailEffect(factory, deps)`
+React hook for simple browser-side fail assertions. Returns `[description, condition]` or `null`/`undefined` to skip.
+
+```tsx
+useFailEffect(() => {
+  if (isLoading) return undefined
+  return ['user should not be in error state', user?.error]
+}, [user, isLoading])
+```
+
+#### `useServerAssert(assertFn, appData, deps)`
+Clean API for multi-context assertions. Pass `undefined` for appData to skip.
+
+```tsx
+useServerAssert(async (server, fromApp) => {
+  const dbProfile = await server.db.get(fromApp.userId)
+  pass('DB matches local', dbProfile.name === fromApp.local.name)
+}, isLoading ? undefined : { local: collection.get(id), state: profile }, [isLoading, profile?.id])
+```
+
+#### `useAssertEffect(factory, deps)`
+Factory-based multi-context assertions. The factory returns a config or `null`/`undefined` to skip.
+
+```tsx
+useAssertEffect(() => {
+  if (isLoading) return undefined
+  return {
+    title: 'User matches database',
+    appData: () => ({ userId: user.id }),
+    assertFn: (server, fromApp) => {
+      pass('user exists in db', server.db.hasUser(fromApp.userId))
+    },
+  }
+}, [user?.id])
+```
+
+#### `assertion(config)`
+Imperative multi-context assertion for use in callbacks (e.g., `onSuccess`, `onSettled`).
+
+```tsx
+onSuccess: (data) => {
+  assertion({
+    title: 'Data saved correctly',
+    appData: () => ({ id: data.id }),
+    assertFn: (server, fromApp) => {
+      const dbRecord = server.db.get(fromApp.id)
+      pass('record exists', dbRecord !== null)
+    },
+  })
+}
+```
 
 #### `scenePage` fixture
 Extended Playwright `page` with:
 - `scenePage.assertions` - All collected assertions
 - `scenePage.passed` - Assertions that passed
 - `scenePage.failed` - Assertions that failed
+- `scenePage.waitForAssertions()` - Wait for pending multi-context assertions to complete
 
 ---
 
@@ -387,43 +512,37 @@ export function UpdateProfileForm() {
 			const newProfile = ProfileSchema.parse(data)
 			store.updateProfile(newProfile)
 			toast.show('Updated successfully!')
-		},
-		onError: () => toast.error('Update failed :('),
-		onSettled: {
-			assertion({
-				title: 'Updating profile'
-				// the expectFn provides a "server" object that you configure (see below)
-				assertFn: async (server, fromApp) => {
-					// wait for the toast before checking everything else
-					await pass('shows success toast', /* ... */)
 
+			// Multi-context assertion in a callback - use assertion() directly
+			assertion({
+				title: 'Updating profile',
+				appData: () => ({
+					userId: profile.id,
+					formSuccessData: newProfile,
+					localDbData: store.getProfile(),
+					formInputs: inputs,
+				}),
+				// the assertFn runs on the server with access to server.* functions
+				assertFn: async (server, fromApp) => {
 					const dbProfile = await server.getProfile(fromApp.userId)
 					pass('has DB updated_at value in the last 10 seconds', /* ... */)
-					pass.happy('DB value updated less than 1 second ago', /* ... */)
 					pass('has DB values same as form inputs', /* ... */)
 
 					// not all values will match the DB exactly, but these should
 					const fieldsToCompare = [
 						'username', 'uid', 'language', 'avatar_url', 'bio', 'updated_at',
 					]
-					pass('has same values in DB & local collection', () => {
-						for(key in fieldsToCompare) {
-							if (dbProfile[key] !== fromApp.localDbData[key])
-								// failure doesn't end the test; it just records a failure
-								fail(`Values for "${key}" do not match`)
+					for (const key of fieldsToCompare) {
+						if (dbProfile[key] !== fromApp.localDbData[key]) {
+							fail(`Values for "${key}" do not match`)
 						}
-					})
+					}
 				},
-				appData: () => ({
-					userId,
-					formSuccessData: newProfile,
-					localDbData: store.getProfile(),
-					formInputs: inputs,
-				}),
 			})
-		}
+		},
+		onError: () => toast.error('Update failed :('),
 	})
-	return <form onSubmut={myForm.handleSubmit}>{/* ... */}</form>
+	return <form onSubmit={myForm.handleSubmit}>{/* ... */}</form>
 }
 ```
 

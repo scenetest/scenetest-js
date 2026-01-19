@@ -1,6 +1,17 @@
-import type { Plugin } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
 import { stripScenetest } from './strip.js'
 import { devPanelScript } from './dev-panel.generated.js'
+import { transformAssertions } from './transform.js'
+import {
+  registerAssertions,
+  removeAssertionsForFile,
+  clearRegistry,
+  VIRTUAL_MODULE_ID,
+  RESOLVED_VIRTUAL_MODULE_ID,
+  generateVirtualModuleCode,
+} from './virtual-module.js'
+import { clearConfigCache, isConfigFile } from './config.js'
+import { createScenetestMiddleware } from './middleware.js'
 
 export interface ScenetestPluginOptions {
   /**
@@ -19,13 +30,15 @@ export interface ScenetestPluginOptions {
 /**
  * Vite plugin for Scenetest
  *
- * In development/test mode: leaves code as-is (assertions report to test runner)
+ * In development/test mode: transforms assertion() calls and serves assertFn via middleware
  * In production mode: strips all scenetest imports and function calls via AST transform
  */
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
   let showDevPanel = false
   let mode = 'development'
+  let root = process.cwd()
+  let server: ViteDevServer | undefined
 
   return {
     name: 'vite-plugin-scenetest',
@@ -36,6 +49,31 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       shouldStrip = options.strip ?? env.mode === 'production'
       // Default: show dev panel in development (not in test mode - Playwright handles that)
       showDevPanel = options.devPanel ?? (env.mode === 'development' && !process.env.PLAYWRIGHT_TEST)
+    },
+
+    configResolved(config) {
+      root = config.root
+    },
+
+    configureServer(devServer) {
+      server = devServer
+
+      // Install the scenetest middleware for handling RPC requests
+      server.middlewares.use(createScenetestMiddleware(server, root))
+    },
+
+    resolveId(id) {
+      if (id === VIRTUAL_MODULE_ID) {
+        return RESOLVED_VIRTUAL_MODULE_ID
+      }
+      return null
+    },
+
+    load(id) {
+      if (id === RESOLVED_VIRTUAL_MODULE_ID) {
+        return generateVirtualModuleCode()
+      }
+      return null
     },
 
     transform(code, id) {
@@ -54,26 +92,48 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return null
       }
 
-      if (!shouldStrip) {
-        // In dev/test mode, leave code as-is
-        // The runtime checks for window.__scenetest_report
-        return null
+      if (shouldStrip) {
+        // Production mode: strip scenetest code via AST transform
+        const result = stripScenetest(code, {
+          filename: id,
+          sourceMap: true,
+        })
+
+        if (!result) {
+          return null
+        }
+
+        return {
+          code: result.code,
+          map: result.map,
+        }
       }
 
-      // Production mode: strip scenetest code via AST transform
-      const result = stripScenetest(code, {
+      // Dev mode: transform assertion() calls
+      const transformResult = transformAssertions(code, {
         filename: id,
         sourceMap: true,
       })
 
-      if (!result) {
-        return null
+      if (transformResult) {
+        // Register extracted assertions for the virtual module
+        registerAssertions(transformResult.extractedAssertions)
+
+        // Invalidate the virtual module so it regenerates with new assertions
+        if (server) {
+          const virtualMod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_MODULE_ID)
+          if (virtualMod) {
+            server.moduleGraph.invalidateModule(virtualMod)
+          }
+        }
+
+        return {
+          code: transformResult.code,
+          map: transformResult.map,
+        }
       }
 
-      return {
-        code: result.code,
-        map: result.map,
-      }
+      return null
     },
 
     transformIndexHtml(html) {
@@ -87,6 +147,10 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
     },
 
     buildStart() {
+      // Clear registries on build start
+      clearRegistry()
+      clearConfigCache()
+
       if (shouldStrip) {
         console.log('[vite-plugin-scenetest] Production build - stripping scenetest code')
       } else {
@@ -96,10 +160,27 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         }
       }
     },
+
+    handleHotUpdate({ file }) {
+      // Clear config cache if config file changed
+      if (isConfigFile(file, root)) {
+        clearConfigCache()
+        console.log('[vite-plugin-scenetest] Config file changed - reloading')
+      }
+
+      // Remove assertions from the file being updated (they'll be re-registered on transform)
+      removeAssertionsForFile(file)
+    },
   }
 }
 
 // Re-export strip function for testing
 export { stripScenetest } from './strip.js'
+
+// Re-export config helper for user config files
+export { defineScenetestConfig } from './config.js'
+
+// Re-export server-side pass/fail for use in scenetest.config.ts
+export { pass, fail } from './middleware.js'
 
 export default scenetest

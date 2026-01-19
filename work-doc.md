@@ -12,30 +12,6 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 
 ## Items to tackle
 
-### Inline Assertions Panel round 2
-- **Status**: PENDING
-- **Complexity**: 1 each
-- **Difficulty**:
-- **Tags**: DEV-PANEL
-- **Description**:
-  - when we click an item in the small panel and it opens in the big panel, we need it to scroll maybe 30px farther down because the fixed header
-  - when we click an item in the small panel and it opens in the big panel, we should highlight the item at least for a second, so we can really see which one it corresponds to.
-  - when you have a failure and it says `(1 after ✓)` I would like some way to go and see that! or maybe to click a kind of info toggle that hides everything except the other instances of this same test. The point is that we just need to be able to see "is this discrepancy a bad thing or is it fine?". The dev just needs some way of seeing that much context. use your best judgement and make a guess.
-
-
-### Inline Assertions Panel
-- **Status**: DONE
-- **Complexity**: 1 each
-- **Difficulty**: 1
-- **Tags**: DEV-PANEL
-- **Description**:
-  - always show items grouped. remove the button to group and ungroup.
-  - always treat as "collapsed" and we'll open items as needed. remove the button.
-  - with item groups, even if there are 0 errors, next to `✓ 8` still show 0 errors. it's a positive sign. it can be gray instead of green.
-  - this `(2 prior ✓, 3 after ✓)` we don't need to show it on the small panel; we need it on the big one only.
-  - I don't like the click-to-open-in-vscode, but when in small-panel mode I think the main click on the item should open the fullscreen version to that item.
-- **Notes**: All items implemented. Removed grouped/collapsed toggles from both panels. Zero errors shown in gray. History hidden on small panel. Clicking item in small panel opens fullscreen scrolled to that group.
-
 ### Multi-Context Assertions (assertion() API)
 - **Status**: DESIGN READY - AWAITING REVIEW
 - **Complexity**: 4
@@ -68,4 +44,6 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 
 ## Reference
 
-See `CLAUDE.md` for completed implementation notes.
+- See `CLAUDE.md` for completed implementation notes.
+- See `implementation-details.md` for previous choices you made and forgot.
+- See `docs/design/server-actions.md` for design of our server-actions API.
