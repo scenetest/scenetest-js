@@ -11,10 +11,11 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build:dev-panel": "node scripts/bundle-dev-panel.mjs",
+    "build": "pnpm run build:dev-panel && tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm run build:dev-panel && tsc --noEmit"
   },
   "dependencies": {
     "@babel/parser": "^7.24.0",

@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite'
 import { stripScenetest } from './strip.js'
-import { devPanelScript } from './dev-panel.js'
+import { devPanelScript } from './dev-panel.generated.js'
 
 export interface ScenetestPluginOptions {
   /**
