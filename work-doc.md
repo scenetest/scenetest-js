@@ -12,6 +12,17 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 
 ## Items to tackle
 
+### Inline Assertions Panel round 2
+- **Status**: PENDING
+- **Complexity**: 1 each
+- **Difficulty**:
+- **Tags**: DEV-PANEL
+- **Description**:
+  - when we click an item in the small panel and it opens in the big panel, we need it to scroll maybe 30px farther down because the fixed header
+  - when we click an item in the small panel and it opens in the big panel, we should highlight the item at least for a second, so we can really see which one it corresponds to.
+  - when you have a failure and it says `(1 after ✓)` I would like some way to go and see that! or maybe to click a kind of info toggle that hides everything except the other instances of this same test. The point is that we just need to be able to see "is this discrepancy a bad thing or is it fine?". The dev just needs some way of seeing that much context. use your best judgement and make a guess.
+
+
 ### Inline Assertions Panel
 - **Status**: DONE
 - **Complexity**: 1 each
@@ -26,17 +37,19 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 - **Notes**: All items implemented. Removed grouped/collapsed toggles from both panels. Zero errors shown in gray. History hidden on small panel. Clicking item in small panel opens fullscreen scrolled to that group.
 
 ### Multi-Context Assertions (assertion() API)
-- **Status**: PENDING
+- **Status**: DESIGN READY - AWAITING REVIEW
 - **Complexity**: 4
 - **Tags**: BIG ITEM
 - **Description**: The `assertion({ assertFn, appData })` API is more complex:
   - `appData` runs in browser, collects data
-  - `assertFn` runs in Node.js with server access
-  - Need to serialize appData and send to Node
-  - This is the "server action" pattern from the README
-  - **Needs separate design doc before implementation**
-
-SEE @docs/design/server-actions.md
+  - `assertFn` runs on server (Vite middleware) with database access
+  - Vite plugin extracts assertFn at build time, generates RPC client
+  - Server functions configured in `scenetest.config.ts`
+- **Design Doc**: See `docs/design/server-actions.md`
+- **Notes**: Design doc written. Key architecture: Vite plugin middleware serves as test server, no external process needed. assertFn extracted and served as virtual module. Browser calls `/__scenetest/run` endpoint with serialized appData. Results flow back through existing `__scenetest_report` mechanism.
+- **Decisions made**:
+  1. No imports in assertFn - everything via `server` or `fromApp`
+  2. Optional `key` field for uniqueness in loops (combined with file location)
 
 ---
 
