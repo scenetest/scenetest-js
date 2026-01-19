@@ -5,7 +5,6 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter example-app dev",
-    "test": "pnpm --filter example-app test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

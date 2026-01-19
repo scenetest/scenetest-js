@@ -10,6 +10,7 @@ export const devPanelScript = `
 
   const assertions = [];
   const groups = []; // Groups of assertions that fired together
+  const assertionHistory = new Map(); // Map<description, Array<{result, timestamp, index}>>
   let panel = null;
   let listEl = null;
   let passCount = 0;
@@ -22,6 +23,72 @@ export const devPanelScript = `
   const GROUP_THRESHOLD_MS = 50;
   let pendingGroup = null;
   let groupTimeout = null;
+
+  // Track assertion to history for quick lookup
+  function trackAssertion(result, index) {
+    const key = result.description;
+    if (!assertionHistory.has(key)) {
+      assertionHistory.set(key, []);
+    }
+    const history = assertionHistory.get(key);
+    history.push({ result: result.result, timestamp: result.timestamp, index });
+    return history;
+  }
+
+  // Get history stats for an assertion
+  function getHistoryStats(description, currentIndex) {
+    const history = assertionHistory.get(description);
+    if (!history || history.length <= 1) return null;
+
+    let priorPassed = 0, priorFailed = 0;
+    let afterPassed = 0, afterFailed = 0;
+
+    for (const entry of history) {
+      if (entry.index < currentIndex) {
+        if (entry.result) priorPassed++;
+        else priorFailed++;
+      } else if (entry.index > currentIndex) {
+        if (entry.result) afterPassed++;
+        else afterFailed++;
+      }
+    }
+
+    const total = history.length - 1; // exclude current
+    if (total === 0) return null;
+
+    return { priorPassed, priorFailed, afterPassed, afterFailed, total };
+  }
+
+  // Format history summary for display
+  function formatHistorySummary(stats) {
+    if (!stats) return '';
+
+    const parts = [];
+    const priorTotal = stats.priorPassed + stats.priorFailed;
+    const afterTotal = stats.afterPassed + stats.afterFailed;
+
+    if (priorTotal > 0) {
+      if (stats.priorFailed === 0) {
+        parts.push(priorTotal + ' prior ✓');
+      } else if (stats.priorPassed === 0) {
+        parts.push(priorTotal + ' prior ✗');
+      } else {
+        parts.push(priorTotal + ' prior (' + stats.priorPassed + '✓ ' + stats.priorFailed + '✗)');
+      }
+    }
+
+    if (afterTotal > 0) {
+      if (stats.afterFailed === 0) {
+        parts.push(afterTotal + ' after ✓');
+      } else if (stats.afterPassed === 0) {
+        parts.push(afterTotal + ' after ✗');
+      } else {
+        parts.push(afterTotal + ' after (' + stats.afterPassed + '✓ ' + stats.afterFailed + '✗)');
+      }
+    }
+
+    return parts.length > 0 ? '(' + parts.join(', ') + ')' : '';
+  }
 
   // Create the floating panel
   function createPanel() {
@@ -101,11 +168,26 @@ export const devPanelScript = `
         }
         #scenetest-actions {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           padding: 6px 12px;
           background: #202038;
           border-bottom: 1px solid #3a3a5a;
           flex-wrap: wrap;
+          align-items: center;
+        }
+        .scenetest-btn-group {
+          display: flex;
+          border: 1px solid #4a4a6a;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .scenetest-btn-group .scenetest-btn {
+          border: none;
+          border-radius: 0;
+          border-right: 1px solid #4a4a6a;
+        }
+        .scenetest-btn-group .scenetest-btn:last-child {
+          border-right: none;
         }
         .scenetest-btn {
           background: none;
@@ -125,6 +207,11 @@ export const devPanelScript = `
         .scenetest-btn.active {
           background: #4a4a6a;
           color: #fff;
+        }
+        .scenetest-separator {
+          width: 1px;
+          height: 16px;
+          background: #3a3a5a;
         }
         #scenetest-list {
           overflow-y: auto;
@@ -262,6 +349,18 @@ export const devPanelScript = `
         .scenetest-ungrouped {
           padding: 4px 8px;
         }
+        .scenetest-history {
+          font-size: 9px;
+          color: #8a8aaa;
+          margin-top: 2px;
+          font-style: italic;
+        }
+        .scenetest-history-pass {
+          color: #4ade80;
+        }
+        .scenetest-history-fail {
+          color: #f87171;
+        }
       </style>
       <div id="scenetest-header">
         <span id="scenetest-title">scenetest</span>
@@ -271,10 +370,13 @@ export const devPanelScript = `
         </span>
       </div>
       <div id="scenetest-actions">
-        <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
+        <div class="scenetest-btn-group">
+          <button class="scenetest-btn active" id="scenetest-filter-all">all</button>
+          <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
+        </div>
+        <span class="scenetest-separator"></span>
         <button class="scenetest-btn active" id="scenetest-group-toggle">grouped</button>
-        <button class="scenetest-btn" id="scenetest-filter-all">all</button>
-        <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
+        <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
         <button class="scenetest-btn" id="scenetest-clear">clear</button>
       </div>
       <div id="scenetest-list">
@@ -326,6 +428,7 @@ export const devPanelScript = `
       e.stopPropagation();
       assertions.length = 0;
       groups.length = 0;
+      assertionHistory.clear();
       passCount = 0;
       failCount = 0;
       pendingGroup = null;
@@ -409,6 +512,7 @@ export const devPanelScript = `
     doc.getElementById('scenetest-clear-full').addEventListener('click', () => {
       assertions.length = 0;
       groups.length = 0;
+      assertionHistory.clear();
       passCount = 0;
       failCount = 0;
       pendingGroup = null;
@@ -652,6 +756,12 @@ export const devPanelScript = `
             white-space: pre-wrap;
             word-break: break-all;
           }
+          .history {
+            font-size: 11px;
+            color: #8a8aaa;
+            margin-top: 4px;
+            font-style: italic;
+          }
           #empty {
             text-align: center;
             padding: 60px 20px;
@@ -734,17 +844,21 @@ export const devPanelScript = `
           <span class="group-toggle">▼</span>
         </div>
         <div class="group-items">
-          \${g.items.map((a) => \`
+          \${g.items.map((a) => {
+            const histStats = getHistoryStats(a.description, a._index);
+            const histSummary = formatHistorySummary(histStats);
+            return \`
             <div class="item \${a.result ? 'pass' : 'fail'}">
               <span class="icon">\${a.result ? '✓' : '✗'}</span>
               <div class="content">
                 <div class="desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
                 \${a.location ? '<div class="location" onclick="window.opener && window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(' + JSON.stringify(a.location).replace(/"/g, '&quot;') + ')">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
+                \${histSummary ? '<div class="history">' + histSummary + '</div>' : ''}
                 \${a.context ? '<div class="context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
                 \${a.stack && !a.context ? '<div class="stack">' + escapeHtml(a.stack.split('\\n').slice(0, 3).join('\\n')) + '</div>' : ''}
               </div>
             </div>
-          \`).join('')}
+          \`}).join('')}
         </div>
       </div>
     \`}).reverse().join('');
@@ -791,33 +905,39 @@ export const devPanelScript = `
             <span class="scenetest-group-toggle">▼</span>
           </div>
           <div class="scenetest-group-items">
-            \${g.items.map((a, i) => \`
-              <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.location ? escapeHtml(formatLocation(a.location)) : ''}">
+            \${g.items.map((a, i) => {
+              const histStats = getHistoryStats(a.description, a._index);
+              const histSummary = formatHistorySummary(histStats);
+              return \`
+              <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.context ? escapeHtml(formatContext(a.context)) : (a.location ? escapeHtml(formatLocation(a.location)) : '')}">
                 <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
                 <div class="scenetest-content">
                   <div class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
                   \${a.location ? '<div class="scenetest-location">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
-                  \${a.context ? '<div class="scenetest-context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
+                  \${histSummary ? '<div class="scenetest-history">' + histSummary + '</div>' : ''}
                 </div>
               </div>
-            \`).join('')}
+            \`}).join('')}
           </div>
         </div>
       \`}).reverse().join('');
     } else {
       // Flat list (ungrouped)
       const allFiltered = filterItems(assertions);
-      listEl.innerHTML = '<div class="scenetest-ungrouped">' + allFiltered.map((a) => \`
-        <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.location ? escapeHtml(formatLocation(a.location)) : ''}">
+      listEl.innerHTML = '<div class="scenetest-ungrouped">' + allFiltered.map((a) => {
+        const histStats = getHistoryStats(a.description, a._index);
+        const histSummary = formatHistorySummary(histStats);
+        return \`
+        <div class="scenetest-item \${a.result ? 'pass' : 'fail'}" onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(\${a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'})" title="\${a.context ? escapeHtml(formatContext(a.context)) : (a.location ? escapeHtml(formatLocation(a.location)) : '')}">
           <span class="scenetest-icon">\${a.result ? '✓' : '✗'}</span>
           <div class="scenetest-content">
             <div class="scenetest-desc\${a.type === 'fail' && a.result ? ' negated' : ''}">\${escapeHtml(a.description)}</div>
             \${a.location ? '<div class="scenetest-location">' + escapeHtml(formatLocation(a.location)) + '</div>' : ''}
-            \${a.context ? '<div class="scenetest-context">' + escapeHtml(formatContext(a.context)) + '</div>' : ''}
+            \${histSummary ? '<div class="scenetest-history">' + histSummary + '</div>' : ''}
           </div>
           <span class="scenetest-time">\${formatTime(a.timestamp)}</span>
         </div>
-      \`).reverse().join('') + '</div>';
+      \`}).reverse().join('') + '</div>';
     }
   }
 
@@ -871,7 +991,11 @@ export const devPanelScript = `
       }
     }
 
+    const index = assertions.length;
+    result._index = index; // Store index for history lookup
     assertions.push(result);
+    trackAssertion(result, index);
+
     if (result.result) {
       passCount++;
     } else {

@@ -15,11 +15,34 @@
 
 ## Instructions for the coding agent
 
-Under normal circumstances you will start by looking through the document for items that are pending or in an otherwise "ready" state, and then you'll attempt to do it! Go in whatever order you think is _most important_. (Revert your changes and move on after 3 missed attempts.) If you think you've succeeded at an item, run the tests and the linters, and fix things until they pass. It's very important after every item, whether you completed it, or just did some research, or tried and failed, you must add a DIFFICULTY score (1-to-4) underneath the COMPLEXITY score. (It does NOT have to be the same; it is used to give us information about when we have guessed incorrectly.) Then add whatever notes you want, for later, git commit, and move on. If the commit fails, fix any errors and commit again. If you make migrations, you can run `pnpm db-full` to run the migrations and update the types, but then you have to STOP and ask the human manager to handle the changes to the `base.sql` schema. But so when you're done, regardless of the status, update the item with a new status, difficulty, and your notes, and move on to the next one. You do not have to go in any order. If something is large enough to warrant its own project doc, like a difficulty of 3 or 4, then make your own project doc and wait for human feedback before moving ahead to implementation.
+Under normal circumstances you will start by looking through the document for items that are pending or in an otherwise "ready" state, and then you'll attempt to do it! Go in whatever order you think is _most important_. (Revert your changes and move on after 3 missed attempts.) If you think you've succeeded at an item, run the linters, and fix things until they pass. It's very important after every item, whether you completed it, or just did some research, or tried and failed, you must add a DIFFICULTY score (1-to-4) underneath the COMPLEXITY score. (It does NOT have to be the same; it is used to give us information about when we have guessed incorrectly.) Then add whatever notes you want, for later, git commit, and move on. If the commit fails, fix any errors and commit again. So when you're done, regardless of the status, update the item with a new status, difficulty, and your notes, and move on to the next one. You do not have to go in any order. If something is large enough to warrant its own project doc, like a difficulty of 3 or 4, then make your own project doc and wait for human feedback before moving ahead to implementation.
 
 If you have been instructed to do a BIG ITEMS PASS, then do one thing differently: start first by looking at the items that are marked as BIG ITEMS, or that you can see require analysis or have a complexity of 3 or 4. Otherwise, work through the doc item by item picking the ones most relevant to you, as you normally would, but not writing any code or doing any git commits, simply leaving your analysis and plans on these items and moving on.
 
 ---
+
+## Items to tackle
+
+1. Project Setup: Is there a reason you wrote the dev panel in a raw JS string? do you care to rewrite it in JS that humans can read and interact with?
+  STATUS: PENDING
+  COMPLEXITY: 2
+
+2. Group "All | Errors" into a button group. In fullscreen mode where "Passes only" is visible, add that to the group. It should be clear these buttons are radio/mutually-exclusive.
+  STATUS: PENDING
+  COMPLEXITY: 1
+
+3. We should have the "grouped" option in fullscreen view as well. In fact, in fullscreen mode we should also have an option "collapsed" which collapsed all the messages without needing to click them all.
+  STATUS: PENDING
+  COMPLEXITY: 1
+
+4. I think we don't need the full context info to show in the small overlay; it's taking up extra space and we don't have much space here. perhaps it's visible in a tooltop or you can click and expand it? but I think it's fine to not see it unless we open up the full screen version.
+  STATUS: PENDING
+  COMPLEXITY: 1
+
+5. since a single test will run lots and lots of times, I think it would make sense to be able to see, for example, with an error, it could say "this same test ran 17 other times, 12 prior, all passed, 4 after, all passed." and then we maybe would worry about it differently or be able to JUMP easily to those places, or to click on the thing to enter a view where we can actually see all the times that exact test ran!
+  STATUS: PENDING
+  COMPLEXITY: 2
+
 
 ## Research Notes
 
