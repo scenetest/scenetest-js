@@ -12,6 +12,15 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 
 ## Items to tackle
 
+### Inline Assertions Panel
+- **Status**: PENDING
+- **Complexity**: 1
+- **Tags**: DEV-PANEL
+- **Description**: several items for both the fullscreen and small dev panel
+  - always show items grouped. you can remove the button to group and ungroup.
+  - always treat as "collapsed" and we'll open items as needed. remove the button.
+
+
 ### Multi-Context Assertions (assertion() API)
 - **Status**: PENDING
 - **Complexity**: 4
@@ -22,6 +31,8 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
   - Need to serialize appData and send to Node
   - This is the "server action" pattern from the README
   - **Needs separate design doc before implementation**
+
+SEE @docs/design/server-actions.md
 
 ---
 
