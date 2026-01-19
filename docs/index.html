@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scenetest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #faf9f7;
+      --text: #1a1a1a;
+      --text-light: #555;
+      --accent: #5046e5;
+      --code-bg: #f0eeeb;
+      --border: #e0ddd8;
+    }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 19px;
+      line-height: 1.7;
+    }
+
+    article {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+    }
+
+    h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2.5rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-style: italic;
+      color: var(--text-light);
+      margin-bottom: 48px;
+      font-size: 1.1rem;
+    }
+
+    h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 500;
+      margin-top: 56px;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin-bottom: 24px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.88em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 28px 0;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 24px;
+      margin: 32px 0;
+      font-style: italic;
+      color: var(--text-light);
+    }
+
+    .divider {
+      text-align: center;
+      margin: 48px 0;
+      color: var(--text-light);
+      letter-spacing: 0.3em;
+    }
+
+    ul, ol {
+      margin-bottom: 24px;
+      padding-left: 28px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .install {
+      margin-top: 48px;
+      padding: 24px;
+      background: var(--code-bg);
+      border-radius: 6px;
+    }
+
+    .install p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.95rem;
+      color: var(--text-light);
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>Scenetest</h1>
+    <p class="subtitle">Local-First testing framework for Vite that evaluates your product, and your mental model &ndash; not your tests.</p>
+
+    <p>
+      It's 2026; we builds app differently now. Component state, Query cache, Zustand store,
+		Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>
+		possibilities are endless, and they're helping us build buttery smooth, responsive UIs.
+    </p>
+    <p><strong>Test tooling should keep up.</strong></p>
+    <p>
+		Most frameworks rely on a headless browser clicking around our app, inputting
+		inputs into inputs and clicking clickers and expecting to see certain expectations. If we're
+		being <em>very thorough</em> we might check the database directly to be sure something updated (for certain).
+    </p>
+    <p>
+		The DOM and the Database are good book-ends to compare, but if the main data store my app relies on
+		is a local DB or store or cache, how will we test this? When we live and die by the rule
+		<code>UI = f(state)</code>, testing local state feels like it should be easier&hellip;
+    </p>
+
+    <p>
+      This is how <em>Scenetest JS</em> came about. We were looking for tests that would:
+		<ol>
+		  <li>Compare data we take from inside the React component lifecycle &ndash; in onSuccess callbacks, in effects, hooks.</li>
+		  <li>Compare to what we expect to find in the database or other privileged resources.</li>
+		  <li>Write both with full type safety, intellisense, etc.</li>
+		</ol>
+		Thankfully, in 2026 React world, we have a primitive that matches this pattern
+		neatly: <strong>Server Actions</strong>, which are written in the app, stripped by the
+		bundler, deployed on the server as an RPC function, and called remotely from the client.
+		This inversion of control solves the multi-context app&hArr;server problem,
+		giving the app control over when to call the server function and what data to pass it,
+		but actually running it in a protected environment.
+		Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
+		about nearly every layer of an application in one place.
+		</p>
+<pre><code>cost post = usePost(id)
+const form = usePostForm(post)
+// useAssert is like sugar for useEffect(() => assert(), deps)
+useAssert(
+  () => {
+    title: 'Server item should match local',
+    // app data we pass from react-land to the assertion fn
+		appData: () => postsCollection.get(id),
+    // the assertFn runs on the server as a server action
+		assertFn: (server, app) => {
+      const post = await server.getPosts(app.id)
+      fail('title is empty', !post)
+      pass('titles match', post.title === app.title)
+    },
+    // skip when submitting, run when only finished
+    enabled: !form.isSubmitting,
+  },
+  [form.isSubmitting, post.title]
+)</code></pre>
+
+    <p class="divider">* * *</p>
+
+    <h2>Scenes and Inline Assertions</h2>
+
+    <p>
+      <strong>Scenes</strong> are small user journeys, or the sort of atomic units of a user flow you want to test.
+		<em>e.g.</em> <code>scenetest/profile-update.scene.ts</code>: <em>Log in, navigate to settings, change your username,
+      submit the form, see the success message.</em> Scenes are about orchestration &ndash; driving the
+      browser through a sequence of interactions. The person writing a Scene shouldn't need to know
+      how the app works under the hood. They just need to think through what sorts of things a user might do or expect.
+    </p>
+
+    <p>
+      <strong>Inline Assertions</strong> are test statements that live inside your application
+		code &ndash; in your components, hooks, and callbacks. They validate your mental model: "at this point in the code / React lifecycle,
+      this data should be in this state." Engineers write them to encode and record their mental model and to alert future generations.
+		Use <code>pass</code> or <code>fail</code>, or assertions that run on the server <code>assert</code> and <code>useAssert</code>.
+    </p>
+
+    <p>
+      Moving Assertions into the application code means they're type-safe, they run passively even
+		as you just click around, and you never have to write
+		<code>window.__testData?.profileStore = profileStore</code> ever again.
+		And it means your Scenes can be written with any old tool, by a PM, an LLM, etc.
+    </p>
+
+    <p>
+      Scenetest assertions run <em>inside</em> your components. No extra tooling to run your
+      hooks in a test environment. No recreating your app's logic in a spec file. You write
+      the assertion where the code lives, with access to the real data:
+    </p>
+
+    <pre><code>import { pass, fail } from 'scenetest'
+
+export function ProfileForm() {
+  const { data: profile } = useProfile()
+
+  // Runs every render, with the actual value, at the actual moment
+  pass('Profile available without loading state', profile !== undefined)
+
+  if (!profile) return &lt;CreateProfileForm /&gt;
+  return &lt;EditProfileForm profile={profile} /&gt;
+}</code></pre>
+
+    <p>
+      In dev and test mode, these assertions report to a collector. In production, the Vite
+      plugin strips them out entirely. Zero runtime cost.
+    </p>
+
+    <h2>Multi-context comparisons</h2>
+
+    <p>
+      The most powerful use case is comparing data across contexts. After a form submission,
+      you might want to verify that the DOM, component state, React Query cache, and database
+      all agree:
+    </p>
+
+    <pre><code>onSuccess: (savedProfile) => {
+  const domName = displayRef.current?.textContent
+  const stateName = name.trim()
+  const cacheName = queryClient.getQueryData('profile')?.name
+  const dbName = getProfileFromDb().name
+
+  pass('All contexts agree on name',
+    domName === stateName &&
+    stateName === cacheName &&
+    cacheName === dbName
+  )
+
+  fail('Cache out of sync with database',
+    cacheName !== dbName
+  )
+}</code></pre>
+
+    <p>
+      This runs inside your <code>onSuccess</code> callback, at exactly the moment when your
+      mental model says everything should be in sync. If there's a bug where the state updates
+		but not the cache, you'll catch it here. It means your tests are testing your application
+		code, not your test helpers.
+    </p>
+
+    <h2>The Scene stays clean</h2>
+
+    <p>
+      Because assertions live in the application code, Scene files can focus purely on
+      orchestration:
+    </p>
+
+    <pre><code>scene('User updates their profile', async ([user]) => {
+  await user.goto('/profile')
+  await user.get('label[name=Name]').cousin('input').fill('New Name')
+  await user.get('button', { name: 'Save' })
+            .disabled(false)
+            .then(button => button.click())
+  await user.read('success!')
+  // That's it. All the assertions fired automatically.
+})</code></pre>
+
+    <p>
+      The person writing this Scene doesn't need to know about React Query, or localStorage,
+      or what the component's internal state looks like. They just need to know what a user would do.
+      The implementation experts write the assertions; the journey experts write the Scenes.
+    </p>
+
+    <h2>What we're really testing</h2>
+
+    <p>
+      Scenes test the user's experience: does the product work the way we intended?
+    </p>
+
+    <p>
+      Inline Assertions test the engineer's mental model: does the system work the way we
+      think it works?
+    </p>
+
+    <p>
+      These are complementary questions. A Scene can pass while assertions fail &ndash; the user
+      got the right outcome, but through a code path we didn't expect. Assertions can pass while
+      a Scene fails &ndash; all our assumptions are correct, but the user can't actually complete
+      the journey because of a UI problem.
+    </p>
+
+    <p>
+      Together, they give you a complete picture. You traverse your product along both axes,
+      and you know not just <em>that</em> it works, but <em>why</em>.
+    </p>
+
+    <div class="install">
+      <p>pnpm install scenetest vite-plugin-scenetest playwright-scenetest</p>
+    </div>
+
+    <footer>
+      <a href="faq.html">FAQ</a> &mdash; comparisons with page.evaluate, Vitest, etc.
+    </footer>
+
+  </article>
+</body>
+</html>
