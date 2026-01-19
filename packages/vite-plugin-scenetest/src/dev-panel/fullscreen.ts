@@ -131,7 +131,7 @@ export function openFullscreen(groupId?: number): void {
 }
 
 /**
- * Scroll to a specific group in the fullscreen window
+ * Scroll to a specific group in the fullscreen window and highlight it
  */
 function scrollToGroup(groupId: number): void {
   if (!fullscreenWindow || fullscreenWindow.closed) return
@@ -142,6 +142,11 @@ function scrollToGroup(groupId: number): void {
     groupEl.classList.remove('collapsed')
     // Scroll into view
     groupEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Add highlight effect
+    groupEl.classList.remove('highlighted')
+    // Force reflow to restart animation
+    void (groupEl as HTMLElement).offsetWidth
+    groupEl.classList.add('highlighted')
   }
 }
 
