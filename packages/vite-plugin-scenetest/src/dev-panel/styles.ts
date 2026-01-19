@@ -168,6 +168,10 @@ export const panelStyles = `
   background: #3a1a1a;
   color: #f87171;
 }
+.scenetest-group-stat.zero {
+  background: #2a2a3a;
+  color: #6a6a8a;
+}
 .scenetest-group-items {
   border-top: 1px solid #3a3a5a;
 }

@@ -13,13 +13,17 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 ## Items to tackle
 
 ### Inline Assertions Panel
-- **Status**: PENDING
-- **Complexity**: 1
+- **Status**: DONE
+- **Complexity**: 1 each
+- **Difficulty**: 1
 - **Tags**: DEV-PANEL
-- **Description**: several items for both the fullscreen and small dev panel
-  - always show items grouped. you can remove the button to group and ungroup.
+- **Description**:
+  - always show items grouped. remove the button to group and ungroup.
   - always treat as "collapsed" and we'll open items as needed. remove the button.
-
+  - with item groups, even if there are 0 errors, next to `✓ 8` still show 0 errors. it's a positive sign. it can be gray instead of green.
+  - this `(2 prior ✓, 3 after ✓)` we don't need to show it on the small panel; we need it on the big one only.
+  - I don't like the click-to-open-in-vscode, but when in small-panel mode I think the main click on the item should open the fullscreen version to that item.
+- **Notes**: All items implemented. Removed grouped/collapsed toggles from both panels. Zero errors shown in gray. History hidden on small panel. Clicking item in small panel opens fullscreen scrolled to that group.
 
 ### Multi-Context Assertions (assertion() API)
 - **Status**: PENDING
@@ -51,4 +55,4 @@ SEE @docs/design/server-actions.md
 
 ## Reference
 
-See `implementation-details.md` for completed implementation notes.
+See `CLAUDE.md` for completed implementation notes.

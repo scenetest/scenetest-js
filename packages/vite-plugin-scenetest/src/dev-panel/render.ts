@@ -8,11 +8,9 @@ import { escapeHtml, formatContext, formatLocation, formatTime, getGroupStats } 
 
 /**
  * Render a single assertion item for the main panel
+ * Click opens fullscreen view, no history shown (history only in fullscreen)
  */
-export function renderPanelItem(a: AssertionResult): string {
-  const histStats = getHistoryStats(a.description, a._index ?? 0)
-  const histSummary = formatHistorySummary(histStats)
-  const locJson = a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'
+export function renderPanelItem(a: AssertionResult, groupId: number): string {
   const titleAttr = a.context
     ? escapeHtml(formatContext(a.context))
     : a.location
@@ -21,13 +19,12 @@ export function renderPanelItem(a: AssertionResult): string {
 
   return `
     <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
-         onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(${locJson})"
+         onclick="if(window.__scenetest_openFullscreenToGroup)window.__scenetest_openFullscreenToGroup(${groupId})"
          title="${titleAttr}">
       <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="scenetest-content">
         <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
-        ${histSummary ? `<div class="scenetest-history">${histSummary}</div>` : ''}
       </div>
     </div>
   `
@@ -73,14 +70,14 @@ export function renderPanelGroup(g: AssertionGroup): string {
         <div class="scenetest-group-summary">
           <span class="scenetest-group-time">${formatTime(g.timestamp)}</span>
           <div class="scenetest-group-stats">
-            ${stats.passCount > 0 ? `<span class="scenetest-group-stat pass">\u2713${stats.passCount}</span>` : ''}
-            ${stats.failCount > 0 ? `<span class="scenetest-group-stat fail">\u2717${stats.failCount}</span>` : ''}
+            <span class="scenetest-group-stat pass">\u2713${stats.passCount}</span>
+            <span class="scenetest-group-stat ${stats.failCount > 0 ? 'fail' : 'zero'}">\u2717${stats.failCount}</span>
           </div>
         </div>
         <span class="scenetest-group-toggle">\u25BC</span>
       </div>
       <div class="scenetest-group-items">
-        ${g.items.map(a => renderPanelItem(a)).join('')}
+        ${g.items.map(a => renderPanelItem(a, g.id)).join('')}
       </div>
     </div>
   `

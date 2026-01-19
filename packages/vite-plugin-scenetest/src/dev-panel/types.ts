@@ -45,5 +45,6 @@ declare global {
     __scenetest_panel?: boolean
     __scenetest_report?: (result: AssertionResult) => void
     __scenetest_openInEditor?: (loc: AssertionResult['location']) => void
+    __scenetest_openFullscreenToGroup?: (groupId: number) => void
   }
 }

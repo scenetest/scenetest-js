@@ -20,14 +20,15 @@ import {
 import { trackAssertion } from './history'
 import { openInEditor } from './utils'
 import { createPanel, updatePanel } from './panel'
-import { updateFullscreenWindow } from './fullscreen'
+import { updateFullscreenWindow, openFullscreenToGroup } from './fullscreen'
 
 // Don't inject twice
 if (!window.__scenetest_panel) {
   window.__scenetest_panel = true
 
-  // Make openInEditor available globally for onclick handlers
+  // Make functions available globally for onclick handlers
   window.__scenetest_openInEditor = openInEditor
+  window.__scenetest_openFullscreenToGroup = openFullscreenToGroup
 
   /**
    * Add an assertion to a group (batches assertions that arrive within GROUP_THRESHOLD_MS)

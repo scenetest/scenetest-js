@@ -4,26 +4,19 @@
 
 import type { FilterMode } from './types'
 import {
-  assertions,
   groups,
   passCount,
   failCount,
   panel,
   listEl,
   filter,
-  groupingEnabled,
-  collapsedMode,
   setPanel,
   setListEl,
   setFilter,
-  toggleGrouping,
-  toggleCollapsedMode,
-  collapseAllGroups,
-  expandAllGroups,
   clearAll,
 } from './state'
 import { filterItems } from './utils'
-import { renderPanelGroup, renderPanelItemWithTime } from './render'
+import { renderPanelGroup } from './render'
 import { panelStyles } from './styles'
 import { openFullscreen, updateFullscreenWindow } from './fullscreen'
 
@@ -44,11 +37,6 @@ function getPanelHTML(): string {
       <div class="scenetest-btn-group">
         <button class="scenetest-btn active" id="scenetest-filter-all">all</button>
         <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
-      </div>
-      <span class="scenetest-separator"></span>
-      <div class="scenetest-btn-group">
-        <button class="scenetest-btn active" id="scenetest-group-toggle">grouped</button>
-        <button class="scenetest-btn" id="scenetest-collapsed-toggle">collapsed</button>
       </div>
       <span class="scenetest-separator"></span>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
@@ -115,33 +103,6 @@ export function createPanel(): void {
     handleSetFilter('fails')
   })
 
-  // Grouping toggle
-  panelEl.querySelector('#scenetest-group-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const isGrouped = toggleGrouping()
-    const target = e.target as HTMLElement
-    target.classList.toggle('active', isGrouped)
-    target.textContent = isGrouped ? 'grouped' : 'ungrouped'
-    updatePanel()
-    updateFullscreenWindow()
-  })
-
-  // Collapsed mode toggle
-  panelEl.querySelector('#scenetest-collapsed-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const isCollapsed = toggleCollapsedMode()
-    const target = e.target as HTMLElement
-    target.classList.toggle('active', isCollapsed)
-    // When turning on collapsed mode, collapse all existing groups
-    if (isCollapsed) {
-      collapseAllGroups()
-    } else {
-      expandAllGroups()
-    }
-    updatePanel()
-    updateFullscreenWindow()
-  })
-
   // Clear button
   panelEl.querySelector('#scenetest-clear')?.addEventListener('click', (e) => {
     e.stopPropagation()
@@ -182,20 +143,9 @@ export function updatePanel(): void {
     return
   }
 
-  if (groupingEnabled) {
-    listEl.innerHTML = filteredGroups
-      .map(g => renderPanelGroup(g))
-      .reverse()
-      .join('')
-  } else {
-    // Flat list (ungrouped)
-    const allFiltered = filterItems(assertions)
-    listEl.innerHTML =
-      '<div class="scenetest-ungrouped">' +
-      allFiltered
-        .map(a => renderPanelItemWithTime(a))
-        .reverse()
-        .join('') +
-      '</div>'
-  }
+  // Always show grouped view
+  listEl.innerHTML = filteredGroups
+    .map(g => renderPanelGroup(g))
+    .reverse()
+    .join('')
 }

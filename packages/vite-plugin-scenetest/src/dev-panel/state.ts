@@ -27,7 +27,7 @@ export let listEl: HTMLElement | null = null
 export let fullscreenWindow: Window | null = null
 export let filter: FilterMode = 'all'
 export let groupingEnabled = true
-export let collapsedMode = false // When true, new groups start collapsed
+export let collapsedMode = true // Always start collapsed
 
 export function setPanel(el: HTMLDivElement): void {
   panel = el
