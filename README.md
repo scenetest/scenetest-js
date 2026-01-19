@@ -9,7 +9,7 @@ _Evaluate your product, not your tests. Write friendly little Scenes for your Ac
 ### Installation
 
 ```bash
-npm install scenetest vite-plugin-scenetest playwright-scenetest
+pnpm install scenetest vite-plugin-scenetest playwright-scenetest
 ```
 
 ### 1. Add the Vite Plugin
@@ -51,35 +51,31 @@ export function ProfileForm({ user }) {
 }
 ```
 
-### 3. Multi-Context Assertions with `useAssertEffect`
+### 3. Multi-Context Assertions with `useAssert`
 
 For assertions that need to compare browser data with server data:
 
 ```tsx
 // src/components/ProfileForm.tsx
-import { useAssertEffect, pass } from 'scenetest'
+import { useAssert, pass, fail } from 'scenetest'
 
 export function ProfileForm({ userId }) {
-	const { profile, isLoading } = useProfile(userOd)
-  // Runs when user.email changes, compares browser and server data
-	useServerAssert(
-		async (server, fromApp) => {
-			if (isLoading) return undefined // no test
-			const dbProfile = await server.db.get(userId)
-			pass('DB matches local', dbProfile.name === fromApp.localProfile.name)
-			fail(
-				'Context mismatching user id, possible flash of skewed session',
-				userId !== dbProfile.user_id
-				|| userId !== localCollection.userId
-				|| userId !== state.userId
-			)
-		},
-		{
-			localProfile: profilesCollection.get(id), // local collection
-			state: profile, // component state
-		},
-		[isLoading, profile?.id] // re-run deps
-	)
+  const { profile, isLoading } = useProfile(userId)
+
+  // Runs when deps change, compares browser and server data
+  useAssert({
+    title: 'Profile matches database',
+    appData: () => ({
+      localProfile: profilesCollection.get(userId),
+      state: profile,
+    }),
+    assertFn: async (server, fromApp) => {
+      const dbProfile = await server.db.get(userId)
+      pass('DB matches local', dbProfile.name === fromApp.localProfile.name)
+      fail('Context mismatching user id', userId !== dbProfile.user_id)
+    },
+    enabled: !isLoading,
+  }, [isLoading, profile?.id])
 
   return <form>{/* ... */}</form>
 }
@@ -140,7 +136,7 @@ test('User updates their profile', async ({ scenePage }) => {
 })
 ```
 
-### 6. Configure Playwright
+**Playwright Config:**
 
 ```typescript
 // playwright.config.ts
@@ -159,7 +155,7 @@ export default defineConfig({
 })
 ```
 
-### 7. Run Your Scenes
+**Run Your Scenes:**
 
 ```bash
 # Start dev server and run tests
@@ -173,7 +169,7 @@ npx playwright test
 
 ### Dev Panel
 
-When running your app in development mode (`npm run dev`), Scenetest injects a floating panel that shows inline assertions in real-time as you interact with your app.
+When running your app in development mode (`pnpm run dev`), Scenetest injects a floating panel that shows inline assertions in real-time as you interact with your app.
 
 ![Dev Panel Screenshot](docs/images/dev-panel.png)
 
@@ -203,58 +199,27 @@ Records a passing assertion when `condition` is truthy. Optional `context` objec
 #### `fail(description, condition, context?)`
 Records a failing assertion when `condition` is truthy. Use this to assert something should NOT happen.
 
-#### `usePassEffect(factory, deps)`
-React hook for simple browser-side pass assertions. Returns `[description, condition]` or `null`/`undefined` to skip.
+#### `useAssert(config, deps)`
+React hook for multi-context assertions. Same config shape as `assert()`. Use `enabled: false` to skip.
 
 ```tsx
-usePassEffect(() => {
-  if (isLoading) return undefined
-  return ['user is loaded', user !== null]
-}, [user, isLoading])
+useAssert({
+  title: 'Profile matches database',
+  appData: () => ({ userId: profile.id }),
+  assertFn: async (server, fromApp) => {
+    const dbProfile = await server.db.get(fromApp.userId)
+    pass('DB matches local', dbProfile.name === fromApp.local.name)
+  },
+  enabled: !isLoading,
+}, [isLoading, profile?.id])
 ```
 
-#### `useFailEffect(factory, deps)`
-React hook for simple browser-side fail assertions. Returns `[description, condition]` or `null`/`undefined` to skip.
-
-```tsx
-useFailEffect(() => {
-  if (isLoading) return undefined
-  return ['user should not be in error state', user?.error]
-}, [user, isLoading])
-```
-
-#### `useServerAssert(assertFn, appData, deps)`
-Clean API for multi-context assertions. Pass `undefined` for appData to skip.
-
-```tsx
-useServerAssert(async (server, fromApp) => {
-  const dbProfile = await server.db.get(fromApp.userId)
-  pass('DB matches local', dbProfile.name === fromApp.local.name)
-}, isLoading ? undefined : { local: collection.get(id), state: profile }, [isLoading, profile?.id])
-```
-
-#### `useAssertEffect(factory, deps)`
-Factory-based multi-context assertions. The factory returns a config or `null`/`undefined` to skip.
-
-```tsx
-useAssertEffect(() => {
-  if (isLoading) return undefined
-  return {
-    title: 'User matches database',
-    appData: () => ({ userId: user.id }),
-    assertFn: (server, fromApp) => {
-      pass('user exists in db', server.db.hasUser(fromApp.userId))
-    },
-  }
-}, [user?.id])
-```
-
-#### `assertion(config)`
+#### `assert(config)`
 Imperative multi-context assertion for use in callbacks (e.g., `onSuccess`, `onSettled`).
 
 ```tsx
 onSuccess: (data) => {
-  assertion({
+  assert({
     title: 'Data saved correctly',
     appData: () => ({ id: data.id }),
     assertFn: (server, fromApp) => {
@@ -495,7 +460,7 @@ Now that we've seen how Scenes work, here's our profile form, with Inline Assert
 
 ```javascript
 // ~components/profile-form.ts
-import { assertion, pass, fail } from 'scenetest'
+import { assert, pass, fail } from 'scenetest'
 import { useForm } from '@your-fave/form'
 import { useStore } from 'zustand'
 import { toast } from 'your-fave-toast'
@@ -513,8 +478,8 @@ export function UpdateProfileForm() {
 			store.updateProfile(newProfile)
 			toast.show('Updated successfully!')
 
-			// Multi-context assertion in a callback - use assertion() directly
-			assertion({
+			// Multi-context assertion in a callback - use assert() directly
+			assert({
 				title: 'Updating profile',
 				appData: () => ({
 					userId: profile.id,

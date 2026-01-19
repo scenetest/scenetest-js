@@ -36,6 +36,8 @@ export interface AssertionConfig<TAppData = unknown> {
    * Has access to server context functions and data collected from the browser.
    */
   assertFn: (server: ServerContext, fromApp: TAppData) => void | Promise<void>
+  /** Whether the assertion is enabled (default: true). Set to false to skip. */
+  enabled?: boolean
 }
 
 /**

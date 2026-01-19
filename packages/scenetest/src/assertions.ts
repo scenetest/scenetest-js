@@ -107,7 +107,7 @@ export function fail(description: string, condition: boolean, context?: Record<s
  *
  * @example
  * ```tsx
- * assertion({
+ * assert({
  *   title: 'User profile matches database',
  *   appData: () => ({ userId: profile.id, name: profile.name }),
  *   assertFn: (server, fromApp) => {
@@ -117,7 +117,7 @@ export function fail(description: string, condition: boolean, context?: Record<s
  * })
  * ```
  */
-export function assertion<TAppData>(_config: AssertionConfig<TAppData>): void {
+export function assert<TAppData>(_config: AssertionConfig<TAppData>): void {
   // This function is transformed by vite-plugin-scenetest
   // If this runs, it means the plugin is not configured or we're in production
   // In production, this will be stripped out

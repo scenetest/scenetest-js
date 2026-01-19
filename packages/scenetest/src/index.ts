@@ -1,5 +1,5 @@
-export { pass, fail, assertion } from './assertions.js'
-export { usePassEffect, useFailEffect, useAssertEffect, useServerAssert, __useAssertEffect, __useServerAssert } from './hooks.js'
+export { pass, fail, assert } from './assertions.js'
+export { useAssert, __useAssert } from './hooks.js'
 export type {
   AssertionResult,
   ScenetestReporter,

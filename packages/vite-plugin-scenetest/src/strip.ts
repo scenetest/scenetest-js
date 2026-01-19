@@ -114,9 +114,9 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
       let isScenetestCall = false
 
       // Functions to strip
-      const strippableFunctions = ['pass', 'fail', 'assertion', 'useAssertEffect', 'usePassEffect', 'useFailEffect', 'useServerAssert']
+      const strippableFunctions = ['pass', 'fail', 'assert', 'useAssert']
 
-      // Direct call: pass(...), fail(...), assertion(...), useAssertEffect(...)
+      // Direct call: pass(...), fail(...), assertion(...), useAssert(...)
       if (t.isIdentifier(callee)) {
         if (scenetestImports.has(callee.name)) {
           const imported = scenetestImports.get(callee.name)

@@ -7,7 +7,7 @@ import MagicString from 'magic-string'
 const traverse = (typeof _traverse === 'function' ? _traverse : (_traverse as any).default) as typeof _traverse
 
 /**
- * Extracted assertion from an assertion() call
+ * Extracted assertion from an assert() or useAssert() call
  */
 export interface ExtractedAssertion {
   /** Unique identifier (filename:line:col:key?) */
@@ -43,17 +43,71 @@ export interface TransformOptions {
 }
 
 /**
- * Transform assertion() and useAssertEffect() calls in source code.
+ * Helper to extract assertFn body code from a function node
+ */
+function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: string, line: number): string | null {
+  if (t.isArrowFunctionExpression(assertFnNode) || t.isFunctionExpression(assertFnNode)) {
+    const body = assertFnNode.body
+    if (t.isBlockStatement(body)) {
+      const bodyCode = code.slice(body.start!, body.end!)
+      return bodyCode.slice(1, -1).trim() // Remove { and }
+    } else {
+      return `return ${code.slice(body.start!, body.end!)}`
+    }
+  } else {
+    console.warn(`[vite-plugin-scenetest] assertFn is not a function at ${filename}:${line}`)
+    return null
+  }
+}
+
+/**
+ * Helper to extract properties from a config object
+ */
+function extractConfigProps(configObj: t.ObjectExpression): {
+  titleNode: t.Node | null
+  keyNode: t.Node | null
+  appDataNode: t.Node | null
+  assertFnNode: t.Node | null
+  assertFnProp: t.ObjectProperty | null
+} {
+  let titleNode: t.Node | null = null
+  let keyNode: t.Node | null = null
+  let appDataNode: t.Node | null = null
+  let assertFnNode: t.Node | null = null
+  let assertFnProp: t.ObjectProperty | null = null
+
+  for (const prop of configObj.properties) {
+    if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
+      continue
+    }
+
+    const keyName = prop.key.name
+    if (keyName === 'title') {
+      titleNode = prop.value
+    } else if (keyName === 'key') {
+      keyNode = prop.value
+    } else if (keyName === 'appData') {
+      appDataNode = prop.value
+    } else if (keyName === 'assertFn') {
+      assertFnNode = prop.value
+      assertFnProp = prop
+    }
+  }
+
+  return { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp }
+}
+
+/**
+ * Transform assert() and useAssert() calls in source code.
  *
- * For assertion() calls:
+ * For assert() calls:
  * 1. Extract the assertFn to be run on the server
  * 2. Replace the call with __scenetest_rpc({ id, title, key?, appData })
  *
- * For useAssertEffect() calls:
- * 1. Find return statements in the factory that return config with assertFn
- * 2. Extract the assertFn to be run on the server
- * 3. Replace assertFn with __assertionId in the returned object
- * 4. Replace useAssertEffect with __useAssertEffect
+ * For useAssert() calls:
+ * 1. Extract the assertFn from the config object
+ * 2. Replace assertFn property with __assertionId
+ * 3. Replace useAssert with __useAssert
  *
  * @param code Source code to transform
  * @param options Transform options
@@ -62,15 +116,14 @@ export interface TransformOptions {
 export function transformAssertions(code: string, options: TransformOptions = {}): TransformResult | null {
   const { sourceMap = true, filename = 'unknown.js' } = options
 
-  // Quick check - if no assertion call, skip
-  if (!code.includes('assertion') && !code.includes('useAssertEffect') && !code.includes('useServerAssert')) {
+  // Quick check - if no assert call, skip
+  if (!code.includes('assert')) {
     return null
   }
 
   // Track imported names from scenetest
-  let assertionLocalName: string | null = null
-  let useAssertEffectLocalName: string | null = null
-  let useServerAssertLocalName: string | null = null
+  let assertLocalName: string | null = null
+  let useAssertLocalName: string | null = null
 
   // Parse with Babel
   const parserOptions: ParserOptions = {
@@ -99,7 +152,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   const s = new MagicString(code)
   const extractedAssertions: ExtractedAssertion[] = []
   let needsRpcImport = false
-  let needsUseAssertEffectImport = false
+  let needsUseAssertImport = false
 
   // First pass: find imports from scenetest
   traverse(ast, {
@@ -114,200 +167,138 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           const imported = t.isIdentifier(specifier.imported)
             ? specifier.imported.name
             : specifier.imported.value
-          if (imported === 'assertion') {
-            assertionLocalName = specifier.local.name
-          } else if (imported === 'useAssertEffect') {
-            useAssertEffectLocalName = specifier.local.name
-          } else if (imported === 'useServerAssert') {
-            useServerAssertLocalName = specifier.local.name
+          if (imported === 'assert') {
+            assertLocalName = specifier.local.name
+          } else if (imported === 'useAssert') {
+            useAssertLocalName = specifier.local.name
           }
         }
       }
     },
   })
 
-  if (!assertionLocalName && !useAssertEffectLocalName && !useServerAssertLocalName) {
+  if (!assertLocalName && !useAssertLocalName) {
     return null
   }
 
-  // Second pass: transform assertion() calls
-  traverse(ast, {
-    CallExpression(path: NodePath<t.CallExpression>) {
-      const callee = path.node.callee
-
-      // Check if this is an assertion() call
-      if (!t.isIdentifier(callee) || callee.name !== assertionLocalName) {
-        return
-      }
-
-      // Get the config object argument
-      const args = path.node.arguments
-      if (args.length !== 1 || !t.isObjectExpression(args[0])) {
-        console.warn(`[vite-plugin-scenetest] assertion() requires a single config object at ${filename}:${path.node.loc?.start.line}`)
-        return
-      }
-
-      const configObj = args[0]
-      let titleNode: t.Node | null = null
-      let keyNode: t.Node | null = null
-      let appDataNode: t.Node | null = null
-      let assertFnNode: t.Node | null = null
-
-      // Extract properties from the config object
-      for (const prop of configObj.properties) {
-        if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
-          continue
-        }
-
-        const keyName = prop.key.name
-        if (keyName === 'title') {
-          titleNode = prop.value
-        } else if (keyName === 'key') {
-          keyNode = prop.value
-        } else if (keyName === 'appData') {
-          appDataNode = prop.value
-        } else if (keyName === 'assertFn') {
-          assertFnNode = prop.value
-        }
-      }
-
-      if (!titleNode || !appDataNode || !assertFnNode) {
-        console.warn(`[vite-plugin-scenetest] assertion() missing required properties at ${filename}:${path.node.loc?.start.line}`)
-        return
-      }
-
-      // Get the source location
-      const loc = path.node.loc
-      const line = loc?.start.line ?? 0
-      const column = loc?.start.column ?? 0
-
-      // Extract key value if present
-      let keyValue: string | undefined
-      if (keyNode && t.isStringLiteral(keyNode)) {
-        keyValue = keyNode.value
-      }
-
-      // Generate assertion ID
-      const id = keyValue
-        ? `${filename}:${line}:${column}:${keyValue}`
-        : `${filename}:${line}:${column}`
-
-      // Extract title value
-      let titleValue = 'assertion'
-      if (t.isStringLiteral(titleNode)) {
-        titleValue = titleNode.value
-      }
-
-      // Extract assertFn body code
-      // The assertFn should be an arrow function or function expression
-      let assertFnBodyCode: string
-      if (t.isArrowFunctionExpression(assertFnNode) || t.isFunctionExpression(assertFnNode)) {
-        const body = assertFnNode.body
-        if (t.isBlockStatement(body)) {
-          // Block body: { ... } - extract just the statements inside
-          // Remove the outer braces
-          const bodyCode = code.slice(body.start!, body.end!)
-          assertFnBodyCode = bodyCode.slice(1, -1).trim() // Remove { and }
-        } else {
-          // Expression body: () => expr - wrap in return
-          assertFnBodyCode = `return ${code.slice(body.start!, body.end!)}`
-        }
-      } else {
-        // Fallback: use the whole code (might not work perfectly)
-        console.warn(`[vite-plugin-scenetest] assertFn is not a function at ${filename}:${line}`)
-        assertFnBodyCode = code.slice(assertFnNode.start!, assertFnNode.end!)
-      }
-
-      // Store extracted assertion
-      extractedAssertions.push({
-        id,
-        title: titleValue,
-        key: keyValue,
-        assertFnBodyCode,
-        location: { file: filename, line, column },
-      })
-
-      // Build the replacement RPC call
-      // __scenetest_rpc({ id: "...", title: "...", key?: "...", appData: () => ... })
-      const appDataCode = code.slice(appDataNode.start!, appDataNode.end!)
-
-      let rpcCall = `__scenetest_rpc({ id: ${JSON.stringify(id)}, title: ${JSON.stringify(titleValue)}`
-      if (keyValue) {
-        rpcCall += `, key: ${JSON.stringify(keyValue)}`
-      }
-      rpcCall += `, appData: ${appDataCode} })`
-
-      // Replace the assertion() call with the RPC call
-      s.overwrite(path.node.start!, path.node.end!, rpcCall)
-      needsRpcImport = true
-    },
-  })
-
-  // Third pass: transform useAssertEffect() calls
-  if (useAssertEffectLocalName) {
+  // Second pass: transform assert() calls
+  if (assertLocalName) {
     traverse(ast, {
       CallExpression(path: NodePath<t.CallExpression>) {
         const callee = path.node.callee
 
-        // Check if this is a useAssertEffect() call
-        if (!t.isIdentifier(callee) || callee.name !== useAssertEffectLocalName) {
+        // Check if this is an assert() call
+        if (!t.isIdentifier(callee) || callee.name !== assertLocalName) {
           return
         }
 
-        // Get arguments: (factory, deps)
+        // Get the config object argument
         const args = path.node.arguments
-        if (args.length < 1) {
-          console.warn(`[vite-plugin-scenetest] useAssertEffect() requires a factory function at ${filename}:${path.node.loc?.start.line}`)
+        if (args.length !== 1 || !t.isObjectExpression(args[0])) {
+          console.warn(`[vite-plugin-scenetest] assert() requires a single config object at ${filename}:${path.node.loc?.start.line}`)
           return
         }
 
-        const factoryArg = args[0]
-        if (!t.isArrowFunctionExpression(factoryArg) && !t.isFunctionExpression(factoryArg)) {
-          console.warn(`[vite-plugin-scenetest] useAssertEffect() factory must be a function at ${filename}:${path.node.loc?.start.line}`)
+        const configObj = args[0]
+        const { titleNode, keyNode, appDataNode, assertFnNode } = extractConfigProps(configObj)
+
+        if (!titleNode || !appDataNode || !assertFnNode) {
+          console.warn(`[vite-plugin-scenetest] assert() missing required properties at ${filename}:${path.node.loc?.start.line}`)
           return
         }
 
-        // Find return statements in the factory that return object literals with assertFn
-        const factoryBody = factoryArg.body
+        // Get the source location
+        const loc = path.node.loc
+        const line = loc?.start.line ?? 0
+        const column = loc?.start.column ?? 0
 
-        // Helper to process a return value (object literal)
-        const processReturnValue = (returnValue: t.Node, returnStart: number, returnEnd: number) => {
-          if (!t.isObjectExpression(returnValue)) {
-            return // Could be null or other value
+        // Extract key value if present
+        let keyValue: string | undefined
+        if (keyNode && t.isStringLiteral(keyNode)) {
+          keyValue = keyNode.value
+        }
+
+        // Generate assertion ID
+        const id = keyValue
+          ? `${filename}:${line}:${column}:${keyValue}`
+          : `${filename}:${line}:${column}`
+
+        // Extract title value
+        let titleValue = 'assertion'
+        if (t.isStringLiteral(titleNode)) {
+          titleValue = titleNode.value
+        }
+
+        // Extract assertFn body code
+        const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+        if (!assertFnBodyCode) {
+          return
+        }
+
+        // Store extracted assertion
+        extractedAssertions.push({
+          id,
+          title: titleValue,
+          key: keyValue,
+          assertFnBodyCode,
+          location: { file: filename, line, column },
+        })
+
+        // Build the replacement RPC call
+        const appDataCode = code.slice(appDataNode.start!, appDataNode.end!)
+
+        let rpcCall = `__scenetest_rpc({ id: ${JSON.stringify(id)}, title: ${JSON.stringify(titleValue)}`
+        if (keyValue) {
+          rpcCall += `, key: ${JSON.stringify(keyValue)}`
+        }
+        rpcCall += `, appData: ${appDataCode} })`
+
+        // Replace the assert() call with the RPC call
+        s.overwrite(path.node.start!, path.node.end!, rpcCall)
+        needsRpcImport = true
+      },
+    })
+  }
+
+  // Third pass: transform useAssert() calls
+  // useAssert(config | undefined, deps) where config has { title, appData, assertFn }
+  if (useAssertLocalName) {
+    traverse(ast, {
+      CallExpression(path: NodePath<t.CallExpression>) {
+        const callee = path.node.callee
+
+        // Check if this is a useAssert() call
+        if (!t.isIdentifier(callee) || callee.name !== useAssertLocalName) {
+          return
+        }
+
+        const args = path.node.arguments
+        if (args.length < 2) {
+          console.warn(`[vite-plugin-scenetest] useAssert() requires (config, deps) at ${filename}:${path.node.loc?.start.line}`)
+          return
+        }
+
+        const configArg = args[0]
+        const depsArg = args[1]
+        const depsCode = code.slice(depsArg.start!, depsArg.end!)
+
+        // Get location for ID generation
+        const loc = path.node.loc
+        const line = loc?.start.line ?? 0
+        const column = loc?.start.column ?? 0
+
+        // Helper to process a config object and register the assertion
+        const processConfigObject = (configObj: t.ObjectExpression): {
+          id: string
+          titleValue: string
+          keyValue?: string
+        } | null => {
+          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configObj)
+
+          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+            console.warn(`[vite-plugin-scenetest] useAssert() config missing required properties at ${filename}:${line}`)
+            return null
           }
-
-          // Find assertFn property
-          let assertFnProp: t.ObjectProperty | null = null
-          let assertFnNode: t.Node | null = null
-          let titleNode: t.Node | null = null
-          let keyNode: t.Node | null = null
-          let appDataNode: t.Node | null = null
-
-          for (const prop of returnValue.properties) {
-            if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
-              continue
-            }
-            const keyName = prop.key.name
-            if (keyName === 'assertFn') {
-              assertFnProp = prop
-              assertFnNode = prop.value
-            } else if (keyName === 'title') {
-              titleNode = prop.value
-            } else if (keyName === 'key') {
-              keyNode = prop.value
-            } else if (keyName === 'appData') {
-              appDataNode = prop.value
-            }
-          }
-
-          if (!assertFnNode || !assertFnProp) {
-            return // No assertFn in this return
-          }
-
-          // Get location for ID generation
-          const loc = returnValue.loc
-          const line = loc?.start.line ?? 0
-          const column = loc?.start.column ?? 0
 
           // Extract key value if present
           let keyValue: string | undefined
@@ -322,23 +313,14 @@ export function transformAssertions(code: string, options: TransformOptions = {}
 
           // Extract title value
           let titleValue = 'assertion'
-          if (titleNode && t.isStringLiteral(titleNode)) {
+          if (t.isStringLiteral(titleNode)) {
             titleValue = titleNode.value
           }
 
           // Extract assertFn body code
-          let assertFnBodyCode: string
-          if (t.isArrowFunctionExpression(assertFnNode) || t.isFunctionExpression(assertFnNode)) {
-            const body = assertFnNode.body
-            if (t.isBlockStatement(body)) {
-              const bodyCode = code.slice(body.start!, body.end!)
-              assertFnBodyCode = bodyCode.slice(1, -1).trim()
-            } else {
-              assertFnBodyCode = `return ${code.slice(body.start!, body.end!)}`
-            }
-          } else {
-            console.warn(`[vite-plugin-scenetest] assertFn is not a function at ${filename}:${line}`)
-            assertFnBodyCode = code.slice(assertFnNode.start!, assertFnNode.end!)
+          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+          if (!assertFnBodyCode) {
+            return null
           }
 
           // Store extracted assertion
@@ -350,109 +332,66 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             location: { file: filename, line, column },
           })
 
-          // Replace assertFn property with __assertionId
-          // We need to replace "assertFn: ..." with "__assertionId: ..."
-          const assertFnPropStart = assertFnProp.start!
-          const assertFnPropEnd = assertFnProp.end!
-          s.overwrite(assertFnPropStart, assertFnPropEnd, `__assertionId: ${JSON.stringify(id)}`)
+          // Replace assertFn property with __assertionId in the source
+          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
 
-          needsUseAssertEffectImport = true
+          return { id, titleValue, keyValue }
         }
 
-        if (t.isBlockStatement(factoryBody)) {
-          // Block body: find all return statements
-          traverse(factoryBody, {
-            ReturnStatement(returnPath: NodePath<t.ReturnStatement>) {
-              if (returnPath.node.argument) {
-                processReturnValue(
-                  returnPath.node.argument,
-                  returnPath.node.start!,
-                  returnPath.node.end!
-                )
-              }
-            },
-          }, path.scope, path.state, path)
+        // Handle different forms of the config argument:
+        // 1. Direct object: useAssert({ title, appData, assertFn }, deps)
+        // 2. Conditional: useAssert(condition ? undefined : { ... }, deps)
+        // 3. Conditional: useAssert(condition ? { ... } : undefined, deps)
+
+        if (t.isObjectExpression(configArg)) {
+          // Direct object
+          const result = processConfigObject(configArg)
+          if (!result) return
+
+          // Replace useAssert with __useAssert
+          s.overwrite(callee.start!, callee.end!, '__useAssert')
+          needsUseAssertImport = true
+
+        } else if (t.isConditionalExpression(configArg)) {
+          // Conditional expression - find the object in consequent or alternate
+          const { consequent, alternate } = configArg
+
+          let configObj: t.ObjectExpression | null = null
+          if (t.isObjectExpression(consequent)) {
+            configObj = consequent
+          } else if (t.isObjectExpression(alternate)) {
+            configObj = alternate
+          }
+
+          if (!configObj) {
+            // Both branches are non-objects (e.g., both could be identifiers)
+            // We can't statically analyze this, skip
+            console.warn(`[vite-plugin-scenetest] useAssert() conditional must have an object literal in one branch at ${filename}:${line}`)
+            return
+          }
+
+          const result = processConfigObject(configObj)
+          if (!result) return
+
+          // Replace useAssert with __useAssert
+          s.overwrite(callee.start!, callee.end!, '__useAssert')
+          needsUseAssertImport = true
+
+        } else if (t.isIdentifier(configArg) && configArg.name === 'undefined') {
+          // Just undefined - nothing to transform, but still rename the call
+          s.overwrite(callee.start!, callee.end!, '__useAssert')
+          needsUseAssertImport = true
         } else {
-          // Expression body (implicit return)
-          processReturnValue(factoryBody, factoryBody.start!, factoryBody.end!)
-        }
-
-        // Replace useAssertEffect with __useAssertEffect
-        if (needsUseAssertEffectImport) {
-          s.overwrite(callee.start!, callee.end!, '__useAssertEffect')
+          // Could be a variable reference or other expression
+          // We can't statically extract the assertFn, skip with warning
+          console.warn(`[vite-plugin-scenetest] useAssert() config must be an object literal or conditional at ${filename}:${line}`)
+          return
         }
       },
     })
   }
 
-  // Fourth pass: transform useServerAssert() calls
-  let needsUseServerAssertImport = false
-  if (useServerAssertLocalName) {
-    traverse(ast, {
-      CallExpression(path: NodePath<t.CallExpression>) {
-        const callee = path.node.callee
-
-        // Check if this is a useServerAssert() call
-        if (!t.isIdentifier(callee) || callee.name !== useServerAssertLocalName) {
-          return
-        }
-
-        // Get arguments: (assertFn, appData, deps)
-        const args = path.node.arguments
-        if (args.length < 2) {
-          console.warn(`[vite-plugin-scenetest] useServerAssert() requires (assertFn, appData, deps) at ${filename}:${path.node.loc?.start.line}`)
-          return
-        }
-
-        const assertFnArg = args[0]
-        const appDataArg = args[1]
-        const depsArg = args[2]
-
-        if (!t.isArrowFunctionExpression(assertFnArg) && !t.isFunctionExpression(assertFnArg)) {
-          console.warn(`[vite-plugin-scenetest] useServerAssert() first argument must be a function at ${filename}:${path.node.loc?.start.line}`)
-          return
-        }
-
-        // Get location for ID generation
-        const loc = path.node.loc
-        const line = loc?.start.line ?? 0
-        const column = loc?.start.column ?? 0
-
-        // Generate assertion ID
-        const id = `${filename}:${line}:${column}`
-
-        // Extract assertFn body code
-        let assertFnBodyCode: string
-        const body = assertFnArg.body
-        if (t.isBlockStatement(body)) {
-          const bodyCode = code.slice(body.start!, body.end!)
-          assertFnBodyCode = bodyCode.slice(1, -1).trim()
-        } else {
-          assertFnBodyCode = `return ${code.slice(body.start!, body.end!)}`
-        }
-
-        // Store extracted assertion
-        extractedAssertions.push({
-          id,
-          title: 'server assertion',
-          assertFnBodyCode,
-          location: { file: filename, line, column },
-        })
-
-        // Build the replacement call
-        // __useServerAssert(appData === undefined ? undefined : { __assertionId, appData }, deps)
-        const appDataCode = code.slice(appDataArg.start!, appDataArg.end!)
-        const depsCode = depsArg ? code.slice(depsArg.start!, depsArg.end!) : '[]'
-
-        const replacement = `__useServerAssert(${appDataCode} == null ? undefined : { __assertionId: ${JSON.stringify(id)}, appData: ${appDataCode} }, ${depsCode})`
-
-        s.overwrite(path.node.start!, path.node.end!, replacement)
-        needsUseServerAssertImport = true
-      },
-    })
-  }
-
-  if (!needsRpcImport && !needsUseAssertEffectImport && !needsUseServerAssertImport) {
+  if (!needsRpcImport && !needsUseAssertImport) {
     return null
   }
 
@@ -472,13 +411,8 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     s.appendLeft(importInsertPos, rpcImport)
   }
 
-  if (needsUseAssertEffectImport) {
-    const hookImport = `\nimport { __useAssertEffect } from 'scenetest'\n`
-    s.appendLeft(importInsertPos, hookImport)
-  }
-
-  if (needsUseServerAssertImport) {
-    const hookImport = `\nimport { __useServerAssert } from 'scenetest'\n`
+  if (needsUseAssertImport) {
+    const hookImport = `\nimport { __useAssert } from 'scenetest'\n`
     s.appendLeft(importInsertPos, hookImport)
   }
 
