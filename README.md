@@ -65,11 +65,11 @@ export function ProfileForm({ userId }) {
   // Runs when deps change, compares browser and server data
   useAssert({
     title: 'Profile matches database',
-    appData: () => ({
+    withData: () => ({
       localProfile: profilesCollection.get(userId),
       state: profile,
     }),
-    assertFn: async (server, fromApp) => {
+    serverFn: async (server, fromApp) => {
       const dbProfile = await server.db.get(userId)
       pass('DB matches local', dbProfile.name === fromApp.localProfile.name)
       fail('Context mismatching user id', userId !== dbProfile.user_id)
@@ -92,6 +92,8 @@ export default defineScenetestConfig({
     validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
     getUser: (id) => db.users.findById(id),
   },
+	/* not here yet
+	fnInjection: async (data, req, headers) =>
 })
 ```
 
