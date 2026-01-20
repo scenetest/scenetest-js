@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <style>
     * {
       box-sizing: border-box;
@@ -94,9 +95,10 @@
       background: var(--code-bg);
       border: 1px solid var(--border);
       border-radius: 4px;
-      padding: 20px 24px;
+      // padding: 10px 12px;
       overflow-x: auto;
       margin: 28px 0;
+			box-shadow: 2px 2px 2px 2px rgb(0 0 255 / 0.1);
     }
 
     pre code {
@@ -196,7 +198,7 @@
 		Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
 		about nearly every layer of an application in one place.
 		</p>
-<pre><code>// in your UI component
+<pre><code class="language-typescript">// in your UI component
 cost post = usePost(id)
 const form = usePostForm(post)
 // useAssert is like sugar for useEffect(() => assert(config), deps)
@@ -227,7 +229,7 @@ useAssert(
 			features are implemented.
     </p>
 
-    <pre><code>// in scenetest/profile-update.scene.ts
+    <pre><code class="language-typescript">// in scenetest/profile-update.scene.ts
 scene('User updates their profile', async ([user]) => {
   await user.goto('/profile')
   await user.get('label[name=Name]').cousin('input').fill('New Name')
@@ -246,7 +248,7 @@ scene('User updates their profile', async ([user]) => {
 		  Use <code>pass</code> or <code>fail</code>, or assertions that run on the server <code>assert</code> and <code>useAssert</code>.
     </p>
 
-<pre><code>import { pass, fail, assert } from 'scenetest'
+<pre><code class="language-typescript">import { pass, fail, assert } from 'scenetest'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -289,7 +291,7 @@ export function ProfileForm({ userId }) {
 		we are now able to do this kind of &ldquo;Reverse Server-Action&rdquo; to get the data back
 		out where we can compare it.</p>
 
-		<pre><code>// ❌ "reverse server action" approach
+		<pre><code class="language-typescript">// ❌ "reverse server action" approach
 const localDeck = await page.evaluate((lang) => {
   // 🙅❌💀🤧
   const profileStore = window.__profileStore
@@ -315,7 +317,7 @@ expect({
 			after the mutation we're trying to test.
     </p>
 
-    <pre><code>// ✅ server assertion triggered after a mutation
+    <pre><code class="language-typescript">// ✅ server assertion triggered after a mutation
 onSettled: (data) => {
   assert({
     title: 'New deck should initialise the same',
@@ -411,5 +413,9 @@ onSettled: (data) => {
     </footer>
 
   </article>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+  <script>hljs.highlightAll();</script>
 </body>
 </html>
