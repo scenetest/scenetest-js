@@ -69,9 +69,9 @@ export function ProfileForm({ userId }) {
       localProfile: profilesCollection.get(userId),
       state: profile,
     }),
-    serverFn: async (server, fromApp) => {
+    serverFn: async (server, data) => {
       const dbProfile = await server.db.get(userId)
-      pass('DB matches local', dbProfile.name === fromApp.localProfile.name)
+      pass('DB matches local', dbProfile.name === data.localProfile.name)
       fail('Context mismatching user id', userId !== dbProfile.user_id)
     },
     enabled: !isLoading,
@@ -207,10 +207,10 @@ React hook for multi-context assertions. Same config shape as `assert()`. Use `e
 ```tsx
 useAssert({
   title: 'Profile matches database',
-  appData: () => ({ userId: profile.id }),
-  assertFn: async (server, fromApp) => {
-    const dbProfile = await server.db.get(fromApp.userId)
-    pass('DB matches local', dbProfile.name === fromApp.local.name)
+  withData: () => ({ userId: profile.id }),
+  serverFn: async (server, data) => {
+    const dbProfile = await server.db.get(data.userId)
+    pass('DB matches local', dbProfile.name === data.local.name)
   },
   enabled: !isLoading,
 }, [isLoading, profile?.id])
@@ -223,13 +223,23 @@ Imperative multi-context assertion for use in callbacks (e.g., `onSuccess`, `onS
 onSuccess: (data) => {
   assert({
     title: 'Data saved correctly',
-    appData: () => ({ id: data.id }),
-    assertFn: (server, fromApp) => {
-      const dbRecord = server.db.get(fromApp.id)
+    withData: () => ({ id: data.id }),
+    serverFn: (server, data) => {
+      const dbRecord = server.db.get(data.id)
       pass('record exists', dbRecord !== null)
     },
   })
 }
+```
+
+#### `match(...pairs)`
+Compare pairs of values for equality. Returns `true` if all pairs match.
+
+```tsx
+pass('primary fields match', match(
+  [localDeck.cards, dbDeck.cards],
+  [localDeck.updated_at, dbDeck.updated_at]
+))
 ```
 
 #### `scenePage` fixture
@@ -483,15 +493,15 @@ export function UpdateProfileForm() {
 			// Multi-context assertion in a callback - use assert() directly
 			assert({
 				title: 'Updating profile',
-				appData: () => ({
+				withData: () => ({
 					userId: profile.id,
 					formSuccessData: newProfile,
 					localDbData: store.getProfile(),
 					formInputs: inputs,
 				}),
-				// the assertFn runs on the server with access to server.* functions
-				assertFn: async (server, fromApp) => {
-					const dbProfile = await server.getProfile(fromApp.userId)
+				// the serverFn runs on the server with access to server.* functions
+				serverFn: async (server, data) => {
+					const dbProfile = await server.getProfile(data.userId)
 					pass('has DB updated_at value in the last 10 seconds', /* ... */)
 					pass('has DB values same as form inputs', /* ... */)
 
@@ -500,7 +510,7 @@ export function UpdateProfileForm() {
 						'username', 'uid', 'language', 'avatar_url', 'bio', 'updated_at',
 					]
 					for (const key of fieldsToCompare) {
-						if (dbProfile[key] !== fromApp.localDbData[key]) {
+						if (dbProfile[key] !== data.localDbData[key]) {
 							fail(`Values for "${key}" do not match`)
 						}
 					}
@@ -513,13 +523,13 @@ export function UpdateProfileForm() {
 }
 ```
 
-You can think of this `assertFn` as analogous to a _Server Action_ in React parlance (but with no returned data); we're defining it in our component, with access to the react-world's data objects and types via the `appData`, but the assertion function itself will be stripped by the bundler and shipped to run on our test server with elevated permissions for the database and other privileged resources, and will report its results only to the test suite. (You might think of it as a "Server Effect" but that's another conversation!)
+You can think of this `serverFn` as analogous to a _Server Action_ in React parlance (but with no returned data); we're defining it in our component, with access to the react-world's data objects and types via `withData`, but the assertion function itself will be stripped by the bundler and shipped to run on our test server with elevated permissions for the database and other privileged resources, and will report its results only to the test suite. (You might think of it as a "Server Effect" but that's another conversation!)
 
-This is where we are getting back to the initial concept of `page.evaluate` from Playwright land, except instead of having both the server logic and the browser logic written in the _test_, cloistered away from all the code they're evaluating (and probably treated like a haunted attic by most of your dev team), they live in the component. They produce the `appData` at exactly the spot in the React lifecycle where the form's `onSettled` function is called -- exactly when our mental model of the code tells us it should be ready.
+This is where we are getting back to the initial concept of `page.evaluate` from Playwright land, except instead of having both the server logic and the browser logic written in the _test_, cloistered away from all the code they're evaluating (and probably treated like a haunted attic by most of your dev team), they live in the component. They produce the data (via `withData`) at exactly the spot in the React lifecycle where the form's `onSettled` function is called -- exactly when our mental model of the code tells us it should be ready.
 
 A couple of key things to note here:
 
-1. This assertion will also run when a tester is improvising their own test scenes or clicking randomly throughout the app trying to break things. Updated the profile? The test running will evaluate the appData fn, ship it to the test server, and run the assertFn to make sure everything went as planned.
+1. This assertion will also run when a tester is improvising their own test scenes or clicking randomly throughout the app trying to break things. Updated the profile? The test runner will evaluate `withData`, ship it to the test server, and run the `serverFn` to make sure everything went as planned.
 2. Now that we are fully separating Scenes from Inline Assertions, anything that doesn't break the flow of the Scene doesn't have to end the test. If the flow succeeds but the assertions fail, this tells us "Your product is probably working but your mental model is off". I think this is where people will really love the developer-experience benefits of behind Scenetest; it should actually make your job easier.
 3. As promised: our Inline Assertions don't have to wire up special infrastructure to access props or state of the React component, and we can access the form's inputs directly, rather than hard-coding them into our spec file as `PROFILE_1_UPDATE_PROFILE_OLD_USERNAME` and `PROFILE_1_UPDATE_PROFILE_NEW_USERNAME`.
 

@@ -16,15 +16,15 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 - **Status**: DESIGN READY - AWAITING REVIEW
 - **Complexity**: 4
 - **Tags**: BIG ITEM
-- **Description**: The `assertion({ assertFn, appData })` API is more complex:
-  - `appData` runs in browser, collects data
-  - `assertFn` runs on server (Vite middleware) with database access
-  - Vite plugin extracts assertFn at build time, generates RPC client
+- **Description**: The `assertion({ serverFn, withData })` API is more complex:
+  - `withData` runs in browser, collects data
+  - `serverFn` runs on server (Vite middleware) with database access
+  - Vite plugin extracts serverFn at build time, generates RPC client
   - Server functions configured in `scenetest.config.ts`
 - **Design Doc**: See `docs/design/server-actions.md`
-- **Notes**: Design doc written. Key architecture: Vite plugin middleware serves as test server, no external process needed. assertFn extracted and served as virtual module. Browser calls `/__scenetest/run` endpoint with serialized appData. Results flow back through existing `__scenetest_report` mechanism.
+- **Notes**: Design doc written. Key architecture: Vite plugin middleware serves as test server, no external process needed. serverFn extracted and served as virtual module. Browser calls `/__scenetest/run` endpoint with serialized data. Results flow back through existing `__scenetest_report` mechanism.
 - **Decisions made**:
-  1. No imports in assertFn - everything via `server` or `fromApp`
+  1. No imports in serverFn - everything via `server` or `data`
   2. Optional `key` field for uniqueness in loops (combined with file location)
 
 ---

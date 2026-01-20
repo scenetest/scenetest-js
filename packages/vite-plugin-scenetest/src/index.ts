@@ -30,7 +30,7 @@ export interface ScenetestPluginOptions {
 /**
  * Vite plugin for Scenetest
  *
- * In development/test mode: transforms assertion() calls and serves assertFn via middleware
+ * In development/test mode: transforms assertion() calls and serves serverFn via middleware
  * In production mode: strips all scenetest imports and function calls via AST transform
  */
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {

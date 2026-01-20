@@ -1,5 +1,5 @@
 // Type augmentation for scenetest ServerContext
-// This declares the server functions available in assertFn
+// This declares the server functions available in serverFn
 
 import 'scenetest'
 

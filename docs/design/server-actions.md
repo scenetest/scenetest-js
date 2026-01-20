@@ -19,30 +19,30 @@ const mutation = useUpdateProfile({
   onSuccess: (data) => {
     assertion({
       title: 'Profile update persisted',
-      appData: () => ({
+      withData: () => ({
         odlerId,
         formInput: data.input,
         mutationResult: data.result,
         cacheValue: queryClient.getQueryData(['profile', userId]),
       }),
-      assertFn: async (server, fromApp) => {
-        const dbRecord = await server.getProfile(fromApp.userId)
+      serverFn: async (server, data) => {
+        const dbRecord = await server.getProfile(data.userId)
 
         pass('DB updated recently',
           Date.now() - new Date(dbRecord.updated_at).getTime() < 5000)
 
         pass('DB matches form input',
-          dbRecord.name === fromApp.formInput.name)
+          dbRecord.name === data.formInput.name)
 
         pass('Cache matches DB',
-          fromApp.cacheValue.name === dbRecord.name)
+          data.cacheValue.name === dbRecord.name)
       },
     })
   },
 })
 ```
 
-The `appData` function runs in the browser (has access to React state, cache, etc.), while `assertFn` runs on the server (has access to database).
+The `withData` function runs in the browser (has access to React state, cache, etc.), while `serverFn` runs on the server (has access to database).
 
 ## Architecture
 
@@ -56,13 +56,13 @@ The `appData` function runs in the browser (has access to React state, cache, et
 │  │                  │               │                          │    │
 │  │  mutation        │               │  POST /__scenetest/run   │    │
 │  │    onSuccess:    │               │    ↓                     │    │
-│  │      assertion() │ ────POST────► │  Load assertFn by ID     │    │
+│  │      assertion() │ ────POST────► │  Load serverFn by ID     │    │
 │  │        │         │               │    ↓                     │    │
 │  │        ↓         │               │  Create server context   │    │
-│  │  appData() runs  │               │  (from scenetest.config) │    │
+│  │  withData() runs  │               │  (from scenetest.config) │    │
 │  │  serialize       │               │    ↓                     │    │
-│  │  POST to server  │ ◄───JSON───── │  Run assertFn(server,    │    │
-│  │        ↓         │               │              fromApp)    │    │
+│  │  POST to server  │ ◄───JSON───── │  Run serverFn(server,    │    │
+│  │        ↓         │               │              data)    │    │
 │  │  Results to      │               │    ↓                     │    │
 │  │  dev panel       │               │  Collect pass/fail       │    │
 │  │                  │               │  Return results          │    │
@@ -87,15 +87,15 @@ const mutation = useUpdateProfile({
   onSuccess: (data) => {
     assertion({
       title: 'Profile update persisted',
-      appData: () => ({
+      withData: () => ({
         userId,
         newName: data.input.name,
         cacheValue: queryClient.getQueryData(['profile', userId]),
       }),
-      assertFn: async (server, fromApp) => {
-        const db = await server.getProfile(fromApp.userId)
-        pass('DB matches input', db.name === fromApp.newName)
-        pass('Cache matches DB', fromApp.cacheValue.name === db.name)
+      serverFn: async (server, data) => {
+        const db = await server.getProfile(data.userId)
+        pass('DB matches input', db.name === data.newName)
+        pass('Cache matches DB', data.cacheValue.name === db.name)
       },
     })
   },
@@ -113,7 +113,7 @@ const mutation = useUpdateProfile({
     __scenetest_rpc({
       id: 'src/components/ProfileForm.tsx:12:4',
       title: 'Profile update persisted',
-      appData: () => ({
+      withData: () => ({
         userId,
         newName: data.input.name,
         cacheValue: queryClient.getQueryData(['profile', userId]),
@@ -125,19 +125,19 @@ const mutation = useUpdateProfile({
 
 ### Output (server module)
 
-The plugin extracts all `assertFn` functions into a virtual module served by the middleware:
+The plugin extracts all `serverFn` functions into a virtual module served by the middleware:
 
 ```typescript
 // Virtual: /__scenetest/assertions.js
 import { pass, fail } from 'scenetest'
 
 export const assertions = {
-  'src/components/ProfileForm.tsx:12:4': async (server, fromApp) => {
-    const db = await server.getProfile(fromApp.userId)
-    pass('DB matches input', db.name === fromApp.newName)
-    pass('Cache matches DB', fromApp.cacheValue.name === db.name)
+  'src/components/ProfileForm.tsx:12:4': async (server, data) => {
+    const db = await server.getProfile(data.userId)
+    pass('DB matches input', db.name === data.newName)
+    pass('Cache matches DB', data.cacheValue.name === db.name)
   },
-  // ... other extracted assertFns
+  // ... other extracted serverFns
 }
 ```
 
@@ -154,18 +154,18 @@ In production, the entire `assertion()` call is stripped (same as current `pass(
 export async function __scenetest_rpc(config: {
   id: string
   title: string
-  appData: () => unknown
+  withData: () => unknown
 }) {
   // Collect data from app context
   let serializedData: string
   try {
-    const data = config.appData()
+    const data = config.withData()
     serializedData = JSON.stringify(data)
   } catch (error) {
     // Report collection failure
     window.__scenetest_report?.({
       type: 'fail',
-      description: `[${config.title}] appData error: ${error.message}`,
+      description: `[${config.title}] withData error: ${error.message}`,
       result: false,
       timestamp: Date.now(),
     })
@@ -180,7 +180,7 @@ export async function __scenetest_rpc(config: {
       body: JSON.stringify({
         id: config.id,
         title: config.title,
-        appData: serializedData,
+        withData: serializedData,
       }),
     })
 
@@ -201,18 +201,18 @@ export async function __scenetest_rpc(config: {
 }
 ```
 
-### 2. Server: Execute assertFn
+### 2. Server: Execute serverFn
 
 ```typescript
 // Vite plugin middleware
 async function handleAssertionRun(req, res) {
-  const { id, title, appData } = req.body
+  const { id, title, withData } = req.body
 
   // Load extracted assertions
   const { assertions } = await import('/__scenetest/assertions.js')
-  const assertFn = assertions[id]
+  const serverFn = assertions[id]
 
-  if (!assertFn) {
+  if (!serverFn) {
     return res.json([{
       type: 'fail',
       description: `[${title}] Assertion not found: ${id}`,
@@ -224,19 +224,19 @@ async function handleAssertionRun(req, res) {
   // Create server context from user config
   const serverContext = await loadServerContext()
 
-  // Collect results from pass/fail calls inside assertFn
+  // Collect results from pass/fail calls inside serverFn
   const results = []
   const collector = (result) => results.push(result)
 
   try {
     // Run with result collection
     await runWithCollector(collector, async () => {
-      await assertFn(serverContext, JSON.parse(appData))
+      await serverFn(serverContext, JSON.parse(withData))
     })
   } catch (error) {
     results.push({
       type: 'fail',
-      description: `[${title}] assertFn threw: ${error.message}`,
+      description: `[${title}] serverFn threw: ${error.message}`,
       result: false,
       timestamp: Date.now(),
       stack: error.stack,
@@ -279,27 +279,27 @@ export default defineScenetestConfig({
 The Vite plugin:
 1. Loads this config at dev server startup
 2. Creates the `server` context object from `serverFunctions`
-3. Passes it to each `assertFn` when executed
+3. Passes it to each `serverFn` when executed
 
 ## Type Safety
 
-TypeScript should infer `fromApp` type from `appData` return type:
+TypeScript should infer `data` type from `withData` return type:
 
 ```typescript
 assertion({
   title: 'Type-safe assertion',
 
   // Return type is inferred: { userId: string, name: string }
-  appData: () => ({
+  withData: () => ({
     userId: user.id,
     name: formData.name,
   }),
 
-  // fromApp is typed as { userId: string, name: string }
-  assertFn: async (server, fromApp) => {
-    fromApp.userId  // ✓ string
-    fromApp.name    // ✓ string
-    fromApp.foo     // ✗ Type error
+  // data is typed as { userId: string, name: string }
+  serverFn: async (server, data) => {
+    data.userId  // ✓ string
+    data.name    // ✓ string
+    data.foo     // ✗ Type error
   },
 })
 ```
@@ -307,14 +307,14 @@ assertion({
 Type definition:
 
 ```typescript
-interface AssertionConfig<TAppData> {
+interface AssertionConfig<TwithData> {
   title: string
   key?: string  // Optional: for uniqueness in loops/conditionals
-  appData: () => TAppData
-  assertFn: (server: ServerContext, fromApp: TAppData) => Promise<void> | void
+  withData: () => TwithData
+  serverFn: (server: ServerContext, data: TwithData) => Promise<void> | void
 }
 
-function assertion<TAppData>(config: AssertionConfig<TAppData>): void
+function assertion<TwithData>(config: AssertionConfig<TwithData>): void
 ```
 
 For `ServerContext`, users can extend the type:
@@ -331,10 +331,10 @@ declare module 'scenetest' {
 
 ## Results Flow
 
-Results from `assertFn` flow through the existing infrastructure:
+Results from `serverFn` flow through the existing infrastructure:
 
 ```
-assertFn runs on server
+serverFn runs on server
     ↓
 pass()/fail() collect results
     ↓
@@ -372,7 +372,7 @@ Multi-context assertions show additional info:
 │  ✓ DB matches input                                         │
 │  ✓ Cache matches DB                                         │
 │                                                             │
-│  appData: { userId: "123", newName: "Alice", ... }         │
+│  withData: { userId: "123", newName: "Alice", ... }         │
 │  src/components/ProfileForm.tsx:12                          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -439,14 +439,14 @@ async waitForAssertions(options = {}) {
 ### Phase 1: Core Transform
 
 1. Extend Vite plugin to detect `assertion()` calls
-2. Extract `assertFn` to virtual module
+2. Extract `serverFn` to virtual module
 3. Transform call site to `__scenetest_rpc`
 4. Generate assertion IDs from file location
 
 ### Phase 2: Middleware
 
 1. Add `/__scenetest/run` endpoint to Vite plugin
-2. Load and execute extracted assertFns
+2. Load and execute extracted serverFns
 3. Collect and return results
 4. Load server context from config
 
@@ -471,11 +471,11 @@ async waitForAssertions(options = {}) {
 
 ## Design Decisions
 
-### 1. No imports in assertFn
+### 1. No imports in serverFn
 
-`assertFn` cannot import from the user's codebase. Everything it needs must come from:
+`serverFn` cannot import from the user's codebase. Everything it needs must come from:
 - `server` - configured server functions (database, APIs, etc.)
-- `fromApp` - data collected by `appData()` in the browser
+- `data` - data collected by `withData()` in the browser
 
 This keeps extraction simple and makes dependencies explicit.
 
@@ -488,10 +488,10 @@ items.forEach(item => {
   assertion({
     title: 'Item validation',  // Clean title for display
     key: item.id,              // Combined with file location for unique ID
-    appData: () => ({ itemId: item.id, value: item.value }),
-    assertFn: async (server, fromApp) => {
-      const db = await server.getItem(fromApp.itemId)
-      pass('DB matches', db.value === fromApp.value)
+    withData: () => ({ itemId: item.id, value: item.value }),
+    serverFn: async (server, data) => {
+      const db = await server.getItem(data.itemId)
+      pass('DB matches', db.value === data.value)
     },
   })
 })
@@ -499,24 +499,24 @@ items.forEach(item => {
 
 The internal ID becomes: `${fileLocation}:${key ?? ''}` (e.g., `src/List.tsx:42:4:item-123`)
 
-### 3. Sync and async assertFn supported
+### 3. Sync and async serverFn supported
 
 ```typescript
 // Async (most common - database calls)
-assertFn: async (server, fromApp) => {
-  const db = await server.getProfile(fromApp.userId)
-  pass('matches', db.name === fromApp.name)
+serverFn: async (server, data) => {
+  const db = await server.getProfile(data.userId)
+  pass('matches', db.name === data.name)
 }
 
 // Sync (simple checks)
-assertFn: (server, fromApp) => {
-  pass('valid format', fromApp.email.includes('@'))
+serverFn: (server, data) => {
+  pass('valid format', data.email.includes('@'))
 }
 ```
 
-### 4. Catch appData errors
+### 4. Catch withData errors
 
-If `appData()` throws, catch and report as a failed assertion. Assertions should never crash the app.
+If `withData()` throws, catch and report as a failed assertion. Assertions should never crash the app.
 
 ## File Changes
 
@@ -532,7 +532,7 @@ packages/
 │   └── src/
 │       ├── index.ts           # Add middleware setup
 │       ├── transform.ts       # Extend to handle assertion()
-│       ├── extract.ts         # New: Extract assertFn to virtual module
+│       ├── extract.ts         # New: Extract serverFn to virtual module
 │       ├── middleware.ts      # New: /__scenetest/run handler
 │       └── config.ts          # New: Load scenetest.config.ts
 │

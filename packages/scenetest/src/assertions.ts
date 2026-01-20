@@ -1,6 +1,24 @@
 import type { AssertionResult, AssertionConfig } from './types.js'
 
 /**
+ * Compare pairs of values for equality.
+ * Returns true if all pairs match (using strict equality).
+ *
+ * Useful for asserting multiple fields match in a single pass/fail call.
+ *
+ * @example
+ * ```tsx
+ * pass('primary fields match', match(
+ *   [localDeck.cards, dbDeck.cards],
+ *   [localDeck.updated_at, dbDeck.updated_at]
+ * ))
+ * ```
+ */
+export function match(...pairs: [unknown, unknown][]): boolean {
+  return pairs.every(([a, b]) => a === b)
+}
+
+/**
  * Get a simplified stack trace for debugging
  */
 function getStack(): string | undefined {
@@ -102,22 +120,22 @@ export function fail(description: string, condition: boolean, context?: Record<s
  *
  * This function is a stub that gets transformed by vite-plugin-scenetest.
  * In dev mode, the Vite plugin:
- * 1. Extracts the assertFn to a server-side virtual module
+ * 1. Extracts the serverFn to a server-side virtual module
  * 2. Replaces this call with __scenetest_rpc() from scenetest/runtime
  *
  * @example
  * ```tsx
  * assert({
  *   title: 'User profile matches database',
- *   appData: () => ({ userId: profile.id, name: profile.name }),
- *   assertFn: (server, fromApp) => {
- *     const dbUser = server.db.getUser(fromApp.userId)
- *     pass('name matches', fromApp.name === dbUser.name)
+ *   withData: () => ({ userId: profile.id, name: profile.name }),
+ *   serverFn: (server, data) => {
+ *     const dbUser = server.db.getUser(data.userId)
+ *     pass('name matches', data.name === dbUser.name)
  *   },
  * })
  * ```
  */
-export function assert<TAppData>(_config: AssertionConfig<TAppData>): void {
+export function assert<TData>(_config: AssertionConfig<TData>): void {
   // This function is transformed by vite-plugin-scenetest
   // If this runs, it means the plugin is not configured or we're in production
   // In production, this will be stripped out

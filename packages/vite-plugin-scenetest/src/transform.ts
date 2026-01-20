@@ -16,8 +16,8 @@ export interface ExtractedAssertion {
   title: string
   /** Optional key for disambiguation */
   key?: string
-  /** The assertFn body code (without function wrapper) */
-  assertFnBodyCode: string
+  /** The serverFn body code (without function wrapper) */
+  serverFnBodyCode: string
   /** Source location */
   location: {
     file: string
@@ -43,11 +43,11 @@ export interface TransformOptions {
 }
 
 /**
- * Helper to extract assertFn body code from a function node
+ * Helper to extract serverFn body code from a function node
  */
-function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: string, line: number): string | null {
-  if (t.isArrowFunctionExpression(assertFnNode) || t.isFunctionExpression(assertFnNode)) {
-    const body = assertFnNode.body
+function extractServerFnBody(code: string, serverFnNode: t.Node, filename: string, line: number): string | null {
+  if (t.isArrowFunctionExpression(serverFnNode) || t.isFunctionExpression(serverFnNode)) {
+    const body = serverFnNode.body
     if (t.isBlockStatement(body)) {
       const bodyCode = code.slice(body.start!, body.end!)
       return bodyCode.slice(1, -1).trim() // Remove { and }
@@ -55,7 +55,7 @@ function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: strin
       return `return ${code.slice(body.start!, body.end!)}`
     }
   } else {
-    console.warn(`[vite-plugin-scenetest] assertFn is not a function at ${filename}:${line}`)
+    console.warn(`[vite-plugin-scenetest] serverFn is not a function at ${filename}:${line}`)
     return null
   }
 }
@@ -66,15 +66,15 @@ function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: strin
 function extractConfigProps(configObj: t.ObjectExpression): {
   titleNode: t.Node | null
   keyNode: t.Node | null
-  appDataNode: t.Node | null
-  assertFnNode: t.Node | null
-  assertFnProp: t.ObjectProperty | null
+  withDataNode: t.Node | null
+  serverFnNode: t.Node | null
+  serverFnProp: t.ObjectProperty | null
 } {
   let titleNode: t.Node | null = null
   let keyNode: t.Node | null = null
-  let appDataNode: t.Node | null = null
-  let assertFnNode: t.Node | null = null
-  let assertFnProp: t.ObjectProperty | null = null
+  let withDataNode: t.Node | null = null
+  let serverFnNode: t.Node | null = null
+  let serverFnProp: t.ObjectProperty | null = null
 
   for (const prop of configObj.properties) {
     if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
@@ -86,27 +86,27 @@ function extractConfigProps(configObj: t.ObjectExpression): {
       titleNode = prop.value
     } else if (keyName === 'key') {
       keyNode = prop.value
-    } else if (keyName === 'appData') {
-      appDataNode = prop.value
-    } else if (keyName === 'assertFn') {
-      assertFnNode = prop.value
-      assertFnProp = prop
+    } else if (keyName === 'withData') {
+      withDataNode = prop.value
+    } else if (keyName === 'serverFn') {
+      serverFnNode = prop.value
+      serverFnProp = prop
     }
   }
 
-  return { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp }
+  return { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp }
 }
 
 /**
  * Transform assert() and useAssert() calls in source code.
  *
  * For assert() calls:
- * 1. Extract the assertFn to be run on the server
- * 2. Replace the call with __scenetest_rpc({ id, title, key?, appData })
+ * 1. Extract the serverFn to be run on the server
+ * 2. Replace the call with __scenetest_rpc({ id, title, key?, withData })
  *
  * For useAssert() calls:
- * 1. Extract the assertFn from the config object
- * 2. Replace assertFn property with __assertionId
+ * 1. Extract the serverFn from the config object
+ * 2. Replace serverFn property with __assertionId
  * 3. Replace useAssert with __useAssert
  *
  * @param code Source code to transform
@@ -200,9 +200,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
         }
 
         const configObj = args[0]
-        const { titleNode, keyNode, appDataNode, assertFnNode } = extractConfigProps(configObj)
+        const { titleNode, keyNode, withDataNode, serverFnNode } = extractConfigProps(configObj)
 
-        if (!titleNode || !appDataNode || !assertFnNode) {
+        if (!titleNode || !serverFnNode) {
           console.warn(`[vite-plugin-scenetest] assert() missing required properties at ${filename}:${path.node.loc?.start.line}`)
           return
         }
@@ -229,9 +229,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           titleValue = titleNode.value
         }
 
-        // Extract assertFn body code
-        const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
-        if (!assertFnBodyCode) {
+        // Extract serverFn body code
+        const serverFnBodyCode = extractServerFnBody(code, serverFnNode, filename, line)
+        if (!serverFnBodyCode) {
           return
         }
 
@@ -240,18 +240,20 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           id,
           title: titleValue,
           key: keyValue,
-          assertFnBodyCode,
+          serverFnBodyCode,
           location: { file: filename, line, column },
         })
 
         // Build the replacement RPC call
-        const appDataCode = code.slice(appDataNode.start!, appDataNode.end!)
-
         let rpcCall = `__scenetest_rpc({ id: ${JSON.stringify(id)}, title: ${JSON.stringify(titleValue)}`
         if (keyValue) {
           rpcCall += `, key: ${JSON.stringify(keyValue)}`
         }
-        rpcCall += `, appData: ${appDataCode} })`
+        if (withDataNode) {
+          const withDataCode = code.slice(withDataNode.start!, withDataNode.end!)
+          rpcCall += `, withData: ${withDataCode}`
+        }
+        rpcCall += ` })`
 
         // Replace the assert() call with the RPC call
         s.overwrite(path.node.start!, path.node.end!, rpcCall)
@@ -261,7 +263,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   // Third pass: transform useAssert() calls
-  // useAssert(config | undefined, deps) where config has { title, appData, assertFn }
+  // useAssert(config | undefined, deps) where config has { title, withData?, serverFn }
   if (useAssertLocalName) {
     traverse(ast, {
       CallExpression(path: NodePath<t.CallExpression>) {
@@ -293,9 +295,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           titleValue: string
           keyValue?: string
         } | null => {
-          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configObj)
+          const { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp } = extractConfigProps(configObj)
 
-          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+          if (!titleNode || !serverFnNode || !serverFnProp) {
             console.warn(`[vite-plugin-scenetest] useAssert() config missing required properties at ${filename}:${line}`)
             return null
           }
@@ -317,9 +319,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             titleValue = titleNode.value
           }
 
-          // Extract assertFn body code
-          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
-          if (!assertFnBodyCode) {
+          // Extract serverFn body code
+          const serverFnBodyCode = extractServerFnBody(code, serverFnNode, filename, line)
+          if (!serverFnBodyCode) {
             return null
           }
 
@@ -328,18 +330,18 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             id,
             title: titleValue,
             key: keyValue,
-            assertFnBodyCode,
+            serverFnBodyCode,
             location: { file: filename, line, column },
           })
 
-          // Replace assertFn property with __assertionId in the source
-          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
+          // Replace serverFn property with __assertionId in the source
+          s.overwrite(serverFnProp.start!, serverFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
 
           return { id, titleValue, keyValue }
         }
 
         // Handle different forms of the config argument:
-        // 1. Direct object: useAssert({ title, appData, assertFn }, deps)
+        // 1. Direct object: useAssert({ title, withData?, serverFn }, deps)
         // 2. Conditional: useAssert(condition ? undefined : { ... }, deps)
         // 3. Conditional: useAssert(condition ? { ... } : undefined, deps)
 
@@ -383,7 +385,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           needsUseAssertImport = true
         } else {
           // Could be a variable reference or other expression
-          // We can't statically extract the assertFn, skip with warning
+          // We can't statically extract the serverFn, skip with warning
           console.warn(`[vite-plugin-scenetest] useAssert() config must be an object literal or conditional at ${filename}:${line}`)
           return
         }

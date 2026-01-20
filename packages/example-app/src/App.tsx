@@ -35,10 +35,10 @@ function ProfileForm() {
   // Runs when profile.email changes, skips when no profile
   useAssert({
     title: 'Email validation on server',
-    appData: () => ({ email: profile!.email }), // profile exists when enabled
-    assertFn: (server, fromApp) => {
-      const isValid = server.validateEmail(fromApp.email)
-      pass('Profile email is valid format', isValid, { email: fromApp.email })
+    withData: () => ({ email: profile!.email }), // profile exists when enabled
+    serverFn: (server, data) => {
+      const isValid = server.validateEmail(data.email)
+      pass('Profile email is valid format', isValid, { email: data.email })
     },
     enabled: !!profile,
   }, [profile?.email])

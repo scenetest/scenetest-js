@@ -5,7 +5,7 @@ import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 
 /**
- * AsyncLocalStorage for collecting assertion results within an assertFn execution
+ * AsyncLocalStorage for collecting assertion results within a serverFn execution
  */
 const assertionStorage = new AsyncLocalStorage<AssertionResult[]>()
 
@@ -67,25 +67,25 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       return
     }
 
-    const { id, title, appData } = payload
+    const { id, title, data } = payload
 
     try {
-      // Load the virtual module containing all assertFns
+      // Load the virtual module containing all serverFns
       const virtualModule = await server.ssrLoadModule(RESOLVED_VIRTUAL_MODULE_ID)
-      const assertions = virtualModule.assertions as Record<string, (server: ServerContext, fromApp: unknown) => void | Promise<void>>
+      const assertions = virtualModule.assertions as Record<string, (server: ServerContext, data: unknown) => void | Promise<void>>
 
-      // Get the assertFn for this ID
-      const assertFn = assertions[id] as (
+      // Get the serverFn for this ID
+      const serverFn = assertions[id] as (
         server: ServerContext,
-        fromApp: unknown,
+        data: unknown,
         helpers: { pass: typeof pass; fail: typeof fail }
       ) => void | Promise<void>
 
-      if (!assertFn) {
+      if (!serverFn) {
         const response: AssertionRpcResponse = {
           success: false,
           results: [],
-          error: `No assertFn found for id: ${id}`,
+          error: `No serverFn found for id: ${id}`,
         }
         res.statusCode = 200
         res.setHeader('Content-Type', 'application/json')
@@ -97,17 +97,17 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       const config = await loadConfig(root, (id) => server.ssrLoadModule(id))
       const serverContext = (config.serverFunctions || {}) as ServerContext
 
-      // Execute assertFn with AsyncLocalStorage for result collection
+      // Execute serverFn with AsyncLocalStorage for result collection
       const results: AssertionResult[] = []
 
       await assertionStorage.run(results, async () => {
         try {
-          // Pass the pass/fail helpers directly to the assertFn
-          await assertFn(serverContext, appData, { pass, fail })
+          // Pass the pass/fail helpers directly to the serverFn
+          await serverFn(serverContext, data, { pass, fail })
         } catch (err) {
           results.push({
             type: 'fail',
-            description: `${title}: assertFn threw an error`,
+            description: `${title}: serverFn threw an error`,
             result: false,
             timestamp: Date.now(),
             context: { error: err instanceof Error ? err.message : String(err) },

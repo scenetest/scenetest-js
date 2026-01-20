@@ -66,7 +66,7 @@ export interface RpcConfig {
   /** Optional disambiguation key */
   key?: string
   /** Function that collects data from the browser */
-  appData: () => unknown
+  withData?: () => unknown
 }
 
 /**
@@ -74,29 +74,31 @@ export interface RpcConfig {
  * This is called by transformed assertion() calls in dev mode.
  */
 export async function __scenetest_rpc(config: RpcConfig): Promise<void> {
-  const { id, title, key, appData } = config
+  const { id, title, key, withData } = config
   const stack = getStack()
   const location = parseLocation(stack)
 
   pendingCount++
 
   try {
-    // Collect app data from browser
-    let appDataValue: unknown
-    try {
-      appDataValue = appData()
-    } catch (err) {
-      report({
-        type: 'fail',
-        description: `${title}: appData() threw an error`,
-        result: false,
-        timestamp: Date.now(),
-        stack,
-        context: { error: err instanceof Error ? err.message : String(err) },
-        location,
-        assertionId: id,
-      })
-      return
+    // Collect data from browser (if withData is provided)
+    let dataValue: unknown = undefined
+    if (withData) {
+      try {
+        dataValue = withData()
+      } catch (err) {
+        report({
+          type: 'fail',
+          description: `${title}: withData() threw an error`,
+          result: false,
+          timestamp: Date.now(),
+          stack,
+          context: { error: err instanceof Error ? err.message : String(err) },
+          location,
+          assertionId: id,
+        })
+        return
+      }
     }
 
     // Build the RPC payload
@@ -104,7 +106,7 @@ export async function __scenetest_rpc(config: RpcConfig): Promise<void> {
       id,
       title,
       key,
-      appData: appDataValue,
+      data: dataValue,
     }
 
     // POST to the server

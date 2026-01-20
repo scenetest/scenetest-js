@@ -1,4 +1,4 @@
-export { pass, fail, assert } from './assertions.js'
+export { pass, fail, assert, match } from './assertions.js'
 export { useAssert, __useAssert } from './hooks.js'
 export type {
   AssertionResult,

@@ -9,16 +9,16 @@ import type { AssertionConfig } from './types.js'
  * ```tsx
  * useAssert({
  *   title: 'Email validation',
- *   appData: () => ({ email: profile.email }),
- *   assertFn: (server, fromApp) => {
- *     pass('email is valid', server.validateEmail(fromApp.email))
+ *   withData: () => ({ email: profile.email }),
+ *   serverFn: (server, data) => {
+ *     pass('email is valid', server.validateEmail(data.email))
  *   },
  *   enabled: !isLoading,
  * }, [isLoading, profile?.email])
  * ```
  */
-export function useAssert<TAppData>(
-  _config: AssertionConfig<TAppData>,
+export function useAssert<TData>(
+  _config: AssertionConfig<TData>,
   _deps: React.DependencyList
 ): void {
   // This function is transformed by vite-plugin-scenetest
@@ -33,13 +33,13 @@ export interface RuntimeAssertConfig {
   __assertionId: string
   title: string
   key?: string
-  appData: () => unknown
+  withData?: () => unknown
   enabled?: boolean
 }
 
 /**
  * Internal runtime hook called after transform.
- * The transform extracts assertFn and replaces useAssert with this.
+ * The transform extracts serverFn and replaces useAssert with this.
  */
 export function __useAssert(
   config: RuntimeAssertConfig,
@@ -55,7 +55,7 @@ export function __useAssert(
         id: config.__assertionId,
         title: config.title,
         key: config.key,
-        appData: config.appData,
+        withData: config.withData,
       })
     })
   }, deps) // eslint-disable-line react-hooks/exhaustive-deps

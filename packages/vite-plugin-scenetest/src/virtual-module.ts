@@ -54,9 +54,9 @@ export function removeAssertionsForFile(filename: string): void {
 
 /**
  * Generate the virtual module code.
- * This module exports a map of assertion IDs to their assertFn functions.
+ * This module exports a map of assertion IDs to their serverFn functions.
  *
- * Each assertFn receives (server, fromApp, { pass, fail }) where pass/fail
+ * Each serverFn receives (server, data, { pass, fail }) where pass/fail
  * are destructured in the function parameters, making them available in scope
  * for the inlined body code.
  */
@@ -67,12 +67,12 @@ export function generateVirtualModuleCode(): string {
     return `export const assertions = {}`
   }
 
-  // Generate an object with all assertFn functions
-  // The original assertFn body is inlined into a wrapper function that
+  // Generate an object with all serverFn functions
+  // The original serverFn body is inlined into a wrapper function that
   // provides pass/fail in scope via parameter destructuring
   const entries = assertions.map((assertion) => {
-    return `  ${JSON.stringify(assertion.id)}: (server, fromApp, { pass, fail }) => {
-    ${assertion.assertFnBodyCode}
+    return `  ${JSON.stringify(assertion.id)}: (server, data, { pass, fail }) => {
+    ${assertion.serverFnBodyCode}
   }`
   })
 

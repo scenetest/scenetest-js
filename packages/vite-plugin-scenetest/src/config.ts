@@ -7,7 +7,7 @@ import { resolve } from 'path'
  */
 export interface ScenetestConfig {
   /**
-   * Server functions available in assertFn via the `server` parameter.
+   * Server functions available in serverFn via the `server` parameter.
    * These functions can access databases, APIs, or any server-side resources.
    */
   serverFunctions?: Partial<ServerContext>
