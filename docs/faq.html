@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <style>
     * {
       box-sizing: border-box;
@@ -130,7 +131,7 @@
       <code>window</code> and hope for the best:
     </p>
 
-    <pre><code>// In your app code (gross)
+    <pre><code class="language-typescript">// In your app code (gross)
 window.__profileData = profile
 
 // In your test file
@@ -153,7 +154,7 @@ const profile = await page.evaluate(() => window.__profileData)</code></pre>
       Vitest has an in-source testing feature that lets you colocate tests with your code:
     </p>
 
-    <pre><code>export function add(...args: number[]) {
+    <pre><code class="language-typescript">export function add(...args: number[]) {
   return args.reduce((a, b) => a + b, 0)
 }
 
@@ -191,5 +192,9 @@ if (import.meta.vitest) {
     </p>
 
   </article>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+  <script>hljs.highlightAll();</script>
 </body>
 </html>
