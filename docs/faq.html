@@ -8,113 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --bg: #faf9f7;
-      --text: #1a1a1a;
-      --text-light: #555;
-      --accent: #5046e5;
-      --code-bg: #f0eeeb;
-      --border: #e0ddd8;
-    }
-
-    body {
-      font-family: 'Source Serif 4', Georgia, serif;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 19px;
-      line-height: 1.7;
-    }
-
-    article {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 80px 24px 120px;
-    }
-
-    h1 {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 2rem;
-      font-weight: 500;
-      letter-spacing: -0.02em;
-      margin-bottom: 48px;
-    }
-
-    h2 {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 1.15rem;
-      font-weight: 500;
-      margin-top: 56px;
-      margin-bottom: 20px;
-      letter-spacing: -0.01em;
-    }
-
-    h2:first-of-type {
-      margin-top: 0;
-    }
-
-    p {
-      margin-bottom: 24px;
-    }
-
-    a {
-      color: var(--accent);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-    }
-
-    strong {
-      font-weight: 600;
-    }
-
-    em {
-      font-style: italic;
-    }
-
-    code {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.88em;
-      background: var(--code-bg);
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-
-    pre {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.82rem;
-      line-height: 1.6;
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 20px 24px;
-      overflow-x: auto;
-      margin: 28px 0;
-    }
-
-    pre code {
-      background: none;
-      padding: 0;
-    }
-
-    .back {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.9rem;
-      margin-bottom: 40px;
-      display: block;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <article>
     <a href="index.html" class="back">&larr; Back</a>
 
-    <h1>FAQ</h1>
+    <h1 class="page-title">FAQ</h1>
 
     <h2>Isn't this like Playwright's page.evaluate?</h2>
 
@@ -190,6 +90,11 @@ if (import.meta.vitest) {
       Scenetest assertions fire when you're running your actual app. The component is mounted
       in its real environment, with real data flowing through it.
     </p>
+
+    <footer>
+      <nav><a href="index.html">&larr; Back to home</a></nav>
+      <p class="copyright">&copy; 2026 Michael Snook. Made with &hearts; <a href="https://github.com/mhsnook/scenetest-js">on GitHub</a>.</p>
+    </footer>
 
   </article>
 
