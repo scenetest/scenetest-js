@@ -27,7 +27,7 @@ packages/
 ├── scenetest-svelte/       # Svelte bindings - runAssert helper (re-exports core)
 ├── vite-plugin-scenetest/  # Vite plugin for build integration
 ├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
-├── example-app/            # React demo app with working Scene tests
+├── example-app-react/      # React demo app with working Scene tests
 ├── example-app-vue/        # Vue demo app
 ├── example-app-solid/      # Solid demo app
 └── example-app-svelte/     # Svelte 5 demo app
@@ -56,7 +56,7 @@ Scenetest separates two distinct concerns in end-to-end testing:
 
 - `packages/scenetest/src/assertions.ts` - Core pass/fail implementation
 - `packages/playwright-scenetest/src/fixtures.ts` - Playwright fixtures
-- `packages/example-app/src/App.tsx` - Example component with inline assertions
+- `packages/example-app-react/src/App.tsx` - Example component with inline assertions
 
 ---
 
