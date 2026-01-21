@@ -511,11 +511,7 @@ body {
   font-size: 48px;
   margin-bottom: 16px;
 }
-@keyframes highlight-fade {
-  0% { box-shadow: 0 0 0 3px #a0a0ff, 0 0 20px rgba(160, 160, 255, 0.4); }
-  100% { box-shadow: none; }
-}
 .group.highlighted {
-  animation: highlight-fade 2s ease-out forwards;
+  box-shadow: 0 0 0 3px #a0a0ff, 0 0 20px rgba(160, 160, 255, 0.4);
 }
 `

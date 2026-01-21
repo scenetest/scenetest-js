@@ -141,11 +141,10 @@ function scrollToGroup(groupId: number): void {
     // Expand the group if collapsed
     groupEl.classList.remove('collapsed')
     // Scroll into view
-    groupEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    // Add highlight effect
-    groupEl.classList.remove('highlighted')
-    // Force reflow to restart animation
-    void (groupEl as HTMLElement).offsetWidth
+    groupEl.scrollIntoView({ behavior: 'auto', block: 'start' })
+    // Clear any previous highlight and add to this group
+    const prevHighlighted = doc.querySelector('.group.highlighted')
+    if (prevHighlighted) prevHighlighted.classList.remove('highlighted')
     groupEl.classList.add('highlighted')
   }
 }
