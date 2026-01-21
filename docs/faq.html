@@ -73,13 +73,18 @@ if (import.meta.vitest) {
     <p>
       This is great for unit tests, and the colocation is nice. But these tests don't run
       <em>in the application context</em>. They run in Vitest's test environment, not in your
-      actual React app with your actual state and your actual data.
+      actual React app with your actual state and your actual data. Vitest In-Source's benefit
+			is it runs in the same <em>closure</em> as your app code... but when you are using a
+			framework like React, Svelte, Solid or Vue, with a client router and a cache and so on,
+			you need better than in-closure tests; you need to be in the component/render lifecycle of
+			the component you're testing, in the callback for the callback you're testing, and so on.
     </p>
 
     <p>
-      Scenetest assertions run when the code runs in the browser. They have access to
-      component props, hook return values, callback arguments&mdash;the real data at the real
-      moment in the real app. It's not in-source testing, it's <em>in-app</em> testing.
+      There's just no way around the need for this. And what it means is the test-writer has
+			the tools to gather up any context or data that is serializable and ship it to the
+			protected / privileged test environment to then check any other resources in your whole
+			stack; in theory there is really no limit to the scope or precision of your test.
     </p>
 
     <h2>What about Cypress component testing?</h2>
