@@ -85,15 +85,13 @@ if (import.meta.vitest) {
     <h2>What about Cypress component testing?</h2>
 
     <p>
-      Cypress component testing mounts individual components in isolation. That's useful
-      for testing components as units, but it's not the same as testing them in the context
-      of your full application&mdash;with your real data fetching, your real state management,
-      your real routing.
-    </p>
-
-    <p>
-      Scenetest assertions fire when you're running your actual app. The component is mounted
-      in its real environment, with real data flowing through it.
+      Cypress is a great tool for driving browsers through automated scripts and journeys in your app,
+			and component testing is a popular way of mounting individual components in isolation and then
+			doing things to them to be sure they respond as expected. That's useful for testing components
+			as units &ndash; and it becomes even more powerful if you have the same inline, in-scope assertions
+			running inside those components while the engineer is building the feature, when your e2e tests
+			run, when your AI agent spins up its own little browser and clicks around, and when your human
+			coworker is doing the final check for you before deployment.
     </p>
 
     <footer>
