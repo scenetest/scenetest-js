@@ -34,9 +34,9 @@ export interface StripOptions {
 export function stripScenetest(code: string, options: StripOptions = {}): StripResult | null {
   const { sourceMap = true, filename = 'unknown.js' } = options
 
-  // Quick check - if no scenetest import, skip parsing
+  // Quick check - if no scenetest/scenetest-react import, skip parsing
   if (!code.includes('scenetest')) {
-    return null
+    return null // This also catches 'scenetest-react'
   }
 
   // Track imported names from scenetest
@@ -76,10 +76,10 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
   const rangesToRemove: Array<{ start: number; end: number; type: string }> = []
 
   traverse(ast, {
-    // Collect scenetest imports and mark for removal
+    // Collect scenetest/scenetest-react imports and mark for removal
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (source !== 'scenetest') {
+      if (source !== 'scenetest' && source !== 'scenetest-react') {
         return
       }
 

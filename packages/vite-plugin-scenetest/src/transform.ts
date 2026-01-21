@@ -154,11 +154,11 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   let needsRpcImport = false
   let needsUseAssertImport = false
 
-  // First pass: find imports from scenetest
+  // First pass: find imports from scenetest or scenetest-react
   traverse(ast, {
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (source !== 'scenetest') {
+      if (source !== 'scenetest' && source !== 'scenetest-react') {
         return
       }
 
@@ -414,7 +414,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsUseAssertImport) {
-    const hookImport = `\nimport { __useAssert } from 'scenetest'\n`
+    const hookImport = `\nimport { __useAssert } from 'scenetest-react'\n`
     s.appendLeft(importInsertPos, hookImport)
   }
 

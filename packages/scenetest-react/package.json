@@ -1,5 +1,5 @@
 {
-  "name": "scenetest",
+  "name": "scenetest-react",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -8,17 +8,20 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "import": "./dist/runtime.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "scenetest": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
   "devDependencies": {
+    "@types/react": "^18.0.0",
     "typescript": "^5.3.3"
   }
 }
