@@ -329,6 +329,91 @@ pass('test', true)`
     })
   })
 
+  describe('scenetest-vue imports', () => {
+    it('removes import from scenetest-vue', () => {
+      const code = `import { pass, fail, useAssert } from 'scenetest-vue'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('handles Vue component with scenetest-vue imports', () => {
+      const code = `import { ref } from 'vue'
+import { pass, useAssert } from 'scenetest-vue'
+
+const count = ref(0)
+pass('rendered', true)
+useAssert({ title: 'test', appData: () => ({ count: count.value }), assertFn: () => {} }, [() => count.value])
+console.log(count.value)`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toContain("import { ref } from 'vue'")
+      expect(result!.code).not.toContain("from 'scenetest-vue'")
+      expect(result!.code).not.toContain('pass(')
+      expect(result!.code).not.toContain('useAssert(')
+    })
+  })
+
+  describe('scenetest-solid imports', () => {
+    it('removes import from scenetest-solid', () => {
+      const code = `import { pass, fail, createAssert } from 'scenetest-solid'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('handles Solid component with scenetest-solid imports', () => {
+      const code = `import { createSignal } from 'solid-js'
+import { pass, createAssert } from 'scenetest-solid'
+
+function Component() {
+  const [count, setCount] = createSignal(0)
+  pass('rendered', true)
+  createAssert({ title: 'test', appData: () => ({ count: count() }), assertFn: () => {} }, [count])
+  return count()
+}`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toContain("import { createSignal } from 'solid-js'")
+      expect(result!.code).not.toContain("from 'scenetest-solid'")
+      expect(result!.code).not.toContain('pass(')
+      expect(result!.code).not.toContain('createAssert(')
+    })
+  })
+
+  describe('scenetest-svelte imports', () => {
+    it('removes import from scenetest-svelte', () => {
+      const code = `import { pass, fail, runAssert } from 'scenetest-svelte'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('handles Svelte with scenetest-svelte imports', () => {
+      const code = `import { pass, runAssert } from 'scenetest-svelte'
+
+let count = 0
+pass('rendered', true)
+runAssert({ title: 'test', appData: () => ({ count }), assertFn: () => {} })
+console.log(count)`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain("from 'scenetest-svelte'")
+      expect(result!.code).not.toContain('pass(')
+      expect(result!.code).not.toContain('runAssert(')
+      expect(result!.code).toContain('let count = 0')
+    })
+  })
+
   describe('scenetest-react imports', () => {
     it('removes import from scenetest-react', () => {
       const code = `import { pass, fail, useAssert } from 'scenetest-react'
