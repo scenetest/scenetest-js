@@ -121,9 +121,21 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     return null
   }
 
-  // Track imported names from scenetest
+  // All scenetest packages
+  const SCENETEST_PACKAGES = [
+    'scenetest',
+    'scenetest-react',
+    'scenetest-vue',
+    'scenetest-solid',
+    'scenetest-svelte',
+  ]
+
+  // Track imported names and their source packages
   let assertLocalName: string | null = null
   let useAssertLocalName: string | null = null
+  let useAssertSourcePackage: string | null = null
+  let createAssertLocalName: string | null = null
+  let runAssertLocalName: string | null = null
 
   // Parse with Babel
   const parserOptions: ParserOptions = {
@@ -153,12 +165,14 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   const extractedAssertions: ExtractedAssertion[] = []
   let needsRpcImport = false
   let needsUseAssertImport = false
+  let needsCreateAssertImport = false
+  let needsRunAssertImport = false
 
-  // First pass: find imports from scenetest or scenetest-react
+  // First pass: find imports from scenetest packages
   traverse(ast, {
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (source !== 'scenetest' && source !== 'scenetest-react') {
+      if (!SCENETEST_PACKAGES.includes(source)) {
         return
       }
 
@@ -171,13 +185,18 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             assertLocalName = specifier.local.name
           } else if (imported === 'useAssert') {
             useAssertLocalName = specifier.local.name
+            useAssertSourcePackage = source
+          } else if (imported === 'createAssert') {
+            createAssertLocalName = specifier.local.name
+          } else if (imported === 'runAssert') {
+            runAssertLocalName = specifier.local.name
           }
         }
       }
     },
   })
 
-  if (!assertLocalName && !useAssertLocalName) {
+  if (!assertLocalName && !useAssertLocalName && !createAssertLocalName && !runAssertLocalName) {
     return null
   }
 
@@ -393,7 +412,131 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     })
   }
 
-  if (!needsRpcImport && !needsUseAssertImport) {
+  // Fourth pass: transform createAssert() calls (Solid)
+  if (createAssertLocalName) {
+    traverse(ast, {
+      CallExpression(path: NodePath<t.CallExpression>) {
+        const callee = path.node.callee
+
+        if (!t.isIdentifier(callee) || callee.name !== createAssertLocalName) {
+          return
+        }
+
+        const args = path.node.arguments
+        if (args.length < 2) {
+          console.warn(`[vite-plugin-scenetest] createAssert() requires (config, deps) at ${filename}:${path.node.loc?.start.line}`)
+          return
+        }
+
+        const configArg = args[0]
+        const loc = path.node.loc
+        const line = loc?.start.line ?? 0
+        const column = loc?.start.column ?? 0
+
+        if (t.isObjectExpression(configArg)) {
+          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configArg)
+
+          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+            console.warn(`[vite-plugin-scenetest] createAssert() config missing required properties at ${filename}:${line}`)
+            return
+          }
+
+          let keyValue: string | undefined
+          if (keyNode && t.isStringLiteral(keyNode)) {
+            keyValue = keyNode.value
+          }
+
+          const id = keyValue
+            ? `${filename}:${line}:${column}:${keyValue}`
+            : `${filename}:${line}:${column}`
+
+          let titleValue = 'assertion'
+          if (t.isStringLiteral(titleNode)) {
+            titleValue = titleNode.value
+          }
+
+          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+          if (!assertFnBodyCode) return
+
+          extractedAssertions.push({
+            id,
+            title: titleValue,
+            key: keyValue,
+            assertFnBodyCode,
+            location: { file: filename, line, column },
+          })
+
+          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
+          s.overwrite(callee.start!, callee.end!, '__createAssert')
+          needsCreateAssertImport = true
+        }
+      },
+    })
+  }
+
+  // Fifth pass: transform runAssert() calls (Svelte)
+  if (runAssertLocalName) {
+    traverse(ast, {
+      CallExpression(path: NodePath<t.CallExpression>) {
+        const callee = path.node.callee
+
+        if (!t.isIdentifier(callee) || callee.name !== runAssertLocalName) {
+          return
+        }
+
+        const args = path.node.arguments
+        if (args.length < 1) {
+          console.warn(`[vite-plugin-scenetest] runAssert() requires (config) at ${filename}:${path.node.loc?.start.line}`)
+          return
+        }
+
+        const configArg = args[0]
+        const loc = path.node.loc
+        const line = loc?.start.line ?? 0
+        const column = loc?.start.column ?? 0
+
+        if (t.isObjectExpression(configArg)) {
+          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configArg)
+
+          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+            console.warn(`[vite-plugin-scenetest] runAssert() config missing required properties at ${filename}:${line}`)
+            return
+          }
+
+          let keyValue: string | undefined
+          if (keyNode && t.isStringLiteral(keyNode)) {
+            keyValue = keyNode.value
+          }
+
+          const id = keyValue
+            ? `${filename}:${line}:${column}:${keyValue}`
+            : `${filename}:${line}:${column}`
+
+          let titleValue = 'assertion'
+          if (t.isStringLiteral(titleNode)) {
+            titleValue = titleNode.value
+          }
+
+          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+          if (!assertFnBodyCode) return
+
+          extractedAssertions.push({
+            id,
+            title: titleValue,
+            key: keyValue,
+            assertFnBodyCode,
+            location: { file: filename, line, column },
+          })
+
+          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
+          s.overwrite(callee.start!, callee.end!, '__runAssert')
+          needsRunAssertImport = true
+        }
+      },
+    })
+  }
+
+  if (!needsRpcImport && !needsUseAssertImport && !needsCreateAssertImport && !needsRunAssertImport) {
     return null
   }
 
@@ -414,8 +557,20 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsUseAssertImport) {
-    const hookImport = `\nimport { __useAssert } from 'scenetest-react'\n`
+    // Import from the same package where useAssert was imported from
+    const sourcePackage = useAssertSourcePackage || 'scenetest-react'
+    const hookImport = `\nimport { __useAssert } from '${sourcePackage}'\n`
     s.appendLeft(importInsertPos, hookImport)
+  }
+
+  if (needsCreateAssertImport) {
+    const solidImport = `\nimport { __createAssert } from 'scenetest-solid'\n`
+    s.appendLeft(importInsertPos, solidImport)
+  }
+
+  if (needsRunAssertImport) {
+    const svelteImport = `\nimport { __runAssert } from 'scenetest-svelte'\n`
+    s.appendLeft(importInsertPos, svelteImport)
   }
 
   return {

@@ -22,9 +22,15 @@ pnpm typecheck        # Type check all packages
 packages/
 ├── scenetest/              # Core library - pass(), fail(), assert() (framework-agnostic)
 ├── scenetest-react/        # React bindings - useAssert hook (re-exports core)
+├── scenetest-vue/          # Vue bindings - useAssert composable (re-exports core)
+├── scenetest-solid/        # Solid bindings - createAssert primitive (re-exports core)
+├── scenetest-svelte/       # Svelte bindings - runAssert helper (re-exports core)
 ├── vite-plugin-scenetest/  # Vite plugin for build integration
 ├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
-└── example-app/            # Demo app with working Scene tests
+├── example-app/            # React demo app with working Scene tests
+├── example-app-vue/        # Vue demo app
+├── example-app-solid/      # Solid demo app
+└── example-app-svelte/     # Svelte 5 demo app
 ```
 
 ## Core Concept
@@ -36,7 +42,12 @@ Scenetest separates two distinct concerns in end-to-end testing:
 
 ## How It Works
 
-1. **In app code**: Use `pass()` and `fail()` from `scenetest` (or `scenetest-react` for React apps with `useAssert` hook)
+1. **In app code**: Use `pass()` and `fail()` from your framework's scenetest package:
+   - React: `scenetest-react` with `useAssert` hook
+   - Vue: `scenetest-vue` with `useAssert` composable
+   - Solid: `scenetest-solid` with `createAssert` primitive
+   - Svelte: `scenetest-svelte` with `runAssert` helper (use inside `$effect`)
+   - Any framework: `scenetest` core for just `pass()` and `fail()`
 2. **At runtime**: These check for `window.__scenetest_report` and report if available
 3. **In tests**: Use `scenePage` fixture from `playwright-scenetest` which exposes the reporter
 4. **Result**: All inline assertions from app code are collected in `scenePage.assertions`
@@ -82,9 +93,10 @@ src/dev-panel/
 ## Vite Plugin
 
 - **Dev mode:** Leaves code as-is, injects dev panel via `transformIndexHtml`
-- **Production:** Strips all scenetest/scenetest-react imports and calls via AST transform
+- **Production:** Strips all scenetest-* package imports and calls via AST transform
+- Supports: scenetest, scenetest-react, scenetest-vue, scenetest-solid, scenetest-svelte
 - Uses @babel/parser + @babel/traverse + magic-string
-- 33 unit tests covering edge cases
+- 39 unit tests covering edge cases
 
 ## Playwright Fixtures
 

@@ -18,12 +18,28 @@ export interface StripOptions {
   filename?: string
 }
 
+// All scenetest packages that should be stripped
+const SCENETEST_PACKAGES = [
+  'scenetest',
+  'scenetest-react',
+  'scenetest-vue',
+  'scenetest-solid',
+  'scenetest-svelte',
+]
+
+/**
+ * Check if a module source is a scenetest package
+ */
+function isScenetestPackage(source: string): boolean {
+  return SCENETEST_PACKAGES.includes(source)
+}
+
 /**
  * Strip all scenetest imports and function calls from source code.
  *
  * This function:
  * 1. Parses the code with Babel (handles JS, TS, JSX)
- * 2. Finds and tracks all imports from 'scenetest'
+ * 2. Finds and tracks all imports from scenetest packages
  * 3. Removes those import statements
  * 4. Removes all calls to the imported functions
  *
@@ -34,9 +50,9 @@ export interface StripOptions {
 export function stripScenetest(code: string, options: StripOptions = {}): StripResult | null {
   const { sourceMap = true, filename = 'unknown.js' } = options
 
-  // Quick check - if no scenetest/scenetest-react import, skip parsing
+  // Quick check - if no scenetest import, skip parsing
   if (!code.includes('scenetest')) {
-    return null // This also catches 'scenetest-react'
+    return null // This catches all scenetest-* packages too
   }
 
   // Track imported names from scenetest
@@ -76,10 +92,10 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
   const rangesToRemove: Array<{ start: number; end: number; type: string }> = []
 
   traverse(ast, {
-    // Collect scenetest/scenetest-react imports and mark for removal
+    // Collect scenetest package imports and mark for removal
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (source !== 'scenetest' && source !== 'scenetest-react') {
+      if (!isScenetestPackage(source)) {
         return
       }
 
@@ -113,8 +129,15 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
 
       let isScenetestCall = false
 
-      // Functions to strip
-      const strippableFunctions = ['pass', 'fail', 'assert', 'useAssert']
+      // Functions to strip (from all framework packages)
+      const strippableFunctions = [
+        'pass',
+        'fail',
+        'assert',
+        'useAssert',      // React, Vue
+        'createAssert',   // Solid
+        'runAssert',      // Svelte
+      ]
 
       // Direct call: pass(...), fail(...), assertion(...), useAssert(...)
       if (t.isIdentifier(callee)) {
