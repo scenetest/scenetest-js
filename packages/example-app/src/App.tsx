@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { pass, fail, useAssert } from 'scenetest'
+import { pass, fail, useAssert } from 'scenetest-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 

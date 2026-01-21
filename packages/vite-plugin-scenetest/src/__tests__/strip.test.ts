@@ -329,6 +329,49 @@ pass('test', true)`
     })
   })
 
+  describe('scenetest-react imports', () => {
+    it('removes import from scenetest-react', () => {
+      const code = `import { pass, fail, useAssert } from 'scenetest-react'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('removes pass/fail/useAssert calls from scenetest-react', () => {
+      const code = `import { pass, fail, useAssert } from 'scenetest-react'
+pass('one', true)
+fail('two', false)
+useAssert({ title: 'test', appData: () => ({}), assertFn: () => {} }, [])
+console.log('kept')`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code.trim()).toBe(`console.log('kept')`)
+    })
+
+    it('handles React component with scenetest-react imports', () => {
+      const code = `import { useState } from 'react'
+import { pass, useAssert } from 'scenetest-react'
+
+function Component() {
+  const [count, setCount] = useState(0)
+  pass('rendered', true)
+  useAssert({ title: 'test', appData: () => ({ count }), assertFn: () => {} }, [count])
+  return <div>{count}</div>
+}`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toContain("import { useState } from 'react'")
+      expect(result!.code).not.toContain("from 'scenetest-react'")
+      expect(result!.code).not.toContain('pass(')
+      expect(result!.code).not.toContain('useAssert(')
+      expect(result!.code).toContain('function Component()')
+    })
+  })
+
   describe('real-world example', () => {
     it('handles a React component with multiple assertions', () => {
       const code = `import { useState, useEffect } from 'react'
