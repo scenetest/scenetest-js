@@ -6,6 +6,7 @@
     "build": "pnpm -r build",
     "dev": "pnpm --filter example-app dev",
     "dev:rebuild": "pnpm --filter vite-plugin-scenetest build && pnpm --filter example-app dev",
+		"dev:docs": "pnpx serve docs",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

@@ -8,152 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --bg: #faf9f7;
-      --text: #1a1a1a;
-      --text-light: #555;
-      --accent: #5046e5;
-      --code-bg: #f0eeeb;
-      --border: #e0ddd8;
-    }
-
-    body {
-      font-family: 'Source Serif 4', Georgia, serif;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 19px;
-      line-height: 1.7;
-    }
-
-    article {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 80px 24px 120px;
-    }
-
-    h1 {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 2.5rem;
-      font-weight: 500;
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      font-style: italic;
-      color: var(--text-light);
-      margin-bottom: 48px;
-      font-size: 1.1rem;
-    }
-
-    h2 {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 1.25rem;
-      font-weight: 500;
-      margin-top: 56px;
-      margin-bottom: 20px;
-      letter-spacing: -0.01em;
-    }
-
-    p {
-      margin-bottom: 24px;
-    }
-
-    a {
-      color: var(--accent);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-    }
-
-    strong {
-      font-weight: 700;
-    }
-
-    em {
-      font-style: italic;
-    }
-
-    code {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.88em;
-      background: var(--code-bg);
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-
-    pre {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.82rem;
-      line-height: 1.6;
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      // padding: 10px 12px;
-      overflow-x: auto;
-      margin: 28px 0;
-			box-shadow: 2px 2px 2px 2px rgb(0 0 255 / 0.1);
-    }
-
-    pre code {
-      background: none;
-      padding: 0;
-    }
-
-    blockquote {
-      border-left: 3px solid var(--accent);
-      padding-left: 24px;
-      margin: 32px 0;
-      font-style: italic;
-      color: var(--text-light);
-    }
-
-    .divider {
-      text-align: center;
-      margin: 48px 0;
-      color: var(--text-light);
-      letter-spacing: 0.3em;
-    }
-
-    ul, ol {
-      margin-bottom: 24px;
-			margin-left: 28px;
-    }
-		ol {
-			font-family: 'IBM Plex Mono', monospace;
-			font-size: 1rem;
-    }
-    li {
-      margin-bottom: 8px;
-    }
-
-    .install {
-      margin-top: 48px;
-      padding: 24px;
-      background: var(--code-bg);
-      border-radius: 6px;
-    }
-
-    .install p {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.9rem;
-      margin: 0;
-    }
-
-    footer {
-      margin-top: 60px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-      font-size: 0.95rem;
-      color: var(--text-light);
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <article>
@@ -163,41 +18,41 @@
 
     <p>
       It's 2026; we builds app differently now. Component state, Query cache, Zustand store,
-		  Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>
-		  possibilities are endless, and they're helping us build buttery smooth, responsive UIs.
+	  Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>
+	  possibilities are endless, and they're helping us build buttery smooth, responsive UIs.
     </p>
     <p><strong>Test tooling should keep up.</strong></p>
     <p>
-		  Most frameworks rely on a headless browser clicking around our app, inputting
-		  inputs into inputs and clicking clickers and expecting to see certain expectations. If we're
-		  being <em>very thorough</em> we might check the database directly to be sure something updated
-			(for realsies).
+	  Most frameworks rely on a headless browser clicking around our app, inputting
+	  inputs into inputs and clicking clickers and expecting to see certain expectations. If we're
+	  being <em>very thorough</em> we might check the database directly to be sure something updated
+		(for realsies).
     </p>
     <p>
-		  The DOM and the Database are good book-ends to compare, but if the main data store in your app is
-		  a local DB or cache, it feels like you're not really testing your app until you're able to make
-			assertions about how your local state compares.
+	  The DOM and the Database are good book-ends to compare, but if the main data store in your app is
+	  a local DB or cache, it feels like you're not really testing your app until you're able to make
+		assertions about how your local state compares.
     </p>
 
     <p class="divider">* * *</p>
 
     <p>
       This is how <em>Scenetest</em> came about. We were looking for tests that would:
-		<ol>
-		  <li>Evaluate data we take from inside the React component lifecycle: in onSettled callbacks, in effects, hooks.</li>
-		  <li>Compare it to what we expect to find in the database or other privileged resources.</li>
-		  <li>Write both with full type safety, intellisense, etc., so your tests work <em>with</em> your types.</li>
-		</ol>
-		Thankfully, in 2026 React world, we have a primitive that matches this pattern
-		neatly: <strong>Server Actions</strong>, which are written in the app, stripped by the
-		bundler, deployed on the server as an RPC function, and called remotely from the client.
-		This inversion of control solves the multi-context app&hArr;server problem,
-		giving the app control over when to call the server function and what data to pass it,
-		but actually running it in a protected/privileged environment.
+	<ol>
+	  <li>Evaluate data we take from inside the React component lifecycle: in onSettled callbacks, in effects, hooks.</li>
+	  <li>Compare it to what we expect to find in the database or other privileged resources.</li>
+	  <li>Write both with full type safety, intellisense, etc., so your tests work <em>with</em> your types.</li>
+	</ol>
+	Thankfully, in 2026 React world, we have a primitive that matches this pattern
+	neatly: <strong>Server Actions</strong>, which are written in the app, stripped by the
+	bundler, deployed on the server as an RPC function, and called remotely from the client.
+	This inversion of control solves the multi-context app&hArr;server problem,
+	giving the app control over when to call the server function and what data to pass it,
+	but actually running it in a protected/privileged environment.
 </p><p>
-		Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
-		about nearly every layer of an application in one place.
-		</p>
+	Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
+	about nearly every layer of an application in one place.
+	</p>
 <pre><code class="language-typescript">// in your UI component
 cost post = usePost(id)
 const form = usePostForm(post)
@@ -206,8 +61,8 @@ useAssert(
   () => {
     title: 'Server item should match local',
     // passing data from react-land to the server fn
-		withData: () => postsCollection.get(id),
-		serverFn: async (server, data) => {
+    withData: () => postsCollection.get(id),
+    serverFn: async (server, data) => {
       const post = await server.getPosts(app.id)
       fail('title is empty', !post)
       pass('titles match', post.title === app.title)
@@ -222,11 +77,11 @@ useAssert(
 
     <p>
       <strong>Scenes</strong> are small user journeys, or the sort of atomic units of a user flow you want to test.
-		<em>e.g.</em> <code>scenetest/profile-update.scene.ts</code>: <em>Log in, navigate to settings, change your username,
+	<em>e.g.</em> <code>scenetest/profile-update.scene.ts</code>: <em>Log in, navigate to settings, change your username,
       submit the form, see the success message.</em> Scenes are about orchestration &ndash; driving the
       browser through a sequence of interactions, and plenty of tools do this just fine,
-			except to add that in theory, writing a sene shouldn't require technical knowledge for how the
-			features are implemented.
+		except to add that in theory, writing a sene shouldn't require technical knowledge for how the
+		features are implemented.
     </p>
 
     <pre><code class="language-typescript">// in scenetest/profile-update.scene.ts
@@ -242,10 +97,10 @@ scene('User updates their profile', async ([user]) => {
 
     <p>
       <strong>Inline Assertions</strong> are test statements that live inside your application
-		  code &ndash; in your components, hooks, and callbacks. They validate your mental model: &ldquo;at this point in the code / React lifecycle,
+	  code &ndash; in your components, hooks, and callbacks. They validate your mental model: &ldquo;at this point in the code / React lifecycle,
       this data should be in this state.&rdquo; Engineers write them to encode their understanding of how and why this works, and to alert
-			future generations if they are ever running afoul of their ancient wisdom.
-		  Use <code>pass</code> or <code>fail</code>, or assertions that run on the server <code>assert</code> and <code>useAssert</code>.
+		future generations if they are ever running afoul of their ancient wisdom.
+	  Use <code>pass</code> or <code>fail</code>, or assertions that run on the server <code>assert</code> and <code>useAssert</code>.
     </p>
 
 <pre><code class="language-typescript">import { pass, fail, assert } from 'scenetest'
@@ -267,15 +122,15 @@ export function ProfileForm({ userId }) {
     : &lt;EditProfileForm profile={profile} /&gt;
 }</code></pre>
 
-		<p>
+	<p>
       Moving Assertions into the application code means they're type-safe out of the box,
-			they run passively even as you just click around your. (In production, the Vite
+		they run passively even as you just click around your. (In production, the Vite
       plugin strips them out entirely. Zero runtime cost. But in dev and test mode,
-			these assertions keep reporting to the collector.)
-			</p><p>
-			 And it means you never again have to apologise
-			to your code base for going into application code and writing
-			<code>window.__profileStore = localDb.profileStore</code> to expose items to the headless browser.
+		these assertions keep reporting to the collector.)
+		</p><p>
+		 And it means you never again have to apologise
+		to your code base for going into application code and writing
+		<code>window.__profileStore = localDb.profileStore</code> to expose items to the headless browser.
     </p>
 
     <p>
@@ -285,13 +140,13 @@ export function ProfileForm({ userId }) {
     <h2>Multi-context comparisons</h2>
 
     <p>We use Playwright in our work and love it, because it allows us to do these multi-context
-		assertions. But look at what we have to do to access the profileStore...
-		now that we have gone into the App code and done the "assign a bunch of things to the window
-		object to help exfiltrate it for the test runner" step mentioned above,
-		we are now able to do this kind of &ldquo;Reverse Server-Action&rdquo; to get the data back
-		out where we can compare it.</p>
+	assertions. But look at what we have to do to access the profileStore...
+	now that we have gone into the App code and done the "assign a bunch of things to the window
+	object to help exfiltrate it for the test runner" step mentioned above,
+	we are now able to do this kind of &ldquo;Reverse Server-Action&rdquo; to get the data back
+	out where we can compare it.</p>
 
-		<pre><code class="language-typescript">// ❌ "reverse server action" approach
+	<pre><code class="language-typescript">// ❌ "reverse server action" approach
 const localDeck = await page.evaluate((lang) => {
   // 🙅❌💀🤧
   const profileStore = window.__profileStore
@@ -311,10 +166,10 @@ expect({
 </code></pre>
     <p>
       I love the multi-context assertion capabilities here, but this approach to getting data
-			from the client feels like we are breaking into its home in the middle of the night and
-			stuffing it in a bag. Let's see if it gets a little nicer when
-			we write it using the <em>assert</em> function in the <code>onSettled</code> callback
-			after the mutation we're trying to test.
+		from the client feels like we are breaking into its home in the middle of the night and
+		stuffing it in a bag. Let's see if it gets a little nicer when
+		we write it using the <em>assert</em> function in the <code>onSettled</code> callback
+		after the mutation we're trying to test.
     </p>
 
     <pre><code class="language-typescript">// ✅ server assertion triggered after a mutation
@@ -341,27 +196,27 @@ onSettled: (data) => {
 
     <p>
       For me, this feels a lot more natural. The engineer who wrote this has waited until the
-			exact moment when we decide the data should all be in sync, and then run the assertion
-			passing in all the client data it needs. What's so unwieldy about the prior version is that
-			we are sending the function from the server to the browser via the headless browser manager,
-			but we're not able to get it <em>in</em> to the app context, so we're just pulling from the
-			<code>window</code> object, and we're able to get it to produce data and we can return that
-			data across the bridge back to the test server. This clearly works but it is so riddled with
-			compromises that it feels like a more natural way is long overdue.
+		exact moment when we decide the data should all be in sync, and then run the assertion
+		passing in all the client data it needs. What's so unwieldy about the prior version is that
+		we are sending the function from the server to the browser via the headless browser manager,
+		but we're not able to get it <em>in</em> to the app context, so we're just pulling from the
+		<code>window</code> object, and we're able to get it to produce data and we can return that
+		data across the bridge back to the test server. This clearly works but it is so riddled with
+		compromises that it feels like a more natural way is long overdue.
     </p>
     <p>
       And look what it does to the applicability of our test code. This second example will work
-			after <em>anyone</em> creates a new deck at any time. Whenever this form or mutation is used,
-			the assertion will run. Unlike the reverse-server-action which is orchestrated by the test
-			suite and only knows how to compare toe <code>getDeck(TEST_LANG, TEST_USER_UID)</code>.</p>
-		<p>
-			And in any other tests that modify decks you'll have to either a) write duplicates of the
-			same assertions in new places, or b) create helper functions that DRY this testing logic &ndash;
-			additional abstractions, additional things that can pass or fail because you built the abstraction
-			imperfectly, opportunities to miss the true nature of whether your app has broken.
+		after <em>anyone</em> creates a new deck at any time. Whenever this form or mutation is used,
+		the assertion will run. Unlike the reverse-server-action which is orchestrated by the test
+		suite and only knows how to compare toe <code>getDeck(TEST_LANG, TEST_USER_UID)</code>.</p>
+	<p>
+		And in any other tests that modify decks you'll have to either a) write duplicates of the
+		same assertions in new places, or b) create helper functions that DRY this testing logic &ndash;
+		additional abstractions, additional things that can pass or fail because you built the abstraction
+		imperfectly, opportunities to miss the true nature of whether your app has broken.
 </p><p>
       Scenetest avoids this repetitiveness without the abstraction &ndash; by putting the assertions in with
-			the component or hook code in the React app, exactly where it always should have been. </p>
+		the component or hook code in the React app, exactly where it always should have been. </p>
 
     <!--h2>The Scene stays clean</h2>
 
@@ -404,12 +259,13 @@ onSettled: (data) => {
       <p>pnpm install scenetest vite-plugin-scenetest playwright-scenetest</p>
     </div-->
 
-		<p><em>Scenetest is in early sideproject dev. Please <a href="https://github.com/mhsnook/scenetest-js">check
-		  it out on GH</a> or <a href="https://bsky.app/profile/msnook.xyz">find me on bsky</a>
-			(<a href="https://twitter.com/mhsnook">or tw</a>) and let me know what you think. &mdash; M</em></p>
+	<p><em>Scenetest is in early sideproject dev. Please <a href="https://github.com/mhsnook/scenetest-js">check
+	  it out on GH</a> or <a href="https://bsky.app/profile/msnook.xyz">find me on bsky</a>
+		(<a href="https://twitter.com/mhsnook">or tw</a>) and let me know what you think. &mdash; M</em></p>
 
     <footer>
       <a href="faq.html">FAQ</a> &mdash; comparisons with page.evaluate, Vitest, etc.
+      <p class="copyright">&copy; m snook 2026 &bull; <a href="https://github.com/mhsnook/scenetest-js">github</a> &bull; <a href="https://bsky.app/profile/msnook.xyz">contact</a></p>
     </footer>
 
   </article>
