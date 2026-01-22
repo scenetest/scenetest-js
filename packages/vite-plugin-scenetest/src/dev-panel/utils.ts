@@ -75,3 +75,12 @@ export function getGroupStats(items: AssertionResult[]): { passCount: number; fa
   }
   return { passCount, failCount }
 }
+
+/**
+ * Format a short location for the location row (just file basename + line)
+ */
+export function formatLocationShort(loc: AssertionResult['location']): string {
+  if (!loc) return ''
+  const file = loc.file.split('/').pop() || loc.file
+  return `${file}:${loc.line}`
+}
