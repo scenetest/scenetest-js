@@ -444,7 +444,7 @@
 })();
 
 // ============================================================================
-// PASS / FAIL FUNCTIONS
+// PASS FUNCTION
 // ============================================================================
 
 function pass(description, condition, context) {
@@ -459,44 +459,24 @@ function pass(description, condition, context) {
   }
 }
 
-function fail(description, condition, context) {
-  if (window.__scenetest_report) {
-    window.__scenetest_report({
-      type: 'fail',
-      description: description,
-      result: !Boolean(condition), // fail() passes when condition is false
-      context: context || null,
-      timestamp: Date.now()
-    });
-  }
-}
-
 // ============================================================================
 // INTERACTIVE DEMO SETUP
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Track hover times for "read long enough" assertions
-  const hoverTimers = new WeakMap();
-
   // Helper to add hover assertions to elements
   function addHoverAssertions(selector, options) {
     const elements = document.querySelectorAll(selector);
     elements.forEach((el, index) => {
-      el.style.cursor = 'pointer';
-
       el.addEventListener('mouseenter', function() {
-        hoverTimers.set(el, Date.now());
         if (options.onEnter) {
           options.onEnter(el, index);
         }
       });
 
       el.addEventListener('mouseleave', function() {
-        const enterTime = hoverTimers.get(el);
-        if (enterTime && options.onLeave) {
-          const duration = Date.now() - enterTime;
-          options.onLeave(el, index, duration);
+        if (options.onLeave) {
+          options.onLeave(el, index);
         }
       });
 
@@ -508,111 +488,98 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Code blocks - the main attraction
+  // Code blocks - demonstrate assertions about rendered content
   addHoverAssertions('pre code', {
-    onEnter: (el, i) => {
-      const codeSnippet = el.textContent.slice(0, 50).trim();
-      pass('User exploring code example', true, codeSnippet + '...');
-    },
-    onLeave: (el, i, duration) => {
-      const minReadTime = 800; // ms
-      fail('Hover too brief to read code', duration < minReadTime,
-           `${duration}ms (need ${minReadTime}ms)`);
+    onEnter: (el) => {
+      pass('Code block should be visible', el.offsetHeight > 0);
+      pass('Code block should contain content', el.textContent.length > 0);
+      // Flaky assertion demo - fails ~25% of the time
+      pass('Syntax highlighting should not throw errors', Math.random() > 0.25);
     }
   });
 
-  // Headers - track navigation intent
+  // Section headers
   addHoverAssertions('h2', {
     onEnter: (el) => {
-      pass('User interested in: ' + el.textContent.trim(), true);
+      const text = el.textContent.trim();
+      pass('Section header should have text content', text.length > 0);
+      pass('Header element should be in the document', document.contains(el));
     }
   });
 
-  // The main title
+  // Main title
   addHoverAssertions('h1', {
-    onEnter: () => {
-      pass('Scenetest title acknowledged', true);
+    onEnter: (el) => {
+      pass('Page title should be rendered', el.textContent.includes('scenetest'));
     },
-    onClick: () => {
-      pass('Title clicked - engaged user!', true);
-      fail('Easter egg: title is not a link', true); // intentional fail for demo
+    onClick: (el) => {
+      pass('Click handler should not throw', true);
+      pass('Document should remain interactive after click', document.body !== null);
     }
   });
 
-  // Subtitle / intro paragraph
+  // Subtitle
   addHoverAssertions('.subtitle', {
-    onEnter: () => {
-      pass('Reading the tagline', true);
+    onEnter: (el) => {
+      pass('Subtitle should be visible', el.offsetHeight > 0);
     }
   });
 
   // External links
   addHoverAssertions('a[href^="http"]', {
     onEnter: (el) => {
-      pass('Considering external link', true, el.href);
+      pass('Link href should be valid URL', el.href.startsWith('http'));
+      pass('Link should have accessible text', el.textContent.trim().length > 0);
     },
     onClick: (el) => {
-      pass('User navigating externally', true, el.href);
+      pass('Navigation should not be blocked', true);
     }
   });
 
-  // FAQ-specific: questions
-  if (document.body.classList.contains('faq')) {
-    addHoverAssertions('h2', {
-      onEnter: (el) => {
-        pass('Reading FAQ question', true, el.textContent.trim());
-      },
-      onLeave: (el, i, duration) => {
-        if (duration > 2000) {
-          pass('Deep consideration of FAQ topic', true, el.textContent.trim());
-        }
-      }
-    });
-  }
-
-  // Screenshot image
+  // Screenshot/figure elements
   addHoverAssertions('figure.screenshot', {
-    onEnter: () => {
-      pass('Viewing screenshot', true);
-    },
-    onLeave: (el, i, duration) => {
-      if (duration > 1500) {
-        pass('Studied the screenshot carefully', true, `${Math.round(duration/1000)}s`);
+    onEnter: (el) => {
+      const img = el.querySelector('img');
+      pass('Figure should contain an image', img !== null);
+      if (img) {
+        pass('Image should have alt text', img.alt && img.alt.length > 0);
+        pass('Image should have loaded', img.complete);
       }
     },
     onClick: () => {
-      pass('Screenshot clicked', true);
-      fail('Image zoom not implemented', true); // demo fail
+      // Flaky assertion demo
+      pass('Image interaction should not cause errors', Math.random() > 0.2);
     }
   });
 
-  // Paragraphs - lightweight tracking
-  let paragraphsRead = 0;
-  addHoverAssertions('article > p', {
-    onLeave: (el, i, duration) => {
-      if (duration > 500) {
-        paragraphsRead++;
-        if (paragraphsRead === 3) {
-          pass('Reader is engaged (3+ paragraphs)', true);
-        }
-        if (paragraphsRead === 6) {
-          pass('Deep reader detected!', true);
-        }
+  // Content paragraphs
+  let interactionCount = 0;
+  addHoverAssertions('article > p, section > p', {
+    onEnter: (el) => {
+      interactionCount++;
+      pass('Paragraph should have readable content', el.textContent.length > 20);
+
+      if (interactionCount === 5) {
+        pass('Multiple elements should be interactive', interactionCount >= 5);
+      }
+      if (interactionCount === 10) {
+        pass('State should remain consistent across interactions', true);
       }
     }
   });
 
   // Footer
   addHoverAssertions('footer', {
-    onEnter: () => {
-      pass('Reached the footer', true);
+    onEnter: (el) => {
+      pass('Footer should be at end of document', true);
+      pass('Page layout should be complete', document.readyState === 'complete');
     }
   });
 
-  // Divider (the * * * section)
+  // Section dividers
   addHoverAssertions('.divider', {
     onEnter: () => {
-      pass('Section break acknowledged', true);
+      pass('Visual separator should render correctly', true);
     }
   });
 
@@ -621,13 +588,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const panel = document.getElementById('scenetest-panel');
     if (panel) {
       panel.addEventListener('mouseenter', () => {
-        pass('User noticed the assertion panel!', true);
+        pass('Assertion panel should be interactive', true);
+        pass('Panel state should be consistent', panel.querySelector('#scenetest-list') !== null);
       });
     }
   }, 100);
 
-  // Initial assertion on page load
+  // Initial assertions on page load
   setTimeout(() => {
-    pass('Documentation page loaded', true, window.location.pathname);
+    pass('Document should be fully loaded', document.readyState === 'complete');
+    pass('DOM should be ready for interaction', document.body !== null);
+    // Flaky demo - occasionally fails
+    pass('Async initialization should complete without race conditions', Math.random() > 0.15);
   }, 200);
 });
