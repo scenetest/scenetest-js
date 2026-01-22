@@ -345,7 +345,7 @@ import { pass, useAssert } from 'scenetest-vue'
 
 const count = ref(0)
 pass('rendered', true)
-useAssert({ title: 'test', appData: () => ({ count: count.value }), assertFn: () => {} }, [() => count.value])
+useAssert({ title: 'test', withData: () => ({ count: count.value }), serverFn: () => {} }, [() => count.value])
 console.log(count.value)`
 
       const result = stripScenetest(code)
@@ -374,7 +374,7 @@ import { pass, createAssert } from 'scenetest-solid'
 function Component() {
   const [count, setCount] = createSignal(0)
   pass('rendered', true)
-  createAssert({ title: 'test', appData: () => ({ count: count() }), assertFn: () => {} }, [count])
+  createAssert({ title: 'test', withData: () => ({ count: count() }), serverFn: () => {} }, [count])
   return count()
 }`
 
@@ -402,7 +402,7 @@ const x = 1`
 
 let count = 0
 pass('rendered', true)
-runAssert({ title: 'test', appData: () => ({ count }), assertFn: () => {} })
+runAssert({ title: 'test', withData: () => ({ count }), serverFn: () => {} })
 console.log(count)`
 
       const result = stripScenetest(code)
@@ -428,7 +428,7 @@ const x = 1`
       const code = `import { pass, fail, useAssert } from 'scenetest-react'
 pass('one', true)
 fail('two', false)
-useAssert({ title: 'test', appData: () => ({}), assertFn: () => {} }, [])
+useAssert({ title: 'test', withData: () => ({}), serverFn: () => {} }, [])
 console.log('kept')`
 
       const result = stripScenetest(code)
@@ -443,7 +443,7 @@ import { pass, useAssert } from 'scenetest-react'
 function Component() {
   const [count, setCount] = useState(0)
   pass('rendered', true)
-  useAssert({ title: 'test', appData: () => ({ count }), assertFn: () => {} }, [count])
+  useAssert({ title: 'test', withData: () => ({ count }), serverFn: () => {} }, [count])
   return <div>{count}</div>
 }`
 

@@ -15,9 +15,9 @@ import type { AssertionConfig } from 'scenetest'
  *
  *   createAssert({
  *     title: 'Email validation',
- *     appData: () => ({ email: profile()?.email }),
- *     assertFn: (server, fromApp) => {
- *       pass('email is valid', server.validateEmail(fromApp.email))
+ *     withData: () => ({ email: profile()?.email }),
+ *     serverFn: (server, data) => {
+ *       pass('email is valid', server.validateEmail(data.email))
  *     },
  *     enabled: !!profile(),
  *   }, [() => profile()?.email])
@@ -26,8 +26,8 @@ import type { AssertionConfig } from 'scenetest'
  * }
  * ```
  */
-export function createAssert<TAppData>(
-  _config: AssertionConfig<TAppData>,
+export function createAssert<TData>(
+  _config: AssertionConfig<TData>,
   _deps: Accessor<unknown>[]
 ): void {
   // This function is transformed by vite-plugin-scenetest
@@ -42,13 +42,13 @@ export interface RuntimeAssertConfig {
   __assertionId: string
   title: string
   key?: string
-  appData: () => unknown
+  withData: () => unknown
   enabled?: boolean
 }
 
 /**
  * Internal runtime primitive called after transform.
- * The transform extracts assertFn and replaces createAssert with this.
+ * The transform extracts serverFn and replaces createAssert with this.
  */
 export function __createAssert(
   config: RuntimeAssertConfig,
@@ -65,7 +65,7 @@ export function __createAssert(
           id: config.__assertionId,
           title: config.title,
           key: config.key,
-          appData: config.appData,
+          withData: config.withData,
         })
       })
     })
