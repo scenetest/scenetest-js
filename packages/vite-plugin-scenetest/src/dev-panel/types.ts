@@ -40,6 +40,32 @@ export interface HistoryStats {
 
 export type FilterMode = 'all' | 'fails' | 'passes'
 
+export type ViewMode = 'grouped' | 'byLocation' | 'sequence'
+
+/**
+ * Represents a unique assertion location in the code
+ * Used for the "by location" view
+ */
+export interface LocationGroup {
+  key: string // "file:line" as unique key
+  location: AssertionResult['location']
+  description: string // Most recent description
+  entries: LocationEntry[]
+  lastResult: boolean
+  lastTimestamp: number
+}
+
+/**
+ * A single run of an assertion at a specific location
+ */
+export interface LocationEntry {
+  result: boolean
+  timestamp: number
+  index: number
+  description: string
+  context?: Record<string, unknown>
+}
+
 declare global {
   interface Window {
     __scenetest_panel?: boolean
@@ -47,5 +73,7 @@ declare global {
     // We extend it here with dev-panel specific functions
     __scenetest_openInEditor?: (loc: AssertionResult['location']) => void
     __scenetest_openFullscreenToGroup?: (groupId: number) => void
+    __scenetest_showSequence?: (locationKey: string) => void
+    __scenetest_setViewMode?: (mode: ViewMode) => void
   }
 }
