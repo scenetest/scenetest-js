@@ -489,10 +489,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Code blocks - demonstrate assertions about rendered content
+  // This mirrors how we think about cache states, loading states, optimistic updates, rollbacks
+  const codeBlockRenderCounts = new WeakMap();
   addHoverAssertions('pre code', {
     onEnter: (el) => {
+      // Track render count for this element
+      const count = (codeBlockRenderCounts.get(el) || 0) + 1;
+      codeBlockRenderCounts.set(el, count);
+
       pass('Code block should be visible', el.offsetHeight > 0);
-      pass('Code block should contain content', el.textContent.length > 0);
+      // This assertion runs every time the element is observed - like checking
+      // that content is present after cache updates, loading states resolve, etc.
+      pass('Code block should have text content every time it renders', el.textContent.length > 0,
+        `render #${count}`);
       // Flaky assertion demo - fails ~25% of the time
       pass('Syntax highlighting should not throw errors', Math.random() > 0.25);
     }
@@ -593,6 +602,23 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   }, 100);
+
+  // Triple-click detection - users shouldn't click so much!
+  let clickTimes = [];
+  const TRIPLE_CLICK_THRESHOLD = 500; // ms between clicks to count as rapid
+  document.addEventListener('click', (e) => {
+    const now = Date.now();
+    // Keep only recent clicks
+    clickTimes = clickTimes.filter(t => now - t < TRIPLE_CLICK_THRESHOLD);
+    clickTimes.push(now);
+
+    if (clickTimes.length >= 3) {
+      pass('User should not click so much!!!', false,
+        `${clickTimes.length} clicks in ${now - clickTimes[0]}ms`);
+      // Reset after triggering so it can trigger again
+      clickTimes = [];
+    }
+  });
 
   // Initial assertions on page load
   setTimeout(() => {
