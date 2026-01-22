@@ -1,16 +1,21 @@
 {
   "name": "scenetest-js",
-  "private": true,
+  "version": "0",
+  "private": false,
   "type": "module",
-	"repository": "https://github.com/mhsnook/scenetest-js.git",
-	"author": "msnook.xyz",
+  "repository": "https://github.com/mhsnook/scenetest-js.git",
+  "author": "msnook.xyz",
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter vite-plugin-scenetest build && pnpm --filter example-app-react dev",
-		"docs": "pnpx serve docs",
-    "typecheck": "pnpm -r typecheck"
+    "docs": "pnpx serve docs",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "pnpm --filter vite-plugin-scenetest test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "typescript": "^5.3.3"
   },
   "packageManager": "pnpm@9.0.0"

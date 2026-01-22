@@ -9,15 +9,14 @@ offer a cloud service that runs your tests across different branches of your thi
 
 ### 3. write example docs of script-driven development
 
-Many find test-driven development to be unwieldy, interfering with the flow of good coding and sometimes tricking you into focusing on perfection too soon. But _Scenetest_ splits the assertions from the scripts, and this can have a big impact on what we even mean by
+Many find test-driven development to be unwieldy, interfering with the flow of good coding and sometimes tricking you into focusing on perfection too soon. But _Scenetest_ splits the assertions from the scripts, and this can have a big impact on what we even mean by "Test Driven Development". We should offer some explanation of "script driven development" where you script things in very human terms like "the person will see a confirmation" and we sort of come up with a little AI agent context instruction for an AI agent to write those as scene specs and then spit out a list for the developer "please add these test IDs and classes in the app code".
 
-Splitting the assertions from the script makes _script-driven development_ actually really viable and potentially easy, even for devs or workflows where they find TDD to be unwieldy or stifling to creative flow. But a script-driven approach is kind of a great way to think about building interfaces in the first place "user2 will log in; and they'll see a notice about the new friend request, and click a button to go view it, and see a list of any new friend requests, and find the other user's username in that list, and click the success-y button in that item, and then the other user, user 1, will receive a success-y alert, and click it, and see their friends list, and the first item on the list will have user2's username in it." This is all very high-level stuff, but if the script is approved it can be very easily converted into a Scene spec, using `data-testid` and `data-testclass` throughout the markup to spot things like "an alert appears" without having to say exactly what text or colour we are looking for. This approach to TDD is just the same as writing some good happy-path user stories as you get started. That doesn't feel so unwieldy to me. And then as you _write the components_ you put in your inline assertions; but this isn't TDD it's more test-as-you-go. So this sense of "frontloading tests" is muted a bit. You frontload your _script_ and then when you write the features you'll just put in whatever inline assertions help you build the feature and debug it as it comes together. Often times we put in a bunch of "if xyz, console log something" -- now you can use scenetest statements, and you don't even have to take them out when you merge the branch!
+And then your tests will be HUMAN READABLE. So then _Script Driven Development_ actually starts to feel like a viable way to work. The inline assertions will be written as needed by the engineer, so not "driving" the process but supporting it and solidifying it; putting the safety harnesses in place as we go. But/so the scripts can be simple simple simple.
 
-Here is an example of the above script written in a SDD kind of way -- no implementation details, just user story, expectation, affordance, some organization:
+Here is an example of a scene where a user logs in and sends a friend request, and then the other user receives it and accepts it, and both users see the confirmation -- no implementation details, just user story, expectation, affordance, action:
 
 ```
-// /scenes/sending-and-receiving-friend-requests.scene.ts
-
+// /scenes/sending-and-receiving-friend-requests.spec.ts
 const [ user1, user2 ] = personas()
 
 // the user takes action!
@@ -49,8 +48,9 @@ user1.watchFor(
 			.thenReadText(user2.username)
   )
 ```
+
 This is a complete spec for a user journey, and the way it's written implies that no refreshes are needed for the user1 to receive the notification, click it, and see a new friend in their friends list. And also nothing is specified about the implementation of the steps, or even the text on the page! We know we want to see _some_ kind of friend management page container but the person writing the test doesn't exactly care what it is for the test to succeed. But the dev will see a
-`<div data-testid="friends-list-container">` and they will know there is some expectation of stability that the friends list container will be on this route, where it is right now, and not in another place or context. If you're thinking of changing that, go talk to someone. So this kind of very high-level scene orchestration, with multi-user concurrency and a sort of continuous flow -> see this content, see the item you want, click the button inside that item, then expect to find some div on the next page that purports to be an explanation. etc. this is a good high-level approach to designing good user journeys, and if we can develop Scene coordination scripts that mirror these semantics and the mechanistic user-tester-centric approach, I think we could get LLMs to be _very good_ at writing these tests. We will want to document the methods and make it easy to feed examples to the AI, and we will design a nice API and not give many ways to do things.
+`<div data-testid="friends-list-container">` and they will know there is some expectation of stability that the friends list container will be on this route, where it is right now, and not in another place or context. This also makes it something of a harness that you can use in LLM-driven development to create meaningful instructions for them but also to _really_ leave them alone to do their thing.
 
 
 ### 4. We can directly profile commonest paths, which things render the most time, etc. We could assign "cost" to different render moments or refresh profiles based on this. the observability potential upside feels huge

@@ -81,7 +81,7 @@ function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: strin
 }
 
 /**
- * Helper to extract properties from a config object
+ * Helper to extract properties from a config object.
  */
 function extractConfigProps(configObj: t.ObjectExpression): {
   titleNode: t.Node | null
@@ -466,9 +466,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
         const column = loc?.start.column ?? 0
 
         if (t.isObjectExpression(configArg)) {
-          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configArg)
+          const { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp } = extractConfigProps(configArg)
 
-          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+          if (!titleNode || !withDataNode || !serverFnNode || !serverFnProp) {
             console.warn(`[vite-plugin-scenetest] createAssert() config missing required properties at ${filename}:${line}`)
             return
           }
@@ -487,18 +487,18 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             titleValue = titleNode.value
           }
 
-          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
-          if (!assertFnBodyCode) return
+          const serverFnBodyCode = extractServerFnBody(code, serverFnNode, filename, line)
+          if (!serverFnBodyCode) return
 
           extractedAssertions.push({
             id,
             title: titleValue,
             key: keyValue,
-            assertFnBodyCode,
+            serverFnBodyCode,
             location: { file: filename, line, column },
           })
 
-          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
+          s.overwrite(serverFnProp.start!, serverFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
           s.overwrite(callee.start!, callee.end!, '__createAssert')
           needsCreateAssertImport = true
         }
@@ -528,9 +528,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
         const column = loc?.start.column ?? 0
 
         if (t.isObjectExpression(configArg)) {
-          const { titleNode, keyNode, appDataNode, assertFnNode, assertFnProp } = extractConfigProps(configArg)
+          const { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp } = extractConfigProps(configArg)
 
-          if (!titleNode || !appDataNode || !assertFnNode || !assertFnProp) {
+          if (!titleNode || !withDataNode || !serverFnNode || !serverFnProp) {
             console.warn(`[vite-plugin-scenetest] runAssert() config missing required properties at ${filename}:${line}`)
             return
           }
@@ -549,18 +549,18 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             titleValue = titleNode.value
           }
 
-          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
-          if (!assertFnBodyCode) return
+          const serverFnBodyCode = extractServerFnBody(code, serverFnNode, filename, line)
+          if (!serverFnBodyCode) return
 
           extractedAssertions.push({
             id,
             title: titleValue,
             key: keyValue,
-            assertFnBodyCode,
+            serverFnBodyCode,
             location: { file: filename, line, column },
           })
 
-          s.overwrite(assertFnProp.start!, assertFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
+          s.overwrite(serverFnProp.start!, serverFnProp.end!, `__assertionId: ${JSON.stringify(id)}`)
           s.overwrite(callee.start!, callee.end!, '__runAssert')
           needsRunAssertImport = true
         }

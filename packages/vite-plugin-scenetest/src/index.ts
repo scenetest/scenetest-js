@@ -47,8 +47,8 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       mode = env.mode
       // Default: strip in production, keep in dev/test
       shouldStrip = options.strip ?? env.mode === 'production'
-      // Default: show dev panel in development (not in test mode - Playwright handles that)
-      showDevPanel = options.devPanel ?? (env.mode === 'development' && !process.env.PLAYWRIGHT_TEST)
+      // Default: show dev panel in development mode
+      showDevPanel = options.devPanel ?? env.mode === 'development'
     },
 
     configResolved(config) {
