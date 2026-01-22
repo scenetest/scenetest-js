@@ -156,6 +156,38 @@ footer {
   font-size: 0.85rem;
 }
 
+/* Screenshot figure */
+figure.screenshot {
+  margin: 40px -40px;
+  text-align: center;
+	background: white;
+	border-radius: 8px;
+	padding: 10px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+figure.screenshot img {
+  max-width: 100%;
+  border-radius: 8px;
+
+}
+
+figure.screenshot figcaption {
+  margin-top: 6px;
+
+	padding: 0 14px 6px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+@media (max-width: 720px) {
+  figure.screenshot {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+
 /* FAQ page overrides */
 .faq h1 {
   font-size: 2rem;
