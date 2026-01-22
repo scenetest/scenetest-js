@@ -16,8 +16,10 @@ export interface ExtractedAssertion {
   title: string
   /** Optional key for disambiguation */
   key?: string
-  /** The serverFn body code (without function wrapper) */
-  serverFnBodyCode: string
+  /** The serverFn body code (without function wrapper) - for React/Vue */
+  serverFnBodyCode?: string
+  /** The assertFn body code (without function wrapper) - for Solid/Svelte */
+  assertFnBodyCode?: string
   /** Source location */
   location: {
     file: string
@@ -61,6 +63,24 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
 }
 
 /**
+ * Helper to extract assertFn body code from a function node (for Solid/Svelte)
+ */
+function extractAssertFnBody(code: string, assertFnNode: t.Node, filename: string, line: number): string | null {
+  if (t.isArrowFunctionExpression(assertFnNode) || t.isFunctionExpression(assertFnNode)) {
+    const body = assertFnNode.body
+    if (t.isBlockStatement(body)) {
+      const bodyCode = code.slice(body.start!, body.end!)
+      return bodyCode.slice(1, -1).trim() // Remove { and }
+    } else {
+      return `return ${code.slice(body.start!, body.end!)}`
+    }
+  } else {
+    console.warn(`[vite-plugin-scenetest] assertFn is not a function at ${filename}:${line}`)
+    return null
+  }
+}
+
+/**
  * Helper to extract properties from a config object
  */
 function extractConfigProps(configObj: t.ObjectExpression): {
@@ -69,12 +89,19 @@ function extractConfigProps(configObj: t.ObjectExpression): {
   withDataNode: t.Node | null
   serverFnNode: t.Node | null
   serverFnProp: t.ObjectProperty | null
+  // For Solid/Svelte which use appData/assertFn instead of withData/serverFn
+  appDataNode: t.Node | null
+  assertFnNode: t.Node | null
+  assertFnProp: t.ObjectProperty | null
 } {
   let titleNode: t.Node | null = null
   let keyNode: t.Node | null = null
   let withDataNode: t.Node | null = null
   let serverFnNode: t.Node | null = null
   let serverFnProp: t.ObjectProperty | null = null
+  let appDataNode: t.Node | null = null
+  let assertFnNode: t.Node | null = null
+  let assertFnProp: t.ObjectProperty | null = null
 
   for (const prop of configObj.properties) {
     if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
@@ -91,10 +118,15 @@ function extractConfigProps(configObj: t.ObjectExpression): {
     } else if (keyName === 'serverFn') {
       serverFnNode = prop.value
       serverFnProp = prop
+    } else if (keyName === 'appData') {
+      appDataNode = prop.value
+    } else if (keyName === 'assertFn') {
+      assertFnNode = prop.value
+      assertFnProp = prop
     }
   }
 
-  return { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp }
+  return { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp, appDataNode, assertFnNode, assertFnProp }
 }
 
 /**

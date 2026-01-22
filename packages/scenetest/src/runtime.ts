@@ -65,8 +65,10 @@ export interface RpcConfig {
   title: string
   /** Optional disambiguation key */
   key?: string
-  /** Function that collects data from the browser */
+  /** Function that collects data from the browser (React/Vue naming) */
   withData?: () => unknown
+  /** Function that collects data from the browser (Solid/Svelte naming) */
+  appData?: () => unknown
 }
 
 /**
@@ -74,22 +76,24 @@ export interface RpcConfig {
  * This is called by transformed assertion() calls in dev mode.
  */
 export async function __scenetest_rpc(config: RpcConfig): Promise<void> {
-  const { id, title, key, withData } = config
+  const { id, title, key, withData, appData } = config
   const stack = getStack()
   const location = parseLocation(stack)
+  // Support both naming conventions: withData (React/Vue) and appData (Solid/Svelte)
+  const dataFn = withData || appData
 
   pendingCount++
 
   try {
-    // Collect data from browser (if withData is provided)
+    // Collect data from browser (if withData/appData is provided)
     let dataValue: unknown = undefined
-    if (withData) {
+    if (dataFn) {
       try {
-        dataValue = withData()
+        dataValue = dataFn()
       } catch (err) {
         report({
           type: 'fail',
-          description: `${title}: withData() threw an error`,
+          description: `${title}: data collection threw an error`,
           result: false,
           timestamp: Date.now(),
           stack,

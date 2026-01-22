@@ -19,6 +19,7 @@ import { filterItems } from './utils'
 import { renderPanelGroup } from './render'
 import { panelStyles } from './styles'
 import { openFullscreen, updateFullscreenWindow } from './fullscreen'
+import { openSymphony } from './symphony/index'
 
 /**
  * Get the HTML template for the panel
@@ -39,6 +40,7 @@ function getPanelHTML(): string {
         <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
       </div>
       <span class="scenetest-separator"></span>
+      <button class="scenetest-btn" id="scenetest-symphony" title="Open symphony visualization">&#10024;</button>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
       <button class="scenetest-btn" id="scenetest-clear">clear</button>
     </div>
@@ -115,6 +117,12 @@ export function createPanel(): void {
   panelEl.querySelector('#scenetest-fullscreen')?.addEventListener('click', (e) => {
     e.stopPropagation()
     openFullscreen()
+  })
+
+  // Symphony button
+  panelEl.querySelector('#scenetest-symphony')?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    openSymphony()
   })
 }
 
