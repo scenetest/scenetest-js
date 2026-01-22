@@ -579,22 +579,64 @@ body {
   gap: 12px;
   flex-shrink: 0;
 }
+/* Current state icon - prominent indicator on the left */
+.state-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.state-icon.pass {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+.state-icon.warn {
+  background: #3a2a0a;
+  color: #f59e0b;
+}
+.state-icon.fail {
+  background: #3a1a1a;
+  color: #f87171;
+}
+
 .status-dots {
   display: flex;
-  gap: 3px;
+  gap: 4px;
   align-items: center;
 }
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   transition: transform 0.15s;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .status-dot.pass {
   background: #4ade80;
 }
 .status-dot.fail {
   background: #f87171;
+}
+/* Accessibility: X marker on failure dots for colorblind users */
+.status-dot .dot-x {
+  position: absolute;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
 }
 .status-dot:last-child {
   animation: pulse-dot 0.5s ease-out;
@@ -647,7 +689,7 @@ body {
   border: 1px solid #4a4a6a;
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .sequence-location {
   margin-bottom: 8px;
@@ -686,27 +728,128 @@ body {
   background: #3a1a1a;
   color: #f87171;
 }
+
+/* Direction hint */
+.sequence-direction-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  color: #6a6a8a;
+  font-size: 11px;
+  background: #0f0f1a;
+  border-radius: 4px;
+}
+.direction-arrow {
+  color: #a0a0ff;
+  font-size: 14px;
+}
+
+/* Timeline track for sequence entries */
+.sequence-list {
+  position: relative;
+  padding-left: 8px;
+}
 .sequence-entry {
-  padding: 10px 16px;
+  padding: 12px 16px 12px 0;
   background: #12121f;
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 0;
+  align-items: stretch;
   border: 1px solid #3a3a5a;
   border-radius: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  position: relative;
 }
 .sequence-entry.fail {
   background: #1a1212;
   border-color: #4a2a2a;
 }
-.sequence-entry.pass .icon { color: #4ade80; }
-.sequence-entry.fail .icon { color: #f87171; }
+
+/* Timeline track with connecting line */
+.timeline-track {
+  width: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.timeline-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background: #3a3a5a;
+  top: -8px;
+  bottom: -8px;
+}
+.timeline-line.first {
+  top: 50%;
+}
+.timeline-line.last {
+  bottom: 50%;
+}
+.timeline-line.first.last {
+  display: none;
+}
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+.timeline-dot.pass {
+  background: #4ade80;
+  box-shadow: 0 0 0 3px #1a3a1a;
+}
+.timeline-dot.fail {
+  background: #f87171;
+  box-shadow: 0 0 0 3px #3a1a1a;
+}
+.timeline-dot .dot-x {
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+.sequence-entry .content {
+  flex: 1;
+  padding-left: 8px;
+}
 .sequence-time {
   font-size: 11px;
   color: #6a6a8a;
   margin-bottom: 4px;
 }
+
+/* End label */
+.sequence-end-label {
+  margin-left: 20px;
+  padding: 8px 16px 8px 40px;
+  color: #6a6a8a;
+  font-size: 11px;
+  position: relative;
+}
+.sequence-end-label::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 0;
+  width: 2px;
+  height: 8px;
+  background: #3a3a5a;
+}
+
 .back-btn {
   display: flex;
   align-items: center;
