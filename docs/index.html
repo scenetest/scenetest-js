@@ -57,9 +57,9 @@
 <pre><code class="language-typescript">// in your UI component
 cost post = usePost(id)
 const form = usePostForm(post)
-// useAssert is like sugar for useEffect(() => assert(config), deps)
+// useAssert works like useEffect or useMemo
 useAssert(
-  () => {
+  () => ({
     title: 'Server item should match local',
     // passing data from react-land to the server fn
     withData: () => postsCollection.get(id),
@@ -70,7 +70,7 @@ useAssert(
     },
     // skip when submitting, run when only finished
     enabled: !form.isSubmitting,
-  },
+  }),
   [form.isSubmitting, post.title]
 )</code></pre>
 

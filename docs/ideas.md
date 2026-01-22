@@ -17,7 +17,7 @@ Here is an example of a scene where a user logs in and sends a friend request, a
 
 ```
 // /scenes/sending-and-receiving-friend-requests.spec.ts
-const [ user1, user2 ] = personas()
+const [ user1, user2 ] = actors()
 
 // the user takes action!
 user1.openBrowserTo(`/friends/search?=${user2.username}`)
@@ -35,7 +35,6 @@ user2
    .thenSeeId('friend-management-page-container')
 	  .getById(`friend-item-${user1.id}`)`
 		.clickId('accept-friend')
-		.fire()
 
 // these are just `when arg1 happens, do arg2`, when either arg is a string it just means
 // when it appears on the message bus and/or put this message on the bus.
