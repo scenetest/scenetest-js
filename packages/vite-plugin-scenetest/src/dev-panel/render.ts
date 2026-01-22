@@ -141,19 +141,33 @@ export function renderLocationRow(group: LocationGroup): string {
   const total = group.entries.length
   const keyJson = JSON.stringify(group.key).replace(/"/g, '&quot;')
 
-  // Generate status dots (most recent 10 runs)
+  // Generate status dots (most recent 10 runs) with ✗ marker for failures
   const recentEntries = group.entries.slice(-10)
   const dots = recentEntries
-    .map(e => `<span class="status-dot ${e.result ? 'pass' : 'fail'}" title="${formatTime(e.timestamp)}"></span>`)
+    .map(e => {
+      if (e.result) {
+        return `<span class="status-dot pass" title="${formatTime(e.timestamp)}"></span>`
+      } else {
+        return `<span class="status-dot fail" title="${formatTime(e.timestamp)}"><span class="dot-x">\u2717</span></span>`
+      }
+    })
     .join('')
 
-  // Determine overall status class
+  // Determine overall status class and icon
   const hasAnyFails = failCount > 0
   const lastFailed = !group.lastResult
   const statusClass = lastFailed ? 'last-fail' : hasAnyFails ? 'has-fails' : 'all-pass'
 
+  // Current state icon - prominent indicator of current status
+  const stateIcon = lastFailed
+    ? '<span class="state-icon fail">\u2717</span>'
+    : hasAnyFails
+      ? '<span class="state-icon warn">\u26A0</span>'
+      : '<span class="state-icon pass">\u2713</span>'
+
   return `
     <div class="location-row ${statusClass}" data-location-key="${keyJson}">
+      ${stateIcon}
       <div class="location-main" onclick="window.opener ? window.opener.__scenetest_showSequence && window.opener.__scenetest_showSequence(${keyJson}) : window.__scenetest_showSequence && window.__scenetest_showSequence(${keyJson})">
         <div class="location-info">
           <span class="location-file">${escapeHtml(formatLocationShort(group.location))}</span>
@@ -178,11 +192,22 @@ export function renderLocationRow(group: LocationGroup): string {
 /**
  * Render a sequence entry for the "sequence" view
  * Shows a single run of an assertion at a specific location
+ * isFirst/isLast are used to show timeline labels
  */
-export function renderSequenceEntry(entry: LocationEntry, location: AssertionResult['location']): string {
+export function renderSequenceEntry(
+  entry: LocationEntry,
+  location: AssertionResult['location'],
+  isFirst: boolean = false,
+  isLast: boolean = false
+): string {
   return `
     <div class="sequence-entry ${entry.result ? 'pass' : 'fail'}">
-      <span class="icon">${entry.result ? '\u2713' : '\u2717'}</span>
+      <div class="timeline-track">
+        <div class="timeline-line ${isFirst ? 'first' : ''} ${isLast ? 'last' : ''}"></div>
+        <div class="timeline-dot ${entry.result ? 'pass' : 'fail'}">
+          ${entry.result ? '' : '<span class="dot-x">\u2717</span>'}
+        </div>
+      </div>
       <div class="content">
         <div class="sequence-time">${formatTime(entry.timestamp)}</div>
         <div class="desc">${escapeHtml(entry.description)}</div>

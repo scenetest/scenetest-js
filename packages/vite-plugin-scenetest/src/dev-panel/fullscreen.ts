@@ -360,11 +360,23 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
 
   const backHandler = `window.opener ? window.opener.__scenetest_setViewMode && window.opener.__scenetest_setViewMode('byLocation') : window.__scenetest_setViewMode && window.__scenetest_setViewMode('byLocation')`
 
+  // Reverse entries so most recent is at top
+  const reversedEntries = entries.slice().reverse()
+  const entryCount = reversedEntries.length
+
   listEl.innerHTML = `
     <div class="back-btn" onclick="${backHandler}">\u2190 Back to all locations</div>
     ${renderSequenceHeader(group)}
-    <div class="sequence-list">
-      ${entries.slice().reverse().map(entry => renderSequenceEntry(entry, group.location)).join('')}
+    <div class="sequence-direction-hint">
+      <span class="direction-arrow">\u2191</span> Most recent at top
     </div>
+    <div class="sequence-list">
+      ${reversedEntries.map((entry, i) => {
+        const isFirst = i === 0 // Most recent (top)
+        const isLast = i === entryCount - 1 // Oldest (bottom)
+        return renderSequenceEntry(entry, group.location, isFirst, isLast)
+      }).join('')}
+    </div>
+    ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
   `
 }
