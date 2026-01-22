@@ -1,4 +1,16 @@
 /**
+ * Result of watching values sync across renders
+ */
+export interface WatchResult {
+  /** Whether values eventually synchronized and stayed synced */
+  settled: boolean
+  /** Sequence of match results per render: [false, false, true] means settled on render 3 */
+  history: boolean[]
+  /** Render number where it first settled (1-indexed), undefined if never settled */
+  settledAtRender?: number
+}
+
+/**
  * Result of an inline assertion, sent to the test runner
  */
 export interface AssertionResult {
@@ -18,6 +30,8 @@ export interface AssertionResult {
   }
   /** Source assertion ID for multi-context assertions */
   assertionId?: string
+  /** For watch assertions that track values syncing over time */
+  watch?: WatchResult
 }
 
 /**

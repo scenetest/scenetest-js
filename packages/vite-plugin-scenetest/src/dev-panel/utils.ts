@@ -2,7 +2,7 @@
  * Utility functions for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup } from './types'
+import type { AssertionResult, AssertionGroup, WatchResult } from './types'
 import { filter } from './state'
 
 /**
@@ -74,4 +74,38 @@ export function getGroupStats(items: AssertionResult[]): { passCount: number; fa
     else failCount++
   }
   return { passCount, failCount }
+}
+
+/**
+ * Format watch result history as a visual indicator
+ * Shows: [✗✗✓] settled on render 3
+ */
+export function formatWatchHistory(watch: WatchResult | undefined): string {
+  if (!watch) return ''
+
+  // Build history visualization: [✗✗✓✓✓]
+  const historyViz = watch.history.map(r => r ? '\u2713' : '\u2717').join('')
+
+  if (watch.settled) {
+    return `[${historyViz}] settled on render ${watch.settledAtRender}`
+  } else {
+    return `[${historyViz}] not settled (${watch.history.length} renders)`
+  }
+}
+
+/**
+ * Format watch info for tooltip
+ */
+export function formatWatchTooltip(watch: WatchResult | undefined): string {
+  if (!watch) return ''
+
+  const lines: string[] = []
+  lines.push(`Watch: ${watch.settled ? 'Settled' : 'Not settled'}`)
+  lines.push(`Renders: ${watch.history.length}`)
+  if (watch.settledAtRender) {
+    lines.push(`Settled at: render ${watch.settledAtRender}`)
+  }
+  lines.push(`History: ${watch.history.map((r, i) => `${i + 1}:${r ? 'pass' : 'fail'}`).join(', ')}`)
+
+  return lines.join('\n')
 }

@@ -266,6 +266,26 @@ export const panelStyles = `
   margin-top: 2px;
   font-style: italic;
 }
+.scenetest-watch {
+  font-size: 9px;
+  color: #8a8aaa;
+  margin-top: 2px;
+  font-family: ui-monospace, monospace;
+}
+.scenetest-item.watch .scenetest-icon {
+  font-size: 13px;
+}
+.scenetest-item.watch.settled .scenetest-icon {
+  color: #4ade80;
+}
+.scenetest-item.watch.syncing .scenetest-icon {
+  color: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 `
 
 export const fullscreenStyles = `
@@ -513,5 +533,25 @@ body {
 }
 .group.highlighted {
   box-shadow: 0 0 0 3px #a0a0ff, 0 0 20px rgba(160, 160, 255, 0.4);
+}
+.watch-info {
+  font-size: 11px;
+  color: #8a8aaa;
+  margin-top: 4px;
+  font-family: ui-monospace, monospace;
+}
+.item.watch .icon {
+  font-size: 15px;
+}
+.item.watch.settled .icon {
+  color: #4ade80;
+}
+.item.watch.syncing .icon {
+  color: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 `

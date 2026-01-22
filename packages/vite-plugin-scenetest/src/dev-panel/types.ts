@@ -2,6 +2,15 @@
  * Types for the dev panel (browser-side)
  */
 
+export interface WatchResult {
+  /** Whether values eventually synchronized and stayed synced */
+  settled: boolean
+  /** Sequence of match results per render */
+  history: boolean[]
+  /** Render number where it first settled (1-indexed) */
+  settledAtRender?: number
+}
+
 export interface AssertionResult {
   type: 'pass' | 'fail'
   description: string
@@ -15,6 +24,8 @@ export interface AssertionResult {
     column?: number
   }
   _index?: number
+  /** For watch assertions that track values syncing over time */
+  watch?: WatchResult
 }
 
 export interface AssertionGroup {

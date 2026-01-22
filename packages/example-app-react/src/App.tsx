@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { pass, fail, useAssert } from 'scenetest-react'
+import { pass, fail, useAssert, useWatch } from 'scenetest-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -27,6 +27,25 @@ function ProfileForm() {
       setEmail(profile.email)
     }
   }, [profile])
+
+  // ========================================
+  // WATCH ASSERTIONS
+  // Track when local state syncs up with profile data.
+  // These assertions watch values across renders and report
+  // when they "settle" (values become equal) or fail to settle.
+  // ========================================
+
+  // Watch: local name should sync with profile name
+  // On first render, name is '' and profile?.name is 'John Doe'
+  // After useEffect runs, name becomes 'John Doe' - settled!
+  useWatch('local name should sync with profile', name, profile?.name ?? '', {
+    context: { localName: name, profileName: profile?.name },
+  })
+
+  // Watch: local email should sync with profile email
+  useWatch('local email should sync with profile', email, profile?.email ?? '', {
+    context: { localEmail: email, profileEmail: profile?.email },
+  })
 
   // Basic render assertions
   pass('ProfileForm rendered', true)
