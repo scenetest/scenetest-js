@@ -248,3 +248,103 @@ Extended Playwright `page` with:
 - `scenePage.passed` - Assertions that passed
 - `scenePage.failed` - Assertions that failed
 - `scenePage.waitForAssertions()` - Wait for pending multi-context assertions to complete
+
+### Watching Props/State Sync
+
+Track when two values eventually synchronize across renders. Useful for detecting when local state catches up with props or remote data.
+
+#### React: `useWatch`
+
+```tsx
+import { useWatch } from 'scenetest-react'
+
+function ProfileSync({ userId }) {
+  const [localId, setLocalId] = useState('')
+
+  // Track that local state syncs with props
+  useWatch('props and state should be in sync', userId, localId)
+
+  useEffect(() => {
+    setLocalId(userId) // Will sync on next render
+  }, [userId])
+
+  return <div>{localId}</div>
+}
+```
+
+The dev panel shows the history of match results: `[✗✗✓] settled on render 3`
+
+**Options:**
+```tsx
+useWatch('data should match', localData, serverData, {
+  compare: (a, b) => JSON.stringify(a) === JSON.stringify(b), // Custom comparison
+  context: { localData, serverData }, // Debug context
+})
+```
+
+#### Vue: `useWatch`
+
+```vue
+<script setup>
+import { useWatch } from 'scenetest-vue'
+import { ref, watch } from 'vue'
+
+const props = defineProps<{ userId: string }>()
+const localId = ref('')
+
+// Track that local state syncs with props
+useWatch('props and state should be in sync',
+  () => props.userId,
+  () => localId.value
+)
+
+watch(() => props.userId, (newId) => {
+  localId.value = newId
+}, { immediate: true })
+</script>
+```
+
+#### Solid: `createWatch`
+
+```tsx
+import { createWatch } from 'scenetest-solid'
+import { createSignal, createEffect } from 'solid-js'
+
+function ProfileSync(props) {
+  const [localId, setLocalId] = createSignal('')
+
+  // Track that local state syncs with props
+  createWatch('props and state should be in sync',
+    () => props.userId,
+    () => localId()
+  )
+
+  createEffect(() => {
+    setLocalId(props.userId)
+  })
+
+  return <div>{localId()}</div>
+}
+```
+
+#### Svelte: `watch`
+
+```svelte
+<script>
+import { watch } from 'scenetest-svelte'
+
+let { userId } = $props()
+let localId = $state('')
+
+const tracker = watch('props and state should sync')
+
+$effect(() => {
+  tracker.check(userId, localId)
+  return () => tracker.finalize()
+})
+
+$effect(() => {
+  localId = userId
+})
+</script>
+```

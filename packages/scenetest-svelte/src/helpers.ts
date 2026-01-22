@@ -1,4 +1,4 @@
-import type { AssertionConfig } from 'scenetest'
+import type { AssertionConfig, AssertionResult, WatchResult } from 'scenetest'
 
 /**
  * Svelte helper for multi-context assertions.
@@ -74,4 +74,193 @@ export function __runAssert(config: RuntimeAssertConfig): void {
       withData: config.withData,
     })
   })
+}
+
+/**
+ * Options for watch tracker
+ */
+export interface WatchOptions {
+  /** Custom comparison function. Defaults to Object.is */
+  compare?: (a: unknown, b: unknown) => boolean
+  /** Optional context data for debugging */
+  context?: Record<string, unknown>
+}
+
+/**
+ * Internal state for watch tracking
+ */
+interface WatchState {
+  history: boolean[]
+  settled: boolean
+  settledAtRender?: number
+}
+
+/**
+ * Get stack trace for the watch call
+ */
+function getWatchStack(): string | undefined {
+  const err = new Error()
+  const stack = err.stack
+  if (!stack) return undefined
+  const lines = stack.split('\n').slice(3)
+  return lines.join('\n')
+}
+
+/**
+ * Parse location from stack trace
+ */
+function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+  if (!stack) return undefined
+  const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
+  if (!match) return undefined
+  return {
+    file: match[1],
+    line: parseInt(match[2], 10),
+    column: match[3] ? parseInt(match[3], 10) : undefined,
+  }
+}
+
+/**
+ * Report a watch assertion result
+ */
+function reportWatch(
+  description: string,
+  watchState: WatchState,
+  stack: string | undefined,
+  context?: Record<string, unknown>
+): void {
+  if (typeof window === 'undefined' || !window.__scenetest_report) return
+
+  const watch: WatchResult = {
+    settled: watchState.settled,
+    history: [...watchState.history],
+    settledAtRender: watchState.settledAtRender,
+  }
+
+  window.__scenetest_report({
+    type: 'pass',
+    description,
+    result: watchState.settled,
+    timestamp: Date.now(),
+    stack,
+    context,
+    location: parseWatchLocation(stack),
+    watch,
+  })
+}
+
+/**
+ * Watch tracker that can be used inside $effect to track value synchronization.
+ */
+export interface WatchTracker {
+  /**
+   * Check if two values match and update the watch state.
+   * Call this inside $effect with the values to compare.
+   */
+  check: (valueA: unknown, valueB: unknown) => void
+  /**
+   * Report final state if never settled. Call in cleanup.
+   */
+  finalize: () => void
+  /**
+   * Whether the values have settled (matched at least once)
+   */
+  readonly settled: boolean
+  /**
+   * History of match results
+   */
+  readonly history: readonly boolean[]
+}
+
+/**
+ * Create a watch tracker for tracking value synchronization in Svelte.
+ *
+ * Use this to track when two reactive values eventually sync up.
+ * Call tracker.check() inside $effect, and optionally tracker.finalize()
+ * in cleanup to report if values never settled.
+ *
+ * @example
+ * ```svelte
+ * <script>
+ * import { watch } from 'scenetest-svelte'
+ *
+ * let { userId } = $props()
+ * let localId = $state('')
+ *
+ * const tracker = watch('props and state should sync')
+ *
+ * $effect(() => {
+ *   tracker.check(userId, localId)
+ *   return () => tracker.finalize()
+ * })
+ *
+ * $effect(() => {
+ *   localId = userId // Sync on prop change
+ * })
+ * </script>
+ * ```
+ *
+ * @example
+ * ```svelte
+ * <script>
+ * import { watch } from 'scenetest-svelte'
+ *
+ * let { data } = $props()
+ * let cache = $state(null)
+ *
+ * // With custom comparison
+ * const tracker = watch('cache should match props', {
+ *   compare: (a, b) => JSON.stringify(a) === JSON.stringify(b)
+ * })
+ *
+ * $effect(() => {
+ *   tracker.check(data, cache)
+ * })
+ * </script>
+ * ```
+ */
+export function watch(description: string, options?: WatchOptions): WatchTracker {
+  const state: WatchState = {
+    history: [],
+    settled: false,
+    settledAtRender: undefined,
+  }
+
+  const stack = getWatchStack()
+  const compare = options?.compare ?? Object.is
+
+  return {
+    check(valueA: unknown, valueB: unknown) {
+      const matches = compare(valueA, valueB)
+
+      // Update history
+      state.history.push(matches)
+
+      // Check if settled
+      if (matches && !state.settled) {
+        state.settled = true
+        state.settledAtRender = state.history.length
+      }
+
+      // Report current state
+      reportWatch(description, state, stack, options?.context)
+    },
+
+    finalize() {
+      if (!state.settled) {
+        reportWatch(description, state, stack, {
+          ...options?.context,
+          _unmountedWithoutSettling: true,
+        })
+      }
+    },
+
+    get settled() {
+      return state.settled
+    },
+
+    get history() {
+      return state.history
+    },
+  }
 }

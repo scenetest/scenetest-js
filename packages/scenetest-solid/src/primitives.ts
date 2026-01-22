@@ -1,5 +1,5 @@
-import { createEffect, on, type Accessor } from 'solid-js'
-import type { AssertionConfig } from 'scenetest'
+import { createEffect, on, onCleanup, type Accessor } from 'solid-js'
+import type { AssertionConfig, AssertionResult, WatchResult } from 'scenetest'
 
 /**
  * Solid primitive for multi-context assertions.
@@ -70,4 +70,152 @@ export function __createAssert(
       })
     })
   )
+}
+
+/**
+ * Options for createWatch primitive
+ */
+export interface CreateWatchOptions {
+  /** Custom comparison function. Defaults to Object.is */
+  compare?: (a: unknown, b: unknown) => boolean
+  /** Optional context data for debugging */
+  context?: Record<string, unknown>
+}
+
+/**
+ * Internal state for watch tracking
+ */
+interface WatchState {
+  history: boolean[]
+  settled: boolean
+  settledAtRender?: number
+}
+
+/**
+ * Get stack trace for the watch call
+ */
+function getWatchStack(): string | undefined {
+  const err = new Error()
+  const stack = err.stack
+  if (!stack) return undefined
+  const lines = stack.split('\n').slice(3)
+  return lines.join('\n')
+}
+
+/**
+ * Parse location from stack trace
+ */
+function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+  if (!stack) return undefined
+  const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
+  if (!match) return undefined
+  return {
+    file: match[1],
+    line: parseInt(match[2], 10),
+    column: match[3] ? parseInt(match[3], 10) : undefined,
+  }
+}
+
+/**
+ * Report a watch assertion result
+ */
+function reportWatch(
+  description: string,
+  watchState: WatchState,
+  stack: string | undefined,
+  context?: Record<string, unknown>
+): void {
+  if (typeof window === 'undefined' || !window.__scenetest_report) return
+
+  const watch: WatchResult = {
+    settled: watchState.settled,
+    history: [...watchState.history],
+    settledAtRender: watchState.settledAtRender,
+  }
+
+  window.__scenetest_report({
+    type: 'pass',
+    description,
+    result: watchState.settled,
+    timestamp: Date.now(),
+    stack,
+    context,
+    location: parseWatchLocation(stack),
+    watch,
+  })
+}
+
+/**
+ * Watch two reactive values and track their synchronization.
+ *
+ * Reports an assertion that tracks whether values eventually sync up.
+ * The assertion passes once values match, and tracks the full history.
+ *
+ * @example
+ * ```tsx
+ * import { createWatch } from 'scenetest-solid'
+ * import { createSignal, createEffect } from 'solid-js'
+ *
+ * function ProfileSync(props: { userId: string }) {
+ *   const [localId, setLocalId] = createSignal('')
+ *
+ *   // Track that local state syncs with props
+ *   createWatch('props and state should be in sync',
+ *     () => props.userId,
+ *     () => localId()
+ *   )
+ *
+ *   createEffect(() => {
+ *     setLocalId(props.userId) // Will sync on next update
+ *   })
+ *
+ *   return <div>{localId()}</div>
+ * }
+ * ```
+ */
+export function createWatch(
+  description: string,
+  valueA: Accessor<unknown>,
+  valueB: Accessor<unknown>,
+  options?: CreateWatchOptions
+): void {
+  // Track state across reactive updates
+  const state: WatchState = {
+    history: [],
+    settled: false,
+    settledAtRender: undefined,
+  }
+
+  // Capture stack on creation
+  const stack = getWatchStack()
+
+  createEffect(
+    on([valueA, valueB], ([a, b]) => {
+      // Compare values
+      const compare = options?.compare ?? Object.is
+      const matches = compare(a, b)
+
+      // Update history
+      state.history.push(matches)
+
+      // Check if settled
+      if (matches && !state.settled) {
+        state.settled = true
+        state.settledAtRender = state.history.length
+      }
+
+      // Report current state
+      reportWatch(description, state, stack, options?.context)
+    })
+  )
+
+  // Report on cleanup if never settled
+  onCleanup(() => {
+    if (!state.settled) {
+      reportWatch(description, state, stack, {
+        ...options?.context,
+        _unmountedWithoutSettling: true,
+      })
+    }
+  })
 }
