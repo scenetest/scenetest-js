@@ -131,7 +131,7 @@ export function openFullscreen(groupId?: number): void {
 }
 
 /**
- * Scroll to a specific group in the fullscreen window
+ * Scroll to a specific group in the fullscreen window and highlight it
  */
 function scrollToGroup(groupId: number): void {
   if (!fullscreenWindow || fullscreenWindow.closed) return
@@ -141,7 +141,11 @@ function scrollToGroup(groupId: number): void {
     // Expand the group if collapsed
     groupEl.classList.remove('collapsed')
     // Scroll into view
-    groupEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    groupEl.scrollIntoView({ behavior: 'auto', block: 'start' })
+    // Clear any previous highlight and add to this group
+    const prevHighlighted = doc.querySelector('.group.highlighted')
+    if (prevHighlighted) prevHighlighted.classList.remove('highlighted')
+    groupEl.classList.add('highlighted')
   }
 }
 
@@ -173,6 +177,26 @@ export function updateFullscreenWindow(): void {
   const listEl = doc.getElementById('list')
   if (!listEl) return
 
+  // Save scroll state before re-rendering
+  // Find the first group visible in the viewport to anchor our scroll position
+  const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop
+  const isScrolled = scrollTop > 50
+  let anchorGroupId: number | null = null
+  let anchorOffset = 0
+
+  if (isScrolled) {
+    const groupEls = listEl.querySelectorAll('[data-group-id]')
+    for (const el of groupEls) {
+      const rect = el.getBoundingClientRect()
+      // Find the first group that's at or below the top of the viewport
+      if (rect.top >= -rect.height / 2) {
+        anchorGroupId = parseInt(el.getAttribute('data-group-id') || '', 10)
+        anchorOffset = rect.top
+        break
+      }
+    }
+  }
+
   const filteredGroups = groups
     .map(g => ({
       ...g,
@@ -199,4 +223,15 @@ export function updateFullscreenWindow(): void {
     .map(g => renderFullscreenGroup(g))
     .reverse()
     .join('')
+
+  // Restore scroll position to keep the same group visible
+  if (anchorGroupId !== null) {
+    const anchorEl = listEl.querySelector(`[data-group-id="${anchorGroupId}"]`)
+    if (anchorEl) {
+      const newRect = anchorEl.getBoundingClientRect()
+      const scrollAdjustment = newRect.top - anchorOffset
+      doc.documentElement.scrollTop += scrollAdjustment
+      doc.body.scrollTop += scrollAdjustment
+    }
+  }
 }

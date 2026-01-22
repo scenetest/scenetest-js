@@ -511,4 +511,7 @@ body {
   font-size: 48px;
   margin-bottom: 16px;
 }
+.group.highlighted {
+  box-shadow: 0 0 0 3px #a0a0ff, 0 0 20px rgba(160, 160, 255, 0.4);
+}
 `
