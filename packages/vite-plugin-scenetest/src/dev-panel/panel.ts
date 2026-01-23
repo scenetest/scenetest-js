@@ -27,7 +27,7 @@ function getPanelHTML(): string {
   return `
     <style>${panelStyles}</style>
     <div id="scenetest-header">
-      <span id="scenetest-title">\uD83C\uDFAC scenetest</span>
+      <span id="scenetest-title"><span class="scenetest-icon">\uD83C\uDFAC</span>scenetest</span>
       <span id="scenetest-counts">
         <span class="scenetest-count pass" id="scenetest-pass" title="Click to filter passes">\u2713 0</span>
         <span class="scenetest-count fail" id="scenetest-fail" title="Click to filter failures">\u2717 0</span>
