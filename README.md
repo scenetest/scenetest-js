@@ -1,20 +1,33 @@
 <div align="center">
 
-# 🎬 Scenetest
+# Scenetest
 
 </div>
 
-_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript Testing framework inspired by Playwright's `page.evaluate`_ and React server actions.
+_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript testing framework inspired by Playwright's `page.evaluate` and React server actions._
 
 ---
 
-## Usage
-
-### Installation
+## Installation
 
 ```bash
-pnpm install scenetest vite-plugin-scenetest playwright-scenetest
+# For React apps
+pnpm add @scenetest/react @scenetest/vite-plugin @scenetest/cli
+
+# For Vue apps
+pnpm add @scenetest/vue @scenetest/vite-plugin @scenetest/cli
+
+# For Solid apps
+pnpm add @scenetest/solid @scenetest/vite-plugin @scenetest/cli
+
+# For Svelte apps
+pnpm add @scenetest/svelte @scenetest/vite-plugin @scenetest/cli
+
+# Core only (framework-agnostic)
+pnpm add @scenetest/core @scenetest/vite-plugin @scenetest/cli
 ```
+
+## Quick Start
 
 ### 1. Add the Vite Plugin
 
@@ -22,7 +35,7 @@ pnpm install scenetest vite-plugin-scenetest playwright-scenetest
 // vite.config.ts
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import scenetest from 'vite-plugin-scenetest'
+import scenetest from '@scenetest/vite-plugin'
 
 export default defineConfig({
   plugins: [react(), scenetest()],
@@ -38,7 +51,7 @@ In development mode, a floating panel appears in your app showing assertions in 
 ```tsx
 // src/components/ProfileForm.tsx
 import { useState } from 'react'
-import { should, failed } from 'scenetest'
+import { should, failed } from '@scenetest/react'
 
 export function ProfileForm({ user }) {
   const [name, setName] = useState(user.name)
@@ -59,13 +72,172 @@ export function ProfileForm({ user }) {
 }
 ```
 
-### 3. Multi-Context Assertions with `useAssert`
+### 3. Create a Scenetest Config
+
+```typescript
+// scenetest.config.ts
+import { defineConfig } from '@scenetest/cli'
+
+export default defineConfig({
+  baseUrl: 'http://localhost:5173',
+  scenes: './scenes',
+
+  // Define test users/actors
+  casts: [
+    { user: { id: 'user-1', username: 'alice' } },
+    { user: { id: 'user-2', username: 'bob' } },
+  ],
+
+  headed: true,        // Show browser window
+  timeout: 30000,      // Scene timeout
+  actionTimeout: 5000, // Per-action timeout
+})
+```
+
+### 4. Write Scene Specs
+
+```typescript
+// scenes/profile.spec.ts
+import { scene } from '@scenetest/cli'
+
+scene('user can see the welcome page', async ({ cast }) => {
+  const user = await cast('user')
+
+  // Navigate to the app
+  await user.goto('/')
+
+  // Should see the main UI elements
+  await user.seeId('profile-form')
+  await user.seeId('name-input')
+})
+
+scene('user can update their name', async ({ cast }) => {
+  const user = await cast('user')
+
+  await user.goto('/')
+
+  // Type a new name and submit
+  await user
+    .seeId('name-input')
+    .typeInto('name-input', 'New Name')
+    .clickId('submit-button')
+
+  // Should see the updated display
+  await user.seeText('New Name')
+})
+```
+
+### 5. Add npm Scripts
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "scenetest"
+  }
+}
+```
+
+### 6. Run Tests
+
+```bash
+# Run all scenes
+pnpm test
+
+# Example output:
+# Running 2 scenes...
+#
+# ✓ user can see the welcome page (1.2s)
+#   Collected 12 assertions (12 passed, 0 failed)
+#
+# ✓ user can update their name (2.1s)
+#   Collected 18 assertions (18 passed, 0 failed)
+#
+# All scenes completed: 2 passed, 0 failed
+```
+
+---
+
+## Framework Packages
+
+| Package | Description |
+|---------|-------------|
+| `@scenetest/core` | Core `should()`, `failed()`, `assert()`, `match()` functions |
+| `@scenetest/react` | React bindings with `useAssert` hook (re-exports core) |
+| `@scenetest/vue` | Vue bindings with `useAssert` composable (re-exports core) |
+| `@scenetest/solid` | Solid bindings with `createAssert` primitive (re-exports core) |
+| `@scenetest/svelte` | Svelte bindings with `runAssert` helper (re-exports core) |
+| `@scenetest/vite-plugin` | Vite plugin for dev panel and production stripping |
+| `@scenetest/cli` | CLI runner for scene specs |
+
+Each framework package re-exports everything from `@scenetest/core`, so you only need to import from your framework's package:
+
+```tsx
+// React - use @scenetest/react
+import { should, failed, useAssert } from '@scenetest/react'
+
+// Vue - use @scenetest/vue
+import { should, failed, useAssert } from '@scenetest/vue'
+
+// Solid - use @scenetest/solid
+import { should, failed, createAssert } from '@scenetest/solid'
+
+// Svelte - use @scenetest/svelte
+import { should, failed, runAssert } from '@scenetest/svelte'
+```
+
+---
+
+## Scene API
+
+### `scene(name, fn)`
+
+Define a scene spec:
+
+```typescript
+import { scene } from '@scenetest/cli'
+
+scene('descriptive name of the user journey', async ({ cast }) => {
+  const user = await cast('user')
+  // ... interactions
+})
+```
+
+### Actor Methods
+
+The `cast()` function returns an actor with these methods:
+
+```typescript
+const user = await cast('user')
+
+// Navigation
+await user.goto('/path')
+
+// Finding elements
+await user.seeId('element-id')       // Wait for element with data-testid
+await user.seeText('text content')   // Wait for text to appear
+
+// Interactions
+await user.clickId('button-id')
+await user.typeInto('input-id', 'text to type')
+
+// Chaining
+await user
+  .seeId('form')
+  .typeInto('email', 'test@example.com')
+  .clickId('submit')
+```
+
+---
+
+## Multi-Context Assertions
 
 For assertions that need to compare browser data with server data:
 
 ```tsx
 // src/components/ProfileForm.tsx
-import { useAssert, should } from 'scenetest'
+import { useAssert, should } from '@scenetest/react'
 
 export function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
@@ -74,13 +246,11 @@ export function ProfileForm({ userId }) {
   useAssert({
     title: 'Profile matches database',
     withData: () => ({
-      localProfile: profilesCollection.get(userId),
-      state: profile,
+      localProfile: profile,
     }),
     serverFn: async (server, data) => {
-      const dbProfile = await server.db.get(userId)
+      const dbProfile = await server.getUser(userId)
       should('DB should match local', dbProfile.name === data.localProfile.name)
-      should('user id should match', userId === dbProfile.user_id)
     },
     enabled: !isLoading,
   }, [isLoading, profile?.id])
@@ -89,99 +259,31 @@ export function ProfileForm({ userId }) {
 }
 ```
 
-Configure server functions in `scenetest.config.ts`:
+### Server Configuration
+
+Configure server functions in your scenetest config:
 
 ```typescript
 // scenetest.config.ts
-import { defineScenetestConfig } from 'vite-plugin-scenetest'
+import { defineConfig } from '@scenetest/cli'
 
-export default defineScenetestConfig({
+export default defineConfig({
+  baseUrl: 'http://localhost:5173',
+  scenes: './scenes',
+  casts: [{ user: { id: 'user-1' } }],
+
   serverFunctions: {
     validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
     getUser: (id) => db.users.findById(id),
   },
-	/* not here yet
-	fnInjection: async (data, req, headers) =>
 })
 ```
 
-### 4. Orchestrate However You Want
+---
 
-Scenetest doesn't care how you drive your app. The assertions fire whenever the code runs. Use whatever works for you:
-
-- **Playwright** - automated browser testing
-- **Cypress** - another great automation tool
-- **AI agents** - let an LLM click around your app
-- **Human testers** - QA team exploring edge cases
-- **You, the developer** - just use your app normally
-- **Your cat walking on the keyboard** - valid test input
-- **Improv sessions** - "yes, and... what if I click this?"
-
-The `playwright-scenetest` package provides a convenient `scenePage` fixture, but it's just one option. Any tool that can drive a browser will trigger your inline assertions.
-
-### 5. Write Scenes with Playwright (Optional)
-
-```typescript
-// tests/profile.scene.ts
-import { test, expect } from 'playwright-scenetest'
-
-test('User updates their profile', async ({ scenePage }) => {
-  await scenePage.goto('/profile')
-
-  // Interact with the app
-  await scenePage.getByLabel('Name').fill('New Name')
-  await scenePage.getByRole('button', { name: 'Save' }).click()
-
-  // Check inline assertions were collected
-  console.log(`Collected ${scenePage.assertions.length} assertions`)
-
-  // All assertions should have passed
-  expect(scenePage.failed).toHaveLength(0)
-
-  // Check specific assertions ran
-  const userAvailable = scenePage.assertions.find(
-    a => a.description === 'user object is available'
-  )
-  expect(userAvailable?.result).toBe(true)
-})
-```
-
-**Playwright Config:**
-
-```typescript
-// playwright.config.ts
-import { defineConfig } from '@playwright/test'
-
-export default defineConfig({
-  testDir: './tests',
-  testMatch: '**/*.scene.ts',
-  use: {
-    baseURL: 'http://localhost:5173',
-  },
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-  },
-})
-```
-
-**Run Your Scenes:**
-
-```bash
-# Start dev server and run tests
-npx playwright test
-
-# Example output:
-# Collected 37 inline assertions:
-#   - Passed: 37
-#   - Failed: 0
-```
-
-### Dev Panel
+## Dev Panel
 
 When running your app in development mode (`pnpm run dev`), Scenetest injects a floating panel that shows inline assertions in real-time as you interact with your app.
-
-![Dev Panel Screenshot](docs/images/dev-panel.png)
 
 **Features:**
 - **Live assertion feed**: See `should()` and `failed()` results as they fire
@@ -190,29 +292,36 @@ When running your app in development mode (`pnpm run dev`), Scenetest injects a 
 - **Fullscreen mode**: Click the fullscreen button to open assertions in a dedicated window with stack traces
 - **Clear button**: Reset assertions to start fresh
 
-This lets you validate assertions without running Playwright tests - just click around your app and watch the assertions fire.
+This lets you validate assertions without running tests - just click around your app and watch the assertions fire.
 
 **Configuration:**
 ```typescript
+// vite.config.ts
+import scenetest from '@scenetest/vite-plugin'
+
 // Disable the dev panel
 scenetest({ devPanel: false })
 
-// Force-enable in test mode (normally disabled for Playwright)
+// Force-enable in test mode
 scenetest({ devPanel: true })
 ```
 
-### API Reference
+---
 
-#### `should(description, condition, context?)`
-Records an assertion. Passes when `condition` is truthy, fails when falsy. Optional `context` object for debugging. Description should read as a natural "should" statement.
+## API Reference
+
+### `should(description, condition, context?)`
+
+Records an assertion. Passes when `condition` is truthy, fails when falsy. Optional `context` object for debugging.
 
 ```tsx
 should('user should be logged in', user !== null)
 should('form should have valid email', isValidEmail(email), { email })
 ```
 
-#### `failed(description, context?)`
-Unconditional failure marker for unexpected code paths. Use this past-tense helper to indicate something bad already happened—there's no more checking to do.
+### `failed(description, context?)`
+
+Unconditional failure marker for unexpected code paths.
 
 ```tsx
 if (error) {
@@ -225,8 +334,9 @@ mutation.mutate(data, {
 })
 ```
 
-#### `useAssert(config, deps)`
-React hook for multi-context assertions. Same config shape as `assert()`. Use `enabled: false` to skip.
+### `useAssert(config, deps)` (React)
+
+React hook for multi-context assertions.
 
 ```tsx
 useAssert({
@@ -240,8 +350,9 @@ useAssert({
 }, [isLoading, profile?.id])
 ```
 
-#### `assert(config)`
-Imperative multi-context assertion for use in callbacks (e.g., `onSuccess`, `onSettled`).
+### `assert(config)`
+
+Imperative multi-context assertion for use in callbacks.
 
 ```tsx
 onSuccess: (data) => {
@@ -256,7 +367,8 @@ onSuccess: (data) => {
 }
 ```
 
-#### `match(...pairs)`
+### `match(...pairs)`
+
 Compare pairs of values for equality. Returns `true` if all pairs match.
 
 ```tsx
@@ -266,9 +378,8 @@ should('primary fields should match', match(
 ))
 ```
 
-#### `scenePage` fixture
-Extended Playwright `page` with:
-- `scenePage.assertions` - All collected assertions
-- `scenePage.passed` - Assertions that passed
-- `scenePage.failed` - Assertions that failed
-- `scenePage.waitForAssertions()` - Wait for pending multi-context assertions to complete
+---
+
+## License
+
+MIT
