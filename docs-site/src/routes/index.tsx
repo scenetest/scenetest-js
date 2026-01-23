@@ -5,8 +5,8 @@ const Home: Component = () => {
     <article class="page home">
       <h1>Scenetest</h1>
       <p class="lead">
-        Inline assertions for end-to-end testing. Write assertions inside your components,
-        see them in real-time as you develop.
+        Evaluate your product, not your tests. Write friendly little Scenes for your Actors.
+        A testing framework inspired by Playwright's <code>page.evaluate</code>.
       </p>
 
       <section>
@@ -16,34 +16,72 @@ const Home: Component = () => {
         </p>
         <ol>
           <li>
-            <strong>Scenes</strong>: Testing user journeys and flows through browser orchestration
+            <strong>Scene Specs</strong>: User journeys written with <code>scene()</code> and <code>cast()</code>
           </li>
           <li>
-            <strong>Inline Assertions</strong>: Assertions that live inside your application code,
-            not in separate spec files
+            <strong>Inline Assertions</strong>: Assertions that live inside your components with <code>should()</code> and <code>failed()</code>
           </li>
         </ol>
       </section>
 
       <section>
-        <h2>Quick Example</h2>
+        <h2>Scene Spec Example</h2>
+        <div class="code-block" data-language="typescript">
+          <div class="code-header">
+            <span class="code-language">typescript</span>
+            <button class="copy-btn" onclick={`navigator.clipboard.writeText(\`import { scene } from '@scenetest/cli'
+
+scene('user can update profile', async ({ cast }) => {
+  const user = await cast('user')
+
+  await user.goto('/')
+  await user.seeId('profile-form')
+  await user.typeInto('name-input', 'New Name')
+  await user.clickId('submit-button')
+  await user.seeText('Profile updated!')
+})\`)`}>Copy</button>
+          </div>
+          <pre><code class="language-typescript">{`import { scene } from '@scenetest/cli'
+
+scene('user can update profile', async ({ cast }) => {
+  const user = await cast('user')
+
+  await user.goto('/')
+  await user.seeId('profile-form')
+  await user.typeInto('name-input', 'New Name')
+  await user.clickId('submit-button')
+  await user.seeText('Profile updated!')
+})`}</code></pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>Inline Assertion Example</h2>
         <div class="code-block" data-language="tsx">
           <div class="code-header">
             <span class="code-language">tsx</span>
-            <button class="copy-btn" onclick="navigator.clipboard.writeText(`import { should } from '@scenetest/react'
+            <button class="copy-btn" onclick={`navigator.clipboard.writeText(\`import { should, failed } from '@scenetest/react'
 
-function WelcomeMessage({ user }) {
-  should('user name is displayed', !!user.name)
+function ProfileForm({ user }) {
+  should('user should be available', user !== undefined)
 
-  return <h1>Welcome, {user.name}!</h1>
-}`)">Copy</button>
+  if (user?.error) {
+    failed('user in unexpected error state', { error: user.error })
+  }
+
+  return <form data-testid="profile-form">...</form>
+}\`)`}>Copy</button>
           </div>
-          <pre><code class="language-tsx">{`import { should } from '@scenetest/react'
+          <pre><code class="language-tsx">{`import { should, failed } from '@scenetest/react'
 
-function WelcomeMessage({ user }) {
-  should('user name is displayed', !!user.name)
+function ProfileForm({ user }) {
+  should('user should be available', user !== undefined)
 
-  return <h1>Welcome, {user.name}!</h1>
+  if (user?.error) {
+    failed('user in unexpected error state', { error: user.error })
+  }
+
+  return <form data-testid="profile-form">...</form>
 }`}</code></pre>
         </div>
       </section>
@@ -53,13 +91,16 @@ function WelcomeMessage({ user }) {
         <div class="code-block" data-language="bash">
           <div class="code-header">
             <span class="code-language">bash</span>
-            <button class="copy-btn" onclick="navigator.clipboard.writeText('npm install @scenetest/core @scenetest/vite-plugin')">Copy</button>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText('pnpm add @scenetest/react @scenetest/vite-plugin @scenetest/cli')">Copy</button>
           </div>
-          <pre><code class="language-bash">npm install @scenetest/core @scenetest/vite-plugin</code></pre>
+          <pre><code class="language-bash">pnpm add @scenetest/react @scenetest/vite-plugin @scenetest/cli</code></pre>
         </div>
         <p>
           Then check out the <a href="/guides/writing-specs">Writing Specs</a> guide to learn
           how to write effective tests with Scenetest.
+        </p>
+        <p>
+          Or try the <a href="/demo">Live Demo</a> to see the observer panel in action.
         </p>
       </section>
     </article>
