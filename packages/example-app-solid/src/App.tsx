@@ -1,5 +1,5 @@
 import { createSignal, createMemo, createEffect, Show } from 'solid-js'
-import { pass, fail } from '@mhsnook/scenetest-solid'
+import { pass, fail } from 'scenetest-js-solid'
 
 function App() {
   // Reactive state

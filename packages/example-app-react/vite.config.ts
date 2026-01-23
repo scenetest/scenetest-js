@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import scenetest from '@mhsnook/vite-plugin-scenetest'
+import scenetest from 'vite-plugin-scenetest-js'
 
 export default defineConfig({
   plugins: [

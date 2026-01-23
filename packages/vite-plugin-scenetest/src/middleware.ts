@@ -1,5 +1,5 @@
 import type { Connect, ViteDevServer } from 'vite'
-import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@mhsnook/scenetest'
+import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from 'scenetest-js'
 import { AsyncLocalStorage } from 'async_hooks'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'

@@ -3,7 +3,7 @@ export { createAssert, __createAssert } from './primitives.js'
 export type { RuntimeAssertConfig } from './primitives.js'
 
 // Re-export everything from core scenetest for convenience
-export { pass, fail, assert } from '@mhsnook/scenetest'
+export { pass, fail, assert } from 'scenetest-js'
 export type {
   AssertionResult,
   ScenetestReporter,
@@ -11,4 +11,4 @@ export type {
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,
-} from '@mhsnook/scenetest'
+} from 'scenetest-js'

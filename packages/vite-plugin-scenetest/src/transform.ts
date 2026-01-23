@@ -148,6 +148,11 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     '@mhsnook/scenetest-vue',
     '@mhsnook/scenetest-solid',
     '@mhsnook/scenetest-svelte',
+    'scenetest-js',
+    'scenetest-js-react',
+    'scenetest-js-vue',
+    'scenetest-js-solid',
+    'scenetest-js-svelte',
   ]
 
   // Track imported names and their source packages
@@ -572,7 +577,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsRpcImport) {
-    const rpcImport = `\nimport { __scenetest_rpc } from '@mhsnook/scenetest/runtime'\n`
+    const rpcImport = `\nimport { __scenetest_rpc } from 'scenetest-js/runtime'\n`
     s.appendLeft(importInsertPos, rpcImport)
   }
 
@@ -584,12 +589,12 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsCreateAssertImport) {
-    const solidImport = `\nimport { __createAssert } from '@mhsnook/scenetest-solid'\n`
+    const solidImport = `\nimport { __createAssert } from 'scenetest-js-solid'\n`
     s.appendLeft(importInsertPos, solidImport)
   }
 
   if (needsRunAssertImport) {
-    const svelteImport = `\nimport { __runAssert } from '@mhsnook/scenetest-svelte'\n`
+    const svelteImport = `\nimport { __runAssert } from 'scenetest-js-svelte'\n`
     s.appendLeft(importInsertPos, svelteImport)
   }
 

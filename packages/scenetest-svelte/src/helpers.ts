@@ -1,4 +1,4 @@
-import type { AssertionConfig } from '@mhsnook/scenetest'
+import type { AssertionConfig } from 'scenetest-js'
 
 /**
  * Svelte helper for multi-context assertions.
@@ -66,7 +66,7 @@ export function __runAssert(config: RuntimeAssertConfig): void {
   if (config.enabled === false) return
 
   // Import dynamically to avoid circular deps
-  import('@mhsnook/scenetest/runtime').then(({ __scenetest_rpc }) => {
+  import('scenetest-js/runtime').then(({ __scenetest_rpc }) => {
     __scenetest_rpc({
       id: config.__assertionId,
       title: config.title,

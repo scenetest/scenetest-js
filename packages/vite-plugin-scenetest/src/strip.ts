@@ -30,6 +30,11 @@ const SCENETEST_PACKAGES = [
   '@mhsnook/scenetest-vue',
   '@mhsnook/scenetest-solid',
   '@mhsnook/scenetest-svelte',
+  'scenetest-js',
+  'scenetest-js-react',
+  'scenetest-js-vue',
+  'scenetest-js-solid',
+  'scenetest-js-svelte',
 ]
 
 /**

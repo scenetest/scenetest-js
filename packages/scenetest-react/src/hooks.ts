@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { AssertionConfig } from '@mhsnook/scenetest'
+import type { AssertionConfig } from 'scenetest-js'
 
 /**
  * React hook for multi-context assertions.
@@ -50,7 +50,7 @@ export function __useAssert(
     if (config.enabled === false) return
 
     // Import dynamically to avoid circular deps
-    import('@mhsnook/scenetest/runtime').then(({ __scenetest_rpc }) => {
+    import('scenetest-js/runtime').then(({ __scenetest_rpc }) => {
       __scenetest_rpc({
         id: config.__assertionId,
         title: config.title,

@@ -1,5 +1,5 @@
 {
-  "name": "@mhsnook/scenetest-vue",
+  "name": "scenetest-js-vue",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mhsnook/scenetest": "workspace:*"
+    "scenetest-js": "workspace:*"
   },
   "peerDependencies": {
     "vue": "^3.3.0"

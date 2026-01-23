@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { pass, fail } from '@mhsnook/scenetest-vue'
+import { pass, fail } from 'scenetest-js-vue'
 
 // Reactive state
 const name = ref('')
