@@ -4,7 +4,7 @@ import { stripScenetest } from '../strip.js'
 describe('stripScenetest', () => {
   describe('import removal', () => {
     it('removes simple import statement', () => {
-      const code = `import { should, fail } from 'scenetest'
+      const code = `import { should, failed } from 'scenetest'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -21,8 +21,8 @@ console.log('hello')`
       expect(result!.code).toBe(`console.log('hello')`)
     })
 
-    it('removes import with only fail', () => {
-      const code = `import { fail } from 'scenetest'
+    it('removes import with only failed', () => {
+      const code = `import { failed } from 'scenetest'
 console.log('hello')`
 
       const result = stripScenetest(code)
@@ -31,7 +31,7 @@ console.log('hello')`
     })
 
     it('removes import with aliases', () => {
-      const code = `import { should as s, fail as f } from 'scenetest'
+      const code = `import { should as s, failed as f } from 'scenetest'
 s('test', true)
 f('test')`
 
@@ -43,7 +43,7 @@ f('test')`
     it('handles namespace import', () => {
       const code = `import * as scenetest from 'scenetest'
 scenetest.should('test', true)
-scenetest.fail('test', false)`
+scenetest.failed('test')`
 
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
@@ -62,9 +62,9 @@ console.log('after')`
       expect(result!.code).toBe(`console.log('after')`)
     })
 
-    it('removes simple fail() statement', () => {
-      const code = `import { fail } from 'scenetest'
-fail('description')
+    it('removes simple failed() statement', () => {
+      const code = `import { failed } from 'scenetest'
+failed('description')
 console.log('after')`
 
       const result = stripScenetest(code)
@@ -72,11 +72,11 @@ console.log('after')`
       expect(result!.code).toBe(`console.log('after')`)
     })
 
-    it('removes multiple should/fail statements', () => {
-      const code = `import { should, fail } from 'scenetest'
+    it('removes multiple should/failed statements', () => {
+      const code = `import { should, failed } from 'scenetest'
 should('one', true)
 console.log('middle')
-fail('two')
+failed('two')
 should('three', true)`
 
       const result = stripScenetest(code)
@@ -168,7 +168,7 @@ const x = 1`
       expect(result).toBeNull()
     })
 
-    it('does not strip when should/fail are from different module', () => {
+    it('does not strip when should/failed are from different module', () => {
       const code = `import { should } from 'other-module'
 should('test', true)
 const x = 1`
@@ -331,7 +331,7 @@ should('test', true)`
 
   describe('scenetest-vue imports', () => {
     it('removes import from scenetest-vue', () => {
-      const code = `import { should, fail, useAssert } from 'scenetest-vue'
+      const code = `import { should, failed, useAssert } from 'scenetest-vue'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -359,7 +359,7 @@ console.log(count.value)`
 
   describe('scenetest-solid imports', () => {
     it('removes import from scenetest-solid', () => {
-      const code = `import { should, fail, createAssert } from 'scenetest-solid'
+      const code = `import { should, failed, createAssert } from 'scenetest-solid'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -389,7 +389,7 @@ function Component() {
 
   describe('scenetest-svelte imports', () => {
     it('removes import from scenetest-svelte', () => {
-      const code = `import { should, fail, runAssert } from 'scenetest-svelte'
+      const code = `import { should, failed, runAssert } from 'scenetest-svelte'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -416,7 +416,7 @@ console.log(count)`
 
   describe('scenetest-react imports', () => {
     it('removes import from scenetest-react', () => {
-      const code = `import { should, fail, useAssert } from 'scenetest-react'
+      const code = `import { should, failed, useAssert } from 'scenetest-react'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -424,10 +424,10 @@ const x = 1`
       expect(result!.code).toBe('const x = 1')
     })
 
-    it('removes should/fail/useAssert calls from scenetest-react', () => {
-      const code = `import { should, fail, useAssert } from 'scenetest-react'
+    it('removes should/failed/useAssert calls from scenetest-react', () => {
+      const code = `import { should, failed, useAssert } from 'scenetest-react'
 should('one', true)
-fail('two')
+failed('two')
 useAssert({ title: 'test', withData: () => ({}), serverFn: () => {} }, [])
 console.log('kept')`
 
@@ -460,7 +460,7 @@ function Component() {
   describe('real-world example', () => {
     it('handles a React component with multiple assertions', () => {
       const code = `import { useState, useEffect } from 'react'
-import { should, fail } from 'scenetest'
+import { should, failed } from 'scenetest'
 
 function ProfileForm() {
   const [profile, setProfile] = useState(null)
@@ -474,7 +474,7 @@ function ProfileForm() {
       setLoading(false)
       should('Profile should load successfully', data !== null)
     }).catch(() => {
-      fail('Profile fetch failed unexpectedly')
+      failed('Profile fetch failed unexpectedly')
     })
   }, [])
 
@@ -500,9 +500,9 @@ function ProfileForm() {
       // Should remove scenetest import
       expect(result!.code).not.toContain("from 'scenetest'")
 
-      // Should remove all should/fail calls
+      // Should remove all should/failed calls
       expect(result!.code).not.toContain('should(')
-      expect(result!.code).not.toContain('fail(')
+      expect(result!.code).not.toContain('failed(')
 
       // Should keep the component logic
       expect(result!.code).toContain('function ProfileForm()')

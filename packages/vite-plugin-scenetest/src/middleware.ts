@@ -26,9 +26,9 @@ export function should(description: string, condition: boolean, context?: Record
 }
 
 /**
- * Server-side fail() function - unconditional failure marker
+ * Server-side failed() function - past-tense failure marker
  */
-export function fail(description: string, context?: Record<string, unknown>): void {
+export function failed(description: string, context?: Record<string, unknown>): void {
   const results = assertionStorage.getStore()
   if (results) {
     results.push({
@@ -78,7 +78,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       const serverFn = assertions[id] as (
         server: ServerContext,
         data: unknown,
-        helpers: { should: typeof should; fail: typeof fail }
+        helpers: { should: typeof should; failed: typeof failed }
       ) => void | Promise<void>
 
       if (!serverFn) {
@@ -102,8 +102,8 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
 
       await assertionStorage.run(results, async () => {
         try {
-          // Pass the should/fail helpers directly to the serverFn
-          await serverFn(serverContext, data, { should, fail })
+          // Pass the should/failed helpers directly to the serverFn
+          await serverFn(serverContext, data, { should, failed })
         } catch (err) {
           results.push({
             type: 'fail',

@@ -1,5 +1,5 @@
 import { createSignal, createMemo, createEffect, Show } from 'solid-js'
-import { should, fail } from 'scenetest-solid'
+import { should, failed } from 'scenetest-solid'
 
 function App() {
   // Reactive state
@@ -40,13 +40,13 @@ function App() {
     // Validate
     if (!isValidName()) {
       setError('Name must be at least 2 characters')
-      fail('form submitted with invalid name', { name: name() })
+      failed('form submitted with invalid name', { name: name() })
       return
     }
 
     if (!isValidEmail()) {
       setError('Please enter a valid email')
-      fail('form submitted with invalid email', { email: email() })
+      failed('form submitted with invalid email', { email: email() })
       return
     }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { should, fail } from 'scenetest-vue'
+import { should, failed } from 'scenetest-vue'
 
 // Reactive state
 const name = ref('')
@@ -37,13 +37,13 @@ function handleSubmit() {
   // Validate
   if (!isValidName.value) {
     error.value = 'Name must be at least 2 characters'
-    fail('form submitted with invalid name', { name: name.value })
+    failed('form submitted with invalid name', { name: name.value })
     return
   }
 
   if (!isValidEmail.value) {
     error.value = 'Please enter a valid email'
-    fail('form submitted with invalid email', { email: email.value })
+    failed('form submitted with invalid email', { email: email.value })
     return
   }
 

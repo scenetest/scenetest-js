@@ -3,7 +3,7 @@ export { runAssert, __runAssert } from './helpers.js'
 export type { RuntimeAssertConfig } from './helpers.js'
 
 // Re-export everything from core scenetest for convenience
-export { should, fail, assert, match } from 'scenetest'
+export { should, failed, assert, match } from 'scenetest'
 export type {
   AssertionResult,
   ScenetestReporter,

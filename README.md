@@ -34,7 +34,7 @@ In development mode, a floating panel appears in your app showing assertions in 
 ```tsx
 // src/components/ProfileForm.tsx
 import { useState } from 'react'
-import { should, fail } from 'scenetest'
+import { should, failed } from 'scenetest'
 
 export function ProfileForm({ user }) {
   const [name, setName] = useState(user.name)
@@ -42,9 +42,9 @@ export function ProfileForm({ user }) {
   // These assertions run every render in dev/test mode
   should('user should be available', user !== undefined)
 
-  // Use fail() as an escape hatch for unexpected states
+  // Use failed() as an escape hatch for unexpected states
   if (user?.error) {
-    fail('user in unexpected error state', { error: user.error })
+    failed('user in unexpected error state', { error: user.error })
   }
 
   return (
@@ -180,7 +180,7 @@ When running your app in development mode (`pnpm run dev`), Scenetest injects a 
 ![Dev Panel Screenshot](docs/images/dev-panel.png)
 
 **Features:**
-- **Live assertion feed**: See `should()` and `fail()` results as they fire
+- **Live assertion feed**: See `should()` and `failed()` results as they fire
 - **Pass/fail counts**: Quick summary of assertion results
 - **Collapsible**: Click the header to minimize
 - **Fullscreen mode**: Click the fullscreen button to open assertions in a dedicated window with stack traces
@@ -207,17 +207,17 @@ should('user should be logged in', user !== null)
 should('form should have valid email', isValidEmail(email), { email })
 ```
 
-#### `fail(description, context?)`
-Unconditional failure marker for unexpected code paths. Use this as an escape hatch when code reaches a state that should never happen.
+#### `failed(description, context?)`
+Unconditional failure marker for unexpected code paths. Use this past-tense helper to indicate something bad already happened—there's no more checking to do.
 
 ```tsx
 if (error) {
-  fail('unexpected error during save', { error: error.message })
+  failed('unexpected error during save', { error: error.message })
   return
 }
 
 mutation.mutate(data, {
-  onError: (err) => fail('mutation failed', { error: err })
+  onError: (err) => failed('mutation failed', { error: err })
 })
 ```
 

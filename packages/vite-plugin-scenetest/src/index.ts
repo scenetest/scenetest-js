@@ -180,7 +180,7 @@ export { stripScenetest } from './strip.js'
 // Re-export config helper for user config files
 export { defineScenetestConfig } from './config.js'
 
-// Re-export server-side should/fail for use in scenetest.config.ts
-export { should, fail } from './middleware.js'
+// Re-export server-side should/failed for use in scenetest.config.ts
+export { should, failed } from './middleware.js'
 
 export default scenetest
