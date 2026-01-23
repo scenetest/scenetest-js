@@ -2,8 +2,8 @@
  * Utility functions for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup } from './types'
-import { filter } from './state'
+import type { AssertionResult } from './types.js'
+import { filter } from './state.js'
 
 /**
  * Escape HTML special characters

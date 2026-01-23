@@ -2,7 +2,7 @@
  * Fullscreen window management
  */
 
-import type { FilterMode, ViewMode } from './types'
+import type { FilterMode, ViewMode } from './types.js'
 import {
   groups,
   passCount,
@@ -18,11 +18,11 @@ import {
   setSequenceLocation,
   clearAll,
   panel,
-} from './state'
-import { filterItems } from './utils'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader } from './render'
-import { fullscreenStyles } from './styles'
-import { updatePanel } from './panel'
+} from './state.js'
+import { filterItems } from './utils.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader } from './render.js'
+import { fullscreenStyles } from './styles.js'
+import { updatePanel } from './panel.js'
 
 /**
  * Get the HTML for the fullscreen window

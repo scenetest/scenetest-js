@@ -2,8 +2,8 @@
  * Assertion history tracking
  */
 
-import type { AssertionResult, HistoryEntry, HistoryStats } from './types'
-import { assertionHistory } from './state'
+import type { AssertionResult, HistoryEntry, HistoryStats } from './types.js'
+import { assertionHistory } from './state.js'
 
 /**
  * Track an assertion in the history map
