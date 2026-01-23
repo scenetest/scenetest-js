@@ -12,38 +12,4 @@ If you have been instructed to do a BIG ITEMS PASS, then do one thing differentl
 
 ## Items to tackle
 
-### Multi-Context Assertions (assertion() API)
-- **Status**: DESIGN READY - AWAITING REVIEW
-- **Complexity**: 4
-- **Tags**: BIG ITEM
-- **Description**: The `assertion({ serverFn, withData })` API is more complex:
-  - `withData` runs in browser, collects data
-  - `serverFn` runs on server (Vite middleware) with database access
-  - Vite plugin extracts serverFn at build time, generates RPC client
-  - Server functions configured in `scenetest.config.ts`
-- **Design Doc**: See `docs/design/server-actions.md`
-- **Notes**: Design doc written. Key architecture: Vite plugin middleware serves as test server, no external process needed. serverFn extracted and served as virtual module. Browser calls `/__scenetest/run` endpoint with serialized data. Results flow back through existing `__scenetest_report` mechanism.
-- **Decisions made**:
-  1. No imports in serverFn - everything via `server` or `data`
-  2. Optional `key` field for uniqueness in loops (combined with file location)
-
 ---
-
-## Open Questions
-
-1. **Assertion timing**: How do we know when to "wait" for assertions? The README mentions awaiting `form.submit()` should wait for assertions triggered by onSettled. Need to design a mechanism for this.
-
-2. **Assertion identity**: How do we dedupe assertions that fire multiple times (e.g., on re-render)? Do we want to?
-
-3. **Error handling**: If an assertion throws, should it break the scene flow or just record a failure?
-   - Answer: Record a failure. Our scenes are not to be messed with by our inline assertions.
-
-4. **Reporter format**: What format should assertion results take? Need to integrate with Playwright's reporter system.
-
----
-
-## Reference
-
-- See `CLAUDE.md` for completed implementation notes.
-- See `implementation-details.md` for previous choices you made and forgot.
-- See `docs/design/server-actions.md` for design of our server-actions API.
