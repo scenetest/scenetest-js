@@ -196,7 +196,7 @@ export function renderLocationRow(group: LocationGroup): string {
  */
 export function renderSequenceEntry(
   entry: LocationEntry,
-  location: AssertionResult['location'],
+  _location: AssertionResult['location'],
   isFirst: boolean = false,
   isLast: boolean = false
 ): string {

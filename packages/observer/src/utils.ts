@@ -2,7 +2,7 @@
  * Utility functions for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup } from './types'
+import type { AssertionResult } from './types'
 import { filter } from './state'
 
 /**

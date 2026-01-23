@@ -2,7 +2,7 @@
  * Shared state for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup, LocationEntry } from './types'
+import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup } from './types'
 
 // Assertion storage
 export const assertions: AssertionResult[] = []

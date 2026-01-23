@@ -1,0 +1,42 @@
+{
+  "name": "@scenetest/observer",
+  "version": "0.0.1",
+  "description": "Observer panel for scenetest - displays assertions in real-time",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/observer"
+  },
+  "keywords": ["testing", "e2e", "assertions", "observability", "dev-tools"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./script": {
+      "types": "./dist/script.d.ts",
+      "import": "./dist/script.js"
+    },
+    "./auto": {
+      "types": "./dist/auto.d.ts",
+      "import": "./dist/auto.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build:bundle": "node scripts/bundle.mjs",
+    "build": "pnpm run build:bundle && tsc",
+    "typecheck": "pnpm run build:bundle && tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2",
+    "typescript": "^5.3.3"
+  }
+}

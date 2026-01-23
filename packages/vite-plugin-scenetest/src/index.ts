@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import { stripScenetest } from './strip.js'
-import { devPanelScript } from './dev-panel.generated.js'
+import { observerScript } from '@scenetest/observer/script'
 import { transformAssertions } from './transform.js'
 import {
   registerAssertions,
@@ -141,8 +141,8 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return html
       }
 
-      // Inject the dev panel script before </body>
-      const script = `<script>${devPanelScript}</script>`
+      // Inject the observer script before </body>
+      const script = `<script>${observerScript}</script>`
       return html.replace('</body>', `${script}</body>`)
     },
 
