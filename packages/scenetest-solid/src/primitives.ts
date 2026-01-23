@@ -73,9 +73,9 @@ export function __createAssert(
 }
 
 /**
- * Options for createWatch primitive
+ * Options for createCheck primitive
  */
-export interface CreateWatchOptions {
+export interface CreateCheckOptions {
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -90,9 +90,9 @@ interface WatchState {
 }
 
 /**
- * Get stack trace for the watch call
+ * Get stack trace for the check call
  */
-function getWatchStack(): string | undefined {
+function getCheckStack(): string | undefined {
   const err = new Error()
   const stack = err.stack
   if (!stack) return undefined
@@ -103,7 +103,7 @@ function getWatchStack(): string | undefined {
 /**
  * Parse location from stack trace
  */
-function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+function parseCheckLocation(stack: string | undefined): AssertionResult['location'] {
   if (!stack) return undefined
   const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
   if (!match) return undefined
@@ -115,9 +115,9 @@ function parseWatchLocation(stack: string | undefined): AssertionResult['locatio
 }
 
 /**
- * Report a watch assertion result
+ * Report a check assertion result
  */
-function reportWatch(
+function reportCheck(
   description: string,
   watchState: WatchState,
   stack: string | undefined,
@@ -138,27 +138,27 @@ function reportWatch(
     timestamp: Date.now(),
     stack,
     context,
-    location: parseWatchLocation(stack),
+    location: parseCheckLocation(stack),
     watch,
   })
 }
 
 /**
- * Watch a reactive condition and track when it settles (becomes true).
+ * Check a reactive condition and track when it settles (becomes true).
  *
- * Similar to `pass()` but tracks the condition over time. Reports an assertion
+ * Similar to `should()` but tracks the condition over time. Reports an assertion
  * that shows whether the condition eventually became true.
  *
  * @example
  * ```tsx
- * import { createWatch } from 'scenetest-solid'
+ * import { createCheck } from 'scenetest-solid'
  * import { createSignal, createEffect } from 'solid-js'
  *
  * function ProfileSync(props: { userId: string }) {
  *   const [localId, setLocalId] = createSignal('')
  *
  *   // Track that local state syncs with props
- *   createWatch('props and state should be in sync',
+ *   createCheck('props and state should be in sync',
  *     () => props.userId === localId()
  *   )
  *
@@ -170,10 +170,10 @@ function reportWatch(
  * }
  * ```
  */
-export function createWatch(
+export function createCheck(
   description: string,
   condition: Accessor<boolean>,
-  options?: CreateWatchOptions
+  options?: CreateCheckOptions
 ): void {
   // Track state across reactive updates
   const state: WatchState = {
@@ -183,7 +183,7 @@ export function createWatch(
   }
 
   // Capture stack on creation
-  const stack = getWatchStack()
+  const stack = getCheckStack()
 
   createEffect(
     on(condition, (result) => {
@@ -197,14 +197,14 @@ export function createWatch(
       }
 
       // Report current state
-      reportWatch(description, state, stack, options?.context)
+      reportCheck(description, state, stack, options?.context)
     })
   )
 
   // Report on cleanup if never settled
   onCleanup(() => {
     if (!state.settled) {
-      reportWatch(description, state, stack, {
+      reportCheck(description, state, stack, {
         ...options?.context,
         _unmountedWithoutSettling: true,
       })

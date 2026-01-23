@@ -1,6 +1,6 @@
 // Svelte-specific helpers
-export { runAssert, __runAssert, watch } from './helpers.js'
-export type { RuntimeAssertConfig, WatchOptions, WatchTracker } from './helpers.js'
+export { runAssert, __runAssert, check } from './helpers.js'
+export type { RuntimeAssertConfig, CheckOptions, CheckTracker } from './helpers.js'
 
 // Re-export everything from core scenetest for convenience
 export { should, failed, assert, match } from 'scenetest'

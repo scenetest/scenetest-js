@@ -74,9 +74,9 @@ export function __useAssert(
 }
 
 /**
- * Options for useWatch composable
+ * Options for useCheck composable
  */
-export interface UseWatchOptions {
+export interface UseCheckOptions {
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -91,9 +91,9 @@ interface WatchState {
 }
 
 /**
- * Get stack trace for the watch call
+ * Get stack trace for the check call
  */
-function getWatchStack(): string | undefined {
+function getCheckStack(): string | undefined {
   const err = new Error()
   const stack = err.stack
   if (!stack) return undefined
@@ -104,7 +104,7 @@ function getWatchStack(): string | undefined {
 /**
  * Parse location from stack trace
  */
-function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+function parseCheckLocation(stack: string | undefined): AssertionResult['location'] {
   if (!stack) return undefined
   const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
   if (!match) return undefined
@@ -116,9 +116,9 @@ function parseWatchLocation(stack: string | undefined): AssertionResult['locatio
 }
 
 /**
- * Report a watch assertion result
+ * Report a check assertion result
  */
-function reportWatch(
+function reportCheck(
   description: string,
   watchState: WatchState,
   stack: string | undefined,
@@ -139,7 +139,7 @@ function reportWatch(
     timestamp: Date.now(),
     stack,
     context,
-    location: parseWatchLocation(stack),
+    location: parseCheckLocation(stack),
     watch,
   })
 }
@@ -153,14 +153,14 @@ function reportWatch(
  * @example
  * ```vue
  * <script setup>
- * import { useWatch } from 'scenetest-vue'
+ * import { useCheck } from 'scenetest-vue'
  * import { ref, watch } from 'vue'
  *
  * const props = defineProps<{ userId: string }>()
  * const localId = ref('')
  *
  * // Track that local state syncs with props
- * useWatch('props and state should be in sync',
+ * useCheck('props and state should be in sync',
  *   () => props.userId === localId.value
  * )
  *
@@ -170,10 +170,10 @@ function reportWatch(
  * </script>
  * ```
  */
-export function useWatch(
+export function useCheck(
   description: string,
   condition: () => boolean,
-  options?: UseWatchOptions
+  options?: UseCheckOptions
 ): void {
   // Track state across reactive updates
   const state: WatchState = {
@@ -183,7 +183,7 @@ export function useWatch(
   }
 
   // Capture stack on creation
-  const stack = getWatchStack()
+  const stack = getCheckStack()
 
   watchEffect(() => {
     // Evaluate condition (establishes reactivity)
@@ -199,13 +199,13 @@ export function useWatch(
     }
 
     // Report current state
-    reportWatch(description, state, stack, options?.context)
+    reportCheck(description, state, stack, options?.context)
   })
 
   // Report on unmount if never settled
   onUnmounted(() => {
     if (!state.settled) {
-      reportWatch(description, state, stack, {
+      reportCheck(description, state, stack, {
         ...options?.context,
         _unmountedWithoutSettling: true,
       })

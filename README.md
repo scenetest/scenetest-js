@@ -269,20 +269,20 @@ Extended Playwright `page` with:
 - `scenePage.failed` - Assertions that failed
 - `scenePage.waitForAssertions()` - Wait for pending multi-context assertions to complete
 
-### Watching Props/State Sync
+### Checking Props/State Sync
 
 Track when a condition eventually becomes true across renders. Useful for detecting when local state catches up with props or remote data.
 
-#### React: `useWatch`
+#### React: `useCheck`
 
 ```tsx
-import { useWatch } from 'scenetest-react'
+import { useCheck } from 'scenetest-react'
 
 function ProfileSync({ userId }) {
   const [localId, setLocalId] = useState('')
 
   // Track that local state syncs with props
-  useWatch('props and state should be in sync', userId === localId)
+  useCheck('props and state should be in sync', userId === localId)
 
   useEffect(() => {
     setLocalId(userId) // Will sync on next render
@@ -296,23 +296,23 @@ The dev panel shows the history of results: `[✗✗✓] settled on render 3`
 
 **Options:**
 ```tsx
-useWatch('data should match', localData.id === serverData.id, {
+useCheck('data should match', localData.id === serverData.id, {
   context: { localData, serverData }, // Debug context
 })
 ```
 
-#### Vue: `useWatch`
+#### Vue: `useCheck`
 
 ```vue
 <script setup>
-import { useWatch } from 'scenetest-vue'
+import { useCheck } from 'scenetest-vue'
 import { ref, watch } from 'vue'
 
 const props = defineProps<{ userId: string }>()
 const localId = ref('')
 
 // Track that local state syncs with props (pass a getter)
-useWatch('props and state should be in sync',
+useCheck('props and state should be in sync',
   () => props.userId === localId.value
 )
 
@@ -322,17 +322,17 @@ watch(() => props.userId, (newId) => {
 </script>
 ```
 
-#### Solid: `createWatch`
+#### Solid: `createCheck`
 
 ```tsx
-import { createWatch } from 'scenetest-solid'
+import { createCheck } from 'scenetest-solid'
 import { createSignal, createEffect } from 'solid-js'
 
 function ProfileSync(props) {
   const [localId, setLocalId] = createSignal('')
 
   // Track that local state syncs with props (pass an accessor)
-  createWatch('props and state should be in sync',
+  createCheck('props and state should be in sync',
     () => props.userId === localId()
   )
 
@@ -344,16 +344,16 @@ function ProfileSync(props) {
 }
 ```
 
-#### Svelte: `watch`
+#### Svelte: `check`
 
 ```svelte
 <script>
-import { watch } from 'scenetest-svelte'
+import { check } from 'scenetest-svelte'
 
 let { userId } = $props()
 let localId = $state('')
 
-const tracker = watch('props and state should sync')
+const tracker = check('props and state should sync')
 
 $effect(() => {
   tracker.check(userId === localId)

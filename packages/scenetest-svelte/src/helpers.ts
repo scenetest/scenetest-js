@@ -77,9 +77,9 @@ export function __runAssert(config: RuntimeAssertConfig): void {
 }
 
 /**
- * Options for watch tracker
+ * Options for check tracker
  */
-export interface WatchOptions {
+export interface CheckOptions {
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -94,9 +94,9 @@ interface WatchState {
 }
 
 /**
- * Get stack trace for the watch call
+ * Get stack trace for the check call
  */
-function getWatchStack(): string | undefined {
+function getCheckStack(): string | undefined {
   const err = new Error()
   const stack = err.stack
   if (!stack) return undefined
@@ -107,7 +107,7 @@ function getWatchStack(): string | undefined {
 /**
  * Parse location from stack trace
  */
-function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+function parseCheckLocation(stack: string | undefined): AssertionResult['location'] {
   if (!stack) return undefined
   const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
   if (!match) return undefined
@@ -119,9 +119,9 @@ function parseWatchLocation(stack: string | undefined): AssertionResult['locatio
 }
 
 /**
- * Report a watch assertion result
+ * Report a check assertion result
  */
-function reportWatch(
+function reportCheck(
   description: string,
   watchState: WatchState,
   stack: string | undefined,
@@ -142,15 +142,15 @@ function reportWatch(
     timestamp: Date.now(),
     stack,
     context,
-    location: parseWatchLocation(stack),
+    location: parseCheckLocation(stack),
     watch,
   })
 }
 
 /**
- * Watch tracker that can be used inside $effect to track when a condition settles.
+ * Check tracker that can be used inside $effect to track when a condition settles.
  */
-export interface WatchTracker {
+export interface CheckTracker {
   /**
    * Check a condition and update the watch state.
    * Call this inside $effect with a boolean condition.
@@ -171,7 +171,7 @@ export interface WatchTracker {
 }
 
 /**
- * Create a watch tracker for tracking when a condition settles in Svelte.
+ * Create a check tracker for tracking when a condition settles in Svelte.
  *
  * Use this to track when a condition eventually becomes true.
  * Call tracker.check() inside $effect, and optionally tracker.finalize()
@@ -180,12 +180,12 @@ export interface WatchTracker {
  * @example
  * ```svelte
  * <script>
- * import { watch } from 'scenetest-svelte'
+ * import { check } from 'scenetest-svelte'
  *
  * let { userId } = $props()
  * let localId = $state('')
  *
- * const tracker = watch('props and state should sync')
+ * const tracker = check('props and state should sync')
  *
  * $effect(() => {
  *   tracker.check(userId === localId)
@@ -198,14 +198,14 @@ export interface WatchTracker {
  * </script>
  * ```
  */
-export function watch(description: string, options?: WatchOptions): WatchTracker {
+export function check(description: string, options?: CheckOptions): CheckTracker {
   const state: WatchState = {
     history: [],
     settled: false,
     settledAtRender: undefined,
   }
 
-  const stack = getWatchStack()
+  const stack = getCheckStack()
 
   return {
     check(condition: boolean) {
@@ -219,12 +219,12 @@ export function watch(description: string, options?: WatchOptions): WatchTracker
       }
 
       // Report current state
-      reportWatch(description, state, stack, options?.context)
+      reportCheck(description, state, stack, options?.context)
     },
 
     finalize() {
       if (!state.settled) {
-        reportWatch(description, state, stack, {
+        reportCheck(description, state, stack, {
           ...options?.context,
           _unmountedWithoutSettling: true,
         })

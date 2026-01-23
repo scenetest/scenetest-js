@@ -62,9 +62,9 @@ export function __useAssert(
 }
 
 /**
- * Options for useWatch hook
+ * Options for useCheck hook
  */
-export interface UseWatchOptions {
+export interface UseCheckOptions {
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -81,11 +81,11 @@ interface WatchState {
 /**
  * Get stack trace for the watch call
  */
-function getWatchStack(): string | undefined {
+function getCheckStack(): string | undefined {
   const err = new Error()
   const stack = err.stack
   if (!stack) return undefined
-  // Skip Error, getWatchStack, useWatch
+  // Skip Error, getCheckStack, useCheck
   const lines = stack.split('\n').slice(3)
   return lines.join('\n')
 }
@@ -93,7 +93,7 @@ function getWatchStack(): string | undefined {
 /**
  * Parse location from stack trace
  */
-function parseWatchLocation(stack: string | undefined): AssertionResult['location'] {
+function parseCheckLocation(stack: string | undefined): AssertionResult['location'] {
   if (!stack) return undefined
   const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
   if (!match) return undefined
@@ -105,30 +105,30 @@ function parseWatchLocation(stack: string | undefined): AssertionResult['locatio
 }
 
 /**
- * Report a watch assertion result
+ * Report a check assertion result
  */
-function reportWatch(
+function reportCheck(
   description: string,
-  watchState: WatchState,
+  checkState: WatchState,
   stack: string | undefined,
   context?: Record<string, unknown>
 ): void {
   if (typeof window === 'undefined' || !window.__scenetest_report) return
 
   const watch: WatchResult = {
-    settled: watchState.settled,
-    history: [...watchState.history],
-    settledAtRender: watchState.settledAtRender,
+    settled: checkState.settled,
+    history: [...checkState.history],
+    settledAtRender: checkState.settledAtRender,
   }
 
   window.__scenetest_report({
-    type: 'pass', // watch assertions use 'pass' type
+    type: 'pass', // check assertions use 'pass' type
     description,
-    result: watchState.settled, // true if settled, false if still syncing
+    result: checkState.settled, // true if settled, false if still syncing
     timestamp: Date.now(),
     stack,
     context,
-    location: parseWatchLocation(stack),
+    location: parseCheckLocation(stack),
     watch,
   })
 }
@@ -146,7 +146,7 @@ function reportWatch(
  *   const [localId, setLocalId] = useState('')
  *
  *   // Track that local state syncs with props
- *   useWatch('props and state should be in sync', userId === localId)
+ *   useCheck('props and state should be in sync', userId === localId)
  *
  *   useEffect(() => {
  *     setLocalId(userId) // Will sync on next render
@@ -157,15 +157,15 @@ function reportWatch(
  * @example
  * ```tsx
  * // With context for debugging
- * useWatch('cache matches server', cache.id === serverData.id, {
+ * useCheck('cache matches server', cache.id === serverData.id, {
  *   context: { cache, serverData }
  * })
  * ```
  */
-export function useWatch(
+export function useCheck(
   description: string,
   condition: boolean,
-  options?: UseWatchOptions
+  options?: UseCheckOptions
 ): void {
   // Track state across renders
   const stateRef = useRef<WatchState>({
@@ -177,7 +177,7 @@ export function useWatch(
   // Capture stack on first render only
   const stackRef = useRef<string | undefined>(undefined)
   if (stackRef.current === undefined) {
-    stackRef.current = getWatchStack()
+    stackRef.current = getCheckStack()
   }
 
   // Update history
@@ -191,7 +191,7 @@ export function useWatch(
 
   // Report after each render
   useEffect(() => {
-    reportWatch(
+    reportCheck(
       description,
       stateRef.current,
       stackRef.current,
@@ -204,7 +204,7 @@ export function useWatch(
     return () => {
       if (!stateRef.current.settled) {
         // Final report showing it never settled
-        reportWatch(
+        reportCheck(
           description,
           stateRef.current,
           stackRef.current,
