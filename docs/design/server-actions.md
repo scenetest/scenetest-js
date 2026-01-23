@@ -6,7 +6,7 @@ This document describes the design for the `assertion()` API - inline assertions
 
 ## Problem Statement
 
-Current `pass()` and `fail()` run entirely in the browser. They can access React state, cache, and localStorage, but cannot:
+Current `should()` and `failed()` run entirely in the browser. They can access React state, cache, and localStorage, but cannot:
 
 - Query a real database with privileged credentials
 - Access server-side APIs or secrets
@@ -28,13 +28,13 @@ const mutation = useUpdateProfile({
       serverFn: async (server, data) => {
         const dbRecord = await server.getProfile(data.userId)
 
-        pass('DB updated recently',
+        should('DB should be updated recently',
           Date.now() - new Date(dbRecord.updated_at).getTime() < 5000)
 
-        pass('DB matches form input',
+        should('DB should match form input',
           dbRecord.name === data.formInput.name)
 
-        pass('Cache matches DB',
+        should('Cache should match DB',
           data.cacheValue.name === dbRecord.name)
       },
     })
@@ -64,7 +64,7 @@ The `withData` function runs in the browser (has access to React state, cache, e
 │  │  POST to server  │ ◄───JSON───── │  Run serverFn(server,    │    │
 │  │        ↓         │               │              data)    │    │
 │  │  Results to      │               │    ↓                     │    │
-│  │  dev panel       │               │  Collect pass/fail       │    │
+│  │  dev panel       │               │  Collect should/failed   │    │
 │  │                  │               │  Return results          │    │
 │  └──────────────────┘               └──────────────────────────┘    │
 │                                                                      │
@@ -81,7 +81,7 @@ The Vite plugin transforms `assertion()` calls at build time.
 
 ```typescript
 // src/components/ProfileForm.tsx
-import { assertion, pass } from 'scenetest'
+import { assertion, should } from 'scenetest'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
@@ -94,8 +94,8 @@ const mutation = useUpdateProfile({
       }),
       serverFn: async (server, data) => {
         const db = await server.getProfile(data.userId)
-        pass('DB matches input', db.name === data.newName)
-        pass('Cache matches DB', data.cacheValue.name === db.name)
+        should('DB should match input', db.name === data.newName)
+        should('Cache should match DB', data.cacheValue.name === db.name)
       },
     })
   },
@@ -129,13 +129,13 @@ The plugin extracts all `serverFn` functions into a virtual module served by the
 
 ```typescript
 // Virtual: /__scenetest/assertions.js
-import { pass, fail } from 'scenetest'
+import { should, failed } from 'scenetest'
 
 export const assertions = {
   'src/components/ProfileForm.tsx:12:4': async (server, data) => {
     const db = await server.getProfile(data.userId)
-    pass('DB matches input', db.name === data.newName)
-    pass('Cache matches DB', data.cacheValue.name === db.name)
+    should('DB should match input', db.name === data.newName)
+    should('Cache should match DB', data.cacheValue.name === db.name)
   },
   // ... other extracted serverFns
 }
@@ -143,7 +143,7 @@ export const assertions = {
 
 ### Production Build
 
-In production, the entire `assertion()` call is stripped (same as current `pass()`/`fail()` behavior).
+In production, the entire `assertion()` call is stripped (same as current `should()`/`failed()` behavior).
 
 ## Runtime Flow
 
@@ -336,7 +336,7 @@ Results from `serverFn` flow through the existing infrastructure:
 ```
 serverFn runs on server
     ↓
-pass()/fail() collect results
+should()/failed() collect results
     ↓
 Results returned as JSON
     ↓
@@ -357,7 +357,7 @@ window.__scenetest_report(result)
 ```
 
 This means:
-- Multi-context assertions appear in the dev panel alongside simple `pass()`/`fail()` calls
+- Multi-context assertions appear in the dev panel alongside simple `should()`/`failed()` calls
 - Playwright collects them without any changes to the fixture
 - Grouping by timing still works (assertions from same user action batch together)
 
@@ -491,7 +491,7 @@ items.forEach(item => {
     withData: () => ({ itemId: item.id, value: item.value }),
     serverFn: async (server, data) => {
       const db = await server.getItem(data.itemId)
-      pass('DB matches', db.value === data.value)
+      should('DB should match', db.value === data.value)
     },
   })
 })
@@ -505,12 +505,12 @@ The internal ID becomes: `${fileLocation}:${key ?? ''}` (e.g., `src/List.tsx:42:
 // Async (most common - database calls)
 serverFn: async (server, data) => {
   const db = await server.getProfile(data.userId)
-  pass('matches', db.name === data.name)
+  should('names should match', db.name === data.name)
 }
 
 // Sync (simple checks)
 serverFn: (server, data) => {
-  pass('valid format', data.email.includes('@'))
+  should('format should be valid', data.email.includes('@'))
 }
 ```
 

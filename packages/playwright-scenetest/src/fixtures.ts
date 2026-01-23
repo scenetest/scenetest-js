@@ -24,7 +24,7 @@ export interface ScenePage extends Page {
 export interface ScenetestFixtures {
   /**
    * A page with scenetest assertion collection enabled.
-   * All inline assertions (pass/fail) called in the browser will be collected here.
+   * All inline assertions (should/failed) called in the browser will be collected here.
    */
   scenePage: ScenePage
 }
@@ -37,7 +37,7 @@ export const test = base.extend<ScenetestFixtures>({
     const assertions: AssertionResult[] = []
 
     // Expose the report function to the browser
-    // This will be called by pass() and fail() in the app
+    // This will be called by should() and failed() in the app
     await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
       assertions.push(result)
     })

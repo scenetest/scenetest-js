@@ -17,7 +17,7 @@ import type { AssertionConfig } from 'scenetest'
  *   title: 'Email validation',
  *   withData: () => ({ email: profile.value?.email }),
  *   serverFn: (server, data) => {
- *     pass('email is valid', server.validateEmail(data.email))
+ *     should('email should be valid', server.validateEmail(data.email))
  *   },
  *   enabled: !!profile.value,
  * }, [() => profile.value?.email])

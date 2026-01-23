@@ -26,7 +26,7 @@ function getStack(): string | undefined {
   const stack = err.stack
   if (!stack) return undefined
 
-  // Skip the first 3 lines (Error, getStack, pass/fail)
+  // Skip the first 3 lines (Error, getStack, should/failed)
   const lines = stack.split('\n').slice(3)
   return lines.join('\n')
 }

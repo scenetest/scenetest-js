@@ -7,7 +7,7 @@ import type { AssertionConfig } from 'scenetest'
  * @example
  * ```svelte
  * <script>
- * import { runAssert, pass } from 'scenetest-svelte'
+ * import { runAssert, should } from 'scenetest-svelte'
  *
  * let profile = $state(null)
  *
@@ -18,22 +18,22 @@ import type { AssertionConfig } from 'scenetest'
  *     title: 'Email validation',
  *     withData: () => ({ email: profile.email }),
  *     serverFn: (server, data) => {
- *       pass('email is valid', server.validateEmail(data.email))
+ *       should('email should be valid', server.validateEmail(data.email))
  *     },
  *   })
  * })
  * </script>
  * ```
  *
- * For simple assertions, just use pass() and fail() directly:
+ * For simple assertions, just use should() and failed() directly:
  * ```svelte
  * <script>
- * import { pass, fail } from 'scenetest-svelte'
+ * import { should, failed } from 'scenetest-svelte'
  *
  * let count = $state(0)
  *
  * $effect(() => {
- *   pass('count is non-negative', count >= 0)
+ *   should('count should be non-negative', count >= 0)
  * })
  * </script>
  * ```
