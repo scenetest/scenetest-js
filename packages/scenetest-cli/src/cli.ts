@@ -152,7 +152,8 @@ function generateHtmlReport(report: RunReport): string {
   <title>Scenetest Report</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; }
-    h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .logo { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: rgba(80, 70, 229, 0.12); box-shadow: inset 0 2px 6px rgba(80, 70, 229, 0.25), inset 0 -1px 2px rgba(255, 255, 255, 0.5); font-size: 1.5rem; }
     .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
     .summary-card { background: #f5f5f5; padding: 1rem; border-radius: 8px; text-align: center; }
     .summary-card h2 { margin: 0; font-size: 2rem; }
@@ -166,7 +167,7 @@ function generateHtmlReport(report: RunReport): string {
   </style>
 </head>
 <body>
-  <h1>🎬 Scenetest Report</h1>
+  <h1><span class="logo">🎬</span> Scenetest Report</h1>
   <p>Generated: ${report.timestamp}</p>
 
   <div class="summary">
