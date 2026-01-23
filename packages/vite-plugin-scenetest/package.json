@@ -1,7 +1,15 @@
 {
-  "name": "vite-plugin-scenetest",
+  "name": "@scenetest/vite-plugin",
   "version": "0.0.1",
+  "description": "Vite plugin for scenetest - strips assertions in production, injects dev panel",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/vite-plugin-scenetest"
+  },
+  "keywords": ["testing", "e2e", "playwright", "vite", "vite-plugin", "assertions"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,6 +21,10 @@
       "types": "./dist/middleware.d.ts",
       "import": "./dist/middleware.js"
     }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build:dev-panel": "node scripts/bundle-dev-panel.mjs",
@@ -26,7 +38,7 @@
     "@babel/traverse": "^7.24.0",
     "@babel/types": "^7.24.0",
     "magic-string": "^0.30.10",
-    "scenetest": "workspace:*"
+    "@scenetest/core": "workspace:*"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0"

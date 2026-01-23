@@ -1,5 +1,5 @@
 import { watchEffect, type WatchSource } from 'vue'
-import type { AssertionConfig } from 'scenetest'
+import type { AssertionConfig } from '@scenetest/core'
 
 /**
  * Vue composable for multi-context assertions.
@@ -8,7 +8,7 @@ import type { AssertionConfig } from 'scenetest'
  * @example
  * ```vue
  * <script setup>
- * import { useAssert } from 'scenetest-vue'
+ * import { useAssert } from '@scenetest/vue'
  * import { ref } from 'vue'
  *
  * const profile = ref(null)
@@ -62,7 +62,7 @@ export function __useAssert(
     if (config.enabled === false) return
 
     // Import dynamically to avoid circular deps
-    import('scenetest/runtime').then(({ __scenetest_rpc }) => {
+    import('@scenetest/core/runtime').then(({ __scenetest_rpc }) => {
       __scenetest_rpc({
         id: config.__assertionId,
         title: config.title,

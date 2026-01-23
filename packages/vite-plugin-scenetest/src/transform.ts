@@ -123,11 +123,11 @@ export function transformAssertions(code: string, options: TransformOptions = {}
 
   // All scenetest packages
   const SCENETEST_PACKAGES = [
-    'scenetest',
-    'scenetest-react',
-    'scenetest-vue',
-    'scenetest-solid',
-    'scenetest-svelte',
+    '@scenetest/core',
+    '@scenetest/react',
+    '@scenetest/vue',
+    '@scenetest/solid',
+    '@scenetest/svelte',
   ]
 
   // Track imported names and their source packages
@@ -552,24 +552,24 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsRpcImport) {
-    const rpcImport = `\nimport { __scenetest_rpc } from 'scenetest/runtime'\n`
+    const rpcImport = `\nimport { __scenetest_rpc } from '@scenetest/core/runtime'\n`
     s.appendLeft(importInsertPos, rpcImport)
   }
 
   if (needsUseAssertImport) {
     // Import from the same package where useAssert was imported from
-    const sourcePackage = useAssertSourcePackage || 'scenetest-react'
+    const sourcePackage = useAssertSourcePackage || '@scenetest/react'
     const hookImport = `\nimport { __useAssert } from '${sourcePackage}'\n`
     s.appendLeft(importInsertPos, hookImport)
   }
 
   if (needsCreateAssertImport) {
-    const solidImport = `\nimport { __createAssert } from 'scenetest-solid'\n`
+    const solidImport = `\nimport { __createAssert } from '@scenetest/solid'\n`
     s.appendLeft(importInsertPos, solidImport)
   }
 
   if (needsRunAssertImport) {
-    const svelteImport = `\nimport { __runAssert } from 'scenetest-svelte'\n`
+    const svelteImport = `\nimport { __runAssert } from '@scenetest/svelte'\n`
     s.appendLeft(importInsertPos, svelteImport)
   }
 

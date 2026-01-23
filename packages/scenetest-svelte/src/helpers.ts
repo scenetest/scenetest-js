@@ -1,4 +1,4 @@
-import type { AssertionConfig } from 'scenetest'
+import type { AssertionConfig } from '@scenetest/core'
 
 /**
  * Svelte helper for multi-context assertions.
@@ -7,7 +7,7 @@ import type { AssertionConfig } from 'scenetest'
  * @example
  * ```svelte
  * <script>
- * import { runAssert, should } from 'scenetest-svelte'
+ * import { runAssert, should } from '@scenetest/svelte'
  *
  * let profile = $state(null)
  *
@@ -28,7 +28,7 @@ import type { AssertionConfig } from 'scenetest'
  * For simple assertions, just use should() and failed() directly:
  * ```svelte
  * <script>
- * import { should, failed } from 'scenetest-svelte'
+ * import { should, failed } from '@scenetest/svelte'
  *
  * let count = $state(0)
  *
@@ -66,7 +66,7 @@ export function __runAssert(config: RuntimeAssertConfig): void {
   if (config.enabled === false) return
 
   // Import dynamically to avoid circular deps
-  import('scenetest/runtime').then(({ __scenetest_rpc }) => {
+  import('@scenetest/core/runtime').then(({ __scenetest_rpc }) => {
     __scenetest_rpc({
       id: config.__assertionId,
       title: config.title,

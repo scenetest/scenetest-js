@@ -4,7 +4,7 @@ import { stripScenetest } from '../strip.js'
 describe('stripScenetest', () => {
   describe('import removal', () => {
     it('removes simple import statement', () => {
-      const code = `import { should, failed } from 'scenetest'
+      const code = `import { should, failed } from '@scenetest/core'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -13,7 +13,7 @@ const x = 1`
     })
 
     it('removes import with only should', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 console.log('hello')`
 
       const result = stripScenetest(code)
@@ -22,7 +22,7 @@ console.log('hello')`
     })
 
     it('removes import with only failed', () => {
-      const code = `import { failed } from 'scenetest'
+      const code = `import { failed } from '@scenetest/core'
 console.log('hello')`
 
       const result = stripScenetest(code)
@@ -31,7 +31,7 @@ console.log('hello')`
     })
 
     it('removes import with aliases', () => {
-      const code = `import { should as s, failed as f } from 'scenetest'
+      const code = `import { should as s, failed as f } from '@scenetest/core'
 s('test', true)
 f('test')`
 
@@ -41,7 +41,7 @@ f('test')`
     })
 
     it('handles namespace import', () => {
-      const code = `import * as scenetest from 'scenetest'
+      const code = `import * as scenetest from '@scenetest/core'
 scenetest.should('test', true)
 scenetest.failed('test')`
 
@@ -53,7 +53,7 @@ scenetest.failed('test')`
 
   describe('function call removal', () => {
     it('removes simple should() statement', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('description', true)
 console.log('after')`
 
@@ -63,7 +63,7 @@ console.log('after')`
     })
 
     it('removes simple failed() statement', () => {
-      const code = `import { failed } from 'scenetest'
+      const code = `import { failed } from '@scenetest/core'
 failed('description')
 console.log('after')`
 
@@ -73,7 +73,7 @@ console.log('after')`
     })
 
     it('removes multiple should/failed statements', () => {
-      const code = `import { should, failed } from 'scenetest'
+      const code = `import { should, failed } from '@scenetest/core'
 should('one', true)
 console.log('middle')
 failed('two')
@@ -85,7 +85,7 @@ should('three', true)`
     })
 
     it('removes should() with semicolon', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', true);
 const x = 1;`
 
@@ -97,7 +97,7 @@ const x = 1;`
 
   describe('complex arguments', () => {
     it('handles nested function calls in condition', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', foo() && bar.baz())
 const x = 1`
 
@@ -107,7 +107,7 @@ const x = 1`
     })
 
     it('handles template literals', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 const name = 'test'
 should(\`checking \${name}\`, true)
 const x = 1`
@@ -119,7 +119,7 @@ const x = 1`)
     })
 
     it('handles object literals', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', { a: 1, b: 2 }.hasOwnProperty('a'))
 const x = 1`
 
@@ -129,7 +129,7 @@ const x = 1`
     })
 
     it('handles array literals', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', [1, 2, 3].includes(2))
 const x = 1`
 
@@ -139,7 +139,7 @@ const x = 1`
     })
 
     it('handles arrow functions', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', (() => true)())
 const x = 1`
 
@@ -197,7 +197,7 @@ const x = 1`
 
   describe('JSX support', () => {
     it('handles should() in JSX component', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 
 function Component() {
   should('component rendered', true)
@@ -212,7 +212,7 @@ function Component() {
     })
 
     it('handles should() in JSX expression', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 
 function Component() {
   return (
@@ -233,7 +233,7 @@ function Component() {
 
   describe('TypeScript support', () => {
     it('handles TypeScript syntax', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 
 interface User {
   name: string
@@ -253,7 +253,7 @@ function greet(user: User): void {
     })
 
     it('handles generic types', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 
 function identity<T>(value: T): T {
   should('identity called', true)
@@ -269,7 +269,7 @@ function identity<T>(value: T): T {
 
   describe('expression contexts (defensive)', () => {
     it('replaces should() in assignment with void 0', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 const x = should('test', true)
 console.log(x)`
 
@@ -279,7 +279,7 @@ console.log(x)`
     })
 
     it('replaces should() in logical expression with void 0', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 const x = condition && should('test', true)
 console.log(x)`
 
@@ -289,7 +289,7 @@ console.log(x)`
     })
 
     it('replaces should() in ternary with void 0', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 const x = cond ? should('a', true) : should('b', false)
 console.log(x)`
 
@@ -299,7 +299,7 @@ console.log(x)`
     })
 
     it('replaces should() in comma expression with void 0', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 const x = (should('test', true), 42)
 console.log(x)`
 
@@ -311,7 +311,7 @@ console.log(x)`
 
   describe('source maps', () => {
     it('generates source map by default', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', true)`
 
       const result = stripScenetest(code)
@@ -320,7 +320,7 @@ should('test', true)`
     })
 
     it('can disable source map', () => {
-      const code = `import { should } from 'scenetest'
+      const code = `import { should } from '@scenetest/core'
 should('test', true)`
 
       const result = stripScenetest(code, { sourceMap: false })
@@ -331,7 +331,7 @@ should('test', true)`
 
   describe('scenetest-vue imports', () => {
     it('removes import from scenetest-vue', () => {
-      const code = `import { should, failed, useAssert } from 'scenetest-vue'
+      const code = `import { should, failed, useAssert } from '@scenetest/vue'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -341,7 +341,7 @@ const x = 1`
 
     it('handles Vue component with scenetest-vue imports', () => {
       const code = `import { ref } from 'vue'
-import { should, useAssert } from 'scenetest-vue'
+import { should, useAssert } from '@scenetest/vue'
 
 const count = ref(0)
 should('rendered', true)
@@ -351,7 +351,7 @@ console.log(count.value)`
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
       expect(result!.code).toContain("import { ref } from 'vue'")
-      expect(result!.code).not.toContain("from 'scenetest-vue'")
+      expect(result!.code).not.toContain("from '@scenetest/vue'")
       expect(result!.code).not.toContain('should(')
       expect(result!.code).not.toContain('useAssert(')
     })
@@ -359,7 +359,7 @@ console.log(count.value)`
 
   describe('scenetest-solid imports', () => {
     it('removes import from scenetest-solid', () => {
-      const code = `import { should, failed, createAssert } from 'scenetest-solid'
+      const code = `import { should, failed, createAssert } from '@scenetest/solid'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -369,7 +369,7 @@ const x = 1`
 
     it('handles Solid component with scenetest-solid imports', () => {
       const code = `import { createSignal } from 'solid-js'
-import { should, createAssert } from 'scenetest-solid'
+import { should, createAssert } from '@scenetest/solid'
 
 function Component() {
   const [count, setCount] = createSignal(0)
@@ -381,7 +381,7 @@ function Component() {
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
       expect(result!.code).toContain("import { createSignal } from 'solid-js'")
-      expect(result!.code).not.toContain("from 'scenetest-solid'")
+      expect(result!.code).not.toContain("from '@scenetest/solid'")
       expect(result!.code).not.toContain('should(')
       expect(result!.code).not.toContain('createAssert(')
     })
@@ -389,7 +389,7 @@ function Component() {
 
   describe('scenetest-svelte imports', () => {
     it('removes import from scenetest-svelte', () => {
-      const code = `import { should, failed, runAssert } from 'scenetest-svelte'
+      const code = `import { should, failed, runAssert } from '@scenetest/svelte'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -398,7 +398,7 @@ const x = 1`
     })
 
     it('handles Svelte with scenetest-svelte imports', () => {
-      const code = `import { should, runAssert } from 'scenetest-svelte'
+      const code = `import { should, runAssert } from '@scenetest/svelte'
 
 let count = 0
 should('rendered', true)
@@ -407,7 +407,7 @@ console.log(count)`
 
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
-      expect(result!.code).not.toContain("from 'scenetest-svelte'")
+      expect(result!.code).not.toContain("from '@scenetest/svelte'")
       expect(result!.code).not.toContain('should(')
       expect(result!.code).not.toContain('runAssert(')
       expect(result!.code).toContain('let count = 0')
@@ -416,7 +416,7 @@ console.log(count)`
 
   describe('scenetest-react imports', () => {
     it('removes import from scenetest-react', () => {
-      const code = `import { should, failed, useAssert } from 'scenetest-react'
+      const code = `import { should, failed, useAssert } from '@scenetest/react'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -425,7 +425,7 @@ const x = 1`
     })
 
     it('removes should/failed/useAssert calls from scenetest-react', () => {
-      const code = `import { should, failed, useAssert } from 'scenetest-react'
+      const code = `import { should, failed, useAssert } from '@scenetest/react'
 should('one', true)
 failed('two')
 useAssert({ title: 'test', withData: () => ({}), serverFn: () => {} }, [])
@@ -438,7 +438,7 @@ console.log('kept')`
 
     it('handles React component with scenetest-react imports', () => {
       const code = `import { useState } from 'react'
-import { should, useAssert } from 'scenetest-react'
+import { should, useAssert } from '@scenetest/react'
 
 function Component() {
   const [count, setCount] = useState(0)
@@ -450,7 +450,7 @@ function Component() {
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
       expect(result!.code).toContain("import { useState } from 'react'")
-      expect(result!.code).not.toContain("from 'scenetest-react'")
+      expect(result!.code).not.toContain("from '@scenetest/react'")
       expect(result!.code).not.toContain('should(')
       expect(result!.code).not.toContain('useAssert(')
       expect(result!.code).toContain('function Component()')
@@ -460,7 +460,7 @@ function Component() {
   describe('real-world example', () => {
     it('handles a React component with multiple assertions', () => {
       const code = `import { useState, useEffect } from 'react'
-import { should, failed } from 'scenetest'
+import { should, failed } from '@scenetest/core'
 
 function ProfileForm() {
   const [profile, setProfile] = useState(null)
@@ -498,7 +498,7 @@ function ProfileForm() {
       expect(result!.code).toContain("import { useState, useEffect } from 'react'")
 
       // Should remove scenetest import
-      expect(result!.code).not.toContain("from 'scenetest'")
+      expect(result!.code).not.toContain("from '@scenetest/core'")
 
       // Should remove all should/failed calls
       expect(result!.code).not.toContain('should(')

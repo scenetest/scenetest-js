@@ -1,7 +1,15 @@
 {
-  "name": "playwright-scenetest",
+  "name": "@scenetest/playwright",
   "version": "0.0.1",
+  "description": "Playwright fixtures for scenetest inline assertions",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/playwright-scenetest"
+  },
+  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions", "fixtures"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -10,12 +18,16 @@
       "import": "./dist/index.js"
     }
   },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "scenetest": "workspace:*"
+    "@scenetest/core": "workspace:*"
   },
   "peerDependencies": {
     "@playwright/test": "^1.40.0"

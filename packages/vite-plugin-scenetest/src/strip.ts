@@ -20,11 +20,11 @@ export interface StripOptions {
 
 // All scenetest packages that should be stripped
 const SCENETEST_PACKAGES = [
-  'scenetest',
-  'scenetest-react',
-  'scenetest-vue',
-  'scenetest-solid',
-  'scenetest-svelte',
+  '@scenetest/core',
+  '@scenetest/react',
+  '@scenetest/vue',
+  '@scenetest/solid',
+  '@scenetest/svelte',
 ]
 
 /**

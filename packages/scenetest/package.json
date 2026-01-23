@@ -1,7 +1,15 @@
 {
-  "name": "scenetest",
+  "name": "@scenetest/core",
   "version": "0.0.1",
+  "description": "Inline assertions for end-to-end testing",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/scenetest"
+  },
+  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,6 +21,10 @@
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
     }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
