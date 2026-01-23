@@ -140,7 +140,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
         'runAssert',      // Svelte
       ]
 
-      // Direct call: pass(...), fail(...), assertion(...), useAssert(...)
+      // Direct call: should(...), failed(...), assert(...), useAssert(...)
       if (t.isIdentifier(callee)) {
         if (scenetestImports.has(callee.name)) {
           const imported = scenetestImports.get(callee.name)
@@ -149,7 +149,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
           }
         }
       }
-      // Member call: scenetest.pass(...) (namespace import)
+      // Member call: scenetest.should(...) (namespace import)
       else if (t.isMemberExpression(callee) && t.isIdentifier(callee.object)) {
         const objectName = callee.object.name
         if (scenetestImports.get(objectName) === '*') {
@@ -176,7 +176,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
         hasChanges = true
       } else {
         // Call is in an expression context - replace with void 0
-        // This is unusual for pass/fail since they return void, but handle defensively
+        // This is unusual for should/failed since they return void, but handle defensively
         const start = path.node.start!
         const end = path.node.end!
         rangesToRemove.push({ start, end, type: 'expression' })

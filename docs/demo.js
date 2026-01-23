@@ -444,13 +444,13 @@
 })();
 
 // ============================================================================
-// PASS FUNCTION
+// SHOULD FUNCTION
 // ============================================================================
 
-function pass(description, condition, context) {
+function should(description, condition, context) {
   if (window.__scenetest_report) {
     window.__scenetest_report({
-      type: 'pass',
+      type: condition ? 'pass' : 'fail',
       description: description,
       result: Boolean(condition),
       context: context || null,
@@ -497,13 +497,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const count = (codeBlockRenderCounts.get(el) || 0) + 1;
       codeBlockRenderCounts.set(el, count);
 
-      pass('Code block should be visible', el.offsetHeight > 0);
+      should('Code block should be visible', el.offsetHeight > 0);
       // This assertion runs every time the element is observed - like checking
       // that content is present after cache updates, loading states resolve, etc.
-      pass('Code block should have text content every time it renders', el.textContent.length > 0,
+      should('Code block should have text content every time it renders', el.textContent.length > 0,
         `render #${count}`);
       // Flaky assertion demo - fails ~25% of the time
-      pass('Syntax highlighting should not throw errors', Math.random() > 0.25);
+      should('Syntax highlighting should not throw errors', Math.random() > 0.25);
     }
   });
 
@@ -511,37 +511,37 @@ document.addEventListener('DOMContentLoaded', function() {
   addHoverAssertions('h2', {
     onEnter: (el) => {
       const text = el.textContent.trim();
-      pass('Section header should have text content', text.length > 0);
-      pass('Header element should be in the document', document.contains(el));
+      should('Section header should have text content', text.length > 0);
+      should('Header element should be in the document', document.contains(el));
     }
   });
 
   // Main title
   addHoverAssertions('h1', {
     onEnter: (el) => {
-      pass('Page title should be rendered', el.textContent.includes('scenetest'));
+      should('Page title should be rendered', el.textContent.includes('scenetest'));
     },
     onClick: (el) => {
-      pass('Click handler should not throw', true);
-      pass('Document should remain interactive after click', document.body !== null);
+      should('Click handler should not throw', true);
+      should('Document should remain interactive after click', document.body !== null);
     }
   });
 
   // Subtitle
   addHoverAssertions('.subtitle', {
     onEnter: (el) => {
-      pass('Subtitle should be visible', el.offsetHeight > 0);
+      should('Subtitle should be visible', el.offsetHeight > 0);
     }
   });
 
   // External links
   addHoverAssertions('a[href^="http"]', {
     onEnter: (el) => {
-      pass('Link href should be valid URL', el.href.startsWith('http'));
-      pass('Link should have accessible text', el.textContent.trim().length > 0);
+      should('Link href should be valid URL', el.href.startsWith('http'));
+      should('Link should have accessible text', el.textContent.trim().length > 0);
     },
     onClick: (el) => {
-      pass('Navigation should not be blocked', true);
+      should('Navigation should not be blocked', true);
     }
   });
 
@@ -549,15 +549,15 @@ document.addEventListener('DOMContentLoaded', function() {
   addHoverAssertions('figure.screenshot', {
     onEnter: (el) => {
       const img = el.querySelector('img');
-      pass('Figure should contain an image', img !== null);
+      should('Figure should contain an image', img !== null);
       if (img) {
-        pass('Image should have alt text', img.alt && img.alt.length > 0);
-        pass('Image should have loaded', img.complete);
+        should('Image should have alt text', img.alt && img.alt.length > 0);
+        should('Image should have loaded', img.complete);
       }
     },
     onClick: () => {
       // Flaky assertion demo
-      pass('Image interaction should not cause errors', Math.random() > 0.2);
+      should('Image interaction should not cause errors', Math.random() > 0.2);
     }
   });
 
@@ -566,13 +566,13 @@ document.addEventListener('DOMContentLoaded', function() {
   addHoverAssertions('article > p, section > p', {
     onEnter: (el) => {
       interactionCount++;
-      pass('Paragraph should have readable content', el.textContent.length > 20);
+      should('Paragraph should have readable content', el.textContent.length > 20);
 
       if (interactionCount === 5) {
-        pass('Multiple elements should be interactive', interactionCount >= 5);
+        should('Multiple elements should be interactive', interactionCount >= 5);
       }
       if (interactionCount === 10) {
-        pass('State should remain consistent across interactions', true);
+        should('State should remain consistent across interactions', true);
       }
     }
   });
@@ -580,15 +580,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Footer
   addHoverAssertions('footer', {
     onEnter: (el) => {
-      pass('Footer should be at end of document', true);
-      pass('Page layout should be complete', document.readyState === 'complete');
+      should('Footer should be at end of document', true);
+      should('Page layout should be complete', document.readyState === 'complete');
     }
   });
 
   // Section dividers
   addHoverAssertions('.divider', {
     onEnter: () => {
-      pass('Visual separator should render correctly', true);
+      should('Visual separator should render correctly', true);
     }
   });
 
@@ -597,8 +597,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const panel = document.getElementById('scenetest-panel');
     if (panel) {
       panel.addEventListener('mouseenter', () => {
-        pass('Assertion panel should be interactive', true);
-        pass('Panel state should be consistent', panel.querySelector('#scenetest-list') !== null);
+        should('Assertion panel should be interactive', true);
+        should('Panel state should be consistent', panel.querySelector('#scenetest-list') !== null);
       });
     }
   }, 100);
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
     clickTimes.push(now);
 
     if (clickTimes.length >= 3) {
-      pass('User should not click so much!!!', false,
+      should('User should not click so much!!!', false,
         `${clickTimes.length} clicks in ${now - clickTimes[0]}ms`);
       // Reset after triggering so it can trigger again
       clickTimes = [];
@@ -622,9 +622,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initial assertions on page load
   setTimeout(() => {
-    pass('Document should be fully loaded', document.readyState === 'complete');
-    pass('DOM should be ready for interaction', document.body !== null);
+    should('Document should be fully loaded', document.readyState === 'complete');
+    should('DOM should be ready for interaction', document.body !== null);
     // Flaky demo - occasionally fails
-    pass('Async initialization should complete without race conditions', Math.random() > 0.15);
+    should('Async initialization should complete without race conditions', Math.random() > 0.15);
   }, 200);
 });
