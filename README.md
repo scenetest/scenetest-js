@@ -34,14 +34,18 @@ In development mode, a floating panel appears in your app showing assertions in 
 ```tsx
 // src/components/ProfileForm.tsx
 import { useState } from 'react'
-import { pass, fail } from 'scenetest'
+import { should, fail } from 'scenetest'
 
 export function ProfileForm({ user }) {
   const [name, setName] = useState(user.name)
 
   // These assertions run every render in dev/test mode
-  pass('user object is available', user !== undefined)
-  fail('user should not be in error state', user?.error)
+  should('user should be available', user !== undefined)
+
+  // Use fail() as an escape hatch for unexpected states
+  if (user?.error) {
+    fail('user in unexpected error state', { error: user.error })
+  }
 
   return (
     <form>
@@ -57,7 +61,7 @@ For assertions that need to compare browser data with server data:
 
 ```tsx
 // src/components/ProfileForm.tsx
-import { useAssert, pass, fail } from 'scenetest'
+import { useAssert, should } from 'scenetest'
 
 export function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
@@ -71,8 +75,8 @@ export function ProfileForm({ userId }) {
     }),
     serverFn: async (server, data) => {
       const dbProfile = await server.db.get(userId)
-      pass('DB matches local', dbProfile.name === data.localProfile.name)
-      fail('Context mismatching user id', userId !== dbProfile.user_id)
+      should('DB should match local', dbProfile.name === data.localProfile.name)
+      should('user id should match', userId === dbProfile.user_id)
     },
     enabled: !isLoading,
   }, [isLoading, profile?.id])
@@ -176,7 +180,7 @@ When running your app in development mode (`pnpm run dev`), Scenetest injects a 
 ![Dev Panel Screenshot](docs/images/dev-panel.png)
 
 **Features:**
-- **Live assertion feed**: See `pass()` and `fail()` results as they fire
+- **Live assertion feed**: See `should()` and `fail()` results as they fire
 - **Pass/fail counts**: Quick summary of assertion results
 - **Collapsible**: Click the header to minimize
 - **Fullscreen mode**: Click the fullscreen button to open assertions in a dedicated window with stack traces
@@ -195,11 +199,27 @@ scenetest({ devPanel: true })
 
 ### API Reference
 
-#### `pass(description, condition, context?)`
-Records a passing assertion when `condition` is truthy. Optional `context` object for debugging.
+#### `should(description, condition, context?)`
+Records an assertion. Passes when `condition` is truthy, fails when falsy. Optional `context` object for debugging. Description should read as a natural "should" statement.
 
-#### `fail(description, condition, context?)`
-Records a failing assertion when `condition` is truthy. Use this to assert something should NOT happen.
+```tsx
+should('user should be logged in', user !== null)
+should('form should have valid email', isValidEmail(email), { email })
+```
+
+#### `fail(description, context?)`
+Unconditional failure marker for unexpected code paths. Use this as an escape hatch when code reaches a state that should never happen.
+
+```tsx
+if (error) {
+  fail('unexpected error during save', { error: error.message })
+  return
+}
+
+mutation.mutate(data, {
+  onError: (err) => fail('mutation failed', { error: err })
+})
+```
 
 #### `useAssert(config, deps)`
 React hook for multi-context assertions. Same config shape as `assert()`. Use `enabled: false` to skip.
@@ -210,7 +230,7 @@ useAssert({
   withData: () => ({ userId: profile.id }),
   serverFn: async (server, data) => {
     const dbProfile = await server.db.get(data.userId)
-    pass('DB matches local', dbProfile.name === data.local.name)
+    should('DB should match local', dbProfile.name === data.local.name)
   },
   enabled: !isLoading,
 }, [isLoading, profile?.id])
@@ -226,7 +246,7 @@ onSuccess: (data) => {
     withData: () => ({ id: data.id }),
     serverFn: (server, data) => {
       const dbRecord = server.db.get(data.id)
-      pass('record exists', dbRecord !== null)
+      should('record should exist', dbRecord !== null)
     },
   })
 }
@@ -236,7 +256,7 @@ onSuccess: (data) => {
 Compare pairs of values for equality. Returns `true` if all pairs match.
 
 ```tsx
-pass('primary fields match', match(
+should('primary fields should match', match(
   [localDeck.cards, dbDeck.cards],
   [localDeck.updated_at, dbDeck.updated_at]
 ))

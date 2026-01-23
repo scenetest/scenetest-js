@@ -4,11 +4,11 @@ import type { AssertionResult, AssertionConfig } from './types.js'
  * Compare pairs of values for equality.
  * Returns true if all pairs match (using strict equality).
  *
- * Useful for asserting multiple fields match in a single pass/fail call.
+ * Useful for asserting multiple fields match in a single should() call.
  *
  * @example
  * ```tsx
- * pass('primary fields match', match(
+ * should('primary fields should match', match(
  *   [localDeck.cards, dbDeck.cards],
  *   [localDeck.updated_at, dbDeck.updated_at]
  * ))
@@ -60,24 +60,25 @@ function report(result: AssertionResult): void {
 }
 
 /**
- * Inline assertion that passes when condition is true.
+ * Inline assertion that describes what should be true.
  *
  * Use this in your components to validate your mental model of how the code works.
+ * The description should read as a natural "should" statement.
  *
  * @example
  * ```tsx
  * function ProfileForm() {
  *   const profile = useProfile()
- *   pass('profile should be loaded without pending state', profile !== undefined)
+ *   should('profile should be loaded without pending state', profile !== undefined)
  *   // With context for debugging:
- *   pass('user has valid ID', !!user.id, { userId: user.id, userName: user.name })
+ *   should('user should have valid ID', !!user.id, { userId: user.id, userName: user.name })
  * }
  * ```
  */
-export function pass(description: string, condition: boolean, context?: Record<string, unknown>): void {
+export function should(description: string, condition: boolean, context?: Record<string, unknown>): void {
   const stack = getStack()
   report({
-    type: 'pass',
+    type: condition ? 'pass' : 'fail',
     description,
     result: condition,
     timestamp: Date.now(),
@@ -88,26 +89,33 @@ export function pass(description: string, condition: boolean, context?: Record<s
 }
 
 /**
- * Inline assertion that fails when condition is true.
+ * Unconditional failure marker for unexpected code paths.
  *
- * Use this to assert that something should NOT happen.
+ * Use this as an escape hatch when code reaches a state that should never happen.
+ * Think of it like a `console.error("something weird happened")` that gets tracked.
  *
  * @example
  * ```tsx
  * function ProfileForm() {
- *   const profile = useProfile()
- *   fail('profile should not be in error state on mount', profile?.error)
- *   // With context for debugging:
- *   fail('user missing required fields', !user.email, { user })
+ *   if (name.trim().length < 2) {
+ *     fail('form submitted with name too short', { name })
+ *     return
+ *   }
+ *
+ *   mutation.mutate(data, {
+ *     onError: (err) => {
+ *       fail('mutation failed unexpectedly', { error: err.message })
+ *     }
+ *   })
  * }
  * ```
  */
-export function fail(description: string, condition: boolean, context?: Record<string, unknown>): void {
+export function fail(description: string, context?: Record<string, unknown>): void {
   const stack = getStack()
   report({
     type: 'fail',
     description,
-    result: !condition, // fail() passes when condition is false
+    result: false,
     timestamp: Date.now(),
     stack,
     context,
@@ -130,7 +138,7 @@ export function fail(description: string, condition: boolean, context?: Record<s
  *   withData: () => ({ userId: profile.id, name: profile.name }),
  *   serverFn: (server, data) => {
  *     const dbUser = server.db.getUser(data.userId)
- *     pass('name matches', data.name === dbUser.name)
+ *     should('name should match', data.name === dbUser.name)
  *   },
  * })
  * ```

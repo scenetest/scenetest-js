@@ -3,7 +3,7 @@ export { useAssert, __useAssert } from './hooks.js'
 export type { RuntimeAssertConfig } from './hooks.js'
 
 // Re-export everything from core scenetest for convenience
-export { pass, fail, assert } from 'scenetest'
+export { should, fail, assert, match } from 'scenetest'
 export type {
   AssertionResult,
   ScenetestReporter,
