@@ -20,7 +20,7 @@ pnpm typecheck        # Type check all packages
 
 ```
 packages/
-├── scenetest/              # Core library - pass(), fail(), assert() (framework-agnostic)
+├── scenetest/              # Core library - should(), fail(), assert() (framework-agnostic)
 ├── scenetest-react/        # React bindings - useAssert hook (re-exports core)
 ├── scenetest-vue/          # Vue bindings - useAssert composable (re-exports core)
 ├── scenetest-solid/        # Solid bindings - createAssert primitive (re-exports core)
@@ -42,19 +42,19 @@ Scenetest separates two distinct concerns in end-to-end testing:
 
 ## How It Works
 
-1. **In app code**: Use `pass()` and `fail()` from your framework's scenetest package:
+1. **In app code**: Use `should()` and `fail()` from your framework's scenetest package:
    - React: `scenetest-react` with `useAssert` hook
    - Vue: `scenetest-vue` with `useAssert` composable
    - Solid: `scenetest-solid` with `createAssert` primitive
    - Svelte: `scenetest-svelte` with `runAssert` helper (use inside `$effect`)
-   - Any framework: `scenetest` core for just `pass()` and `fail()`
+   - Any framework: `scenetest` core for just `should()` and `fail()`
 2. **At runtime**: These check for `window.__scenetest_report` and report if available
 3. **In tests**: Use `scenePage` fixture from `playwright-scenetest` which exposes the reporter
 4. **Result**: All inline assertions from app code are collected in `scenePage.assertions`
 
 ## Key Files
 
-- `packages/scenetest/src/assertions.ts` - Core pass/fail implementation
+- `packages/scenetest/src/assertions.ts` - Core should/fail implementation
 - `packages/playwright-scenetest/src/fixtures.ts` - Playwright fixtures
 - `packages/example-app-react/src/App.tsx` - Example component with inline assertions
 

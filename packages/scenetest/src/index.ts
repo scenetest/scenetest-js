@@ -1,4 +1,4 @@
-export { pass, fail, assert } from './assertions.js'
+export { should, fail, assert, match } from './assertions.js'
 export type {
   AssertionResult,
   ScenetestReporter,
