@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "CLI tool for running scenetest scene specs",
   "type": "module",
   "license": "MIT",

@@ -331,7 +331,7 @@ should('test', true)`
 
   describe('scenetest-vue imports', () => {
     it('removes import from scenetest-vue', () => {
-      const code = `import { should, failed, useAssert } from '@scenetest/vue'
+      const code = `import { should, failed, watchTestEffect } from '@scenetest/vue'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -341,11 +341,11 @@ const x = 1`
 
     it('handles Vue component with scenetest-vue imports', () => {
       const code = `import { ref } from 'vue'
-import { should, useAssert } from '@scenetest/vue'
+import { should, watchTestEffect } from '@scenetest/vue'
 
 const count = ref(0)
 should('rendered', true)
-useAssert({ title: 'test', withData: () => ({ count: count.value }), serverFn: () => {} }, [() => count.value])
+watchTestEffect(() => { should('count is positive', count.value >= 0) })
 console.log(count.value)`
 
       const result = stripScenetest(code)
@@ -353,13 +353,13 @@ console.log(count.value)`
       expect(result!.code).toContain("import { ref } from 'vue'")
       expect(result!.code).not.toContain("from '@scenetest/vue'")
       expect(result!.code).not.toContain('should(')
-      expect(result!.code).not.toContain('useAssert(')
+      expect(result!.code).not.toContain('watchTestEffect(')
     })
   })
 
   describe('scenetest-solid imports', () => {
     it('removes import from scenetest-solid', () => {
-      const code = `import { should, failed, createAssert } from '@scenetest/solid'
+      const code = `import { should, failed, createTestEffect } from '@scenetest/solid'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -369,12 +369,12 @@ const x = 1`
 
     it('handles Solid component with scenetest-solid imports', () => {
       const code = `import { createSignal } from 'solid-js'
-import { should, createAssert } from '@scenetest/solid'
+import { should, createTestEffect } from '@scenetest/solid'
 
 function Component() {
   const [count, setCount] = createSignal(0)
   should('rendered', true)
-  createAssert({ title: 'test', withData: () => ({ count: count() }), serverFn: () => {} }, [count])
+  createTestEffect(() => { should('count is positive', count() >= 0) })
   return count()
 }`
 
@@ -383,13 +383,13 @@ function Component() {
       expect(result!.code).toContain("import { createSignal } from 'solid-js'")
       expect(result!.code).not.toContain("from '@scenetest/solid'")
       expect(result!.code).not.toContain('should(')
-      expect(result!.code).not.toContain('createAssert(')
+      expect(result!.code).not.toContain('createTestEffect(')
     })
   })
 
   describe('scenetest-svelte imports', () => {
     it('removes import from scenetest-svelte', () => {
-      const code = `import { should, failed, runAssert } from '@scenetest/svelte'
+      const code = `import { should, failed, testEffect } from '@scenetest/svelte'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -398,25 +398,25 @@ const x = 1`
     })
 
     it('handles Svelte with scenetest-svelte imports', () => {
-      const code = `import { should, runAssert } from '@scenetest/svelte'
+      const code = `import { should, testEffect } from '@scenetest/svelte'
 
 let count = 0
 should('rendered', true)
-runAssert({ title: 'test', withData: () => ({ count }), serverFn: () => {} })
+testEffect(() => { should('count is positive', count >= 0) })
 console.log(count)`
 
       const result = stripScenetest(code)
       expect(result).not.toBeNull()
       expect(result!.code).not.toContain("from '@scenetest/svelte'")
       expect(result!.code).not.toContain('should(')
-      expect(result!.code).not.toContain('runAssert(')
+      expect(result!.code).not.toContain('testEffect(')
       expect(result!.code).toContain('let count = 0')
     })
   })
 
   describe('scenetest-react imports', () => {
     it('removes import from scenetest-react', () => {
-      const code = `import { should, failed, useAssert } from '@scenetest/react'
+      const code = `import { should, failed, useTestEffect } from '@scenetest/react'
 const x = 1`
 
       const result = stripScenetest(code)
@@ -424,11 +424,11 @@ const x = 1`
       expect(result!.code).toBe('const x = 1')
     })
 
-    it('removes should/failed/useAssert calls from scenetest-react', () => {
-      const code = `import { should, failed, useAssert } from '@scenetest/react'
+    it('removes should/failed/useTestEffect calls from scenetest-react', () => {
+      const code = `import { should, failed, useTestEffect } from '@scenetest/react'
 should('one', true)
 failed('two')
-useAssert({ title: 'test', withData: () => ({}), serverFn: () => {} }, [])
+useTestEffect(() => { should('in effect', true) }, [])
 console.log('kept')`
 
       const result = stripScenetest(code)
@@ -438,12 +438,12 @@ console.log('kept')`
 
     it('handles React component with scenetest-react imports', () => {
       const code = `import { useState } from 'react'
-import { should, useAssert } from '@scenetest/react'
+import { should, useTestEffect } from '@scenetest/react'
 
 function Component() {
   const [count, setCount] = useState(0)
   should('rendered', true)
-  useAssert({ title: 'test', withData: () => ({ count }), serverFn: () => {} }, [count])
+  useTestEffect(() => { should('count is positive', count >= 0) }, [count])
   return <div>{count}</div>
 }`
 
@@ -452,7 +452,7 @@ function Component() {
       expect(result!.code).toContain("import { useState } from 'react'")
       expect(result!.code).not.toContain("from '@scenetest/react'")
       expect(result!.code).not.toContain('should(')
-      expect(result!.code).not.toContain('useAssert(')
+      expect(result!.code).not.toContain('useTestEffect(')
       expect(result!.code).toContain('function Component()')
     })
   })

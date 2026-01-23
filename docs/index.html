@@ -58,22 +58,22 @@
 <pre><code class="language-typescript">// in your UI component
 cost post = usePost(id)
 const form = usePostForm(post)
-// useAssert works like useEffect or useMemo
-useAssert(
-  () => ({
-    title: 'Server item should match local',
-    // passing data from react-land to the server fn
-    withData: () => postsCollection.get(id),
-    serverFn: async (server, data) => {
+// useTestEffect wraps test code that gets stripped in production
+useTestEffect(() => {
+  // skip when submitting, run when only finished
+  if (form.isSubmitting) return
+
+  assert(
+    'Server item should match local',
+    async (server, data) => {
       const post = await server.getPosts(app.id)
       if (!post) failed('title is empty')
       should('titles match', post.title === app.title)
     },
-    // skip when submitting, run when only finished
-    enabled: !form.isSubmitting,
-  }),
-  [form.isSubmitting, post.title]
-)</code></pre>
+    // passing data from react-land to the server fn
+    () => postsCollection.get(id)
+  )
+}, [form.isSubmitting, post.title])</code></pre>
 
     <h2>Scenes and Inline Assertions</h2>
 
@@ -102,10 +102,10 @@ scene('User updates their profile', async ([user]) => {
 	  code &ndash; in your components, hooks, and callbacks. They validate your mental model: &ldquo;at this point in the code / React lifecycle,
       this data should be in this state.&rdquo; Engineers write them to encode their understanding of how and why this works, and to alert
 		future generations if they are ever running afoul of their ancient wisdom.
-	  Use <code>should</code> or <code>failed</code>, or assertions that run on the server <code>assert</code> and <code>useAssert</code>.
+	  Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useTestEffect</code>.
     </p>
 
-<pre><code class="language-typescript">import { should, failed, assert } from 'scenetest'
+<pre><code class="language-typescript">import { should, failed, assert, useTestEffect } from '@scenetest/react'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -114,12 +114,16 @@ export function ProfileForm({ userId }) {
   should('Profile available without loading state', profile !== undefined)
 
   // For special cases, an extra check
-  if (!profile) assert({
-    title: 'no profile returned means no profile exists',
-    serverFn: async (server) => {
-      if (await server.getProfile(userId)) failed('profile DOES exist!')
-    },
-  })
+  useTestEffect(() => {
+    if (profile) return // only check when no profile
+
+    assert(
+      'no profile returned means no profile exists',
+      async (server) => {
+        if (await server.getProfile(userId)) failed('profile DOES exist!')
+      }
+    )
+  }, [profile, userId])
 
   return !profile ? &lt;CreateProfileForm /&gt;
     : &lt;EditProfileForm profile={profile} /&gt;
@@ -178,24 +182,24 @@ expect({
 
     <pre><code class="language-typescript">// ✅ server assertion triggered after a mutation
 onSettled: (data) => {
-  assert({
-    title: 'New deck should initialise the same',
-    withData: () => {
-      data,
-      localDb: localDb.profileStore.getDeck(data.lang)
-    },
-    serverFn: async (server, data) => {
-      const newDeck = await server.getDeck(data.data.userId, data.data.lang)
+  assert(
+    'New deck should initialise the same',
+    async (server, clientData) => {
+      const newDeck = await server.getDeck(clientData.data.userId, clientData.data.lang)
       if (!newDeck) failed('new deck is not real / persisted')
       should(
         'primary fields should match',
         match(
-          [localDeck.cards, dbDeck.cards],
-          [localDeck.updated_string, dbDeck.updated_string]
+          [clientData.localDb.cards, newDeck.cards],
+          [clientData.localDb.updated_string, newDeck.updated_string]
         )
       )
     },
-  })
+    () => ({
+      data,
+      localDb: localDb.profileStore.getDeck(data.lang)
+    })
+  )
 }</code></pre>
 
     <p>

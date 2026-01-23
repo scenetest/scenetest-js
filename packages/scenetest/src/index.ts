@@ -2,7 +2,8 @@ export { should, failed, assert, match } from './assertions.js'
 export type {
   AssertionResult,
   ScenetestReporter,
-  AssertionConfig,
+  AssertServerFn,
+  AssertDataFn,
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,

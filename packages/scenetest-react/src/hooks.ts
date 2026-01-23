@@ -1,62 +1,30 @@
 import { useEffect } from 'react'
-import type { AssertionConfig } from '@scenetest/core'
 
 /**
- * React hook for multi-context assertions.
- * Takes the same config shape as assert(). Use `enabled: false` to skip.
+ * A useEffect wrapper for test code that gets stripped in production.
+ *
+ * Use this to wrap effects containing assertions (should, failed, assert).
+ * The entire effect is removed during production builds.
  *
  * @example
  * ```tsx
- * useAssert({
- *   title: 'Email validation',
- *   withData: () => ({ email: profile.email }),
- *   serverFn: (server, data) => {
- *     should('email should be valid', server.validateEmail(data.email))
- *   },
- *   enabled: !isLoading,
- * }, [isLoading, profile?.email])
+ * useTestEffect(() => {
+ *   assert(
+ *     'profile synced to db',
+ *     async (server, data) => {
+ *       const dbUser = await server.getUser(data.id)
+ *       should('name matches', data.name === dbUser.name)
+ *     },
+ *     () => ({ id: profile.id, name: profile.name })
+ *   )
+ * }, [profile])
  * ```
  */
-export function useAssert<TData>(
-  _config: AssertionConfig<TData>,
-  _deps: React.DependencyList
+export function useTestEffect(
+  effect: React.EffectCallback,
+  deps?: React.DependencyList
 ): void {
-  // This function is transformed by vite-plugin-scenetest
-  // If this runs, it means the plugin is not configured or we're in production
-  // In production, this will be stripped out
-}
-
-/**
- * Internal runtime config passed to __useAssert after transform
- */
-export interface RuntimeAssertConfig {
-  __assertionId: string
-  title: string
-  key?: string
-  withData?: () => unknown
-  enabled?: boolean
-}
-
-/**
- * Internal runtime hook called after transform.
- * The transform extracts serverFn and replaces useAssert with this.
- */
-export function __useAssert(
-  config: RuntimeAssertConfig,
-  deps: React.DependencyList
-): void {
-  useEffect(() => {
-    // Skip if enabled is explicitly false
-    if (config.enabled === false) return
-
-    // Import dynamically to avoid circular deps
-    import('@scenetest/core/runtime').then(({ __scenetest_rpc }) => {
-      __scenetest_rpc({
-        id: config.__assertionId,
-        title: config.title,
-        key: config.key,
-        withData: config.withData,
-      })
-    })
-  }, deps) // eslint-disable-line react-hooks/exhaustive-deps
+  // In dev mode, this just runs useEffect
+  // In production, vite-plugin-scenetest strips the entire call
+  useEffect(effect, deps)
 }

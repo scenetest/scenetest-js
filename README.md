@@ -164,10 +164,10 @@ pnpm test
 | Package | Description |
 |---------|-------------|
 | `@scenetest/core` | Core `should()`, `failed()`, `assert()`, `match()` functions |
-| `@scenetest/react` | React bindings with `useAssert` hook (re-exports core) |
-| `@scenetest/vue` | Vue bindings with `useAssert` composable (re-exports core) |
-| `@scenetest/solid` | Solid bindings with `createAssert` primitive (re-exports core) |
-| `@scenetest/svelte` | Svelte bindings with `runAssert` helper (re-exports core) |
+| `@scenetest/react` | React bindings with `useTestEffect` hook (re-exports core) |
+| `@scenetest/vue` | Vue bindings with `watchTestEffect` composable (re-exports core) |
+| `@scenetest/solid` | Solid bindings with `createTestEffect` primitive (re-exports core) |
+| `@scenetest/svelte` | Svelte bindings with `testEffect` helper (re-exports core) |
 | `@scenetest/vite-plugin` | Vite plugin for dev panel and production stripping |
 | `@scenetest/cli` | CLI runner for scene specs |
 
@@ -175,16 +175,16 @@ Each framework package re-exports everything from `@scenetest/core`, so you only
 
 ```tsx
 // React - use @scenetest/react
-import { should, failed, assert, useAssert, match } from '@scenetest/react'
+import { should, failed, assert, useTestEffect } from '@scenetest/react'
 
 // Vue - use @scenetest/vue
-import { should, failed, assert, useAssert, match } from '@scenetest/vue'
+import { should, failed, assert, watchTestEffect } from '@scenetest/vue'
 
 // Solid - use @scenetest/solid
-import { should, failed, assert, createAssert, match } from '@scenetest/solid'
+import { should, failed, assert, createTestEffect } from '@scenetest/solid'
 
 // Svelte - use @scenetest/svelte
-import { should, failed, assert, runAssert, match } from '@scenetest/svelte'
+import { should, failed, assert, testEffect } from '@scenetest/svelte'
 ```
 
 ---
@@ -238,22 +238,23 @@ For assertions that need to compare browser data with server data:
 
 ```tsx
 // src/components/ProfileForm.tsx
-import { useAssert, should } from '@scenetest/react'
+import { useTestEffect, assert, should } from '@scenetest/react'
 
 export function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
 
   // Runs when deps change, compares browser and server data
-  useAssert({
-    title: 'Profile matches database',
-    withData: () => ({
-      localProfile: profile,
-    }),
-    serverFn: async (server, data) => {
-      const dbProfile = await server.getUser(userId)
-      should('DB should match local', dbProfile.name === data.localProfile.name)
-    },
-    enabled: !isLoading,
+  useTestEffect(() => {
+    if (isLoading || !profile) return
+
+    assert(
+      'Profile matches database',
+      async (server, data) => {
+        const dbProfile = await server.getUser(userId)
+        should('DB should match local', dbProfile.name === data.localProfile.name)
+      },
+      () => ({ localProfile: profile })
+    )
   }, [isLoading, profile?.id])
 
   return <form>{/* ... */}</form>
@@ -335,37 +336,47 @@ mutation.mutate(data, {
 })
 ```
 
-### `useAssert(config, deps)` (React)
+### `assert(title, serverFn, withData?)`
 
-React hook for multi-context assertions.
-
-```tsx
-useAssert({
-  title: 'Profile matches database',
-  withData: () => ({ userId: profile.id }),
-  serverFn: async (server, data) => {
-    const dbProfile = await server.db.get(data.userId)
-    should('DB should match local', dbProfile.name === data.local.name)
-  },
-  enabled: !isLoading,
-}, [isLoading, profile?.id])
-```
-
-### `assert(config)`
-
-Imperative multi-context assertion for use in callbacks.
+Multi-context assertion for comparing browser and server data. Use in callbacks, effects, or anywhere you need to verify data across contexts.
 
 ```tsx
+// In a callback
 onSuccess: (data) => {
-  assert({
-    title: 'Data saved correctly',
-    withData: () => ({ id: data.id }),
-    serverFn: (server, data) => {
-      const dbRecord = server.db.get(data.id)
+  assert(
+    'Data saved correctly',
+    async (server, data) => {
+      const dbRecord = await server.db.get(data.id)
       should('record should exist', dbRecord !== null)
     },
-  })
+    () => ({ id: data.id })
+  )
 }
+```
+
+### `useTestEffect(fn, deps)` (React)
+
+React hook that wraps test code in a `useEffect`. The entire effect is stripped in production builds.
+
+```tsx
+useTestEffect(() => {
+  if (!profile) return
+
+  assert(
+    'Profile matches database',
+    async (server, data) => {
+      const dbProfile = await server.db.get(data.userId)
+      should('DB should match local', dbProfile.name === data.local.name)
+    },
+    () => ({ userId: profile.id })
+  )
+}, [profile?.id])
+```
+
+Similar helpers exist for other frameworks:
+- Vue: `watchTestEffect(fn)` - wraps `watchEffect`
+- Solid: `createTestEffect(fn, deps?)` - wraps `createEffect`
+- Svelte: `testEffect(fn)` - use inside `$effect`
 ```
 
 ### `match(...pairs)`

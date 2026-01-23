@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { should, failed, useAssert } from '@scenetest/react'
+import { should, failed, assert, useTestEffect } from '@scenetest/react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -33,14 +33,17 @@ function ProfileForm() {
 
   // Multi-context assertion: verify email is valid on server
   // Runs when profile.email changes, skips when no profile
-  useAssert({
-    title: 'Email validation on server',
-    withData: () => ({ email: profile!.email }), // profile exists when enabled
-    serverFn: (server, data) => {
-      const isValid = server.validateEmail(data.email)
-      should('profile email should be valid format', isValid, { email: data.email })
-    },
-    enabled: !!profile,
+  useTestEffect(() => {
+    if (!profile) return
+
+    assert(
+      'Email validation on server',
+      (server, data) => {
+        const isValid = server.validateEmail(data.email)
+        should('profile email should be valid format', isValid, { email: data.email })
+      },
+      () => ({ email: profile.email })
+    )
   }, [profile?.email])
 
   // Assertion: profile should be loaded before we can edit
