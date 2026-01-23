@@ -1,73 +1,46 @@
 import { createEffect, on, type Accessor } from 'solid-js'
-import type { AssertionConfig } from '@scenetest/core'
 
 /**
- * Solid primitive for multi-context assertions.
- * Takes the same config shape as assert(). Use `enabled: false` to skip.
+ * A createEffect wrapper for test code that gets stripped in production.
+ *
+ * Use this to wrap effects containing assertions (should, failed, assert).
+ * The entire effect is removed during production builds.
  *
  * @example
  * ```tsx
- * import { createAssert, should } from '@scenetest/solid'
+ * import { createTestEffect, assert, should } from '@scenetest/solid'
  * import { createSignal } from 'solid-js'
  *
  * function Profile() {
  *   const [profile, setProfile] = createSignal(null)
  *
- *   createAssert({
- *     title: 'Email validation',
- *     withData: () => ({ email: profile()?.email }),
- *     serverFn: (server, data) => {
- *       should('email should be valid', server.validateEmail(data.email))
- *     },
- *     enabled: !!profile(),
- *   }, [() => profile()?.email])
+ *   createTestEffect(() => {
+ *     const p = profile()
+ *     if (!p) return
+ *
+ *     assert(
+ *       'profile synced to db',
+ *       async (server, data) => {
+ *         const dbUser = await server.getUser(data.id)
+ *         should('name matches', data.name === dbUser.name)
+ *       },
+ *       () => ({ id: p.id, name: p.name })
+ *     )
+ *   })
  *
  *   return <div>{profile()?.name}</div>
  * }
  * ```
  */
-export function createAssert<TData>(
-  _config: AssertionConfig<TData>,
-  _deps: Accessor<unknown>[]
+export function createTestEffect(
+  effect: () => void,
+  deps?: Accessor<unknown>[]
 ): void {
-  // This function is transformed by vite-plugin-scenetest
-  // If this runs, it means the plugin is not configured or we're in production
-  // In production, this will be stripped out
-}
-
-/**
- * Internal runtime config passed to __createAssert after transform
- */
-export interface RuntimeAssertConfig {
-  __assertionId: string
-  title: string
-  key?: string
-  withData: () => unknown
-  enabled?: boolean
-}
-
-/**
- * Internal runtime primitive called after transform.
- * The transform extracts serverFn and replaces createAssert with this.
- */
-export function __createAssert(
-  config: RuntimeAssertConfig,
-  deps: Accessor<unknown>[]
-): void {
-  createEffect(
-    on(deps, () => {
-      // Skip if enabled is explicitly false
-      if (config.enabled === false) return
-
-      // Import dynamically to avoid circular deps
-      import('@scenetest/core/runtime').then(({ __scenetest_rpc }) => {
-        __scenetest_rpc({
-          id: config.__assertionId,
-          title: config.title,
-          key: config.key,
-          withData: config.withData,
-        })
-      })
-    })
-  )
+  // In dev mode, this just runs createEffect
+  // In production, vite-plugin-scenetest strips the entire call
+  if (deps) {
+    createEffect(on(deps, effect))
+  } else {
+    createEffect(effect)
+  }
 }

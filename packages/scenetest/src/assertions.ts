@@ -1,4 +1,4 @@
-import type { AssertionResult, AssertionConfig } from './types.js'
+import type { AssertionResult, AssertServerFn, AssertDataFn } from './types.js'
 
 /**
  * Compare pairs of values for equality.
@@ -133,17 +133,21 @@ export function failed(description: string, context?: Record<string, unknown>): 
  *
  * @example
  * ```tsx
- * assert({
- *   title: 'User profile matches database',
- *   withData: () => ({ userId: profile.id, name: profile.name }),
- *   serverFn: (server, data) => {
- *     const dbUser = server.db.getUser(data.userId)
+ * assert(
+ *   'User profile matches database',
+ *   async (server, data) => {
+ *     const dbUser = await server.db.getUser(data.userId)
  *     should('name should match', data.name === dbUser.name)
  *   },
- * })
+ *   () => ({ userId: profile.id, name: profile.name })
+ * )
  * ```
  */
-export function assert<TData>(_config: AssertionConfig<TData>): void {
+export function assert<TData>(
+  _title: string,
+  _serverFn: AssertServerFn<TData>,
+  _withData?: AssertDataFn<TData>
+): void {
   // This function is transformed by vite-plugin-scenetest
   // If this runs, it means the plugin is not configured or we're in production
   // In production, this will be stripped out

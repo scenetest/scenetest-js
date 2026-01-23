@@ -1,34 +1,37 @@
-import type { AssertionConfig } from '@scenetest/core'
-
 /**
- * Svelte helper for multi-context assertions.
- * Use this inside a $effect() block for reactive assertions.
+ * A marker function for test code that gets stripped in production.
+ *
+ * Use this inside a $effect() to wrap assertions. The entire call is removed
+ * during production builds.
  *
  * @example
  * ```svelte
  * <script>
- * import { runAssert, should } from '@scenetest/svelte'
+ * import { testEffect, assert, should } from '@scenetest/svelte'
  *
  * let profile = $state(null)
  *
  * $effect(() => {
- *   if (!profile) return
+ *   testEffect(() => {
+ *     if (!profile) return
  *
- *   runAssert({
- *     title: 'Email validation',
- *     withData: () => ({ email: profile.email }),
- *     serverFn: (server, data) => {
- *       should('email should be valid', server.validateEmail(data.email))
- *     },
+ *     assert(
+ *       'profile synced to db',
+ *       async (server, data) => {
+ *         const dbUser = await server.getUser(data.id)
+ *         should('name matches', data.name === dbUser.name)
+ *       },
+ *       () => ({ id: profile.id, name: profile.name })
+ *     )
  *   })
  * })
  * </script>
  * ```
  *
- * For simple assertions, just use should() and failed() directly:
+ * For simple cases, you can use assert() directly in $effect:
  * ```svelte
  * <script>
- * import { should, failed } from '@scenetest/svelte'
+ * import { should } from '@scenetest/svelte'
  *
  * let count = $state(0)
  *
@@ -38,40 +41,8 @@ import type { AssertionConfig } from '@scenetest/core'
  * </script>
  * ```
  */
-export function runAssert<TData>(
-  _config: AssertionConfig<TData>
-): void {
-  // This function is transformed by vite-plugin-scenetest
-  // If this runs, it means the plugin is not configured or we're in production
-  // In production, this will be stripped out
-}
-
-/**
- * Internal runtime config passed to __runAssert after transform
- */
-export interface RuntimeAssertConfig {
-  __assertionId: string
-  title: string
-  key?: string
-  withData: () => unknown
-  enabled?: boolean
-}
-
-/**
- * Internal runtime helper called after transform.
- * The transform extracts serverFn and replaces runAssert with this.
- */
-export function __runAssert(config: RuntimeAssertConfig): void {
-  // Skip if enabled is explicitly false
-  if (config.enabled === false) return
-
-  // Import dynamically to avoid circular deps
-  import('@scenetest/core/runtime').then(({ __scenetest_rpc }) => {
-    __scenetest_rpc({
-      id: config.__assertionId,
-      title: config.title,
-      key: config.key,
-      withData: config.withData,
-    })
-  })
+export function testEffect(effect: () => void): void {
+  // In dev mode, this just runs the effect immediately
+  // In production, vite-plugin-scenetest strips the entire call
+  effect()
 }

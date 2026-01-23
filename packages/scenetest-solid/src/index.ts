@@ -1,13 +1,13 @@
 // Solid-specific primitives
-export { createAssert, __createAssert } from './primitives.js'
-export type { RuntimeAssertConfig } from './primitives.js'
+export { createTestEffect } from './primitives.js'
 
 // Re-export everything from core scenetest for convenience
 export { should, failed, assert, match } from '@scenetest/core'
 export type {
   AssertionResult,
   ScenetestReporter,
-  AssertionConfig,
+  AssertServerFn,
+  AssertDataFn,
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,
