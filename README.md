@@ -251,7 +251,7 @@ Extended Playwright `page` with:
 
 ### Watching Props/State Sync
 
-Track when two values eventually synchronize across renders. Useful for detecting when local state catches up with props or remote data.
+Track when a condition eventually becomes true across renders. Useful for detecting when local state catches up with props or remote data.
 
 #### React: `useWatch`
 
@@ -262,7 +262,7 @@ function ProfileSync({ userId }) {
   const [localId, setLocalId] = useState('')
 
   // Track that local state syncs with props
-  useWatch('props and state should be in sync', userId, localId)
+  useWatch('props and state should be in sync', userId === localId)
 
   useEffect(() => {
     setLocalId(userId) // Will sync on next render
@@ -272,12 +272,11 @@ function ProfileSync({ userId }) {
 }
 ```
 
-The dev panel shows the history of match results: `[✗✗✓] settled on render 3`
+The dev panel shows the history of results: `[✗✗✓] settled on render 3`
 
 **Options:**
 ```tsx
-useWatch('data should match', localData, serverData, {
-  compare: (a, b) => JSON.stringify(a) === JSON.stringify(b), // Custom comparison
+useWatch('data should match', localData.id === serverData.id, {
   context: { localData, serverData }, // Debug context
 })
 ```
@@ -292,10 +291,9 @@ import { ref, watch } from 'vue'
 const props = defineProps<{ userId: string }>()
 const localId = ref('')
 
-// Track that local state syncs with props
+// Track that local state syncs with props (pass a getter)
 useWatch('props and state should be in sync',
-  () => props.userId,
-  () => localId.value
+  () => props.userId === localId.value
 )
 
 watch(() => props.userId, (newId) => {
@@ -313,10 +311,9 @@ import { createSignal, createEffect } from 'solid-js'
 function ProfileSync(props) {
   const [localId, setLocalId] = createSignal('')
 
-  // Track that local state syncs with props
+  // Track that local state syncs with props (pass an accessor)
   createWatch('props and state should be in sync',
-    () => props.userId,
-    () => localId()
+    () => props.userId === localId()
   )
 
   createEffect(() => {
@@ -339,7 +336,7 @@ let localId = $state('')
 const tracker = watch('props and state should sync')
 
 $effect(() => {
-  tracker.check(userId, localId)
+  tracker.check(userId === localId)
   return () => tracker.finalize()
 })
 

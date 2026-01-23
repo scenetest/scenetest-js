@@ -76,8 +76,6 @@ export function __createAssert(
  * Options for createWatch primitive
  */
 export interface CreateWatchOptions {
-  /** Custom comparison function. Defaults to Object.is */
-  compare?: (a: unknown, b: unknown) => boolean
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -146,10 +144,10 @@ function reportWatch(
 }
 
 /**
- * Watch two reactive values and track their synchronization.
+ * Watch a reactive condition and track when it settles (becomes true).
  *
- * Reports an assertion that tracks whether values eventually sync up.
- * The assertion passes once values match, and tracks the full history.
+ * Similar to `pass()` but tracks the condition over time. Reports an assertion
+ * that shows whether the condition eventually became true.
  *
  * @example
  * ```tsx
@@ -161,12 +159,11 @@ function reportWatch(
  *
  *   // Track that local state syncs with props
  *   createWatch('props and state should be in sync',
- *     () => props.userId,
- *     () => localId()
+ *     () => props.userId === localId()
  *   )
  *
  *   createEffect(() => {
- *     setLocalId(props.userId) // Will sync on next update
+ *     setLocalId(props.userId)
  *   })
  *
  *   return <div>{localId()}</div>
@@ -175,8 +172,7 @@ function reportWatch(
  */
 export function createWatch(
   description: string,
-  valueA: Accessor<unknown>,
-  valueB: Accessor<unknown>,
+  condition: Accessor<boolean>,
   options?: CreateWatchOptions
 ): void {
   // Track state across reactive updates
@@ -190,16 +186,12 @@ export function createWatch(
   const stack = getWatchStack()
 
   createEffect(
-    on([valueA, valueB], ([a, b]) => {
-      // Compare values
-      const compare = options?.compare ?? Object.is
-      const matches = compare(a, b)
-
+    on(condition, (result) => {
       // Update history
-      state.history.push(matches)
+      state.history.push(result)
 
       // Check if settled
-      if (matches && !state.settled) {
+      if (result && !state.settled) {
         state.settled = true
         state.settledAtRender = state.history.length
       }

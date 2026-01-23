@@ -80,8 +80,6 @@ export function __runAssert(config: RuntimeAssertConfig): void {
  * Options for watch tracker
  */
 export interface WatchOptions {
-  /** Custom comparison function. Defaults to Object.is */
-  compare?: (a: unknown, b: unknown) => boolean
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -150,32 +148,32 @@ function reportWatch(
 }
 
 /**
- * Watch tracker that can be used inside $effect to track value synchronization.
+ * Watch tracker that can be used inside $effect to track when a condition settles.
  */
 export interface WatchTracker {
   /**
-   * Check if two values match and update the watch state.
-   * Call this inside $effect with the values to compare.
+   * Check a condition and update the watch state.
+   * Call this inside $effect with a boolean condition.
    */
-  check: (valueA: unknown, valueB: unknown) => void
+  check: (condition: boolean) => void
   /**
    * Report final state if never settled. Call in cleanup.
    */
   finalize: () => void
   /**
-   * Whether the values have settled (matched at least once)
+   * Whether the condition has settled (became true at least once)
    */
   readonly settled: boolean
   /**
-   * History of match results
+   * History of condition results
    */
   readonly history: readonly boolean[]
 }
 
 /**
- * Create a watch tracker for tracking value synchronization in Svelte.
+ * Create a watch tracker for tracking when a condition settles in Svelte.
  *
- * Use this to track when two reactive values eventually sync up.
+ * Use this to track when a condition eventually becomes true.
  * Call tracker.check() inside $effect, and optionally tracker.finalize()
  * in cleanup to report if values never settled.
  *
@@ -190,31 +188,12 @@ export interface WatchTracker {
  * const tracker = watch('props and state should sync')
  *
  * $effect(() => {
- *   tracker.check(userId, localId)
+ *   tracker.check(userId === localId)
  *   return () => tracker.finalize()
  * })
  *
  * $effect(() => {
- *   localId = userId // Sync on prop change
- * })
- * </script>
- * ```
- *
- * @example
- * ```svelte
- * <script>
- * import { watch } from 'scenetest-svelte'
- *
- * let { data } = $props()
- * let cache = $state(null)
- *
- * // With custom comparison
- * const tracker = watch('cache should match props', {
- *   compare: (a, b) => JSON.stringify(a) === JSON.stringify(b)
- * })
- *
- * $effect(() => {
- *   tracker.check(data, cache)
+ *   localId = userId
  * })
  * </script>
  * ```
@@ -227,17 +206,14 @@ export function watch(description: string, options?: WatchOptions): WatchTracker
   }
 
   const stack = getWatchStack()
-  const compare = options?.compare ?? Object.is
 
   return {
-    check(valueA: unknown, valueB: unknown) {
-      const matches = compare(valueA, valueB)
-
+    check(condition: boolean) {
       // Update history
-      state.history.push(matches)
+      state.history.push(condition)
 
       // Check if settled
-      if (matches && !state.settled) {
+      if (condition && !state.settled) {
         state.settled = true
         state.settledAtRender = state.history.length
       }

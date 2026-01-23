@@ -65,8 +65,6 @@ export function __useAssert(
  * Options for useWatch hook
  */
 export interface UseWatchOptions {
-  /** Custom comparison function. Defaults to Object.is */
-  compare?: (a: unknown, b: unknown) => boolean
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -136,11 +134,11 @@ function reportWatch(
 }
 
 /**
- * Watch two values and track their synchronization across renders.
+ * Watch a condition across renders and track when it settles (becomes true).
  *
- * Reports an assertion that tracks whether props/state eventually sync up.
- * The assertion passes once values match, and tracks the full history of
- * match results across renders.
+ * Similar to `pass()` but tracks the condition over time. Reports an assertion
+ * that shows whether the condition eventually became true and how many renders
+ * it took to "settle".
  *
  * @example
  * ```tsx
@@ -148,7 +146,7 @@ function reportWatch(
  *   const [localId, setLocalId] = useState('')
  *
  *   // Track that local state syncs with props
- *   useWatch('props and state should be in sync', userId, localId)
+ *   useWatch('props and state should be in sync', userId === localId)
  *
  *   useEffect(() => {
  *     setLocalId(userId) // Will sync on next render
@@ -158,17 +156,15 @@ function reportWatch(
  *
  * @example
  * ```tsx
- * // With custom comparison for objects
- * useWatch('user data should match', localUser, serverUser, {
- *   compare: (a, b) => JSON.stringify(a) === JSON.stringify(b),
- *   context: { localUser, serverUser }
+ * // With context for debugging
+ * useWatch('cache matches server', cache.id === serverData.id, {
+ *   context: { cache, serverData }
  * })
  * ```
  */
 export function useWatch(
   description: string,
-  valueA: unknown,
-  valueB: unknown,
+  condition: boolean,
   options?: UseWatchOptions
 ): void {
   // Track state across renders
@@ -184,15 +180,11 @@ export function useWatch(
     stackRef.current = getWatchStack()
   }
 
-  // Compare values using provided comparator or Object.is
-  const compare = options?.compare ?? Object.is
-  const matches = compare(valueA, valueB)
-
   // Update history
-  stateRef.current.history.push(matches)
+  stateRef.current.history.push(condition)
 
-  // Check if settled (matches and wasn't settled before)
-  if (matches && !stateRef.current.settled) {
+  // Check if settled (condition true and wasn't settled before)
+  if (condition && !stateRef.current.settled) {
     stateRef.current.settled = true
     stateRef.current.settledAtRender = stateRef.current.history.length
   }

@@ -77,8 +77,6 @@ export function __useAssert(
  * Options for useWatch composable
  */
 export interface UseWatchOptions {
-  /** Custom comparison function. Defaults to Object.is */
-  compare?: (a: unknown, b: unknown) => boolean
   /** Optional context data for debugging */
   context?: Record<string, unknown>
 }
@@ -147,10 +145,10 @@ function reportWatch(
 }
 
 /**
- * Watch two reactive values and track their synchronization.
+ * Watch a reactive condition and track when it settles (becomes true).
  *
- * Reports an assertion that tracks whether values eventually sync up.
- * The assertion passes once values match, and tracks the full history.
+ * Similar to `pass()` but tracks the condition over time. Reports an assertion
+ * that shows whether the condition eventually became true.
  *
  * @example
  * ```vue
@@ -163,20 +161,18 @@ function reportWatch(
  *
  * // Track that local state syncs with props
  * useWatch('props and state should be in sync',
- *   () => props.userId,
- *   () => localId.value
+ *   () => props.userId === localId.value
  * )
  *
  * watch(() => props.userId, (newId) => {
- *   localId.value = newId // Will sync on next tick
+ *   localId.value = newId
  * }, { immediate: true })
  * </script>
  * ```
  */
 export function useWatch(
   description: string,
-  valueAGetter: () => unknown,
-  valueBGetter: () => unknown,
+  condition: () => boolean,
   options?: UseWatchOptions
 ): void {
   // Track state across reactive updates
@@ -190,19 +186,14 @@ export function useWatch(
   const stack = getWatchStack()
 
   watchEffect(() => {
-    // Get current values (establishes reactivity)
-    const valueA = valueAGetter()
-    const valueB = valueBGetter()
-
-    // Compare values
-    const compare = options?.compare ?? Object.is
-    const matches = compare(valueA, valueB)
+    // Evaluate condition (establishes reactivity)
+    const result = condition()
 
     // Update history
-    state.history.push(matches)
+    state.history.push(result)
 
     // Check if settled
-    if (matches && !state.settled) {
+    if (result && !state.settled) {
       state.settled = true
       state.settledAtRender = state.history.length
     }
