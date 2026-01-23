@@ -37,7 +37,7 @@ function getFullscreenHTML(): string {
     </head>
     <body>
       <div id="header">
-        <span id="title">scenetest</span>
+        <span id="title">\uD83C\uDFAC scenetest</span>
         <div id="controls">
           <div id="counts">
             <span class="count pass" id="pass-count">\u2713 0</span>
