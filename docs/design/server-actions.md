@@ -253,7 +253,7 @@ Users configure server functions in a config file:
 
 ```typescript
 // scenetest.config.ts
-import { defineScenetestConfig } from 'vite-plugin-scenetest'
+import { defineScenetestConfig } from '@scenetest/vite-plugin'
 import { db } from './src/db'
 
 export default defineScenetestConfig({
@@ -528,7 +528,7 @@ packages/
 │       ├── runtime.ts         # New: __scenetest_rpc for browser
 │       └── types.ts           # Add AssertionConfig, ServerContext
 │
-├── vite-plugin-scenetest/
+├── vite-plugin/
 │   └── src/
 │       ├── index.ts           # Add middleware setup
 │       ├── transform.ts       # Extend to handle assertion()

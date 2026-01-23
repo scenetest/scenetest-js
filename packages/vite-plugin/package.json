@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/scenetest/scenetest-js",
-    "directory": "packages/vite-plugin-scenetest"
+    "directory": "packages/vite-plugin"
   },
   "keywords": ["testing", "e2e", "playwright", "vite", "vite-plugin", "assertions"],
   "main": "./dist/index.js",
