@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { should, fail } from 'scenetest-svelte'
+  import { should, failed } from 'scenetest-svelte'
 
   // Reactive state using Svelte 5 runes
   let name = $state('')
@@ -34,13 +34,13 @@
     // Validate
     if (!isValidName) {
       error = 'Name must be at least 2 characters'
-      fail('form submitted with invalid name', { name })
+      failed('form submitted with invalid name', { name })
       return
     }
 
     if (!isValidEmail) {
       error = 'Please enter a valid email'
-      fail('form submitted with invalid email', { email })
+      failed('form submitted with invalid email', { email })
       return
     }
 

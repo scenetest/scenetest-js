@@ -132,7 +132,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
       // Functions to strip (from all framework packages)
       const strippableFunctions = [
         'should',
-        'fail',
+        'failed',
         'assert',
         'match',
         'useAssert',      // React, Vue

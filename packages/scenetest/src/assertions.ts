@@ -89,28 +89,28 @@ export function should(description: string, condition: boolean, context?: Record
 }
 
 /**
- * Unconditional failure marker for unexpected code paths.
+ * Past-tense failure marker for unexpected code paths.
  *
- * Use this as an escape hatch when code reaches a state that should never happen.
+ * Use this to report that something bad already happened.
  * Think of it like a `console.error("something weird happened")` that gets tracked.
  *
  * @example
  * ```tsx
  * function ProfileForm() {
  *   if (name.trim().length < 2) {
- *     fail('form submitted with name too short', { name })
+ *     failed('form submitted with name too short', { name })
  *     return
  *   }
  *
  *   mutation.mutate(data, {
  *     onError: (err) => {
- *       fail('mutation failed unexpectedly', { error: err.message })
+ *       failed('mutation failed unexpectedly', { error: err.message })
  *     }
  *   })
  * }
  * ```
  */
-export function fail(description: string, context?: Record<string, unknown>): void {
+export function failed(description: string, context?: Record<string, unknown>): void {
   const stack = getStack()
   report({
     type: 'fail',

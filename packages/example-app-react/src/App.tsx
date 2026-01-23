@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { should, fail, useAssert } from 'scenetest-react'
+import { should, failed, useAssert } from 'scenetest-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -55,7 +55,7 @@ function ProfileForm() {
     // Validate
     if (name.trim().length < 2) {
       setError('Name must be at least 2 characters')
-      fail('form submitted with name too short', { name: name.trim() })
+      failed('form submitted with name too short', { name: name.trim() })
       return
     }
 
@@ -140,7 +140,7 @@ function ProfileForm() {
         },
         onError: (err) => {
           setError(err instanceof Error ? err.message : 'Update failed')
-          fail('mutation failed with error', { error: err instanceof Error ? err.message : String(err) })
+          failed('mutation failed with error', { error: err instanceof Error ? err.message : String(err) })
         },
       }
     )
