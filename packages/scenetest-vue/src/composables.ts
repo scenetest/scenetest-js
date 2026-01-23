@@ -1,5 +1,5 @@
 import { watchEffect, type WatchSource } from 'vue'
-import type { AssertionConfig } from 'scenetest'
+import type { AssertionConfig } from '@mhsnook/scenetest'
 
 /**
  * Vue composable for multi-context assertions.
@@ -62,12 +62,12 @@ export function __useAssert(
     if (config.enabled === false) return
 
     // Import dynamically to avoid circular deps
-    import('scenetest/runtime').then(({ __scenetest_rpc }) => {
+    import('@mhsnook/scenetest/runtime').then(({ __scenetest_rpc }) => {
       __scenetest_rpc({
         id: config.__assertionId,
         title: config.title,
         key: config.key,
-        appData: config.appData,
+        withData: config.appData,
       })
     })
   })

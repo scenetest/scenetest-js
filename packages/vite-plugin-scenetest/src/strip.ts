@@ -18,13 +18,18 @@ export interface StripOptions {
   filename?: string
 }
 
-// All scenetest packages that should be stripped
+// All scenetest packages that should be stripped (both scoped and unscoped)
 const SCENETEST_PACKAGES = [
   'scenetest',
   'scenetest-react',
   'scenetest-vue',
   'scenetest-solid',
   'scenetest-svelte',
+  '@mhsnook/scenetest',
+  '@mhsnook/scenetest-react',
+  '@mhsnook/scenetest-vue',
+  '@mhsnook/scenetest-solid',
+  '@mhsnook/scenetest-svelte',
 ]
 
 /**

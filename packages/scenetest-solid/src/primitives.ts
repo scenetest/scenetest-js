@@ -1,5 +1,5 @@
 import { createEffect, on, type Accessor } from 'solid-js'
-import type { AssertionConfig } from 'scenetest'
+import type { AssertionConfig } from '@mhsnook/scenetest'
 
 /**
  * Solid primitive for multi-context assertions.
@@ -60,12 +60,12 @@ export function __createAssert(
       if (config.enabled === false) return
 
       // Import dynamically to avoid circular deps
-      import('scenetest/runtime').then(({ __scenetest_rpc }) => {
+      import('@mhsnook/scenetest/runtime').then(({ __scenetest_rpc }) => {
         __scenetest_rpc({
           id: config.__assertionId,
           title: config.title,
           key: config.key,
-          appData: config.appData,
+          withData: config.appData,
         })
       })
     })

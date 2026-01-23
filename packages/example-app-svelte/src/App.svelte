@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pass, fail } from 'scenetest-svelte'
+  import { pass, fail } from '@mhsnook/scenetest-svelte'
 
   // Reactive state using Svelte 5 runes
   let name = $state('')

@@ -1,5 +1,5 @@
 {
-  "name": "scenetest-svelte",
+  "name": "@mhsnook/scenetest-svelte",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "scenetest": "workspace:*"
+    "@mhsnook/scenetest": "workspace:*"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"

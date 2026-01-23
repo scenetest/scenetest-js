@@ -1,5 +1,5 @@
 {
-  "name": "playwright-scenetest",
+  "name": "@mhsnook/playwright-scenetest",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "scenetest": "workspace:*"
+    "@mhsnook/scenetest": "workspace:*"
   },
   "peerDependencies": {
     "@playwright/test": "^1.40.0"

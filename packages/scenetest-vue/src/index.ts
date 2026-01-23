@@ -3,7 +3,7 @@ export { useAssert, __useAssert } from './composables.js'
 export type { RuntimeAssertConfig } from './composables.js'
 
 // Re-export everything from core scenetest for convenience
-export { pass, fail, assert } from 'scenetest'
+export { pass, fail, assert } from '@mhsnook/scenetest'
 export type {
   AssertionResult,
   ScenetestReporter,
@@ -11,4 +11,4 @@ export type {
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,
-} from 'scenetest'
+} from '@mhsnook/scenetest'

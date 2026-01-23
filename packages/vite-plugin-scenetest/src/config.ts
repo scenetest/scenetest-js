@@ -1,4 +1,4 @@
-import type { ServerContext } from 'scenetest'
+import type { ServerContext } from '@mhsnook/scenetest'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 

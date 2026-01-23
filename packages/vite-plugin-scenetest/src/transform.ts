@@ -62,6 +62,9 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
 
 /**
  * Helper to extract properties from a config object
+ * Supports both naming conventions:
+ * - React: withData, serverFn
+ * - Solid/Svelte: appData, assertFn
  */
 function extractConfigProps(configObj: t.ObjectExpression): {
   titleNode: t.Node | null
@@ -69,12 +72,19 @@ function extractConfigProps(configObj: t.ObjectExpression): {
   withDataNode: t.Node | null
   serverFnNode: t.Node | null
   serverFnProp: t.ObjectProperty | null
+  // Solid/Svelte naming
+  appDataNode: t.Node | null
+  assertFnNode: t.Node | null
+  assertFnProp: t.ObjectProperty | null
 } {
   let titleNode: t.Node | null = null
   let keyNode: t.Node | null = null
   let withDataNode: t.Node | null = null
   let serverFnNode: t.Node | null = null
   let serverFnProp: t.ObjectProperty | null = null
+  let appDataNode: t.Node | null = null
+  let assertFnNode: t.Node | null = null
+  let assertFnProp: t.ObjectProperty | null = null
 
   for (const prop of configObj.properties) {
     if (!t.isObjectProperty(prop) || !t.isIdentifier(prop.key)) {
@@ -91,10 +101,15 @@ function extractConfigProps(configObj: t.ObjectExpression): {
     } else if (keyName === 'serverFn') {
       serverFnNode = prop.value
       serverFnProp = prop
+    } else if (keyName === 'appData') {
+      appDataNode = prop.value
+    } else if (keyName === 'assertFn') {
+      assertFnNode = prop.value
+      assertFnProp = prop
     }
   }
 
-  return { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp }
+  return { titleNode, keyNode, withDataNode, serverFnNode, serverFnProp, appDataNode, assertFnNode, assertFnProp }
 }
 
 /**
@@ -121,13 +136,18 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     return null
   }
 
-  // All scenetest packages
+  // All scenetest packages (both scoped and unscoped for backwards compatibility)
   const SCENETEST_PACKAGES = [
     'scenetest',
     'scenetest-react',
     'scenetest-vue',
     'scenetest-solid',
     'scenetest-svelte',
+    '@mhsnook/scenetest',
+    '@mhsnook/scenetest-react',
+    '@mhsnook/scenetest-vue',
+    '@mhsnook/scenetest-solid',
+    '@mhsnook/scenetest-svelte',
   ]
 
   // Track imported names and their source packages
@@ -455,14 +475,14 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             titleValue = titleNode.value
           }
 
-          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+          const assertFnBodyCode = extractServerFnBody(code, assertFnNode, filename, line)
           if (!assertFnBodyCode) return
 
           extractedAssertions.push({
             id,
             title: titleValue,
             key: keyValue,
-            assertFnBodyCode,
+            serverFnBodyCode: assertFnBodyCode,
             location: { file: filename, line, column },
           })
 
@@ -517,14 +537,14 @@ export function transformAssertions(code: string, options: TransformOptions = {}
             titleValue = titleNode.value
           }
 
-          const assertFnBodyCode = extractAssertFnBody(code, assertFnNode, filename, line)
+          const assertFnBodyCode = extractServerFnBody(code, assertFnNode, filename, line)
           if (!assertFnBodyCode) return
 
           extractedAssertions.push({
             id,
             title: titleValue,
             key: keyValue,
-            assertFnBodyCode,
+            serverFnBodyCode: assertFnBodyCode,
             location: { file: filename, line, column },
           })
 
@@ -552,7 +572,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsRpcImport) {
-    const rpcImport = `\nimport { __scenetest_rpc } from 'scenetest/runtime'\n`
+    const rpcImport = `\nimport { __scenetest_rpc } from '@mhsnook/scenetest/runtime'\n`
     s.appendLeft(importInsertPos, rpcImport)
   }
 
@@ -564,12 +584,12 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   }
 
   if (needsCreateAssertImport) {
-    const solidImport = `\nimport { __createAssert } from 'scenetest-solid'\n`
+    const solidImport = `\nimport { __createAssert } from '@mhsnook/scenetest-solid'\n`
     s.appendLeft(importInsertPos, solidImport)
   }
 
   if (needsRunAssertImport) {
-    const svelteImport = `\nimport { __runAssert } from 'scenetest-svelte'\n`
+    const svelteImport = `\nimport { __runAssert } from '@mhsnook/scenetest-svelte'\n`
     s.appendLeft(importInsertPos, svelteImport)
   }
 
