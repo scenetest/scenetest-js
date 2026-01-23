@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Modern/stylized clapperboard -->
+
+  <!-- Board with rounded corners -->
+  <rect x="8" y="24" width="48" height="32" rx="4" fill="currentColor"/>
+
+  <!-- Clapper arm (angled open) -->
+  <g transform="rotate(-15, 8, 24)">
+    <rect x="8" y="10" width="48" height="14" rx="2" fill="currentColor"/>
+    <!-- Stripes on arm -->
+    <rect x="16" y="10" width="6" height="14" fill="white"/>
+    <rect x="30" y="10" width="6" height="14" fill="white"/>
+    <rect x="44" y="10" width="6" height="14" fill="white"/>
+  </g>
+
+  <!-- Hinge circle -->
+  <circle cx="10" cy="24" r="4" fill="currentColor"/>
+  <circle cx="10" cy="24" r="2" fill="white"/>
+
+  <!-- Checkmark -->
+  <polyline points="22,40 28,48 42,34" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
