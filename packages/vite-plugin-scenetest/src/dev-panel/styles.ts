@@ -45,6 +45,19 @@ export const panelStyles = `
 #scenetest-title {
   font-weight: 600;
   color: #a0a0ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scenetest-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  font-size: 12px;
 }
 #scenetest-counts {
   display: flex;
@@ -295,6 +308,19 @@ body {
   font-size: 18px;
   font-weight: 600;
   color: #a0a0ff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#title .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  font-size: 18px;
 }
 #controls {
   display: flex;

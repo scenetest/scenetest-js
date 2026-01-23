@@ -1,4 +1,8 @@
-# Scenetest
+<div align="center">
+
+# 🎬 Scenetest
+
+</div>
 
 _Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript Testing framework inspired by Playwright's `page.evaluate`_ and React server actions.
 
