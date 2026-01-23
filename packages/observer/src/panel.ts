@@ -2,7 +2,7 @@
  * Main panel UI management
  */
 
-import type { FilterMode } from './types'
+import type { FilterMode } from './types.js'
 import {
   groups,
   passCount,
@@ -14,11 +14,11 @@ import {
   setListEl,
   setFilter,
   clearAll,
-} from './state'
-import { filterItems } from './utils'
-import { renderPanelGroup } from './render'
-import { panelStyles } from './styles'
-import { openFullscreen, updateFullscreenWindow } from './fullscreen'
+} from './state.js'
+import { filterItems } from './utils.js'
+import { renderPanelGroup } from './render.js'
+import { panelStyles } from './styles.js'
+import { openFullscreen, updateFullscreenWindow } from './fullscreen.js'
 
 /**
  * Get the HTML template for the panel

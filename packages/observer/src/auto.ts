@@ -7,6 +7,6 @@
  * This will automatically initialize the observer panel when imported.
  */
 
-import { initObserver } from './index'
+import { initObserver } from './index.js'
 
 initObserver()

@@ -2,9 +2,9 @@
  * Rendering functions for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types'
-import { getHistoryStats, formatHistorySummary } from './history'
-import { escapeHtml, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils'
+import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
+import { getHistoryStats, formatHistorySummary } from './history.js'
+import { escapeHtml, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
 
 /**
  * Render a single assertion item for the main panel

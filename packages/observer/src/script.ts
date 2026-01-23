@@ -5,6 +5,6 @@
  * useful for injecting into HTML (e.g., by the Vite plugin).
  */
 
-import { observerScript } from './script.generated'
+import { observerScript } from './script.generated.js'
 
 export { observerScript }

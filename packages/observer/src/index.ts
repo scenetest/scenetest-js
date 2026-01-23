@@ -3,7 +3,7 @@
  * Real-time assertion panel for scenetest
  */
 
-import type { AssertionResult, ViewMode } from './types'
+import type { AssertionResult, ViewMode } from './types.js'
 import {
   assertions,
   groups,
@@ -18,14 +18,14 @@ import {
   incrementFailCount,
   trackLocationGroup,
   setViewMode,
-} from './state'
-import { trackAssertion } from './history'
-import { openInEditor } from './utils'
-import { createPanel, updatePanel } from './panel'
-import { updateFullscreenWindow, openFullscreenToGroup, showSequence } from './fullscreen'
+} from './state.js'
+import { trackAssertion } from './history.js'
+import { openInEditor } from './utils.js'
+import { createPanel, updatePanel } from './panel.js'
+import { updateFullscreenWindow, openFullscreenToGroup, showSequence } from './fullscreen.js'
 
 // Re-export types for consumers
-export type { AssertionResult, AssertionGroup, ViewMode } from './types'
+export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
 
 declare global {
   interface Window {
