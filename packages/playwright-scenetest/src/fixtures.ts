@@ -1,5 +1,5 @@
 import { test as base, type Page } from '@playwright/test'
-import type { AssertionResult } from 'scenetest'
+import type { AssertionResult } from '@scenetest/core'
 
 /**
  * Extended page with scenetest assertion collection

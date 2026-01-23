@@ -1,7 +1,15 @@
 {
-  "name": "scenetest-solid",
+  "name": "@scenetest/solid",
   "version": "0.0.1",
+  "description": "Solid bindings for scenetest inline assertions",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/scenetest-solid"
+  },
+  "keywords": ["testing", "e2e", "playwright", "solid", "solidjs", "assertions", "inline-assertions"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -10,12 +18,16 @@
       "import": "./dist/index.js"
     }
   },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "scenetest": "workspace:*"
+    "@scenetest/core": "workspace:*"
   },
   "peerDependencies": {
     "solid-js": "^1.8.0"

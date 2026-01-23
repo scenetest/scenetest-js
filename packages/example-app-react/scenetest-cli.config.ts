@@ -1,4 +1,4 @@
-import { defineConfig } from 'scenetest-cli'
+import { defineConfig } from '@scenetest/cli'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',

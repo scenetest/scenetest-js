@@ -1,4 +1,4 @@
-import { scene } from 'scenetest-cli'
+import { scene } from '@scenetest/cli'
 
 scene('user can see the welcome page', async ({ cast }) => {
   const user = await cast('user')

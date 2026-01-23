@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { should, failed } from 'scenetest-svelte'
+  import { should, failed } from '@scenetest/svelte'
 
   // Reactive state using Svelte 5 runes
   let name = $state('')

@@ -1,7 +1,15 @@
 {
-  "name": "scenetest-svelte",
+  "name": "@scenetest/svelte",
   "version": "0.0.1",
+  "description": "Svelte bindings for scenetest inline assertions",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/scenetest-svelte"
+  },
+  "keywords": ["testing", "e2e", "playwright", "svelte", "assertions", "inline-assertions"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -10,12 +18,16 @@
       "import": "./dist/index.js"
     }
   },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "scenetest": "workspace:*"
+    "@scenetest/core": "workspace:*"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"

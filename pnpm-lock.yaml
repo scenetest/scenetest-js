@@ -17,6 +17,9 @@ importers:
 
   packages/example-app-react:
     dependencies:
+      '@scenetest/react':
+        specifier: workspace:*
+        version: link:../scenetest-react
       '@tanstack/react-query':
         specifier: ^5.90.19
         version: 5.90.19(react@18.3.1)
@@ -26,10 +29,10 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
-      scenetest-react:
-        specifier: workspace:*
-        version: link:../scenetest-react
     devDependencies:
+      '@scenetest/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-scenetest
       '@types/react':
         specifier: ^18.3.0
         version: 18.3.27
@@ -45,38 +48,38 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@20.19.30)
-      vite-plugin-scenetest:
-        specifier: workspace:*
-        version: link:../vite-plugin-scenetest
 
   packages/example-app-solid:
     dependencies:
-      scenetest-solid:
+      '@scenetest/solid':
         specifier: workspace:*
         version: link:../scenetest-solid
       solid-js:
         specifier: ^1.9.0
         version: 1.9.10
     devDependencies:
+      '@scenetest/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-scenetest
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@20.19.30)
-      vite-plugin-scenetest:
-        specifier: workspace:*
-        version: link:../vite-plugin-scenetest
       vite-plugin-solid:
         specifier: ^2.11.0
         version: 2.11.10(solid-js@1.9.10)(vite@5.4.21(@types/node@20.19.30))
 
   packages/example-app-svelte:
     dependencies:
-      scenetest-svelte:
+      '@scenetest/svelte':
         specifier: workspace:*
         version: link:../scenetest-svelte
     devDependencies:
+      '@scenetest/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-scenetest
       '@sveltejs/vite-plugin-svelte':
         specifier: ^4.0.0
         version: 4.0.4(svelte@5.47.1)(vite@5.4.21(@types/node@20.19.30))
@@ -92,19 +95,19 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@20.19.30)
-      vite-plugin-scenetest:
-        specifier: workspace:*
-        version: link:../vite-plugin-scenetest
 
   packages/example-app-vue:
     dependencies:
-      scenetest-vue:
+      '@scenetest/vue':
         specifier: workspace:*
         version: link:../scenetest-vue
       vue:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.9.3)
     devDependencies:
+      '@scenetest/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-scenetest
       '@vitejs/plugin-vue':
         specifier: ^5.2.0
         version: 5.2.4(vite@5.4.21(@types/node@20.19.30))(vue@3.5.27(typescript@5.9.3))
@@ -114,16 +117,13 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@20.19.30)
-      vite-plugin-scenetest:
-        specifier: workspace:*
-        version: link:../vite-plugin-scenetest
       vue-tsc:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
 
   packages/playwright-scenetest:
     dependencies:
-      scenetest:
+      '@scenetest/core':
         specifier: workspace:*
         version: link:../scenetest
     devDependencies:
@@ -164,12 +164,12 @@ importers:
 
   packages/scenetest-react:
     dependencies:
+      '@scenetest/core':
+        specifier: workspace:*
+        version: link:../scenetest
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 18.3.1
-      scenetest:
-        specifier: workspace:*
-        version: link:../scenetest
     devDependencies:
       '@types/react':
         specifier: ^18.0.0
@@ -180,7 +180,7 @@ importers:
 
   packages/scenetest-solid:
     dependencies:
-      scenetest:
+      '@scenetest/core':
         specifier: workspace:*
         version: link:../scenetest
     devDependencies:
@@ -193,7 +193,7 @@ importers:
 
   packages/scenetest-svelte:
     dependencies:
-      scenetest:
+      '@scenetest/core':
         specifier: workspace:*
         version: link:../scenetest
     devDependencies:
@@ -206,7 +206,7 @@ importers:
 
   packages/scenetest-vue:
     dependencies:
-      scenetest:
+      '@scenetest/core':
         specifier: workspace:*
         version: link:../scenetest
     devDependencies:
@@ -228,12 +228,12 @@ importers:
       '@babel/types':
         specifier: ^7.24.0
         version: 7.28.6
+      '@scenetest/core':
+        specifier: workspace:*
+        version: link:../scenetest
       magic-string:
         specifier: ^0.30.10
         version: 0.30.21
-      scenetest:
-        specifier: workspace:*
-        version: link:../scenetest
     devDependencies:
       '@types/babel__traverse':
         specifier: ^7.20.5
