@@ -1,9 +1,16 @@
 // Type augmentation for scenetest ServerContext
 // This declares the server functions available in serverFn
 
-import 'scenetest'
+export {}
 
 declare module 'scenetest' {
+  interface ServerContext {
+    getServerTime: () => number
+    validateEmail: (email: string) => boolean
+  }
+}
+
+declare module 'scenetest-react' {
   interface ServerContext {
     getServerTime: () => number
     validateEmail: (email: string) => boolean
