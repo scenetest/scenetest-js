@@ -56,8 +56,12 @@ export const panelStyles = `
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
+  background: #a0a0ff;
   font-size: 12px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+.scenetest-icon span {
+  filter: drop-shadow(0px 0px 4px #ffffff);
 }
 #scenetest-counts {
   display: flex;
@@ -319,8 +323,12 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
+  background: #a0a0ff;
   font-size: 18px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+}
+#title .icon span {
+  filter: drop-shadow(0px 0px 5px #ffffff);
 }
 #controls {
   display: flex;
