@@ -25,7 +25,7 @@ packages/
 ├── scenetest-vue/          # Vue bindings - watchTestEffect composable (re-exports core)
 ├── scenetest-solid/        # Solid bindings - createTestEffect primitive (re-exports core)
 ├── scenetest-svelte/       # Svelte bindings - testEffect helper (re-exports core)
-├── vite-plugin-scenetest/  # Vite plugin for build integration
+├── vite-plugin/            # Vite plugin for build integration
 ├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
 ├── example-app-react/      # React demo app with working Scene tests
 ├── example-app-vue/        # Vue demo app
@@ -62,7 +62,7 @@ Scenetest separates two distinct concerns in end-to-end testing:
 
 ## Dev Panel Architecture
 
-The dev panel is built as proper TypeScript modules in `packages/vite-plugin-scenetest/src/dev-panel/`:
+The dev panel is built as proper TypeScript modules in `packages/vite-plugin/src/dev-panel/`:
 
 ```
 src/dev-panel/
