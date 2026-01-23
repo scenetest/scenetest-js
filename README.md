@@ -4,7 +4,7 @@
 
 </div>
 
-_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript testing framework inspired by Playwright's `page.evaluate` and React server actions._
+_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript testing framework inspired by Playwright's `page.evaluate` and Tanstack Server Functions._
 
 ---
 
@@ -199,8 +199,9 @@ Define a scene spec:
 import { scene } from '@scenetest/cli'
 
 scene('descriptive name of the user journey', async ({ cast }) => {
-  const user = await cast('user')
-  // ... interactions
+  const user = await cast('primary-user-1')
+  const friend = await cast('friend-of-1')
+  // ... interactions between actors
 })
 ```
 
