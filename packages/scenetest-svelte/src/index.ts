@@ -3,7 +3,7 @@ export { runAssert, __runAssert, watch } from './helpers.js'
 export type { RuntimeAssertConfig, WatchOptions, WatchTracker } from './helpers.js'
 
 // Re-export everything from core scenetest for convenience
-export { pass, fail, assert } from 'scenetest'
+export { should, failed, assert, match } from 'scenetest'
 export type {
   AssertionResult,
   WatchResult,

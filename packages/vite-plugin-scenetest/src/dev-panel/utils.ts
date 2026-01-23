@@ -77,6 +77,15 @@ export function getGroupStats(items: AssertionResult[]): { passCount: number; fa
 }
 
 /**
+ * Format a short location for the location row (just file basename + line)
+ */
+export function formatLocationShort(loc: AssertionResult['location']): string {
+  if (!loc) return ''
+  const file = loc.file.split('/').pop() || loc.file
+  return `${file}:${loc.line}`
+}
+
+/**
  * Format watch result history as a visual indicator
  * Shows: [✗✗✓] settled on render 3
  */
@@ -100,7 +109,7 @@ export function formatWatchTooltip(watch: WatchResult | undefined): string {
   if (!watch) return ''
 
   const lines: string[] = []
-  lines.push(`Watch: ${watch.settled ? 'Settled' : 'Not settled'}`)
+  lines.push(`Check: ${watch.settled ? 'Settled' : 'Not settled'}`)
   lines.push(`Renders: ${watch.history.length}`)
   if (watch.settledAtRender) {
     lines.push(`Settled at: render ${watch.settledAtRender}`)

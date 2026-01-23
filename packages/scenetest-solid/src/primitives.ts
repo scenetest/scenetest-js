@@ -7,7 +7,7 @@ import type { AssertionConfig, AssertionResult, WatchResult } from 'scenetest'
  *
  * @example
  * ```tsx
- * import { createAssert, pass } from 'scenetest-solid'
+ * import { createAssert, should } from 'scenetest-solid'
  * import { createSignal } from 'solid-js'
  *
  * function Profile() {
@@ -17,7 +17,7 @@ import type { AssertionConfig, AssertionResult, WatchResult } from 'scenetest'
  *     title: 'Email validation',
  *     withData: () => ({ email: profile()?.email }),
  *     serverFn: (server, data) => {
- *       pass('email is valid', server.validateEmail(data.email))
+ *       should('email should be valid', server.validateEmail(data.email))
  *     },
  *     enabled: !!profile(),
  *   }, [() => profile()?.email])

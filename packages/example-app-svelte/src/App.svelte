@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pass, fail } from 'scenetest-svelte'
+  import { should, failed } from 'scenetest-svelte'
 
   // Reactive state using Svelte 5 runes
   let name = $state('')
@@ -12,18 +12,18 @@
   let isValidName = $derived(name.trim().length >= 2)
 
   // Inline assertion - runs on mount
-  pass('App component rendered', true)
+  should('App component should render', true)
 
   // Reactive assertions using $effect
   $effect(() => {
     if (name.length > 0) {
-      pass('Name validation runs when name changes', true, { name, isValid: isValidName })
+      should('name validation should run when name changes', true, { name, isValid: isValidName })
     }
   })
 
   $effect(() => {
     if (email.length > 0) {
-      pass('Email validation runs when email changes', true, { email, isValid: isValidEmail })
+      should('email validation should run when email changes', true, { email, isValid: isValidEmail })
     }
   })
 
@@ -34,19 +34,19 @@
     // Validate
     if (!isValidName) {
       error = 'Name must be at least 2 characters'
-      fail('Form submitted with invalid name', true, { name })
+      failed('form submitted with invalid name', { name })
       return
     }
 
     if (!isValidEmail) {
       error = 'Please enter a valid email'
-      fail('Form submitted with invalid email', true, { email })
+      failed('form submitted with invalid email', { email })
       return
     }
 
     // Success
     submitted = true
-    pass('Form submitted successfully', true, { name, email })
+    should('form should submit successfully', true, { name, email })
   }
 
   function reset() {
@@ -54,7 +54,7 @@
     email = ''
     submitted = false
     error = null
-    pass('Form reset', true)
+    should('form should reset', true)
   }
 </script>
 

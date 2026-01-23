@@ -4,6 +4,7 @@
  */
 
 import type { AssertionResult } from './types'
+import type { ViewMode } from './types'
 import {
   assertions,
   groups,
@@ -16,11 +17,14 @@ import {
   setGroupTimeout,
   incrementPassCount,
   incrementFailCount,
+  trackLocationGroup,
+  setViewMode,
+  setSequenceLocation,
 } from './state'
 import { trackAssertion } from './history'
 import { openInEditor } from './utils'
 import { createPanel, updatePanel } from './panel'
-import { updateFullscreenWindow, openFullscreenToGroup } from './fullscreen'
+import { updateFullscreenWindow, openFullscreenToGroup, showSequence } from './fullscreen'
 
 // Don't inject twice
 if (!window.__scenetest_panel) {
@@ -29,6 +33,11 @@ if (!window.__scenetest_panel) {
   // Make functions available globally for onclick handlers
   window.__scenetest_openInEditor = openInEditor
   window.__scenetest_openFullscreenToGroup = openFullscreenToGroup
+  window.__scenetest_showSequence = showSequence
+  window.__scenetest_setViewMode = (mode: ViewMode) => {
+    setViewMode(mode)
+    updateFullscreenWindow()
+  }
 
   /**
    * Add an assertion to a group (batches assertions that arrive within GROUP_THRESHOLD_MS)
@@ -79,6 +88,7 @@ if (!window.__scenetest_panel) {
     result._index = index // Store index for history lookup
     assertions.push(result)
     trackAssertion(result, index)
+    trackLocationGroup(result, index)
 
     if (result.result) {
       incrementPassCount()

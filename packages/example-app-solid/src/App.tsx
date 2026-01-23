@@ -1,5 +1,5 @@
 import { createSignal, createMemo, createEffect, Show } from 'solid-js'
-import { pass, fail } from 'scenetest-solid'
+import { should, failed } from 'scenetest-solid'
 
 function App() {
   // Reactive state
@@ -18,18 +18,18 @@ function App() {
   })
 
   // Inline assertions - these run on every render
-  pass('App component rendered', true)
+  should('App component should render', true)
 
   // Reactive assertions using createEffect
   createEffect(() => {
     if (name().length > 0) {
-      pass('Name validation runs when name changes', true, { name: name(), isValid: isValidName() })
+      should('name validation should run when name changes', true, { name: name(), isValid: isValidName() })
     }
   })
 
   createEffect(() => {
     if (email().length > 0) {
-      pass('Email validation runs when email changes', true, { email: email(), isValid: isValidEmail() })
+      should('email validation should run when email changes', true, { email: email(), isValid: isValidEmail() })
     }
   })
 
@@ -40,19 +40,19 @@ function App() {
     // Validate
     if (!isValidName()) {
       setError('Name must be at least 2 characters')
-      fail('Form submitted with invalid name', true, { name: name() })
+      failed('form submitted with invalid name', { name: name() })
       return
     }
 
     if (!isValidEmail()) {
       setError('Please enter a valid email')
-      fail('Form submitted with invalid email', true, { email: email() })
+      failed('form submitted with invalid email', { email: email() })
       return
     }
 
     // Success
     setSubmitted(true)
-    pass('Form submitted successfully', true, {
+    should('form should submit successfully', true, {
       name: name(),
       email: email(),
     })
@@ -63,7 +63,7 @@ function App() {
     setEmail('')
     setSubmitted(false)
     setError(null)
-    pass('Form reset', true)
+    should('form should reset', true)
   }
 
   return (

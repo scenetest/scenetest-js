@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('scenetest core functionality', () => {
-  test('pass() and fail() call __scenetest_report when available', async ({
+  test('should() and failed() call __scenetest_report when available', async ({
     page,
   }) => {
     const reportedAssertions: unknown[] = []
@@ -83,7 +83,7 @@ test.describe('scenetest core functionality', () => {
     expect(assertionWithContext?.context).toBeInstanceOf(Object)
   })
 
-  test('pass() reports result=true, fail() reports result=false', async ({
+  test('should() reports result=true/false based on condition', async ({
     page,
   }) => {
     const reportedAssertions: unknown[] = []
@@ -103,12 +103,12 @@ test.describe('scenetest core functionality', () => {
       (a) => (a as Record<string, unknown>).type === 'fail'
     )
 
-    // All pass() calls should have result=true (condition was truthy)
+    // All should() calls with truthy conditions should have result=true
     for (const a of passAssertions) {
       expect((a as Record<string, unknown>).result).toBe(true)
     }
 
-    // fail() calls report when condition is truthy (failure detected)
+    // failed() calls are unconditional failures
     // On initial load, there should be no failures
     expect(failAssertions.length).toBe(0)
   })

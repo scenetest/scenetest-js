@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { pass, fail } from 'scenetest-vue'
+import { should, failed } from 'scenetest-vue'
 
 // Reactive state
 const name = ref('')
@@ -18,16 +18,16 @@ const isValidName = computed(() => {
 })
 
 // Inline assertions - these run on every render
-pass('App component rendered', true)
+should('App component should render', true)
 
 // Watch for validation state changes
 watch([name, email], () => {
   // Assert validation logic is working
   if (name.value.length > 0) {
-    pass('Name validation runs when name changes', true, { name: name.value, isValid: isValidName.value })
+    should('name validation should run when name changes', true, { name: name.value, isValid: isValidName.value })
   }
   if (email.value.length > 0) {
-    pass('Email validation runs when email changes', true, { email: email.value, isValid: isValidEmail.value })
+    should('email validation should run when email changes', true, { email: email.value, isValid: isValidEmail.value })
   }
 })
 
@@ -37,19 +37,19 @@ function handleSubmit() {
   // Validate
   if (!isValidName.value) {
     error.value = 'Name must be at least 2 characters'
-    fail('Form submitted with invalid name', true, { name: name.value })
+    failed('form submitted with invalid name', { name: name.value })
     return
   }
 
   if (!isValidEmail.value) {
     error.value = 'Please enter a valid email'
-    fail('Form submitted with invalid email', true, { email: email.value })
+    failed('form submitted with invalid email', { email: email.value })
     return
   }
 
   // Success
   submitted.value = true
-  pass('Form submitted successfully', true, {
+  should('form should submit successfully', true, {
     name: name.value,
     email: email.value,
   })
@@ -60,7 +60,7 @@ function reset() {
   email.value = ''
   submitted.value = false
   error.value = null
-  pass('Form reset', true)
+  should('form should reset', true)
 }
 </script>
 

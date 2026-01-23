@@ -2,12 +2,15 @@
  * Shared state for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry } from './types'
+import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup, LocationEntry } from './types'
 
 // Assertion storage
 export const assertions: AssertionResult[] = []
 export const groups: AssertionGroup[] = []
 export const assertionHistory = new Map<string, HistoryEntry[]>()
+
+// Location-based grouping (keyed by "file:line")
+export const locationGroups = new Map<string, LocationGroup>()
 
 // Counts
 export let passCount = 0
@@ -28,6 +31,10 @@ export let fullscreenWindow: Window | null = null
 export let filter: FilterMode = 'all'
 export let groupingEnabled = true
 export let collapsedMode = true // Always start collapsed
+
+// View mode state (fullscreen only)
+export let viewMode: ViewMode = 'grouped'
+export let sequenceLocationKey: string | null = null // Which location to show in sequence view
 
 export function setPanel(el: HTMLDivElement): void {
   panel = el
@@ -53,6 +60,61 @@ export function toggleGrouping(): boolean {
 export function toggleCollapsedMode(): boolean {
   collapsedMode = !collapsedMode
   return collapsedMode
+}
+
+export function setViewMode(mode: ViewMode): void {
+  viewMode = mode
+  if (mode !== 'sequence') {
+    sequenceLocationKey = null
+  }
+}
+
+export function setSequenceLocation(key: string | null): void {
+  sequenceLocationKey = key
+  if (key !== null) {
+    viewMode = 'sequence'
+  }
+}
+
+/**
+ * Get the location key from an assertion result
+ */
+export function getLocationKey(result: AssertionResult): string | null {
+  if (!result.location) return null
+  return `${result.location.file}:${result.location.line}`
+}
+
+/**
+ * Track an assertion in the location groups
+ */
+export function trackLocationGroup(result: AssertionResult, index: number): void {
+  const key = getLocationKey(result)
+  if (!key || !result.location) return
+
+  let group = locationGroups.get(key)
+  if (!group) {
+    group = {
+      key,
+      location: result.location,
+      description: result.description,
+      entries: [],
+      lastResult: result.result,
+      lastTimestamp: result.timestamp,
+    }
+    locationGroups.set(key, group)
+  }
+
+  // Update group with latest info
+  group.description = result.description
+  group.lastResult = result.result
+  group.lastTimestamp = result.timestamp
+  group.entries.push({
+    result: result.result,
+    timestamp: result.timestamp,
+    index,
+    description: result.description,
+    context: result.context,
+  })
 }
 
 export function collapseAllGroups(): void {
@@ -85,9 +147,11 @@ export function clearAll(): void {
   assertions.length = 0
   groups.length = 0
   assertionHistory.clear()
+  locationGroups.clear()
   passCount = 0
   failCount = 0
   pendingGroup = null
+  sequenceLocationKey = null
   if (groupTimeout) {
     clearTimeout(groupTimeout)
     groupTimeout = null

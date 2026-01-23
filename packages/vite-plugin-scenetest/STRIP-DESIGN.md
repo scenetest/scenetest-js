@@ -4,7 +4,7 @@
 
 Remove all scenetest code from production builds:
 1. Import statements from 'scenetest'
-2. All `pass()` and `fail()` function calls
+2. All `should()` and `failed()` function calls
 
 ## Approach
 
@@ -19,64 +19,64 @@ Use `@babel/parser` + `@babel/traverse` + `magic-string`:
 
 ```javascript
 // Remove entirely:
-import { pass, fail } from 'scenetest'
-import { pass } from 'scenetest'
-import { fail } from 'scenetest'
+import { should, failed } from 'scenetest'
+import { should } from 'scenetest'
+import { failed } from 'scenetest'
 
 // Remove only scenetest specifiers, keep others:
-import { pass, fail, someOtherExport } from 'scenetest'  // → never happens, scenetest only exports pass/fail
+import { should, failed, someOtherExport } from 'scenetest'  // → never happens, scenetest only exports should/failed
 
 // Handle aliases:
-import { pass as p, fail as f } from 'scenetest'
+import { should as s, failed as f } from 'scenetest'
 ```
 
 ### 2. Function Call Statements
 
 ```javascript
 // Simple statement - remove entire line:
-pass('description', condition)
-fail('description', condition)
+should('description', condition)
+failed('description')
 
 // With semicolon:
-pass('description', condition);
+should('description', condition);
 
 // Multiple on same line (uncommon but valid):
-pass('a', true); pass('b', false);
+should('a', true); should('b', false);
 ```
 
 ### 3. Complex Arguments (must preserve correctness)
 
 ```javascript
 // Nested function calls in condition:
-pass('test', foo() && bar.baz())
+should('test', foo() && bar.baz())
 
 // Template literals:
-pass(`test ${name}`, condition)
+should(`test ${name}`, condition)
 
 // Arrow functions:
-pass('test', () => true)
+should('test', () => true)
 
 // Object/array literals:
-pass('test', { a: 1 }.hasOwnProperty('a'))
+should('test', { a: 1 }.hasOwnProperty('a'))
 ```
 
 ### 4. Expression Contexts (edge cases)
 
-Since `pass()` and `fail()` return `void`, they shouldn't appear in expression contexts.
+Since `should()` and `failed()` return `void`, they shouldn't appear in expression contexts.
 But if they do, we need to handle it safely:
 
 ```javascript
 // Theoretically possible but bad code:
-const x = pass('test', true)  // → const x = undefined  (or remove entirely?)
+const x = should('test', true)  // → const x = undefined  (or remove entirely?)
 
 // In comma expressions:
-(pass('test', true), doSomething())  // → (doSomething())
+(should('test', true), doSomething())  // → (doSomething())
 
 // In logical expressions (BAD - changes behavior):
-condition && pass('test', true)  // → condition && undefined  ???
+condition && should('test', true)  // → condition && undefined  ???
 
 // In ternary:
-x ? pass('a', true) : pass('b', false)  // Problematic
+x ? should('a', true) : should('b', false)  // Problematic
 ```
 
 **Decision**: For expression contexts, replace with `undefined` or `void 0` to maintain expression validity.
@@ -99,8 +99,8 @@ For statement expressions, remove the entire statement.
 - [ ] Import removal (full import)
 - [ ] Import removal (named imports)
 - [ ] Import removal (aliased imports)
-- [ ] Simple pass() statement
-- [ ] Simple fail() statement
+- [ ] Simple should() statement
+- [ ] Simple failed() statement
 - [ ] Multiple statements
 
 ### Complex Arguments
@@ -113,9 +113,9 @@ For statement expressions, remove the entire statement.
 ### Edge Cases
 - [ ] No scenetest imports (should not transform)
 - [ ] Mixed imports (scenetest + other)
-- [ ] pass/fail not from scenetest (should NOT strip)
-- [ ] String containing "pass(" (should NOT strip)
-- [ ] Comments containing pass() (should NOT strip)
+- [ ] should/failed not from scenetest (should NOT strip)
+- [ ] String containing "should(" (should NOT strip)
+- [ ] Comments containing should() (should NOT strip)
 - [ ] Inside JSX expressions
 - [ ] TypeScript type annotations present
 

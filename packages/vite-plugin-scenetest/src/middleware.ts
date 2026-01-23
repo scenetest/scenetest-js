@@ -10,13 +10,13 @@ import { loadConfig } from './config.js'
 const assertionStorage = new AsyncLocalStorage<AssertionResult[]>()
 
 /**
- * Server-side pass() function that collects results in AsyncLocalStorage
+ * Server-side should() function that collects results in AsyncLocalStorage
  */
-export function pass(description: string, condition: boolean, context?: Record<string, unknown>): void {
+export function should(description: string, condition: boolean, context?: Record<string, unknown>): void {
   const results = assertionStorage.getStore()
   if (results) {
     results.push({
-      type: 'pass',
+      type: condition ? 'pass' : 'fail',
       description,
       result: condition,
       timestamp: Date.now(),
@@ -26,15 +26,15 @@ export function pass(description: string, condition: boolean, context?: Record<s
 }
 
 /**
- * Server-side fail() function that collects results in AsyncLocalStorage
+ * Server-side failed() function - past-tense failure marker
  */
-export function fail(description: string, condition: boolean, context?: Record<string, unknown>): void {
+export function failed(description: string, context?: Record<string, unknown>): void {
   const results = assertionStorage.getStore()
   if (results) {
     results.push({
       type: 'fail',
       description,
-      result: !condition, // fail() passes when condition is false
+      result: false,
       timestamp: Date.now(),
       context,
     })
@@ -78,7 +78,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       const serverFn = assertions[id] as (
         server: ServerContext,
         data: unknown,
-        helpers: { pass: typeof pass; fail: typeof fail }
+        helpers: { should: typeof should; failed: typeof failed }
       ) => void | Promise<void>
 
       if (!serverFn) {
@@ -102,8 +102,8 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
 
       await assertionStorage.run(results, async () => {
         try {
-          // Pass the pass/fail helpers directly to the serverFn
-          await serverFn(serverContext, data, { pass, fail })
+          // Pass the should/failed helpers directly to the serverFn
+          await serverFn(serverContext, data, { should, failed })
         } catch (err) {
           results.push({
             type: 'fail',

@@ -1,4 +1,4 @@
-import { defineScenetestConfig, pass } from 'vite-plugin-scenetest'
+import { defineScenetestConfig, should } from 'vite-plugin-scenetest'
 
 export default defineScenetestConfig({
   serverFunctions: {

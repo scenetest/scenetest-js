@@ -2,20 +2,25 @@
  * Fullscreen window management
  */
 
-import type { FilterMode } from './types'
+import type { FilterMode, ViewMode } from './types'
 import {
   groups,
   passCount,
   failCount,
   fullscreenWindow,
   filter,
+  viewMode,
+  sequenceLocationKey,
+  locationGroups,
   setFullscreenWindow,
   setFilter,
+  setViewMode,
+  setSequenceLocation,
   clearAll,
   panel,
 } from './state'
 import { filterItems } from './utils'
-import { renderFullscreenGroup } from './render'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader } from './render'
 import { fullscreenStyles } from './styles'
 import { updatePanel } from './panel'
 
@@ -37,6 +42,10 @@ function getFullscreenHTML(): string {
           <div id="counts">
             <span class="count pass" id="pass-count">\u2713 0</span>
             <span class="count fail" id="fail-count">\u2717 0</span>
+          </div>
+          <div id="view-modes" class="btn-group">
+            <button class="btn active" id="view-grouped" title="Group by time">Timeline</button>
+            <button class="btn" id="view-byLocation" title="Group by code location">By Location</button>
           </div>
           <div id="filters" class="btn-group">
             <button class="btn active" id="filter-all">All</button>
@@ -70,6 +79,30 @@ function setFullscreenFilter(newFilter: FilterMode): void {
     panel.querySelector('#scenetest-fail')?.classList.toggle('active', filter === 'fails')
   }
   updatePanel()
+  updateFullscreenWindow()
+}
+
+/**
+ * Set view mode from fullscreen
+ */
+function setFullscreenViewMode(newMode: ViewMode): void {
+  setViewMode(newMode)
+  updateFullscreenWindow()
+}
+
+/**
+ * Show sequence view for a specific location
+ */
+export function showSequence(locationKey: string): void {
+  setSequenceLocation(locationKey)
+  updateFullscreenWindow()
+}
+
+/**
+ * Go back from sequence view to byLocation view
+ */
+export function backToLocationView(): void {
+  setViewMode('byLocation')
   updateFullscreenWindow()
 }
 
@@ -119,6 +152,15 @@ export function openFullscreen(groupId?: number): void {
 
   doc.getElementById('filter-passes')?.addEventListener('click', () => {
     setFullscreenFilter('passes')
+  })
+
+  // View mode handlers
+  doc.getElementById('view-grouped')?.addEventListener('click', () => {
+    setFullscreenViewMode('grouped')
+  })
+
+  doc.getElementById('view-byLocation')?.addEventListener('click', () => {
+    setFullscreenViewMode('byLocation')
   })
 
   updateFullscreenWindow()
@@ -174,11 +216,34 @@ export function updateFullscreenWindow(): void {
   doc.getElementById('filter-fails')?.classList.toggle('active', filter === 'fails')
   doc.getElementById('filter-passes')?.classList.toggle('active', filter === 'passes')
 
+  // Update view mode button states
+  const isSequenceView = viewMode === 'sequence'
+  doc.getElementById('view-grouped')?.classList.toggle('active', viewMode === 'grouped')
+  doc.getElementById('view-byLocation')?.classList.toggle('active', viewMode === 'byLocation' || isSequenceView)
+
   const listEl = doc.getElementById('list')
   if (!listEl) return
 
+  // Render based on view mode
+  if (viewMode === 'sequence' && sequenceLocationKey) {
+    renderSequenceView(doc, listEl)
+    return
+  }
+
+  if (viewMode === 'byLocation') {
+    renderByLocationView(doc, listEl)
+    return
+  }
+
+  // Default: grouped (timeline) view
+  renderGroupedView(doc, listEl)
+}
+
+/**
+ * Render the grouped (timeline) view
+ */
+function renderGroupedView(doc: Document, listEl: HTMLElement): void {
   // Save scroll state before re-rendering
-  // Find the first group visible in the viewport to anchor our scroll position
   const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop
   const isScrolled = scrollTop > 50
   let anchorGroupId: number | null = null
@@ -188,7 +253,6 @@ export function updateFullscreenWindow(): void {
     const groupEls = listEl.querySelectorAll('[data-group-id]')
     for (const el of groupEls) {
       const rect = el.getBoundingClientRect()
-      // Find the first group that's at or below the top of the viewport
       if (rect.top >= -rect.height / 2) {
         anchorGroupId = parseInt(el.getAttribute('data-group-id') || '', 10)
         anchorOffset = rect.top
@@ -224,7 +288,7 @@ export function updateFullscreenWindow(): void {
     .reverse()
     .join('')
 
-  // Restore scroll position to keep the same group visible
+  // Restore scroll position
   if (anchorGroupId !== null) {
     const anchorEl = listEl.querySelector(`[data-group-id="${anchorGroupId}"]`)
     if (anchorEl) {
@@ -234,4 +298,85 @@ export function updateFullscreenWindow(): void {
       doc.body.scrollTop += scrollAdjustment
     }
   }
+}
+
+/**
+ * Render the "by location" view showing one row per unique code location
+ */
+function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
+  // Get all location groups and sort by most recent activity
+  const locations = Array.from(locationGroups.values())
+    .sort((a, b) => b.lastTimestamp - a.lastTimestamp)
+
+  // Apply filter
+  let filteredLocations = locations
+  if (filter === 'fails') {
+    filteredLocations = locations.filter(loc => loc.entries.some(e => !e.result))
+  } else if (filter === 'passes') {
+    filteredLocations = locations.filter(loc => loc.entries.some(e => e.result))
+  }
+
+  if (filteredLocations.length === 0) {
+    const icon = filter === 'fails' ? '\u2713' : '\uD83C\uDFAC'
+    const message =
+      filter === 'fails'
+        ? 'No errors! All assertions passed.'
+        : 'Interact with your app to see inline assertions appear here...'
+    listEl.innerHTML = `
+      <div id="empty">
+        <div id="empty-icon">${icon}</div>
+        <div>${message}</div>
+      </div>
+    `
+    return
+  }
+
+  listEl.innerHTML = `
+    <div class="location-list">
+      ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
+    </div>
+  `
+}
+
+/**
+ * Render the sequence view for a specific location
+ */
+function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
+  const group = locationGroups.get(sequenceLocationKey!)
+  if (!group) {
+    // Location no longer exists, go back
+    setViewMode('byLocation')
+    renderByLocationView(_doc, listEl)
+    return
+  }
+
+  // Apply filter to entries
+  let entries = group.entries
+  if (filter === 'fails') {
+    entries = entries.filter(e => !e.result)
+  } else if (filter === 'passes') {
+    entries = entries.filter(e => e.result)
+  }
+
+  const backHandler = `window.opener ? window.opener.__scenetest_setViewMode && window.opener.__scenetest_setViewMode('byLocation') : window.__scenetest_setViewMode && window.__scenetest_setViewMode('byLocation')`
+
+  // Reverse entries so most recent is at top
+  const reversedEntries = entries.slice().reverse()
+  const entryCount = reversedEntries.length
+
+  listEl.innerHTML = `
+    <div class="back-btn" onclick="${backHandler}">\u2190 Back to all locations</div>
+    ${renderSequenceHeader(group)}
+    <div class="sequence-direction-hint">
+      <span class="direction-arrow">\u2191</span> Most recent at top
+    </div>
+    <div class="sequence-list">
+      ${reversedEntries.map((entry, i) => {
+        const isFirst = i === 0 // Most recent (top)
+        const isLast = i === entryCount - 1 // Oldest (bottom)
+        return renderSequenceEntry(entry, group.location, isFirst, isLast)
+      }).join('')}
+    </div>
+    ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
+  `
 }

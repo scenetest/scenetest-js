@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { pass, fail, useAssert, useWatch } from 'scenetest-react'
+import { should, failed, useAssert, useCheck } from 'scenetest-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -29,26 +29,26 @@ function ProfileForm() {
   }, [profile])
 
   // ========================================
-  // WATCH ASSERTIONS
+  // CHECK ASSERTIONS
   // Track when local state syncs up with profile data.
-  // These assertions watch a condition across renders and report
+  // These assertions check a condition across renders and report
   // when it "settles" (becomes true) or fails to settle.
   // ========================================
 
-  // Watch: local name should sync with profile name
+  // Check: local name should sync with profile name
   // On first render, name is '' and profile?.name is 'John Doe'
   // After useEffect runs, name becomes 'John Doe' - settled!
-  useWatch('local name should sync with profile', name === (profile?.name ?? ''), {
+  useCheck('local name should sync with profile', name === (profile?.name ?? ''), {
     context: { localName: name, profileName: profile?.name },
   })
 
-  // Watch: local email should sync with profile email
-  useWatch('local email should sync with profile', email === (profile?.email ?? ''), {
+  // Check: local email should sync with profile email
+  useCheck('local email should sync with profile', email === (profile?.email ?? ''), {
     context: { localEmail: email, profileEmail: profile?.email },
   })
 
   // Basic render assertions
-  pass('ProfileForm rendered', true)
+  should('ProfileForm should render', true)
 
   // Multi-context assertion: verify email is valid on server
   // Runs when profile.email changes, skips when no profile
@@ -57,14 +57,14 @@ function ProfileForm() {
     withData: () => ({ email: profile!.email }), // profile exists when enabled
     serverFn: (server, data) => {
       const isValid = server.validateEmail(data.email)
-      pass('Profile email is valid format', isValid, { email: data.email })
+      should('profile email should be valid format', isValid, { email: data.email })
     },
     enabled: !!profile,
   }, [profile?.email])
 
   // Assertion: profile should be loaded before we can edit
   if (!isLoading && profile) {
-    pass('Profile loaded from cache', profile.name.length > 0)
+    should('profile should be loaded from cache', profile.name.length > 0)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,7 +74,7 @@ function ProfileForm() {
     // Validate
     if (name.trim().length < 2) {
       setError('Name must be at least 2 characters')
-      fail('Form validation failed', true)
+      failed('form submitted with name too short', { name: name.trim() })
       return
     }
 
@@ -83,7 +83,7 @@ function ProfileForm() {
       { name: name.trim(), email },
       {
         onSuccess: (savedProfile) => {
-          pass('Mutation completed successfully', true, { savedProfile })
+          should('mutation should complete successfully', true, { savedProfile })
 
           // ========================================
           // MULTI-CONTEXT ASSERTIONS
@@ -121,32 +121,32 @@ function ProfileForm() {
             }
 
             // Assert: DOM matches what was saved
-            pass('DOM name matches saved value', domName === savedProfile.name, ctx)
-            pass('DOM email matches saved value', domEmail === savedProfile.email, ctx)
+            should('DOM name should match saved value', domName === savedProfile.name, ctx)
+            should('DOM email should match saved value', domEmail === savedProfile.email, ctx)
 
             // Assert: Component state matches saved
-            pass('State name matches saved value', stateName === savedProfile.name, ctx)
-            pass('State email matches saved value', stateEmail === savedProfile.email, ctx)
+            should('state name should match saved value', stateName === savedProfile.name, ctx)
+            should('state email should match saved value', stateEmail === savedProfile.email, ctx)
 
             // Assert: React Query cache is updated
-            pass('Cache name matches saved value', cacheName === savedProfile.name, ctx)
-            pass('Cache email matches saved value', cacheEmail === savedProfile.email, ctx)
+            should('cache name should match saved value', cacheName === savedProfile.name, ctx)
+            should('cache email should match saved value', cacheEmail === savedProfile.email, ctx)
 
             // Assert: localStorage (database) is updated
-            pass('DB name matches saved value', dbName === savedProfile.name, ctx)
-            pass('DB email matches saved value', dbEmail === savedProfile.email, ctx)
+            should('DB name should match saved value', dbName === savedProfile.name, ctx)
+            should('DB email should match saved value', dbEmail === savedProfile.email, ctx)
 
             // Assert: All contexts are in sync with each other
             const allNamesMatch = domName === stateName && stateName === cacheName && cacheName === dbName
             const allEmailsMatch = domEmail === stateEmail && stateEmail === cacheEmail && cacheEmail === dbEmail
 
-            pass('All contexts have matching name', allNamesMatch, ctx)
-            pass('All contexts have matching email', allEmailsMatch, ctx)
+            should('all contexts should have matching name', allNamesMatch, ctx)
+            should('all contexts should have matching email', allEmailsMatch, ctx)
 
-            // Fail assertions for mismatches (these detect bugs!)
-            fail('DOM out of sync with database', domName !== dbName || domEmail !== dbEmail, ctx)
-            fail('Cache out of sync with database', cacheName !== dbName || cacheEmail !== dbEmail, ctx)
-            fail('State out of sync with database', stateName !== dbName || stateEmail !== dbEmail, ctx)
+            // Assert sync between contexts
+            should('DOM should be in sync with database', domName === dbName && domEmail === dbEmail, ctx)
+            should('cache should be in sync with database', cacheName === dbName && cacheEmail === dbEmail, ctx)
+            should('state should be in sync with database', stateName === dbName && stateEmail === dbEmail, ctx)
           }
 
           // Run immediately after React flushes (rAF + microtask)
@@ -159,7 +159,7 @@ function ProfileForm() {
         },
         onError: (err) => {
           setError(err instanceof Error ? err.message : 'Update failed')
-          fail('Mutation failed with error', true)
+          failed('mutation failed with error', { error: err instanceof Error ? err.message : String(err) })
         },
       }
     )

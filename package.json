@@ -7,7 +7,7 @@
   "author": "msnook.xyz",
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter vite-plugin-scenetest build && pnpm --filter example-app dev",
+    "dev": "pnpm --filter vite-plugin-scenetest build && pnpm --filter example-app-react dev",
     "docs": "pnpx serve docs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm test:unit && pnpm test:e2e",
