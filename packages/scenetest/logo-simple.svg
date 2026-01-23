@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Minimal clapperboard with checkmark -->
+
+  <!-- Board body -->
+  <rect x="6" y="22" width="52" height="36" rx="2" fill="currentColor"/>
+
+  <!-- Clapper top -->
+  <polygon points="6,22 10,6 54,6 58,22" fill="currentColor"/>
+
+  <!-- Stripes -->
+  <polygon points="14,6 10,22 18,22 22,6" fill="white"/>
+  <polygon points="30,6 26,22 34,22 38,6" fill="white"/>
+  <polygon points="46,6 42,22 50,22 54,6" fill="white"/>
+
+  <!-- Checkmark -->
+  <polyline points="22,40 28,48 42,34" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
