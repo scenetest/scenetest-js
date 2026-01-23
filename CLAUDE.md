@@ -21,10 +21,10 @@ pnpm typecheck        # Type check all packages
 ```
 packages/
 ├── scenetest/              # Core library - should(), failed(), assert() (framework-agnostic)
-├── scenetest-react/        # React bindings - useAssert hook (re-exports core)
-├── scenetest-vue/          # Vue bindings - useAssert composable (re-exports core)
-├── scenetest-solid/        # Solid bindings - createAssert primitive (re-exports core)
-├── scenetest-svelte/       # Svelte bindings - runAssert helper (re-exports core)
+├── scenetest-react/        # React bindings - useTestEffect hook (re-exports core)
+├── scenetest-vue/          # Vue bindings - watchTestEffect composable (re-exports core)
+├── scenetest-solid/        # Solid bindings - createTestEffect primitive (re-exports core)
+├── scenetest-svelte/       # Svelte bindings - testEffect helper (re-exports core)
 ├── vite-plugin-scenetest/  # Vite plugin for build integration
 ├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
 ├── example-app-react/      # React demo app with working Scene tests
@@ -43,10 +43,10 @@ Scenetest separates two distinct concerns in end-to-end testing:
 ## How It Works
 
 1. **In app code**: Use `should()` and `failed()` from your framework's scenetest package:
-   - React: `scenetest-react` with `useAssert` hook
-   - Vue: `scenetest-vue` with `useAssert` composable
-   - Solid: `scenetest-solid` with `createAssert` primitive
-   - Svelte: `scenetest-svelte` with `runAssert` helper (use inside `$effect`)
+   - React: `scenetest-react` with `useTestEffect` hook
+   - Vue: `scenetest-vue` with `watchTestEffect` composable
+   - Solid: `scenetest-solid` with `createTestEffect` primitive
+   - Svelte: `scenetest-svelte` with `testEffect` helper (use inside `$effect`)
    - Any framework: `scenetest` core for just `should()` and `failed()`
 2. **At runtime**: These check for `window.__scenetest_report` and report if available
 3. **In tests**: Use `scenePage` fixture from `playwright-scenetest` which exposes the reporter

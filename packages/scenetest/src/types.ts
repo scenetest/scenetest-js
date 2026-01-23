@@ -21,24 +21,17 @@ export interface AssertionResult {
 }
 
 /**
- * Configuration for multi-context assertions.
- * These assertions can compare data from the browser with data from the server.
+ * Server function that runs assertions with access to server context.
  */
-export interface AssertionConfig<TData = unknown> {
-  /** Human-readable title for this assertion group */
-  title: string
-  /** Optional key to disambiguate multiple assertions with the same title */
-  key?: string
-  /** Function that collects data from the browser context to pass to serverFn */
-  withData?: () => TData
-  /**
-   * Function that runs on the server to perform assertions.
-   * Has access to server context functions and data collected from the browser.
-   */
-  serverFn: (server: ServerContext, data: TData) => void | Promise<void>
-  /** Whether the assertion is enabled (default: true). Set to false to skip. */
-  enabled?: boolean
-}
+export type AssertServerFn<TData = unknown> = (
+  server: ServerContext,
+  data: TData
+) => void | Promise<void>
+
+/**
+ * Data provider function that collects data from browser context.
+ */
+export type AssertDataFn<TData = unknown> = () => TData
 
 /**
  * Server context available in serverFn.

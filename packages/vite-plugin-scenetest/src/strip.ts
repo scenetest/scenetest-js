@@ -135,12 +135,13 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
         'failed',
         'assert',
         'match',
-        'useAssert',      // React, Vue
-        'createAssert',   // Solid
-        'runAssert',      // Svelte
+        'useTestEffect',     // React
+        'watchTestEffect',   // Vue
+        'createTestEffect',  // Solid
+        'testEffect',        // Svelte
       ]
 
-      // Direct call: should(...), failed(...), assert(...), useAssert(...)
+      // Direct call: should(...), failed(...), assert(...), useTestEffect(...), etc.
       if (t.isIdentifier(callee)) {
         if (scenetestImports.has(callee.name)) {
           const imported = scenetestImports.get(callee.name)

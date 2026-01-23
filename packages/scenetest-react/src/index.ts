@@ -1,13 +1,13 @@
 // React-specific hooks
-export { useAssert, __useAssert } from './hooks.js'
-export type { RuntimeAssertConfig } from './hooks.js'
+export { useTestEffect } from './hooks.js'
 
 // Re-export everything from core scenetest for convenience
 export { should, failed, assert, match } from '@scenetest/core'
 export type {
   AssertionResult,
   ScenetestReporter,
-  AssertionConfig,
+  AssertServerFn,
+  AssertDataFn,
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,
