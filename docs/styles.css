@@ -158,15 +158,16 @@ footer {
 }
 
 .footer-logo {
-  font-size: 2rem;
-  margin-bottom: 12px;
+  font-size: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: rgba(80, 70, 229, 0.08);
+  background: rgba(80, 70, 229, 0.12);
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .back {
