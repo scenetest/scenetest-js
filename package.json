@@ -1,9 +1,14 @@
 {
   "name": "scenetest-monorepo",
+  "version": "0.0.2",
   "description": "A local-first testing framework for the Vite ecosystem",
+  "license": "MIT",
   "private": false,
   "type": "module",
-  "repository": "https://github.com/scenetest/scenetest-js.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scenetest/scenetest-js.git"
+  },
   "author": "msnook.xyz",
   "scripts": {
     "build": "pnpm --filter @scenetest/core --filter @scenetest/cli build && pnpm -r build",
