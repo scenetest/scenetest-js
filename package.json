@@ -6,12 +6,12 @@
   "repository": "https://github.com/scenetest/scenetest-js.git",
   "author": "msnook.xyz",
   "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm --filter vite-plugin-scenetest build && pnpm --filter example-app-react dev",
+    "build": "pnpm --filter @scenetest/core --filter @scenetest/cli build && pnpm -r build",
+    "dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
     "docs": "pnpx serve docs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm test:unit && pnpm test:e2e",
-    "test:unit": "pnpm --filter vite-plugin-scenetest test",
+    "test:unit": "pnpm --filter @scenetest/vite-plugin test",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
