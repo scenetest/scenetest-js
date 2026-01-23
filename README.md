@@ -4,7 +4,7 @@
 
 </div>
 
-_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript testing framework inspired by Playwright's `page.evaluate` and React server actions._
+_Evaluate your product, not your tests. Write friendly little Scenes for your Actors. A Javascript testing framework inspired by Playwright's `page.evaluate` and Tanstack Server Functions._
 
 ---
 
@@ -175,16 +175,16 @@ Each framework package re-exports everything from `@scenetest/core`, so you only
 
 ```tsx
 // React - use @scenetest/react
-import { should, failed, useAssert } from '@scenetest/react'
+import { should, failed, assert, useAssert, match } from '@scenetest/react'
 
 // Vue - use @scenetest/vue
-import { should, failed, useAssert } from '@scenetest/vue'
+import { should, failed, assert, useAssert, match } from '@scenetest/vue'
 
 // Solid - use @scenetest/solid
-import { should, failed, createAssert } from '@scenetest/solid'
+import { should, failed, assert, createAssert, match } from '@scenetest/solid'
 
 // Svelte - use @scenetest/svelte
-import { should, failed, runAssert } from '@scenetest/svelte'
+import { should, failed, assert, runAssert, match } from '@scenetest/svelte'
 ```
 
 ---
@@ -199,8 +199,9 @@ Define a scene spec:
 import { scene } from '@scenetest/cli'
 
 scene('descriptive name of the user journey', async ({ cast }) => {
-  const user = await cast('user')
-  // ... interactions
+  const user = await cast('primary-user-1')
+  const friend = await cast('friend-of-1')
+  // ... interactions between actors
 })
 ```
 
