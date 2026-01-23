@@ -1,9 +1,9 @@
 {
-  "name": "scenetest-js",
-  "version": "0",
+  "name": "scenetest-monorepo",
+  "version": "0.1",
   "private": false,
   "type": "module",
-  "repository": "https://github.com/mhsnook/scenetest-js.git",
+  "repository": "https://github.com/scenetest/scenetest-js.git",
   "author": "msnook.xyz",
   "scripts": {
     "build": "pnpm -r build",
