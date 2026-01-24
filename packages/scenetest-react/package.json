@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/react",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "React bindings for scenetest inline assertions",
   "type": "module",
   "license": "MIT",
