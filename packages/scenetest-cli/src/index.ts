@@ -1,5 +1,5 @@
 // Public API for scene specs
-export { scene, when } from './scene.js'
+export { scene, when, happens, waitForEvent, getEvents } from './scene.js'
 export { defineConfig } from './config.js'
 
 // Types
@@ -13,4 +13,6 @@ export type {
   SceneReport,
   RunReport,
   AssertionResult,
+  SceneEvent,
+  EventDescriptor,
 } from './types.js'

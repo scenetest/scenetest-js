@@ -1,5 +1,5 @@
 import type { Page, BrowserContext } from 'playwright'
-import type { ActorConfig, ActorHandle, ActionChain, AssertionResult, TimelineEntry } from './types.js'
+import type { ActorConfig, ActorHandle, ActionChain, AssertionResult, TimelineEntry, SceneEvent } from './types.js'
 import { MessageBus } from './message-bus.js'
 
 /**
@@ -82,6 +82,19 @@ class ActionChainImpl implements ActionChain {
   emit(message: string): ActionChain {
     return this.addAction('emit', message, async () => {
       this.bus.emit(message)
+    })
+  }
+
+  happens(description: string, data?: unknown): ActionChain {
+    // Create narrative event name: "role description"
+    const eventName = `${this.actor.role} ${description}`
+    return this.addAction('happens', eventName, async () => {
+      this.bus.emitEvent({
+        name: eventName,
+        actor: this.actor.role,
+        data,
+        timestamp: Date.now(),
+      })
     })
   }
 
@@ -209,6 +222,10 @@ export class ActorHandleImpl implements ActorHandle {
 
   emit(message: string): ActionChain {
     return this.createChain().emit(message)
+  }
+
+  happens(description: string, data?: unknown): ActionChain {
+    return this.createChain().happens(description, data)
   }
 
   do(fn: (page: Page) => Promise<void>): ActionChain {

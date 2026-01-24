@@ -1,4 +1,4 @@
-import type { SceneFn, RegisteredScene, SceneContext, SceneReport } from './types.js'
+import type { SceneFn, RegisteredScene, SceneContext, SceneReport, SceneEvent, ActorHandle } from './types.js'
 import { CastSession } from './cast-manager.js'
 import { when as whenImpl } from './message-bus.js'
 
@@ -74,6 +74,72 @@ export function when(
     throw new Error('when() can only be called inside a scene')
   }
   whenImpl(currentSession.getMessageBus(), trigger, action)
+}
+
+/**
+ * Emit a narrative event for an actor.
+ * Alternative to actor.happens() for more natural syntax.
+ *
+ * @example
+ * ```ts
+ * // These are equivalent:
+ * await happens(user1, 'goes into the elevator')
+ * await user1.happens('goes into the elevator')
+ *
+ * // With data payload:
+ * await happens(friend3, 'phone battery dies', { level: 5 })
+ * ```
+ */
+export function happens(actor: ActorHandle, description: string, data?: unknown): PromiseLike<void> {
+  return actor.happens(description, data)
+}
+
+/**
+ * Wait for an event matching a predicate or event name pattern.
+ *
+ * @example
+ * ```ts
+ * // Wait for specific event by name
+ * await waitForEvent('user-1 goes into the elevator')
+ *
+ * // Wait for any event from an actor
+ * await waitForEvent(e => e.actor === 'user-1')
+ *
+ * // Wait for event with specific data
+ * await waitForEvent(e =>
+ *   e.name.includes('phone battery') &&
+ *   e.data?.level < 10
+ * )
+ * ```
+ */
+export function waitForEvent(
+  predicateOrName: string | ((e: SceneEvent) => boolean),
+  timeout?: number
+): Promise<SceneEvent> {
+  if (!currentSession) {
+    throw new Error('waitForEvent() can only be called inside a scene')
+  }
+
+  const predicate =
+    typeof predicateOrName === 'string' ? (e: SceneEvent) => e.name === predicateOrName : predicateOrName
+
+  return currentSession.getMessageBus().waitForEvent(predicate, timeout)
+}
+
+/**
+ * Get all events that have been emitted in the current scene.
+ *
+ * @example
+ * ```ts
+ * const events = getEvents()
+ * console.log(events.filter(e => e.actor === 'user-1'))
+ * ```
+ */
+export function getEvents(): readonly SceneEvent[] {
+  if (!currentSession) {
+    throw new Error('getEvents() can only be called inside a scene')
+  }
+  return currentSession.getMessageBus().getEvents()
 }
 
 /**

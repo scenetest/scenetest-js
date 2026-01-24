@@ -106,6 +106,37 @@ export interface TimelineEntry {
 }
 
 /**
+ * Scene event for narrative coordination between actors.
+ *
+ * Events use natural language descriptions like:
+ * - "user-1 goes into the elevator"
+ * - "friend-user-3's phone battery dies"
+ *
+ * The `name` is the full narrative string used for matching.
+ * The `actor` is the role of the actor who triggered it.
+ */
+export interface SceneEvent {
+  /** Full narrative description, e.g. "user-1 goes into the elevator" */
+  name: string
+  /** Actor role who triggered this event */
+  actor: string
+  /** Optional payload data */
+  data?: unknown
+  /** When the event occurred */
+  timestamp: number
+}
+
+/**
+ * Event descriptor for type-safe event handling
+ */
+export interface EventDescriptor {
+  /** The event name/description */
+  name: string
+  /** Actor role (optional, for actor-scoped events) */
+  actor?: string
+}
+
+/**
  * Report for a single scene run
  */
 export interface SceneReport {
@@ -210,6 +241,21 @@ export interface ActorHandle extends ActorConfig {
   /** Emit message to the message bus */
   emit(message: string): ActionChain
 
+  /**
+   * Emit a narrative event for this actor.
+   * Creates events like "user-1 goes into the elevator".
+   *
+   * @example
+   * ```ts
+   * await user1.happens('goes into the elevator')
+   * // Emits event: "user-1 goes into the elevator"
+   *
+   * await friend3.happens('phone battery dies')
+   * // Emits event: "friend-user-3 phone battery dies"
+   * ```
+   */
+  happens(description: string, data?: unknown): ActionChain
+
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
 }
@@ -244,6 +290,12 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Emit message to the message bus */
   emit(message: string): ActionChain
+
+  /**
+   * Emit a narrative event for this actor.
+   * @see ActorHandle.happens
+   */
+  happens(description: string, data?: unknown): ActionChain
 
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
