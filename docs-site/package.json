@@ -16,7 +16,8 @@
     "react-dom": "^19.0.0",
     "marked": "^15.0.6",
     "@scenetest/core": "workspace:*",
-    "@scenetest/observer": "workspace:*"
+    "@scenetest/observer": "workspace:*",
+    "@scenetest/react": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
