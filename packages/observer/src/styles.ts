@@ -214,16 +214,27 @@ export const panelStyles = `
 .scenetest-item:last-child {
   border-bottom: none;
 }
+.scenetest-item .scenetest-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  text-align: center;
+}
 .scenetest-item.pass .scenetest-icon {
-  color: #4ade80;
+  background: #22c55e;
+  color: white;
+  font-size: 14px;
 }
 .scenetest-item.fail .scenetest-icon {
-  color: #f87171;
-}
-.scenetest-icon {
-  flex-shrink: 0;
-  width: 14px;
-  text-align: center;
+  background: #f87171;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3);
 }
 .scenetest-content {
   flex: 1;
@@ -520,12 +531,26 @@ body {
 }
 .icon {
   font-size: 14px;
-  width: 18px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
   text-align: center;
   flex-shrink: 0;
 }
-.item.pass .icon { color: #4ade80; }
-.item.fail .icon { color: #f87171; }
+.item.pass .icon {
+  background: #22c55e;
+  color: white;
+}
+.item.fail .icon {
+  background: #f87171;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3);
+}
 .content {
   flex: 1;
 }
@@ -681,8 +706,10 @@ body {
   color: #f59e0b;
 }
 .state-icon.fail {
-  background: #3a1a1a;
-  color: #f87171;
+  background: #f87171;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3);
 }
 
 .status-dots {
@@ -691,8 +718,8 @@ body {
   align-items: center;
 }
 .status-dot {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   transition: transform 0.15s;
   position: relative;
@@ -710,7 +737,7 @@ body {
 .status-dot .dot-x {
   position: absolute;
   color: white;
-  font-size: 9px;
+  font-size: 20px;
   font-weight: bold;
   line-height: 1;
   top: 50%;
@@ -922,7 +949,7 @@ body {
 }
 .timeline-dot .dot-x {
   color: white;
-  font-size: 10px;
+  font-size: 20px;
   font-weight: bold;
   line-height: 1;
   text-shadow: 0 0 2px rgba(0,0,0,0.5);
