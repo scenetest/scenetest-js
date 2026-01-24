@@ -4,14 +4,38 @@
  */
 
 import * as esbuild from 'esbuild'
-import { writeFileSync } from 'fs'
+import { writeFileSync, readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { execSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const srcDir = join(__dirname, '../src')
+const pkgDir = join(__dirname, '..')
+
+// Get version from package.json
+function getVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf-8'))
+    return pkg.version || '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
+
+// Get git commit hash (short)
+function getGitHash() {
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
 
 async function bundle() {
+  const version = getVersion()
+  const gitHash = getGitHash()
+
   const result = await esbuild.build({
     entryPoints: [join(srcDir, 'auto.ts')],
     bundle: true,
@@ -19,6 +43,10 @@ async function bundle() {
     minify: false, // Keep readable for debugging
     write: false,
     target: 'es2020',
+    define: {
+      '__SCENETEST_VERSION__': JSON.stringify(version),
+      '__SCENETEST_GIT_HASH__': JSON.stringify(gitHash),
+    },
   })
 
   const code = result.outputFiles[0].text
@@ -30,13 +58,16 @@ async function bundle() {
  *
  * To modify the observer, edit files in src/ and run:
  *   pnpm run build:bundle
+ *
+ * Version: ${version}
+ * Git Hash: ${gitHash}
  */
 
 export const observerScript = ${JSON.stringify(code)};
 `
 
   writeFileSync(join(srcDir, 'script.generated.ts'), output)
-  console.log('Generated src/script.generated.ts')
+  console.log(`Generated src/script.generated.ts (v${version} @ ${gitHash})`)
 }
 
 bundle().catch((err) => {
