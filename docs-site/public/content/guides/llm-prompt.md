@@ -9,6 +9,7 @@ You can use an LLM (like Claude or ChatGPT) to convert natural language test des
 3. **You**: Review and adjust the spec
 4. **AI/You**: Generate a handoff report listing test IDs needed
 5. **Engineer**: Adds the test IDs to components
+6. **Run the tests!**
 
 ## The Prompt
 

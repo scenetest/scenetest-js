@@ -14,7 +14,7 @@ const guides = [
   {
     slug: 'writing-inline-assertions',
     title: 'Writing Inline Assertions',
-    description: 'Use should(), failed(), and assert() to verify component state from inside your application code.',
+    description: 'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
   },
   {
     slug: 'llm-prompt',
