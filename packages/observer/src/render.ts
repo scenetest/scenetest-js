@@ -5,6 +5,7 @@
 import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
 import { getHistoryStats, formatHistorySummary } from './history.js'
 import { escapeHtml, escapeHtmlAttr, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
+import { getNoteInfo } from './audio.js'
 
 /**
  * Render a single assertion item for the main panel
@@ -16,6 +17,7 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
     : a.location
       ? escapeHtml(formatLocation(a.location))
       : ''
+  const noteInfo = getNoteInfo(a.description)
 
   return `
     <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
@@ -26,6 +28,7 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
         <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
       </div>
+      <span class="scenetest-note ${a.result ? 'pass' : 'fail'}" title="Musical note for this assertion">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }
@@ -90,6 +93,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
   const histStats = getHistoryStats(a.description, a._index ?? 0)
   const histSummary = formatHistorySummary(histStats)
   const locJson = a.location ? escapeHtmlAttr(JSON.stringify(a.location)) : 'null'
+  const noteInfo = getNoteInfo(a.description)
 
   return `
     <div class="item ${a.result ? 'pass' : 'fail'}">
@@ -101,6 +105,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
         ${a.context ? `<div class="context">${escapeHtml(formatContext(a.context))}</div>` : ''}
         ${a.stack && !a.context ? `<div class="stack">${escapeHtml(a.stack.split('\n').slice(0, 3).join('\n'))}</div>` : ''}
       </div>
+      <span class="note-badge ${a.result ? 'pass' : 'fail'}" title="Musical note: ${noteInfo.noteName}">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }
@@ -141,6 +146,7 @@ export function renderLocationRow(group: LocationGroup): string {
   const total = group.entries.length
   const keyJson = escapeHtmlAttr(JSON.stringify(group.key))
   const locJson = escapeHtmlAttr(JSON.stringify(group.location))
+  const noteInfo = getNoteInfo(group.description)
 
   // Generate status dots (most recent 10 runs) with ✗ marker for failures
   const recentEntries = group.entries.slice(-10)
@@ -159,6 +165,9 @@ export function renderLocationRow(group: LocationGroup): string {
   const lastFailed = !group.lastResult
   const statusClass = lastFailed ? 'last-fail' : hasAnyFails ? 'has-fails' : 'all-pass'
 
+  // Note badge class based on current state
+  const noteBadgeClass = lastFailed ? 'fail' : hasAnyFails ? 'warn' : 'pass'
+
   // Current state icon - prominent indicator of current status
   const stateIcon = lastFailed
     ? '<span class="state-icon fail">\u2717</span>'
@@ -167,7 +176,7 @@ export function renderLocationRow(group: LocationGroup): string {
       : '<span class="state-icon pass">\u2713</span>'
 
   return `
-    <div class="location-row ${statusClass}" data-location-key="${keyJson}">
+    <div class="location-row ${statusClass}" data-location-key="${keyJson}" data-description="${escapeHtml(group.description)}" data-last-result="${group.lastResult}">
       ${stateIcon}
       <div class="location-main" onclick="window.opener ? window.opener.__scenetest_showSequence && window.opener.__scenetest_showSequence(${keyJson}) : window.__scenetest_showSequence && window.__scenetest_showSequence(${keyJson})">
         <div class="location-info">
@@ -184,7 +193,98 @@ export function renderLocationRow(group: LocationGroup): string {
         </div>
       </div>
       <div class="location-actions">
+        <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
         <button class="loc-btn" onclick="event.stopPropagation(); window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})" title="Open in editor">\u270E</button>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Render a piano roll visualization showing notes over time (chronological grid)
+ * X axis = time (chords), Y axis = notes (pitch)
+ */
+export function renderPianoRoll(locations: LocationGroup[], allAssertions: AssertionResult[]): string {
+  if (locations.length === 0 || allAssertions.length === 0) return ''
+
+  // Group assertions by timestamp (within 50ms threshold)
+  const GROUP_THRESHOLD = 50
+  const chords: { timestamp: number; assertions: AssertionResult[] }[] = []
+
+  const sortedAssertions = [...allAssertions].sort((a, b) => a.timestamp - b.timestamp)
+
+  sortedAssertions.forEach(assertion => {
+    const lastChord = chords[chords.length - 1]
+    if (lastChord && assertion.timestamp - lastChord.timestamp < GROUP_THRESHOLD) {
+      lastChord.assertions.push(assertion)
+    } else {
+      chords.push({ timestamp: assertion.timestamp, assertions: [assertion] })
+    }
+  })
+
+  // Get unique notes sorted by pitch
+  const noteMap = new Map<string, { noteInfo: ReturnType<typeof getNoteInfo>; description: string; hasAnyFails: boolean; lastResult: boolean }>()
+  locations.forEach(loc => {
+    const noteInfo = getNoteInfo(loc.description)
+    const failCount = loc.entries.filter(e => !e.result).length
+    noteMap.set(loc.description, {
+      noteInfo,
+      description: loc.description,
+      hasAnyFails: failCount > 0,
+      lastResult: loc.lastResult,
+    })
+  })
+
+  const notes = Array.from(noteMap.values()).sort((a, b) => a.noteInfo.noteIndex - b.noteInfo.noteIndex)
+
+  // Limit to last N chords to fit reasonably
+  const maxChords = 30
+  const displayChords = chords.slice(-maxChords)
+
+  // Build the grid
+  const rows = notes.map(note => {
+    const statusClass = !note.lastResult ? 'fail' : note.hasAnyFails ? 'warn' : 'pass'
+
+    const cells = displayChords.map((chord, colIdx) => {
+      const match = chord.assertions.find(a => a.description === note.description)
+      if (match) {
+        const cellClass = match.result ? 'pass' : 'fail'
+        return `<span class="piano-cell ${cellClass}" data-col="${colIdx}"></span>`
+      }
+      return `<span class="piano-cell empty" data-col="${colIdx}"></span>`
+    }).join('')
+
+    return `
+      <div class="piano-row ${statusClass}" data-description="${escapeHtml(note.description)}" data-result="${note.lastResult}">
+        <span class="piano-note">${note.noteInfo.noteName}</span>
+        <div class="piano-cells">${cells}</div>
+      </div>
+    `
+  }).join('')
+
+  // Build chord data for click handlers (JSON encoded)
+  const chordData = displayChords.map(chord => ({
+    timestamp: chord.timestamp,
+    notes: chord.assertions.map(a => ({
+      description: a.description,
+      result: a.result,
+    })),
+  }))
+
+  return `
+    <div class="piano-roll" data-chords="${escapeHtml(JSON.stringify(chordData))}">
+      <div class="piano-roll-header">
+        <span class="piano-roll-title">\uD83C\uDFB9 Piano Roll</span>
+        <span class="piano-roll-hint">Click a column to hear that chord</span>
+      </div>
+      <div class="piano-grid">
+        ${rows}
+      </div>
+      <div class="piano-timeline">
+        <span class="piano-note"></span>
+        <div class="piano-time-markers">
+          ${displayChords.map((_, i) => `<span class="piano-time-marker" data-col="${i}"></span>`).join('')}
+        </div>
       </div>
     </div>
   `
@@ -201,8 +301,10 @@ export function renderSequenceEntry(
   isFirst: boolean = false,
   isLast: boolean = false
 ): string {
+  const noteInfo = getNoteInfo(entry.description)
+
   return `
-    <div class="sequence-entry ${entry.result ? 'pass' : 'fail'}">
+    <div class="sequence-entry ${entry.result ? 'pass' : 'fail'}" data-timestamp="${entry.timestamp}">
       <div class="timeline-track">
         <div class="timeline-line ${isFirst ? 'first' : ''} ${isLast ? 'last' : ''}"></div>
         <div class="timeline-dot ${entry.result ? 'pass' : 'fail'}">
@@ -210,9 +312,47 @@ export function renderSequenceEntry(
         </div>
       </div>
       <div class="content">
-        <div class="sequence-time">${formatTime(entry.timestamp)}</div>
+        <div class="sequence-time chord-trigger" data-timestamp="${entry.timestamp}" title="Hover to hear this chord">
+          ${formatTime(entry.timestamp)}
+          <span class="chord-icon">\uD83C\uDFB5</span>
+        </div>
         <div class="desc">${escapeHtml(entry.description)}</div>
         ${entry.context ? `<div class="context">${escapeHtml(formatContext(entry.context))}</div>` : ''}
+      </div>
+      <span class="note-badge ${entry.result ? 'pass' : 'fail'}" title="Musical note: ${noteInfo.noteName}">\u266A${noteInfo.noteName}</span>
+    </div>
+  `
+}
+
+/**
+ * Render a chord tooltip showing all assertions that fired together
+ */
+export function renderChordTooltip(assertions: AssertionResult[]): string {
+  if (assertions.length === 0) return ''
+
+  const passes = assertions.filter(a => a.result).length
+  const fails = assertions.length - passes
+
+  return `
+    <div class="chord-tooltip">
+      <div class="chord-header">
+        <span class="chord-title">\uD83C\uDFB5 Chord (${assertions.length} note${assertions.length === 1 ? '' : 's'})</span>
+        <span class="chord-stats">
+          ${passes > 0 ? `<span class="pass">\u2713${passes}</span>` : ''}
+          ${fails > 0 ? `<span class="fail">\u2717${fails}</span>` : ''}
+        </span>
+      </div>
+      <div class="chord-notes">
+        ${assertions.map(a => {
+          const noteInfo = getNoteInfo(a.description)
+          return `
+            <div class="chord-note ${a.result ? 'pass' : 'fail'}">
+              <span class="note-indicator">\u266A${noteInfo.noteName}</span>
+              <span class="note-desc">${escapeHtml(a.description)}</span>
+              <span class="note-status">${a.result ? '\u2713' : '\u2717'}</span>
+            </div>
+          `
+        }).join('')}
       </div>
     </div>
   `
@@ -225,19 +365,37 @@ export function renderSequenceHeader(group: LocationGroup): string {
   const locJson = escapeHtmlAttr(JSON.stringify(group.location))
   const passCount = group.entries.filter(e => e.result).length
   const failCount = group.entries.filter(e => !e.result).length
+  const noteInfo = getNoteInfo(group.description)
+
+  // Determine status: flaky (has both), fail (only fails), or pass
+  const isFlaky = passCount > 0 && failCount > 0
+  const lastFailed = !group.lastResult
+  const statusClass = lastFailed ? 'fail' : isFlaky ? 'warn' : 'pass'
+
+  // State icon like in location rows
+  const stateIcon = lastFailed
+    ? '<span class="state-icon fail">\u2717</span>'
+    : isFlaky
+      ? '<span class="state-icon warn">\u26A0</span>'
+      : '<span class="state-icon pass">\u2713</span>'
 
   return `
-    <div class="sequence-header">
-      <div class="sequence-location">
-        <span class="sequence-file" onclick="window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(group.location))}</span>
-      </div>
-      <div class="sequence-summary">
-        <span class="sequence-total">${group.entries.length} run${group.entries.length === 1 ? '' : 's'}</span>
-        <div class="sequence-stats">
-          ${passCount > 0 ? `<span class="stat pass">\u2713 ${passCount}</span>` : ''}
-          ${failCount > 0 ? `<span class="stat fail">\u2717 ${failCount}</span>` : ''}
+    <div class="sequence-header ${statusClass}">
+      ${stateIcon}
+      <div class="sequence-info">
+        <div class="sequence-location">
+          <span class="sequence-file" onclick="window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(group.location))}</span>
+        </div>
+        <div class="sequence-desc">${escapeHtml(group.description)}</div>
+        <div class="sequence-summary">
+          <span class="sequence-total">${group.entries.length} run${group.entries.length === 1 ? '' : 's'}</span>
+          <div class="sequence-stats">
+            ${passCount > 0 ? `<span class="stat pass">\u2713 ${passCount}</span>` : ''}
+            ${failCount > 0 ? `<span class="stat fail">\u2717 ${failCount}</span>` : ''}
+          </div>
         </div>
       </div>
+      <span class="note-badge clickable ${statusClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }

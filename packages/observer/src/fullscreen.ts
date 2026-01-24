@@ -2,7 +2,7 @@
  * Fullscreen window management
  */
 
-import type { FilterMode, ViewMode } from './types.js'
+import type { FilterMode, ViewMode, AssertionResult } from './types.js'
 import {
   groups,
   passCount,
@@ -20,9 +20,21 @@ import {
   panel,
 } from './state.js'
 import { filterItems } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader } from './render.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
+import {
+  clearSymphony,
+  playSymphony,
+  stopSymphony,
+  toggleMute,
+  isPlaying,
+  getSymphonyInfo,
+  initAudio,
+  playGroupChord,
+  playAssertionSound,
+} from './audio.js'
+import { assertions, GROUP_THRESHOLD_MS } from './state.js'
 
 /**
  * Get the HTML for the fullscreen window
@@ -51,6 +63,11 @@ function getFullscreenHTML(): string {
             <button class="btn active" id="filter-all">All</button>
             <button class="btn" id="filter-fails">Errors</button>
             <button class="btn" id="filter-passes">Passes</button>
+          </div>
+          <span class="separator"></span>
+          <div id="audio-controls" class="btn-group">
+            <button class="btn audio-btn" id="audio-mute" title="Toggle sound">\uD83D\uDD0A</button>
+            <button class="btn audio-btn" id="audio-play" title="Play symphony">\u25B6</button>
           </div>
           <span class="separator"></span>
           <button class="btn" id="scenetest-clear-full">Clear</button>
@@ -138,8 +155,61 @@ export function openFullscreen(groupId?: number): void {
 
   doc.getElementById('scenetest-clear-full')?.addEventListener('click', () => {
     clearAll()
+    clearSymphony()
     updatePanel()
     updateFullscreenWindow()
+  })
+
+  // Audio controls
+  doc.getElementById('audio-mute')?.addEventListener('click', () => {
+    initAudio()
+    const nowMuted = toggleMute()
+    const muteBtn = doc.getElementById('audio-mute')
+    if (muteBtn) {
+      muteBtn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A'
+      muteBtn.classList.toggle('muted', nowMuted)
+    }
+    // Sync with main panel
+    const panelMuteBtn = panel?.querySelector('#scenetest-mute')
+    if (panelMuteBtn) {
+      panelMuteBtn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A'
+      panelMuteBtn.classList.toggle('muted', nowMuted)
+    }
+  })
+
+  doc.getElementById('audio-play')?.addEventListener('click', () => {
+    initAudio()
+    const playBtn = doc.getElementById('audio-play')
+    if (isPlaying()) {
+      stopSymphony()
+      if (playBtn) {
+        playBtn.textContent = '\u25B6'
+        playBtn.classList.remove('playing')
+      }
+    } else {
+      const info = getSymphonyInfo()
+      if (info.eventCount === 0) return
+      playSymphony()
+      if (playBtn) {
+        playBtn.textContent = '\u23F9'
+        playBtn.classList.add('playing')
+      }
+
+      // Set up callback for when symphony completes
+      ;(window as any).__scenetest_symphonyComplete = () => {
+        const btn = doc.getElementById('audio-play')
+        if (btn) {
+          btn.textContent = '\u25B6'
+          btn.classList.remove('playing')
+        }
+        // Also update main panel button
+        const panelBtn = panel?.querySelector('#scenetest-play')
+        if (panelBtn) {
+          panelBtn.textContent = '\u25B6'
+          panelBtn.classList.remove('playing')
+        }
+      }
+    }
   })
 
   doc.getElementById('filter-all')?.addEventListener('click', () => {
@@ -332,10 +402,15 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
   }
 
   listEl.innerHTML = `
+    ${renderPianoRoll(filteredLocations, assertions)}
     <div class="location-list">
       ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
     </div>
   `
+
+  // Set up click handlers for piano roll columns and note badges
+  setupPianoRollHandlers(_doc, listEl)
+  setupNoteClickHandlers(_doc, listEl)
 }
 
 /**
@@ -379,4 +454,242 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
     </div>
     ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
   `
+
+  // Set up chord hover handlers
+  setupChordHoverHandlers(_doc, listEl)
+
+  // Set up note click handlers for the header badge
+  setupNoteClickHandlers(_doc, listEl)
+}
+
+/**
+ * Find all assertions that fired at approximately the same time (within GROUP_THRESHOLD_MS)
+ */
+function findChordSiblings(timestamp: number): typeof assertions {
+  return assertions.filter(
+    a => Math.abs(a.timestamp - timestamp) <= GROUP_THRESHOLD_MS
+  )
+}
+
+/**
+ * Set up hover handlers for chord triggers in the sequence view
+ */
+function setupChordHoverHandlers(doc: Document, listEl: HTMLElement): void {
+  let tooltipEl: HTMLElement | null = null
+  let hideTimeout: ReturnType<typeof setTimeout> | null = null
+
+  const chordTriggers = listEl.querySelectorAll('.chord-trigger')
+
+  chordTriggers.forEach(trigger => {
+    trigger.addEventListener('mouseenter', (e) => {
+      const target = e.target as HTMLElement
+      const timestamp = parseInt(target.dataset.timestamp || '0', 10)
+      if (!timestamp) return
+
+      // Clear any pending hide
+      if (hideTimeout) {
+        clearTimeout(hideTimeout)
+        hideTimeout = null
+      }
+
+      // Find all assertions in this chord
+      const chordMembers = findChordSiblings(timestamp)
+      if (chordMembers.length === 0) return
+
+      // Initialize audio and play the chord
+      initAudio()
+      playGroupChord(chordMembers)
+
+      // Create and show tooltip
+      if (tooltipEl) {
+        tooltipEl.remove()
+      }
+
+      tooltipEl = doc.createElement('div')
+      tooltipEl.innerHTML = renderChordTooltip(chordMembers)
+      const tooltip = tooltipEl.firstElementChild as HTMLElement
+      if (tooltip) {
+        doc.body.appendChild(tooltip)
+
+        // Position tooltip near the trigger
+        const rect = target.getBoundingClientRect()
+        tooltip.style.left = `${rect.right + 12}px`
+        tooltip.style.top = `${rect.top - 8}px`
+
+        // Adjust if off-screen
+        const tooltipRect = tooltip.getBoundingClientRect()
+        if (tooltipRect.right > window.innerWidth - 20) {
+          tooltip.style.left = `${rect.left - tooltipRect.width - 12}px`
+        }
+        if (tooltipRect.bottom > window.innerHeight - 20) {
+          tooltip.style.top = `${window.innerHeight - tooltipRect.height - 20}px`
+        }
+
+        tooltipEl = tooltip
+      }
+    })
+
+    trigger.addEventListener('mouseleave', () => {
+      // Delay hiding to allow moving to tooltip
+      hideTimeout = setTimeout(() => {
+        if (tooltipEl) {
+          tooltipEl.remove()
+          tooltipEl = null
+        }
+      }, 200)
+    })
+  })
+
+  // Also hide tooltip when clicking elsewhere
+  doc.addEventListener('click', () => {
+    if (tooltipEl) {
+      tooltipEl.remove()
+      tooltipEl = null
+    }
+  })
+}
+
+/**
+ * Set up click handlers for the piano roll columns
+ */
+function setupPianoRollHandlers(_doc: Document, listEl: HTMLElement): void {
+  const pianoRoll = listEl.querySelector('.piano-roll') as HTMLElement
+  if (!pianoRoll) return
+
+  // Parse chord data
+  const chordDataStr = pianoRoll.dataset.chords
+  if (!chordDataStr) return
+
+  let chordData: { timestamp: number; notes: { description: string; result: boolean }[] }[]
+  try {
+    chordData = JSON.parse(chordDataStr)
+  } catch {
+    return
+  }
+
+  const cells = pianoRoll.querySelectorAll('.piano-cell')
+  const markers = pianoRoll.querySelectorAll('.piano-time-marker')
+
+  // Helper to highlight a column
+  const highlightColumn = (colIdx: number) => {
+    pianoRoll.classList.add('col-hover')
+    cells.forEach(cell => {
+      const cellCol = parseInt((cell as HTMLElement).dataset.col || '-1', 10)
+      cell.classList.toggle('col-active', cellCol === colIdx)
+    })
+  }
+
+  // Helper to clear column highlight
+  const clearHighlight = () => {
+    pianoRoll.classList.remove('col-hover')
+    cells.forEach(cell => cell.classList.remove('col-active'))
+  }
+
+  // Helper to play a chord
+  const playColumn = (colIdx: number) => {
+    if (colIdx < 0 || colIdx >= chordData.length) return
+
+    const chord = chordData[colIdx]
+    initAudio()
+
+    // Create assertion-like objects for playGroupChord
+    const assertionLike: AssertionResult[] = chord.notes.map(n => ({
+      type: (n.result ? 'pass' : 'fail') as 'pass' | 'fail',
+      description: n.description,
+      result: n.result,
+      timestamp: chord.timestamp,
+    }))
+
+    playGroupChord(assertionLike)
+
+    // Visual feedback on marker
+    const marker = markers[colIdx]
+    if (marker) {
+      marker.classList.add('playing')
+      setTimeout(() => marker.classList.remove('playing'), 300)
+    }
+  }
+
+  // Add hover and click handlers to cells
+  cells.forEach(cell => {
+    const colIdx = parseInt((cell as HTMLElement).dataset.col || '-1', 10)
+
+    cell.addEventListener('mouseenter', () => highlightColumn(colIdx))
+    cell.addEventListener('mouseleave', clearHighlight)
+    cell.addEventListener('click', (e) => {
+      e.stopPropagation()
+      playColumn(colIdx)
+    })
+  })
+
+  // Add hover and click handlers to timeline markers
+  markers.forEach((marker, idx) => {
+    marker.addEventListener('mouseenter', () => highlightColumn(idx))
+    marker.addEventListener('mouseleave', clearHighlight)
+    marker.addEventListener('click', (e) => {
+      e.stopPropagation()
+      playColumn(idx)
+    })
+  })
+}
+
+/**
+ * Set up click handlers for note badges and piano bars to play sounds
+ */
+function setupNoteClickHandlers(_doc: Document, listEl: HTMLElement): void {
+  // Handle clickable note badges
+  const noteBadges = listEl.querySelectorAll('.note-badge.clickable')
+  noteBadges.forEach(badge => {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const target = e.currentTarget as HTMLElement
+      const description = target.dataset.description || ''
+      const result = target.dataset.result === 'true'
+
+      if (!description) return
+
+      // Initialize audio and play the note
+      initAudio()
+      playAssertionSound({
+        type: result ? 'pass' : 'fail',
+        description,
+        result,
+        timestamp: Date.now(),
+      })
+
+      // Visual feedback
+      target.style.transform = 'scale(1.3)'
+      setTimeout(() => {
+        target.style.transform = ''
+      }, 150)
+    })
+  })
+
+  // Handle piano bar clicks
+  const pianoBars = listEl.querySelectorAll('.piano-bar')
+  pianoBars.forEach(bar => {
+    bar.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const target = e.currentTarget as HTMLElement
+      const description = target.dataset.description || ''
+      const result = target.dataset.result === 'true'
+
+      if (!description) return
+
+      // Initialize audio and play the note
+      initAudio()
+      playAssertionSound({
+        type: result ? 'pass' : 'fail',
+        description,
+        result,
+        timestamp: Date.now(),
+      })
+
+      // Visual feedback
+      target.style.transform = 'translateX(8px) scale(1.02)'
+      setTimeout(() => {
+        target.style.transform = ''
+      }, 150)
+    })
+  })
 }

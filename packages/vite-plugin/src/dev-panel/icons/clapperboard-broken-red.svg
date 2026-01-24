@@ -1,0 +1,16 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main board body -->
+  <rect x="2" y="10" width="20" height="12" rx="2.5" stroke="#ef4444" stroke-width="1.5" fill="white"/>
+
+  <!-- Jagged break line on top of board -->
+  <path d="M2 11.5 L5 10.5 L8 12 L12 10 L16 11.5 L19 10 L22 11"
+        stroke="#ef4444" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+
+  <!-- Broken clapper piece (tilted and separated) -->
+  <g transform="rotate(-12, 12, 5)">
+    <rect x="3" y="2" width="18" height="4.5" rx="1.5" stroke="#ef4444" stroke-width="1.5" fill="white"/>
+    <!-- Stripes on broken piece -->
+    <line x1="8" y1="2" x2="8" y2="6.5" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="2" x2="14" y2="6.5" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+</svg>

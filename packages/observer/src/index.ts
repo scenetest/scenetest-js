@@ -23,6 +23,14 @@ import { trackAssertion } from './history.js'
 import { openInEditor } from './utils.js'
 import { createPanel, updatePanel } from './panel.js'
 import { updateFullscreenWindow, openFullscreenToGroup, showSequence } from './fullscreen.js'
+import {
+  playGroupChord,
+  playSymphony,
+  stopSymphony,
+  toggleMute,
+  setVolume,
+  initAudio,
+} from './audio.js'
 
 // Re-export types for consumers
 export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
@@ -35,6 +43,14 @@ declare global {
     __scenetest_openFullscreenToGroup?: typeof openFullscreenToGroup
     __scenetest_showSequence?: typeof showSequence
     __scenetest_setViewMode?: (mode: ViewMode) => void
+    // Audio/symphony functions
+    __scenetest_toggleMute?: () => boolean
+    __scenetest_playSymphony?: () => void
+    __scenetest_stopSymphony?: () => void
+    __scenetest_setVolume?: (v: number) => void
+    __scenetest_initAudio?: () => void
+    __scenetest_symphonyProgress?: (current: number, total: number) => void
+    __scenetest_symphonyComplete?: () => void
   }
 }
 
@@ -63,6 +79,10 @@ function addToGroup(result: AssertionResult): void {
   if (groupTimeout) clearTimeout(groupTimeout)
   setGroupTimeout(
     setTimeout(() => {
+      // Play the chord for this group when finalized
+      if (pendingGroup) {
+        playGroupChord(pendingGroup.items)
+      }
       setPendingGroup(null)
       updatePanel()
       updateFullscreenWindow()
@@ -138,6 +158,13 @@ export function initObserver(): void {
     setViewMode(mode)
     updateFullscreenWindow()
   }
+
+  // Audio/symphony functions
+  window.__scenetest_toggleMute = toggleMute
+  window.__scenetest_playSymphony = playSymphony
+  window.__scenetest_stopSymphony = stopSymphony
+  window.__scenetest_setVolume = setVolume
+  window.__scenetest_initAudio = initAudio
 
   // Set up the reporter - chain with existing function if present (e.g., Playwright's exposeFunction)
   const existingReport = window.__scenetest_report
