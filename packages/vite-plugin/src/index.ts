@@ -12,6 +12,44 @@ import {
 } from './virtual-module.js'
 import { clearConfigCache, isConfigFile } from './config.js'
 import { createScenetestMiddleware } from './middleware.js'
+import type { Connect } from 'vite'
+
+/**
+ * Default CSP directives for dev mode.
+ * - 'unsafe-inline' is required for the dev panel's injected script and styles
+ * - 'unsafe-eval' is needed for Vite's HMR in dev mode
+ * - ws: and wss: are needed for Vite's WebSocket HMR connection
+ */
+const DEFAULT_CSP_DIRECTIVES: CspDirectives = {
+  'default-src': "'self'",
+  'script-src': "'self' 'unsafe-inline' 'unsafe-eval'",
+  'style-src': "'self' 'unsafe-inline'",
+  'img-src': "'self' data: blob:",
+  'font-src': "'self' data:",
+  'connect-src': "'self' ws: wss:",
+  'object-src': "'none'",
+  'base-uri': "'self'",
+  'frame-ancestors': "'self'",
+}
+
+/**
+ * Create CSP middleware that adds Content-Security-Policy headers.
+ * Only applies to HTML responses to avoid interfering with other assets.
+ */
+function createCspMiddleware(directives: CspDirectives): Connect.NextHandleFunction {
+  const policy = Object.entries(directives)
+    .map(([key, value]) => `${key} ${value}`)
+    .join('; ')
+
+  return (req, res, next) => {
+    // Only apply CSP to HTML pages (not assets, API calls, etc.)
+    const accept = req.headers.accept || ''
+    if (accept.includes('text/html')) {
+      res.setHeader('Content-Security-Policy', policy)
+    }
+    next()
+  }
+}
 
 // Get git commit hash at plugin load time
 function getGitHash(): string {
@@ -52,6 +90,43 @@ export interface ScenetestPluginOptions {
    * Useful for demos and documentation sites.
    */
   demo?: boolean
+
+  /**
+   * Content Security Policy configuration for dev mode.
+   * Adds CSP headers to protect against XSS and other injection attacks.
+   * Defaults to enabled in development mode when devPanel is active.
+   */
+  csp?:
+    | boolean
+    | {
+        /**
+         * Whether to enable CSP headers.
+         * Defaults to true when devPanel is enabled.
+         */
+        enabled?: boolean
+
+        /**
+         * Custom CSP policy directives to override defaults.
+         * Default policy allows 'self' and 'unsafe-inline' for scripts/styles
+         * (required for dev panel), blocks plugins, and restricts base URI.
+         */
+        directives?: Partial<CspDirectives>
+      }
+}
+
+/**
+ * CSP directive configuration
+ */
+export interface CspDirectives {
+  'default-src': string
+  'script-src': string
+  'style-src': string
+  'img-src': string
+  'font-src': string
+  'connect-src': string
+  'object-src': string
+  'base-uri': string
+  'frame-ancestors': string
 }
 
 /**
@@ -64,6 +139,8 @@ export interface ScenetestPluginOptions {
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
   let showDevPanel = false
+  let cspEnabled = false
+  let cspDirectives: CspDirectives = DEFAULT_CSP_DIRECTIVES
   let mode = 'development'
   let root = process.cwd()
   let server: ViteDevServer | undefined
@@ -83,6 +160,19 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         // Default: show dev panel in development mode
         showDevPanel = options.devPanel ?? env.mode === 'development'
       }
+
+      // CSP configuration: enabled by default when devPanel is active
+      if (typeof options.csp === 'boolean') {
+        cspEnabled = options.csp
+      } else if (typeof options.csp === 'object') {
+        cspEnabled = options.csp.enabled ?? showDevPanel
+        if (options.csp.directives) {
+          cspDirectives = { ...DEFAULT_CSP_DIRECTIVES, ...options.csp.directives }
+        }
+      } else {
+        // Default: enable CSP when devPanel is shown
+        cspEnabled = showDevPanel
+      }
     },
 
     configResolved(config) {
@@ -91,6 +181,11 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
 
     configureServer(devServer) {
       server = devServer
+
+      // Install CSP middleware if enabled (before other middleware)
+      if (cspEnabled) {
+        server.middlewares.use(createCspMiddleware(cspDirectives))
+      }
 
       // Install the scenetest middleware for handling RPC requests
       server.middlewares.use(createScenetestMiddleware(server, root))
@@ -199,6 +294,9 @@ import '@scenetest/observer/auto';
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
         if (showDevPanel) {
           console.log('[vite-plugin-scenetest] Dev panel enabled - open your app to see assertions')
+        }
+        if (cspEnabled) {
+          console.log('[vite-plugin-scenetest] CSP headers enabled for dev server')
         }
       }
     },
