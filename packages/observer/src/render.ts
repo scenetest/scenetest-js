@@ -7,7 +7,7 @@
  */
 
 import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
-import { getHistoryStats, formatHistorySummary } from './history.js'
+import { getHistoryStats, formatHistorySummary, computeFlakyStats, computeResolutionStats, formatResolutionSummary, formatFlakyStatus } from './history.js'
 import { escapeHtml, escapeHtmlAttr, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
 import { getNoteInfo } from './audio.js'
 
@@ -181,6 +181,20 @@ export function renderLocationRow(group: LocationGroup): string {
       ? '<span class="state-icon warn">\u26A0</span>'
       : '<span class="state-icon pass">\u2713</span>'
 
+  // Compute flaky and resolution stats
+  const flakyStats = computeFlakyStats(group.description)
+  const resolutionStats = computeResolutionStats(group.description)
+
+  // Build flaky info line
+  let flakyInfo = ''
+  if (flakyStats && flakyStats.isCurrentlyFailing) {
+    // Currently failing - show failure rate
+    flakyInfo = formatFlakyStatus(flakyStats)
+  } else if (resolutionStats && resolutionStats.resolvedFailures.length > 0) {
+    // Has resolved failures - show resolution summary
+    flakyInfo = formatResolutionSummary(resolutionStats)
+  }
+
   return `
     <div class="location-row ${statusClass}" data-location-key="${keyJson}" data-description="${escapeHtml(group.description)}" data-last-result="${group.lastResult}">
       ${stateIcon}
@@ -197,6 +211,7 @@ export function renderLocationRow(group: LocationGroup): string {
             ${failCount > 0 ? `<span class="stat fail">\u2717${failCount}</span>` : ''}
           </div>
         </div>
+        ${flakyInfo ? `<div class="flaky-info ${lastFailed ? 'failing' : 'resolved'}">${escapeHtml(flakyInfo)}</div>` : ''}
       </div>
       <div class="location-actions">
         <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
@@ -385,6 +400,22 @@ export function renderSequenceHeader(group: LocationGroup): string {
       ? '<span class="state-icon warn">\u26A0</span>'
       : '<span class="state-icon pass">\u2713</span>'
 
+  // Compute flaky and resolution stats
+  const flakyStats = computeFlakyStats(group.description)
+  const resolutionStats = computeResolutionStats(group.description)
+
+  // Build detailed flaky info lines
+  let flakyStatusLine = ''
+  let resolutionLine = ''
+
+  if (flakyStats && flakyStats.isCurrentlyFailing) {
+    flakyStatusLine = formatFlakyStatus(flakyStats)
+  }
+
+  if (resolutionStats && resolutionStats.resolvedFailures.length > 0) {
+    resolutionLine = formatResolutionSummary(resolutionStats)
+  }
+
   return `
     <div class="sequence-header ${statusClass}">
       ${stateIcon}
@@ -400,6 +431,8 @@ export function renderSequenceHeader(group: LocationGroup): string {
             ${failCount > 0 ? `<span class="stat fail">\u2717 ${failCount}</span>` : ''}
           </div>
         </div>
+        ${flakyStatusLine ? `<div class="flaky-status">${escapeHtml(flakyStatusLine)}</div>` : ''}
+        ${resolutionLine ? `<div class="resolution-info">${escapeHtml(resolutionLine)}</div>` : ''}
       </div>
       <span class="note-badge clickable ${statusClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
     </div>

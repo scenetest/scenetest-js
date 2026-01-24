@@ -38,6 +38,37 @@ export interface HistoryStats {
   total: number
 }
 
+/**
+ * Flaky test statistics for a specific assertion
+ */
+export interface FlakyStats {
+  totalRuns: number
+  passCount: number
+  failCount: number
+  failureRate: number // 0-100 percentage
+  isFlaky: boolean // has both passes and fails
+  isCurrentlyFailing: boolean
+}
+
+/**
+ * Resolution statistics for failures that were later resolved
+ */
+export interface ResolutionInfo {
+  duration: number // ms between failure and resolution
+  failTimestamp: number
+  passTimestamp: number
+}
+
+export interface ResolutionStats {
+  resolvedFailures: ResolutionInfo[]
+  unresolvedFailures: number
+  minDuration: number | null
+  maxDuration: number | null
+  outlierThreshold: number | null // durations above this are outliers
+  outliers: ResolutionInfo[]
+  normalRange: ResolutionInfo[]
+}
+
 export type FilterMode = 'all' | 'fails' | 'passes'
 
 export type ViewMode = 'grouped' | 'byLocation' | 'sequence'
