@@ -251,18 +251,19 @@ figure.screenshot {
   text-align: center;
   background: white;
   border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding-bottom: 10px;
+  border: 1px solid var(--border);
 }
 
 figure.screenshot img {
   max-width: 100%;
   border-radius: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 figure.screenshot figcaption {
   margin-top: 6px;
-  padding: 0 14px 6px;
+  padding: 0 4% 6px;
   font-size: 0.85rem;
   color: var(--text-light);
   font-style: italic;
