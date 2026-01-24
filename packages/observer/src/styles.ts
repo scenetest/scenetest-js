@@ -672,20 +672,9 @@ body {
   color: #a0a0ff;
   font-weight: 500;
 }
-.location-desc-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
 .location-desc {
   font-size: 13px;
   color: #e0e0e0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1;
-  min-width: 0;
 }
 .location-stats {
   display: flex;
@@ -871,17 +860,13 @@ body {
   color: #f87171;
 }
 
-/* Flaky test info styles - inline in location row */
+/* Flaky test info styles - own line in location row */
 .flaky-info {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 3px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-family: ui-monospace, monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
-  min-width: 0;
+  margin-top: 2px;
 }
 .flaky-info.failing {
   background: #3a1a1a;
