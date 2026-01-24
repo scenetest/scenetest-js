@@ -1,12 +1,13 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Main board body -->
-  <rect x="2" y="8" width="20" height="14" rx="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
-
-  <!-- Top clapper (slightly open/angled) -->
-  <path d="M4.5 8 L3.5 5.5 C3.3 4.7 3.9 4 4.7 4 L19.3 2.5 C20.2 2.4 20.8 3.2 20.6 4 L20 8"
+  <!-- Main board body (slightly wonky) -->
+  <path d="M3 9.5 C3 8.5 3.8 7.5 5 7.5 L19.5 7.5 C20.5 7.5 21.2 8.3 21 9.5 L21 20 C21 21.2 20 22 19 22 L5.5 22 C4.2 22 3 21 3 19.8 Z"
         stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Stripes on clapper -->
-  <line x1="8" y1="3.8" x2="8.3" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="14" y1="3.2" x2="14" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Hinged clapper (angled open, pivots from left) -->
+  <path d="M3.5 8 L4.5 4.5 C4.7 3.8 5.3 3.3 6 3.2 L18.5 2 C19.5 1.9 20.3 2.7 20.2 3.7 L19.8 7.5"
+        stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stripes on clapper (diagonal feel) -->
+  <line x1="9" y1="2.8" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="15" y1="2.3" x2="15" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
