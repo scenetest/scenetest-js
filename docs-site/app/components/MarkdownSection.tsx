@@ -24,9 +24,13 @@ renderer.code = function (code: { text: string; lang?: string }) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 
+  // Use data attribute to store the code text for copying
+  // Double-encode to handle all special characters safely in HTML attributes
+  const encodedText = encodeURIComponent(encodeURIComponent(text))
+
   return `
     <div class="code-block" data-language="${lang}">
-      <button class="copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(text)}'))">
+      <button class="copy-btn" data-code="${encodedText}">
         Copy
       </button>
       <pre><code class="language-${lang}">${escaped}</code></pre>
@@ -63,6 +67,22 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
       // @ts-expect-error hljs is loaded globally
       window.hljs.highlightAll()
     }
+
+    // Set up copy button handlers
+    function handleCopyClick(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (target.classList.contains('copy-btn') && target.dataset.code) {
+        const text = decodeURIComponent(decodeURIComponent(target.dataset.code))
+        navigator.clipboard.writeText(text)
+        target.textContent = 'Copied!'
+        setTimeout(() => {
+          target.textContent = 'Copy'
+        }, 2000)
+      }
+    }
+
+    document.addEventListener('click', handleCopyClick)
+    return () => document.removeEventListener('click', handleCopyClick)
   }, [content])
 
   return (
