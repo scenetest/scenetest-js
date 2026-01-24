@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite'
+import { execSync } from 'child_process'
 import { stripScenetest } from './strip.js'
-import { observerScript } from '@scenetest/observer/script'
 import { transformAssertions } from './transform.js'
 import {
   registerAssertions,
@@ -12,6 +12,26 @@ import {
 } from './virtual-module.js'
 import { clearConfigCache, isConfigFile } from './config.js'
 import { createScenetestMiddleware } from './middleware.js'
+
+// Get git commit hash at plugin load time
+function getGitHash(): string {
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
+
+// Get version from observer package
+function getVersion(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pkg = require('@scenetest/observer/package.json')
+    return pkg.version || 'dev'
+  } catch {
+    return 'dev'
+  }
+}
 
 export interface ScenetestPluginOptions {
   /**
@@ -25,6 +45,13 @@ export interface ScenetestPluginOptions {
    * Defaults to true in development mode.
    */
   devPanel?: boolean
+
+  /**
+   * Demo mode - show dev panel even in production builds.
+   * When true, scenetest code is NOT stripped and the panel is shown.
+   * Useful for demos and documentation sites.
+   */
+  demo?: boolean
 }
 
 /**
@@ -32,6 +59,7 @@ export interface ScenetestPluginOptions {
  *
  * In development/test mode: transforms assertion() calls and serves serverFn via middleware
  * In production mode: strips all scenetest imports and function calls via AST transform
+ * In demo mode: keeps scenetest code and shows the panel even in production
  */
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
@@ -45,10 +73,16 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
 
     config(_config, env) {
       mode = env.mode
-      // Default: strip in production, keep in dev/test
-      shouldStrip = options.strip ?? env.mode === 'production'
-      // Default: show dev panel in development mode
-      showDevPanel = options.devPanel ?? env.mode === 'development'
+      // Demo mode overrides: never strip, always show panel
+      if (options.demo) {
+        shouldStrip = false
+        showDevPanel = true
+      } else {
+        // Default: strip in production, keep in dev/test
+        shouldStrip = options.strip ?? env.mode === 'production'
+        // Default: show dev panel in development mode
+        showDevPanel = options.devPanel ?? env.mode === 'development'
+      }
     },
 
     configResolved(config) {
@@ -141,8 +175,14 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return html
       }
 
-      // Inject the observer script before </body>
-      const script = `<script>${observerScript}</script>`
+      // Inject observer as a module import - Vite handles bundling/HMR
+      const gitHash = getGitHash()
+      const version = getVersion()
+      const script = `<script type="module">
+window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
+window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
+import '@scenetest/observer/auto';
+</script>`
       return html.replace('</body>', `${script}</body>`)
     },
 
@@ -151,7 +191,9 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       clearRegistry()
       clearConfigCache()
 
-      if (shouldStrip) {
+      if (options.demo) {
+        console.log('[vite-plugin-scenetest] Demo mode - scenetest panel enabled in production')
+      } else if (shouldStrip) {
         console.log('[vite-plugin-scenetest] Production build - stripping scenetest code')
       } else {
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)

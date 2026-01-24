@@ -3,13 +3,10 @@
  * Real-time assertion panel for scenetest
  */
 
-// Build-time constants injected by esbuild (only available in bundled script)
-declare const __SCENETEST_VERSION__: string | undefined
-declare const __SCENETEST_GIT_HASH__: string | undefined
-
-// Fallback values for when running unbundled
-const VERSION = typeof __SCENETEST_VERSION__ !== 'undefined' ? __SCENETEST_VERSION__ : 'dev'
-const GIT_HASH = typeof __SCENETEST_GIT_HASH__ !== 'undefined' ? __SCENETEST_GIT_HASH__ : 'local'
+// Version and git hash are injected by vite plugin onto window globals at runtime
+// This allows the observer to be a regular module without pre-bundling
+const VERSION = typeof window !== 'undefined' && (window as { __SCENETEST_VERSION__?: string }).__SCENETEST_VERSION__ || 'dev'
+const GIT_HASH = typeof window !== 'undefined' && (window as { __SCENETEST_GIT_HASH__?: string }).__SCENETEST_GIT_HASH__ || 'local'
 
 import type { AssertionResult, ViewMode } from './types.js'
 import {

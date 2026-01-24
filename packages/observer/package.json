@@ -15,15 +15,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./script": {
-      "types": "./dist/script.d.ts",
-      "import": "./dist/script.js"
+      "import": "./src/index.ts"
     },
     "./auto": {
       "types": "./dist/auto.d.ts",
-      "import": "./dist/auto.js"
+      "import": "./src/auto.ts"
     }
   },
   "files": ["dist"],
@@ -31,14 +27,12 @@
     "access": "public"
   },
   "scripts": {
-    "build:bundle": "node scripts/bundle.mjs",
-    "build": "pnpm run build:bundle && tsc",
-    "typecheck": "pnpm run build:bundle && tsc --noEmit",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2",
     "typescript": "^5.3.3",
     "vitest": "^2.0.0"
   }
