@@ -310,6 +310,45 @@ scenetest({ devPanel: true })
 
 ---
 
+## Security Considerations
+
+Scenetest is **development-only tooling** designed to run in trusted environments. Understanding its security model helps you use it safely.
+
+### Dev Mode Security Model
+
+In development mode, Scenetest:
+
+- **Executes assertion code with full privileges**: Code inside `assert()` server functions runs in the Vite dev server context with access to Node.js APIs, file system, and any configured server functions.
+- **Injects a dev panel into your app**: The floating panel renders assertion data including descriptions, file paths, and context objects.
+- **Exposes window globals**: Functions like `window.__scenetest_report` are available for the dev panel to communicate with.
+
+**This is safe for normal development** because you're running your own trusted code. However:
+
+- **Do not run untrusted code** through Scenetest assertions
+- **Do not expose dev mode** to untrusted users or networks
+- **Treat dev mode like any other local development server** - it's not hardened for hostile environments
+
+### Production Safety
+
+**Production builds are safe by design.** The Vite plugin completely strips all Scenetest code:
+
+- All imports from `scenetest-*` packages are removed
+- All `should()`, `failed()`, `assert()`, and hook calls are removed
+- No dev panel is injected
+- No window globals are exposed
+- Zero runtime overhead - the code literally doesn't exist in the bundle
+
+You can verify this by inspecting your production build output.
+
+### Best Practices
+
+1. **Keep Scenetest in devDependencies** - It should never be bundled for production
+2. **Use environment checks** - The plugin automatically detects build mode
+3. **Don't put secrets in assertions** - Even though they're stripped, avoid hardcoding sensitive data
+4. **Review assertion code** - Treat it like any other code in your codebase
+
+---
+
 ## API Reference
 
 ### `should(description, condition, context?)`
