@@ -106,38 +106,66 @@ export function computeFlakyStats(description: string): FlakyStats | null {
 /**
  * Compute resolution statistics for failures
  * Tracks when failures are "resolved" by a subsequent pass
+ * Consecutive failures before a pass count as "repeats" - only the last one is "resolved"
  */
 export function computeResolutionStats(description: string): ResolutionStats | null {
   const history = assertionHistory.get(description)
   if (!history || history.length === 0) return null
 
   const resolvedFailures: ResolutionInfo[] = []
+  let repeatFailures = 0
   let unresolvedFailures = 0
 
   // Sort by index to ensure chronological order
   const sorted = [...history].sort((a, b) => a.index - b.index)
 
-  for (let i = 0; i < sorted.length; i++) {
+  let i = 0
+  while (i < sorted.length) {
     const entry = sorted[i]
     if (!entry.result) {
-      // This is a failure, look for the next pass to calculate resolution time
-      let resolved = false
+      // Start of a failure sequence - find all consecutive failures
+      let consecutiveFailCount = 1
+      let lastFailIndex = i
+      let lastFailEntry = entry
+
+      // Count consecutive failures
       for (let j = i + 1; j < sorted.length; j++) {
+        if (!sorted[j].result) {
+          consecutiveFailCount++
+          lastFailIndex = j
+          lastFailEntry = sorted[j]
+        } else {
+          break
+        }
+      }
+
+      // Look for a pass after the failure sequence
+      let resolved = false
+      for (let j = lastFailIndex + 1; j < sorted.length; j++) {
         if (sorted[j].result) {
-          // Found a pass that resolves this failure
-          const duration = sorted[j].timestamp - entry.timestamp
+          // Found a pass that resolves the failure sequence
+          // Only count the LAST failure as resolved, others are repeats
+          const duration = sorted[j].timestamp - lastFailEntry.timestamp
           resolvedFailures.push({
             duration,
-            failTimestamp: entry.timestamp,
+            failTimestamp: lastFailEntry.timestamp,
             passTimestamp: sorted[j].timestamp,
           })
+          repeatFailures += consecutiveFailCount - 1
           resolved = true
           break
         }
       }
+
       if (!resolved) {
-        unresolvedFailures++
+        // All failures in this sequence are unresolved
+        unresolvedFailures += consecutiveFailCount
       }
+
+      // Skip past the consecutive failures we just processed
+      i = lastFailIndex + 1
+    } else {
+      i++
     }
   }
 
@@ -175,6 +203,7 @@ export function computeResolutionStats(description: string): ResolutionStats | n
 
       return {
         resolvedFailures,
+        repeatFailures,
         unresolvedFailures,
         minDuration: normalRange.length > 0 ? Math.min(...normalRange.map(r => r.duration)) : minDuration,
         maxDuration: normalRange.length > 0 ? Math.max(...normalRange.map(r => r.duration)) : maxDuration,
@@ -186,6 +215,7 @@ export function computeResolutionStats(description: string): ResolutionStats | n
       // Not enough data for outlier detection
       return {
         resolvedFailures,
+        repeatFailures,
         unresolvedFailures,
         minDuration,
         maxDuration,
@@ -198,6 +228,7 @@ export function computeResolutionStats(description: string): ResolutionStats | n
 
   return {
     resolvedFailures,
+    repeatFailures,
     unresolvedFailures,
     minDuration,
     maxDuration,
@@ -221,24 +252,31 @@ function formatDuration(ms: number): string {
 }
 
 /**
- * Format resolution summary with outlier information
+ * Format resolution summary with repeat and outlier information
  * Examples:
- * - "1 failure resolved in 5ms"
- * - "4 failures, resolved in 3-9ms"
- * - "4 failures, resolved in 3-9ms with one outlier 140ms"
+ * - "1 resolved in 5ms"
+ * - "2 repeat + 1 resolved in 1.8s"
+ * - "3 resolved in 3-9ms"
+ * - "2 repeat + 2 resolved in 3-9ms, one outlier 140ms"
  */
 export function formatResolutionSummary(stats: ResolutionStats | null): string {
   if (!stats) return ''
 
-  const { resolvedFailures, outliers, minDuration, maxDuration } = stats
-  const count = resolvedFailures.length
+  const { resolvedFailures, repeatFailures, outliers, minDuration, maxDuration } = stats
+  const resolvedCount = resolvedFailures.length
 
-  if (count === 0) return ''
+  if (resolvedCount === 0) return ''
 
-  let result = ''
+  const parts: string[] = []
 
-  if (count === 1) {
-    result = `1 failure resolved in ${formatDuration(resolvedFailures[0].duration)}`
+  // Add repeat count if any
+  if (repeatFailures > 0) {
+    parts.push(`${repeatFailures} repeat`)
+  }
+
+  // Add resolved count with duration
+  if (resolvedCount === 1) {
+    parts.push(`${resolvedCount} resolved in ${formatDuration(resolvedFailures[0].duration)}`)
   } else {
     // Use normal range for min/max if we have outliers
     const rangeMin = stats.normalRange.length > 0
@@ -249,18 +287,20 @@ export function formatResolutionSummary(stats: ResolutionStats | null): string {
       : maxDuration!
 
     if (rangeMin === rangeMax) {
-      result = `${count} failures, resolved in ${formatDuration(rangeMin)}`
+      parts.push(`${resolvedCount} resolved in ${formatDuration(rangeMin)}`)
     } else {
-      result = `${count} failures, resolved in ${formatDuration(rangeMin)}-${formatDuration(rangeMax)}`
+      parts.push(`${resolvedCount} resolved in ${formatDuration(rangeMin)}-${formatDuration(rangeMax)}`)
     }
   }
 
+  let result = parts.join(' + ')
+
   // Add outlier info
   if (outliers.length === 1) {
-    result += ` with one outlier ${formatDuration(outliers[0].duration)}`
+    result += `, one outlier ${formatDuration(outliers[0].duration)}`
   } else if (outliers.length > 1) {
     const outlierDurations = outliers.map(o => formatDuration(o.duration)).join(', ')
-    result += ` with ${outliers.length} outliers (${outlierDurations})`
+    result += `, ${outliers.length} outliers (${outlierDurations})`
   }
 
   return result

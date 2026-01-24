@@ -166,6 +166,7 @@ describe('computeResolutionStats', () => {
     const stats = computeResolutionStats('test')
     expect(stats?.resolvedFailures).toHaveLength(1)
     expect(stats?.resolvedFailures[0].duration).toBe(50)
+    expect(stats?.repeatFailures).toBe(0)
     expect(stats?.unresolvedFailures).toBe(0)
   })
 
@@ -176,6 +177,41 @@ describe('computeResolutionStats', () => {
     const stats = computeResolutionStats('test')
     expect(stats?.resolvedFailures).toHaveLength(0)
     expect(stats?.unresolvedFailures).toBe(1)
+  })
+
+  it('counts consecutive failures as repeats', () => {
+    // pass, pass, fail, fail, fail, pass, pass
+    // Only the LAST fail before the pass counts as resolved
+    // The other 2 fails are "repeats"
+    trackAssertion(createAssertion('test', true, 1000), 0)
+    trackAssertion(createAssertion('test', true, 2000), 1)
+    trackAssertion(createAssertion('test', false, 3000), 2)
+    trackAssertion(createAssertion('test', false, 3100), 3)
+    trackAssertion(createAssertion('test', false, 3200), 4)
+    trackAssertion(createAssertion('test', true, 5000), 5) // 1800ms after last fail
+    trackAssertion(createAssertion('test', true, 6000), 6)
+
+    const stats = computeResolutionStats('test')
+    expect(stats?.resolvedFailures).toHaveLength(1)
+    expect(stats?.resolvedFailures[0].duration).toBe(1800) // from last fail to pass
+    expect(stats?.repeatFailures).toBe(2) // 2 earlier fails in the sequence
+    expect(stats?.unresolvedFailures).toBe(0)
+  })
+
+  it('handles multiple failure sequences with repeats', () => {
+    // fail, fail, pass, fail, pass
+    // First sequence: 2 fails, 1 repeat, 1 resolved
+    // Second sequence: 1 fail, 0 repeat, 1 resolved
+    trackAssertion(createAssertion('test', false, 1000), 0)
+    trackAssertion(createAssertion('test', false, 1100), 1)
+    trackAssertion(createAssertion('test', true, 2000), 2) // 900ms after last fail
+    trackAssertion(createAssertion('test', false, 3000), 3)
+    trackAssertion(createAssertion('test', true, 3500), 4) // 500ms after fail
+
+    const stats = computeResolutionStats('test')
+    expect(stats?.resolvedFailures).toHaveLength(2)
+    expect(stats?.repeatFailures).toBe(1)
+    expect(stats?.unresolvedFailures).toBe(0)
   })
 
   it('calculates multiple resolved failures', () => {
@@ -189,6 +225,7 @@ describe('computeResolutionStats', () => {
 
     const stats = computeResolutionStats('test')
     expect(stats?.resolvedFailures).toHaveLength(3)
+    expect(stats?.repeatFailures).toBe(0)
     expect(stats?.minDuration).toBe(50)
     expect(stats?.maxDuration).toBe(100)
   })
@@ -218,9 +255,10 @@ describe('formatResolutionSummary', () => {
     expect(formatResolutionSummary(null)).toBe('')
   })
 
-  it('formats single failure', () => {
+  it('formats single resolved failure', () => {
     const result = formatResolutionSummary({
       resolvedFailures: [{ duration: 5, failTimestamp: 0, passTimestamp: 5 }],
+      repeatFailures: 0,
       unresolvedFailures: 0,
       minDuration: 5,
       maxDuration: 5,
@@ -228,15 +266,30 @@ describe('formatResolutionSummary', () => {
       outliers: [],
       normalRange: [{ duration: 5, failTimestamp: 0, passTimestamp: 5 }],
     })
-    expect(result).toBe('1 failure resolved in 5ms')
+    expect(result).toBe('1 resolved in 5ms')
   })
 
-  it('formats multiple failures with range', () => {
+  it('formats with repeats', () => {
+    const result = formatResolutionSummary({
+      resolvedFailures: [{ duration: 1800, failTimestamp: 3200, passTimestamp: 5000 }],
+      repeatFailures: 2,
+      unresolvedFailures: 0,
+      minDuration: 1800,
+      maxDuration: 1800,
+      outlierThreshold: null,
+      outliers: [],
+      normalRange: [{ duration: 1800, failTimestamp: 3200, passTimestamp: 5000 }],
+    })
+    expect(result).toBe('2 repeat + 1 resolved in 1.8s')
+  })
+
+  it('formats multiple resolved with range', () => {
     const result = formatResolutionSummary({
       resolvedFailures: [
         { duration: 3, failTimestamp: 0, passTimestamp: 3 },
         { duration: 9, failTimestamp: 100, passTimestamp: 109 },
       ],
+      repeatFailures: 0,
       unresolvedFailures: 0,
       minDuration: 3,
       maxDuration: 9,
@@ -247,7 +300,27 @@ describe('formatResolutionSummary', () => {
         { duration: 9, failTimestamp: 100, passTimestamp: 109 },
       ],
     })
-    expect(result).toBe('2 failures, resolved in 3ms-9ms')
+    expect(result).toBe('2 resolved in 3ms-9ms')
+  })
+
+  it('formats with repeats and range', () => {
+    const result = formatResolutionSummary({
+      resolvedFailures: [
+        { duration: 900, failTimestamp: 1100, passTimestamp: 2000 },
+        { duration: 500, failTimestamp: 3000, passTimestamp: 3500 },
+      ],
+      repeatFailures: 1,
+      unresolvedFailures: 0,
+      minDuration: 500,
+      maxDuration: 900,
+      outlierThreshold: null,
+      outliers: [],
+      normalRange: [
+        { duration: 900, failTimestamp: 1100, passTimestamp: 2000 },
+        { duration: 500, failTimestamp: 3000, passTimestamp: 3500 },
+      ],
+    })
+    expect(result).toBe('1 repeat + 2 resolved in 500ms-900ms')
   })
 
   it('formats with one outlier', () => {
@@ -257,6 +330,7 @@ describe('formatResolutionSummary', () => {
         { duration: 9, failTimestamp: 100, passTimestamp: 109 },
         { duration: 140, failTimestamp: 200, passTimestamp: 340 },
       ],
+      repeatFailures: 0,
       unresolvedFailures: 0,
       minDuration: 3,
       maxDuration: 9,
@@ -267,7 +341,7 @@ describe('formatResolutionSummary', () => {
         { duration: 9, failTimestamp: 100, passTimestamp: 109 },
       ],
     })
-    expect(result).toBe('3 failures, resolved in 3ms-9ms with one outlier 140ms')
+    expect(result).toBe('3 resolved in 3ms-9ms, one outlier 140ms')
   })
 })
 

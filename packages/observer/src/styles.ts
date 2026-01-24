@@ -656,10 +656,10 @@ body {
 .location-main {
   flex: 1;
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 8px 16px;
+  gap: 16px;
+  min-width: 0;
 }
 .location-info {
   display: flex;
@@ -672,12 +672,20 @@ body {
   color: #a0a0ff;
   font-weight: 500;
 }
+.location-desc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .location-desc {
   font-size: 13px;
   color: #e0e0e0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .location-stats {
   display: flex;
@@ -863,24 +871,25 @@ body {
   color: #f87171;
 }
 
-/* Flaky test info styles */
+/* Flaky test info styles - inline in location row */
 .flaky-info {
-  width: 100%;
-  font-size: 11px;
-  padding: 6px 10px;
-  margin-top: 4px;
-  border-radius: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
   font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .flaky-info.failing {
   background: #3a1a1a;
   color: #f87171;
-  border-left: 2px solid #f87171;
 }
 .flaky-info.resolved {
   background: #1a3a1a;
   color: #4ade80;
-  border-left: 2px solid #4ade80;
 }
 
 .flaky-status {
