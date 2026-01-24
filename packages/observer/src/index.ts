@@ -3,6 +3,14 @@
  * Real-time assertion panel for scenetest
  */
 
+// Build-time constants injected by esbuild (only available in bundled script)
+declare const __SCENETEST_VERSION__: string | undefined
+declare const __SCENETEST_GIT_HASH__: string | undefined
+
+// Fallback values for when running unbundled
+const VERSION = typeof __SCENETEST_VERSION__ !== 'undefined' ? __SCENETEST_VERSION__ : 'dev'
+const GIT_HASH = typeof __SCENETEST_GIT_HASH__ !== 'undefined' ? __SCENETEST_GIT_HASH__ : 'local'
+
 import type { AssertionResult, ViewMode } from './types.js'
 import {
   assertions,
@@ -149,6 +157,12 @@ export function initObserver(): void {
   }
 
   window.__scenetest_panel = true
+
+  // Log version info
+  console.log(
+    `%c🎬 scenetest dev panel v${VERSION} (${GIT_HASH})`,
+    'color: #a78bfa; font-weight: bold'
+  )
 
   // Make functions available globally for onclick handlers
   window.__scenetest_openInEditor = openInEditor
