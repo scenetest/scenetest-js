@@ -2,27 +2,16 @@ import { Link } from '@tanstack/react-router'
 
 declare const __GIT_COMMIT__: string
 
-interface FooterProps {
-  showFaqLink?: boolean
-  showCommitHash?: boolean
-}
-
-export function Footer({ showFaqLink = true, showCommitHash = true }: FooterProps) {
+export function Footer() {
   return (
     <footer>
-      {showFaqLink && (
-        <>
-          <Link to="/faq">FAQ</Link> &mdash; comparisons with page.evaluate, Vitest, etc.
-        </>
-      )}
+      <Link to="/faq">FAQ</Link> &mdash; comparisons with page.evaluate, Vitest, etc.
+      <br />
+      <Link to="/guides">Guides</Link> &ndash; writing good specs, casting, assertions
       <p className="copyright">
         <span className="footer-logo">🎬</span> &copy; m snook 2026 &bull;{' '}
         <a href="https://github.com/scenetest/scenetest-js">github</a> &bull;{' '}
-        {showCommitHash && (
-          <>
-            <a href={`https://github.com/scenetest/scenetest-js/commit/${__GIT_COMMIT__}`}>{__GIT_COMMIT__}</a> &bull;{' '}
-          </>
-        )}
+        <a href={`https://github.com/scenetest/scenetest-js/commit/${__GIT_COMMIT__}`}>{__GIT_COMMIT__}</a> &bull;{' '}
         <a href="https://bsky.app/profile/msnook.xyz">contact</a>
       </p>
     </footer>

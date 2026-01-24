@@ -16,7 +16,7 @@ function FAQ() {
       <MarkdownSection src="/content/faq/vs-vitest.md" />
       <MarkdownSection src="/content/faq/vs-cypress.md" />
 
-      <Footer showFaqLink={false} />
+      <Footer />
     </article>
   )
 }

@@ -13,7 +13,7 @@ function WritingSpecs() {
 
       <MarkdownSection src="/content/guides/writing-specs.md" />
 
-      <Footer showCommitHash={false} />
+      <Footer />
     </article>
   )
 }
