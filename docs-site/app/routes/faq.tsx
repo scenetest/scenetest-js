@@ -21,10 +21,8 @@ function FAQ() {
         <p className="copyright">
           <span className="footer-logo">🎬</span> &copy; m snook 2026 &bull;{' '}
           <a href="https://github.com/scenetest/scenetest-js">github</a> &bull;{' '}
-          <a href="https://bsky.app/profile/msnook.xyz">contact</a> &bull;{' '}
-          <a href={`https://github.com/scenetest/scenetest-js/commit/${__GIT_COMMIT__}`}>
-            <code>{__GIT_COMMIT__}</code>
-          </a>
+          <a href={`https://github.com/scenetest/scenetest-js/commit/${__GIT_COMMIT__}`}>{__GIT_COMMIT__}</a> &bull;{' '}
+          <a href="https://bsky.app/profile/msnook.xyz">contact</a>
         </p>
       </footer>
     </article>
