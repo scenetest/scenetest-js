@@ -18,6 +18,7 @@ import {
   setSequenceLocation,
   clearAll,
   panel,
+  toggleGroupCollapsed,
 } from './state.js'
 import { filterItems, openInEditor } from './utils.js'
 import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners } from './render.js'
@@ -74,6 +75,9 @@ function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): voi
       } else {
         backToLocationView()
       }
+    },
+    toggleCollapsed: (groupId) => {
+      toggleGroupCollapsed(groupId)
     },
   })
 }

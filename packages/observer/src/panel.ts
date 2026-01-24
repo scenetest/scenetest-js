@@ -14,6 +14,7 @@ import {
   setListEl,
   setFilter,
   clearAll,
+  toggleGroupCollapsed,
 } from './state.js'
 import { filterItems } from './utils.js'
 import { renderPanelGroup, attachEventListeners } from './render.js'
@@ -88,6 +89,13 @@ export function createPanel(): void {
 
   setPanel(panelEl)
   setListEl(panelEl.querySelector('#scenetest-list')!)
+
+  // Attach event listeners ONCE for the list content (uses event delegation)
+  attachEventListeners(panelEl.querySelector('#scenetest-list') as HTMLElement, {
+    openFullscreenToGroup: (groupId) => openFullscreen(groupId),
+    openInEditor: (location) => openInEditor(location as any),
+    toggleCollapsed: (groupId) => toggleGroupCollapsed(groupId),
+  })
 
   // Toggle collapse
   panelEl.querySelector('#scenetest-header')?.addEventListener('click', (e) => {
@@ -213,10 +221,4 @@ export function updatePanel(): void {
     .map(g => renderPanelGroup(g))
     .reverse()
     .join('')
-
-  // Attach event listeners for the rendered content
-  attachEventListeners(listEl, {
-    openFullscreenToGroup: (groupId) => openFullscreen(groupId),
-    openInEditor: (location) => openInEditor(location as any),
-  })
 }
