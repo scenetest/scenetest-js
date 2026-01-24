@@ -5,6 +5,7 @@
 import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
 import { getHistoryStats, formatHistorySummary } from './history.js'
 import { escapeHtml, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
+import { getNoteInfo } from './audio.js'
 
 /**
  * Render a single assertion item for the main panel
@@ -16,6 +17,7 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
     : a.location
       ? escapeHtml(formatLocation(a.location))
       : ''
+  const noteInfo = getNoteInfo(a.description)
 
   return `
     <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
@@ -26,6 +28,7 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
         <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
       </div>
+      <span class="scenetest-note ${a.result ? 'pass' : 'fail'}" title="Musical note for this assertion">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }
@@ -90,6 +93,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
   const histStats = getHistoryStats(a.description, a._index ?? 0)
   const histSummary = formatHistorySummary(histStats)
   const locJson = a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'
+  const noteInfo = getNoteInfo(a.description)
 
   return `
     <div class="item ${a.result ? 'pass' : 'fail'}">
@@ -101,6 +105,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
         ${a.context ? `<div class="context">${escapeHtml(formatContext(a.context))}</div>` : ''}
         ${a.stack && !a.context ? `<div class="stack">${escapeHtml(a.stack.split('\n').slice(0, 3).join('\n'))}</div>` : ''}
       </div>
+      <span class="note-badge ${a.result ? 'pass' : 'fail'}" title="Musical note: ${noteInfo.noteName}">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }

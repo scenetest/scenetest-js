@@ -283,6 +283,52 @@ export const panelStyles = `
   margin-top: 2px;
   font-style: italic;
 }
+/* Audio controls */
+.scenetest-audio-controls {
+  display: flex;
+}
+.scenetest-audio-btn {
+  min-width: 32px;
+  padding: 4px 8px;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.scenetest-audio-btn:hover {
+  background: #3a3a5a;
+}
+.scenetest-audio-btn.muted {
+  opacity: 0.5;
+}
+.scenetest-audio-btn.playing {
+  background: #2a4a2a;
+  color: #4ade80;
+  animation: scenetest-pulse 1s ease-in-out infinite;
+}
+@keyframes scenetest-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+/* Note badge for musical indicators */
+.scenetest-note {
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.scenetest-note:hover {
+  opacity: 1;
+}
+.scenetest-note.pass {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+.scenetest-note.fail {
+  background: #3a1a1a;
+  color: #f87171;
+}
 `
 
 export const fullscreenStyles = `
@@ -895,5 +941,55 @@ body {
 }
 .back-btn:hover {
   text-decoration: underline;
+}
+
+/* Audio controls */
+#audio-controls {
+  display: flex;
+}
+.audio-btn {
+  min-width: 40px;
+  padding: 8px 12px;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.audio-btn:hover {
+  background: #3a3a5a;
+}
+.audio-btn.muted {
+  opacity: 0.5;
+}
+.audio-btn.playing {
+  background: #2a4a2a;
+  color: #4ade80;
+  animation: audio-pulse 1s ease-in-out infinite;
+}
+@keyframes audio-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+/* Note badge for musical indicators */
+.note-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all 0.15s;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.note-badge:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+.note-badge.pass {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+.note-badge.fail {
+  background: #3a1a1a;
+  color: #f87171;
 }
 `
