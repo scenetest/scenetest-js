@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { escapeHtml, formatContext, formatLocation, formatLocationShort } from '../utils.js'
+import { escapeHtml, formatContext, formatLocation } from '../utils.js'
 import {
   renderPanelItem,
   renderPanelItemWithTime,
@@ -154,31 +154,6 @@ function createLocationGroup(overrides: Partial<LocationGroup> = {}): LocationGr
     lastResult: true,
     lastTimestamp: Date.now(),
     ...overrides
-  }
-}
-
-/**
- * Helper to verify XSS is properly escaped in rendered HTML
- *
- * The key security check is that < and > in the original payload
- * are converted to &lt; and &gt; in the output, preventing the
- * browser from parsing them as HTML.
- */
-function assertNoUnescapedHtml(html: string, originalPayload: string): void {
-  // Count < and > in original payload
-  const originalLeftCount = (originalPayload.match(/</g) || []).length
-  const originalRightCount = (originalPayload.match(/>/g) || []).length
-
-  // In the output, we should have at least that many escaped versions
-  // (there may be more from the template itself)
-  const escapedLeftCount = (html.match(/&lt;/g) || []).length
-  const escapedRightCount = (html.match(/&gt;/g) || []).length
-
-  if (originalLeftCount > 0) {
-    expect(escapedLeftCount).toBeGreaterThanOrEqual(originalLeftCount)
-  }
-  if (originalRightCount > 0) {
-    expect(escapedRightCount).toBeGreaterThanOrEqual(originalRightCount)
   }
 }
 
