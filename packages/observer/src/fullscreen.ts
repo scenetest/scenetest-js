@@ -2,7 +2,7 @@
  * Fullscreen window management
  */
 
-import type { FilterMode, ViewMode } from './types.js'
+import type { FilterMode, ViewMode, AssertionResult } from './types.js'
 import {
   groups,
   passCount,
@@ -402,13 +402,14 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
   }
 
   listEl.innerHTML = `
-    ${renderPianoRoll(filteredLocations)}
+    ${renderPianoRoll(filteredLocations, assertions)}
     <div class="location-list">
       ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
     </div>
   `
 
-  // Set up click handlers for piano bars and note badges
+  // Set up click handlers for piano roll columns and note badges
+  setupPianoRollHandlers(_doc, listEl)
   setupNoteClickHandlers(_doc, listEl)
 }
 
@@ -545,6 +546,90 @@ function setupChordHoverHandlers(doc: Document, listEl: HTMLElement): void {
       tooltipEl.remove()
       tooltipEl = null
     }
+  })
+}
+
+/**
+ * Set up click handlers for the piano roll columns
+ */
+function setupPianoRollHandlers(_doc: Document, listEl: HTMLElement): void {
+  const pianoRoll = listEl.querySelector('.piano-roll') as HTMLElement
+  if (!pianoRoll) return
+
+  // Parse chord data
+  const chordDataStr = pianoRoll.dataset.chords
+  if (!chordDataStr) return
+
+  let chordData: { timestamp: number; notes: { description: string; result: boolean }[] }[]
+  try {
+    chordData = JSON.parse(chordDataStr)
+  } catch {
+    return
+  }
+
+  const cells = pianoRoll.querySelectorAll('.piano-cell')
+  const markers = pianoRoll.querySelectorAll('.piano-time-marker')
+
+  // Helper to highlight a column
+  const highlightColumn = (colIdx: number) => {
+    pianoRoll.classList.add('col-hover')
+    cells.forEach(cell => {
+      const cellCol = parseInt((cell as HTMLElement).dataset.col || '-1', 10)
+      cell.classList.toggle('col-active', cellCol === colIdx)
+    })
+  }
+
+  // Helper to clear column highlight
+  const clearHighlight = () => {
+    pianoRoll.classList.remove('col-hover')
+    cells.forEach(cell => cell.classList.remove('col-active'))
+  }
+
+  // Helper to play a chord
+  const playColumn = (colIdx: number) => {
+    if (colIdx < 0 || colIdx >= chordData.length) return
+
+    const chord = chordData[colIdx]
+    initAudio()
+
+    // Create assertion-like objects for playGroupChord
+    const assertionLike: AssertionResult[] = chord.notes.map(n => ({
+      type: (n.result ? 'pass' : 'fail') as 'pass' | 'fail',
+      description: n.description,
+      result: n.result,
+      timestamp: chord.timestamp,
+    }))
+
+    playGroupChord(assertionLike)
+
+    // Visual feedback on marker
+    const marker = markers[colIdx]
+    if (marker) {
+      marker.classList.add('playing')
+      setTimeout(() => marker.classList.remove('playing'), 300)
+    }
+  }
+
+  // Add hover and click handlers to cells
+  cells.forEach(cell => {
+    const colIdx = parseInt((cell as HTMLElement).dataset.col || '-1', 10)
+
+    cell.addEventListener('mouseenter', () => highlightColumn(colIdx))
+    cell.addEventListener('mouseleave', clearHighlight)
+    cell.addEventListener('click', (e) => {
+      e.stopPropagation()
+      playColumn(colIdx)
+    })
+  })
+
+  // Add hover and click handlers to timeline markers
+  markers.forEach((marker, idx) => {
+    marker.addEventListener('mouseenter', () => highlightColumn(idx))
+    marker.addEventListener('mouseleave', clearHighlight)
+    marker.addEventListener('click', (e) => {
+      e.stopPropagation()
+      playColumn(idx)
+    })
   })
 }
 
