@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter @scenetest/core build && pnpm --filter @scenetest/observer build && cd docs-site && NITRO_PRESET=vercel pnpm build && mkdir -p ../.vercel && cp -r .vercel/output ../.vercel/output",
-  "installCommand": "pnpm install"
+  "buildCommand": "cd .. && pnpm --filter @scenetest/core build && pnpm --filter @scenetest/observer build && cd docs-site && NITRO_PRESET=vercel pnpm build",
+  "installCommand": "cd .. && pnpm install"
 }
