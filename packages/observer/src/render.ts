@@ -464,6 +464,7 @@ export function attachEventListeners(
     showSequence?: (key: string) => void
     backToLocationView?: () => void
     setViewMode?: (mode: string) => void
+    toggleCollapsed?: (groupId: number) => void
   }
 ): void {
   const root = container instanceof Document ? container.body : container
@@ -537,6 +538,11 @@ export function attachEventListeners(
         const parent = actionEl.parentElement
         if (parent) {
           parent.classList.toggle('collapsed')
+          // Also update the state if a callback is provided
+          const groupId = parseInt(parent.dataset.groupId || '', 10)
+          if (!isNaN(groupId) && handlers.toggleCollapsed) {
+            handlers.toggleCollapsed(groupId)
+          }
         }
         break
       }

@@ -132,6 +132,13 @@ export function expandAllGroups(): void {
   }
 }
 
+export function toggleGroupCollapsed(groupId: number): void {
+  const group = groups.find(g => g.id === groupId)
+  if (group) {
+    group.collapsed = !group.collapsed
+  }
+}
+
 // Grouping state
 export const GROUP_THRESHOLD_MS = 50
 export let pendingGroup: AssertionGroup | null = null
