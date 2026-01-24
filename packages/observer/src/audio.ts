@@ -29,9 +29,8 @@ const PENTATONIC_FREQUENCIES = [
   523.25, 587.33, 659.25, 783.99, 880.00,
 ]
 
-// How much to detune failing notes (in Hz multiplier)
-// A semitone down is roughly 0.9439, we use 0.97 for subtle dissonance
-const FAIL_DETUNE_RATIO = 0.97
+// A semitone (half step) ratio - 2^(1/12) ≈ 1.0595
+const SEMITONE_RATIO = Math.pow(2, 1 / 12)
 
 // Note duration in seconds
 const NOTE_DURATION = 0.25
@@ -93,99 +92,51 @@ function getNoteIndex(description: string): number {
 /**
  * Get the frequency for an assertion
  */
-function getFrequency(description: string, passed: boolean): number {
+function getFrequency(description: string): number {
   const noteIndex = getNoteIndex(description)
-  let frequency = PENTATONIC_FREQUENCIES[noteIndex]
-
-  // Detune failing assertions for dissonance
-  if (!passed) {
-    frequency *= FAIL_DETUNE_RATIO
-  }
-
-  return frequency
+  return PENTATONIC_FREQUENCIES[noteIndex]
 }
 
 /**
  * Play a single note with envelope
  * Passing notes: clean sine wave
- * Failing notes: harsh sawtooth with pitch slide down ("sad trombone" effect)
+ * Failing notes: true note + half step away (subtle dissonance)
  */
 function playNote(frequency: number, passed: boolean, time?: number): void {
   if (!audioContext || muted) return
 
   const startTime = time ?? audioContext.currentTime
 
-  if (passed) {
-    // Clean, pleasant sine wave for passes
-    const oscillator = audioContext.createOscillator()
-    oscillator.type = 'sine'
-    oscillator.frequency.setValueAtTime(frequency, startTime)
+  // Clean, pleasant sine wave for the main note
+  const oscillator = audioContext.createOscillator()
+  oscillator.type = 'sine'
+  oscillator.frequency.setValueAtTime(frequency, startTime)
 
-    const gainNode = audioContext.createGain()
-    gainNode.gain.setValueAtTime(0, startTime)
-    gainNode.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
-    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
+  const gainNode = audioContext.createGain()
+  gainNode.gain.setValueAtTime(0, startTime)
+  gainNode.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
+  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-    oscillator.start(startTime)
-    oscillator.stop(startTime + NOTE_DURATION + 0.1)
-  } else {
-    // OFFENSIVE failure sound: harsh sawtooth with pitch slide down
-    const failDuration = 0.4 // Longer for more drama
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+  oscillator.start(startTime)
+  oscillator.stop(startTime + NOTE_DURATION + 0.1)
 
-    // Main harsh sawtooth oscillator
-    const osc1 = audioContext.createOscillator()
-    osc1.type = 'sawtooth'
-    osc1.frequency.setValueAtTime(frequency, startTime)
-    // Slide pitch down dramatically (sad trombone effect)
-    osc1.frequency.exponentialRampToValueAtTime(frequency * 0.5, startTime + failDuration)
+  if (!passed) {
+    // Add a second note a half step up - creates subtle "off" dissonance
+    const dissonantOsc = audioContext.createOscillator()
+    dissonantOsc.type = 'sine'
+    dissonantOsc.frequency.setValueAtTime(frequency * SEMITONE_RATIO, startTime)
 
-    // Second oscillator slightly detuned for beating/chorus effect
-    const osc2 = audioContext.createOscillator()
-    osc2.type = 'sawtooth'
-    osc2.frequency.setValueAtTime(frequency * 1.02, startTime) // 2% sharp
-    osc2.frequency.exponentialRampToValueAtTime(frequency * 0.51, startTime + failDuration)
+    const dissonantGain = audioContext.createGain()
+    dissonantGain.gain.setValueAtTime(0, startTime)
+    dissonantGain.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
+    dissonantGain.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
 
-    // Third oscillator for extra grit (square wave, lower octave)
-    const osc3 = audioContext.createOscillator()
-    osc3.type = 'square'
-    osc3.frequency.setValueAtTime(frequency * 0.5, startTime) // One octave down
-    osc3.frequency.exponentialRampToValueAtTime(frequency * 0.25, startTime + failDuration)
-
-    // Gain envelope - louder attack, quick decay
-    const gainNode = audioContext.createGain()
-    gainNode.gain.setValueAtTime(0, startTime)
-    gainNode.gain.linearRampToValueAtTime(volume * 1.2, startTime + 0.01) // Quick attack
-    gainNode.gain.exponentialRampToValueAtTime(volume * 0.8, startTime + 0.05)
-    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + failDuration)
-
-    // Fast, aggressive vibrato
-    const vibrato = audioContext.createOscillator()
-    vibrato.frequency.setValueAtTime(12, startTime) // 12 Hz - faster wobble
-    const vibratoGain = audioContext.createGain()
-    vibratoGain.gain.setValueAtTime(frequency * 0.05, startTime) // 5% pitch modulation
-    vibrato.connect(vibratoGain)
-    vibratoGain.connect(osc1.frequency)
-    vibratoGain.connect(osc2.frequency)
-
-    // Connect all oscillators
-    osc1.connect(gainNode)
-    osc2.connect(gainNode)
-    osc3.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-
-    // Start all
-    osc1.start(startTime)
-    osc2.start(startTime)
-    osc3.start(startTime)
-    vibrato.start(startTime)
-
-    // Stop all
-    osc1.stop(startTime + failDuration + 0.1)
-    osc2.stop(startTime + failDuration + 0.1)
-    osc3.stop(startTime + failDuration + 0.1)
-    vibrato.stop(startTime + failDuration + 0.1)
+    dissonantOsc.connect(dissonantGain)
+    dissonantGain.connect(audioContext.destination)
+    dissonantOsc.start(startTime)
+    dissonantOsc.stop(startTime + NOTE_DURATION + 0.1)
   }
 }
 
@@ -220,7 +171,7 @@ export function playAssertionSound(result: AssertionResult): void {
     audioContext.resume()
   }
 
-  const frequency = getFrequency(result.description, result.result)
+  const frequency = getFrequency(result.description)
   playNote(frequency, result.result)
 }
 
@@ -240,7 +191,7 @@ export function playGroupChord(results: AssertionResult[]): void {
   }
 
   const notes = results.map(r => ({
-    frequency: getFrequency(r.description, r.result),
+    frequency: getFrequency(r.description),
     passed: r.result,
   }))
 
@@ -393,5 +344,5 @@ export function getNoteInfo(description: string): { noteIndex: number; noteName:
 // Export for testing
 export const _test = {
   PENTATONIC_FREQUENCIES,
-  FAIL_DETUNE_RATIO,
+  SEMITONE_RATIO,
 }
