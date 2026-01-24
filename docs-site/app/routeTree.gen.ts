@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
-import { Route as GuidesWritingSpecsRouteImport } from './routes/guides/writing-specs'
+import { Route as GuidesWritingSceneSpecsRouteImport } from './routes/guides/writing-scene-specs'
+import { Route as GuidesWritingInlineAssertionsRouteImport } from './routes/guides/writing-inline-assertions'
+import { Route as GuidesLlmPromptRouteImport } from './routes/guides/llm-prompt'
 
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
@@ -29,43 +31,81 @@ const GuidesIndexRoute = GuidesIndexRouteImport.update({
   path: '/guides/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GuidesWritingSpecsRoute = GuidesWritingSpecsRouteImport.update({
-  id: '/guides/writing-specs',
-  path: '/guides/writing-specs',
+const GuidesWritingSceneSpecsRoute = GuidesWritingSceneSpecsRouteImport.update({
+  id: '/guides/writing-scene-specs',
+  path: '/guides/writing-scene-specs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesWritingInlineAssertionsRoute =
+  GuidesWritingInlineAssertionsRouteImport.update({
+    id: '/guides/writing-inline-assertions',
+    path: '/guides/writing-inline-assertions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const GuidesLlmPromptRoute = GuidesLlmPromptRouteImport.update({
+  id: '/guides/llm-prompt',
+  path: '/guides/llm-prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
-  '/guides/writing-specs': typeof GuidesWritingSpecsRoute
+  '/guides/llm-prompt': typeof GuidesLlmPromptRoute
+  '/guides/writing-inline-assertions': typeof GuidesWritingInlineAssertionsRoute
+  '/guides/writing-scene-specs': typeof GuidesWritingSceneSpecsRoute
   '/guides/': typeof GuidesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
-  '/guides/writing-specs': typeof GuidesWritingSpecsRoute
+  '/guides/llm-prompt': typeof GuidesLlmPromptRoute
+  '/guides/writing-inline-assertions': typeof GuidesWritingInlineAssertionsRoute
+  '/guides/writing-scene-specs': typeof GuidesWritingSceneSpecsRoute
   '/guides': typeof GuidesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
-  '/guides/writing-specs': typeof GuidesWritingSpecsRoute
+  '/guides/llm-prompt': typeof GuidesLlmPromptRoute
+  '/guides/writing-inline-assertions': typeof GuidesWritingInlineAssertionsRoute
+  '/guides/writing-scene-specs': typeof GuidesWritingSceneSpecsRoute
   '/guides/': typeof GuidesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/faq' | '/guides/writing-specs' | '/guides/'
+  fullPaths:
+    | '/'
+    | '/faq'
+    | '/guides/llm-prompt'
+    | '/guides/writing-inline-assertions'
+    | '/guides/writing-scene-specs'
+    | '/guides/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/faq' | '/guides/writing-specs' | '/guides'
-  id: '__root__' | '/' | '/faq' | '/guides/writing-specs' | '/guides/'
+  to:
+    | '/'
+    | '/faq'
+    | '/guides/llm-prompt'
+    | '/guides/writing-inline-assertions'
+    | '/guides/writing-scene-specs'
+    | '/guides'
+  id:
+    | '__root__'
+    | '/'
+    | '/faq'
+    | '/guides/llm-prompt'
+    | '/guides/writing-inline-assertions'
+    | '/guides/writing-scene-specs'
+    | '/guides/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqRoute: typeof FaqRoute
-  GuidesWritingSpecsRoute: typeof GuidesWritingSpecsRoute
+  GuidesLlmPromptRoute: typeof GuidesLlmPromptRoute
+  GuidesWritingInlineAssertionsRoute: typeof GuidesWritingInlineAssertionsRoute
+  GuidesWritingSceneSpecsRoute: typeof GuidesWritingSceneSpecsRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
 }
 
@@ -92,11 +132,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/guides/writing-specs': {
-      id: '/guides/writing-specs'
-      path: '/guides/writing-specs'
-      fullPath: '/guides/writing-specs'
-      preLoaderRoute: typeof GuidesWritingSpecsRouteImport
+    '/guides/writing-scene-specs': {
+      id: '/guides/writing-scene-specs'
+      path: '/guides/writing-scene-specs'
+      fullPath: '/guides/writing-scene-specs'
+      preLoaderRoute: typeof GuidesWritingSceneSpecsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/writing-inline-assertions': {
+      id: '/guides/writing-inline-assertions'
+      path: '/guides/writing-inline-assertions'
+      fullPath: '/guides/writing-inline-assertions'
+      preLoaderRoute: typeof GuidesWritingInlineAssertionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/llm-prompt': {
+      id: '/guides/llm-prompt'
+      path: '/guides/llm-prompt'
+      fullPath: '/guides/llm-prompt'
+      preLoaderRoute: typeof GuidesLlmPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -105,7 +159,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqRoute: FaqRoute,
-  GuidesWritingSpecsRoute: GuidesWritingSpecsRoute,
+  GuidesLlmPromptRoute: GuidesLlmPromptRoute,
+  GuidesWritingInlineAssertionsRoute: GuidesWritingInlineAssertionsRoute,
+  GuidesWritingSceneSpecsRoute: GuidesWritingSceneSpecsRoute,
   GuidesIndexRoute: GuidesIndexRoute,
 }
 export const routeTree = rootRouteImport
