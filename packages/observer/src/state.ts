@@ -9,7 +9,7 @@ export const assertions: AssertionResult[] = []
 export const groups: AssertionGroup[] = []
 export const assertionHistory = new Map<string, HistoryEntry[]>()
 
-// Location-based grouping (keyed by "file:line")
+// Location-based grouping (keyed by description)
 export const locationGroups = new Map<string, LocationGroup>()
 
 // Counts
@@ -78,10 +78,12 @@ export function setSequenceLocation(key: string | null): void {
 
 /**
  * Get the location key from an assertion result
+ * Uses description as key so each unique assertion is grouped separately.
+ * This works better than file:line in minified code where many calls
+ * end up on the same line.
  */
-export function getLocationKey(result: AssertionResult): string | null {
-  if (!result.location) return null
-  return `${result.location.file}:${result.location.line}`
+export function getLocationKey(result: AssertionResult): string {
+  return result.description
 }
 
 /**
@@ -89,7 +91,6 @@ export function getLocationKey(result: AssertionResult): string | null {
  */
 export function trackLocationGroup(result: AssertionResult, index: number): void {
   const key = getLocationKey(result)
-  if (!key || !result.location) return
 
   let group = locationGroups.get(key)
   if (!group) {
@@ -104,8 +105,10 @@ export function trackLocationGroup(result: AssertionResult, index: number): void
     locationGroups.set(key, group)
   }
 
-  // Update group with latest info
-  group.description = result.description
+  // Update group with latest info (location might change if same description used in different places)
+  if (result.location) {
+    group.location = result.location
+  }
   group.lastResult = result.result
   group.lastTimestamp = result.timestamp
   group.entries.push({
