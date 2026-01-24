@@ -7,9 +7,19 @@ export const Route = createFileRoute('/guides/')({
 
 const guides = [
   {
-    slug: 'writing-specs',
-    title: 'Writing Specs',
-    description: 'Learn the philosophy and best practices for writing scene specs and inline assertions with Scenetest.',
+    slug: 'writing-scene-specs',
+    title: 'Writing Scene Specs',
+    description: 'Learn how to write scene specs that describe user journeys and orchestrate browser interactions.',
+  },
+  {
+    slug: 'writing-inline-assertions',
+    title: 'Writing Inline Assertions',
+    description: 'Use should(), failed(), and assert() to verify component state from inside your application code.',
+  },
+  {
+    slug: 'llm-prompt',
+    title: 'Using AI to Write Specs',
+    description: 'A copyable prompt for using LLMs to convert natural language test descriptions into scene specs.',
   },
 ]
 
