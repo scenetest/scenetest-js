@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { CodeBlock } from '../components/CodeBlock'
 import { useTestAssertions } from '../useTestAssertions'
 
 export const Route = createFileRoute('/')({
@@ -60,7 +61,7 @@ function Home() {
         about nearly every layer of an application in one place.
       </p>
 
-      <pre><code className="language-typescript">{`// in your UI component
+      <CodeBlock>{`// in your UI component
 const post = usePost(id)
 const form = usePostForm(post)
 // useTestEffect wraps test code that gets stripped in production
@@ -78,7 +79,7 @@ useTestEffect(() => {
     // passing data from react-land to the server fn
     () => postsCollection.get(id)
   )
-}, [form.isSubmitting, post.title])`}</code></pre>
+}, [form.isSubmitting, post.title])`}</CodeBlock>
 
       <h2>Scenes and Inline Assertions</h2>
 
@@ -91,7 +92,7 @@ useTestEffect(() => {
         features are implemented.
       </p>
 
-      <pre><code className="language-typescript">{`// in scenetest/profile-update.scene.ts
+      <CodeBlock>{`// in scenetest/profile-update.scene.ts
 scene('User updates their profile', async ([user]) => {
   await user.goto('/profile')
   await user.get('label[name=Name]').cousin('input').fill('New Name')
@@ -100,7 +101,7 @@ scene('User updates their profile', async ([user]) => {
           .then(button => button.click())
   await user.read('success!')
   // That's it. All the assertions fired automatically.
-})`}</code></pre>
+})`}</CodeBlock>
 
       <p>
         <strong>Inline Assertions</strong> are test statements that live inside your application
@@ -110,7 +111,7 @@ scene('User updates their profile', async ([user]) => {
         Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useTestEffect</code>.
       </p>
 
-      <pre><code className="language-typescript">{`import { should, failed, assert, useTestEffect } from '@scenetest/react'
+      <CodeBlock>{`import { should, failed, assert, useTestEffect } from '@scenetest/react'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -132,7 +133,7 @@ export function ProfileForm({ userId }) {
 
   return !profile ? <CreateProfileForm />
     : <EditProfileForm profile={profile} />
-}`}</code></pre>
+}`}</CodeBlock>
 
       <p>
         Moving Assertions into the application code means they're type-safe out of the box,
@@ -162,7 +163,7 @@ export function ProfileForm({ userId }) {
         out where we can compare it.
       </p>
 
-      <pre><code className="language-typescript">{`// ❌ "reverse server action" approach
+      <CodeBlock>{`// ❌ "reverse server action" approach
 const localDeck = await page.evaluate((lang) => {
   // 🙅❌💀🤧
   const profileStore = window.__profileStore
@@ -178,7 +179,7 @@ expect({
 }).toMatch({
   cards: localDeck.cards,
   updated_string: localDeck.updated_string,
-})`}</code></pre>
+})`}</CodeBlock>
 
       <p>
         I love the multi-context assertion capabilities here, but this approach to getting data
@@ -188,7 +189,7 @@ expect({
         after the mutation we're trying to test.
       </p>
 
-      <pre><code className="language-typescript">{`// ✅ server assertion triggered after a mutation
+      <CodeBlock>{`// ✅ server assertion triggered after a mutation
 onSettled: (data) => {
   assert(
     'New deck should initialise the same',
@@ -208,7 +209,7 @@ onSettled: (data) => {
       localDb: localDb.profileStore.getDeck(data.lang)
     })
   )
-}`}</code></pre>
+}`}</CodeBlock>
 
       <p>
         For me, this feels a lot more natural. The engineer who wrote this has waited until the
