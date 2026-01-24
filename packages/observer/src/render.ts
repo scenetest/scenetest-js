@@ -201,10 +201,8 @@ export function renderLocationRow(group: LocationGroup): string {
       <div class="location-main" data-action="showSequence" data-key="${keyJson}">
         <div class="location-info">
           <span class="location-file">${escapeHtml(formatLocationShort(group.location))}</span>
-          <div class="location-desc-row">
-            <span class="location-desc">${escapeHtml(group.description)}</span>
-            ${flakyInfo ? `<span class="flaky-info ${lastFailed ? 'failing' : 'resolved'}" title="${escapeHtmlAttr(flakyInfo)}">${escapeHtml(flakyInfo)}</span>` : ''}
-          </div>
+          <span class="location-desc">${escapeHtml(group.description)}</span>
+          ${flakyInfo ? `<span class="flaky-info ${lastFailed ? 'failing' : 'resolved'}">${escapeHtml(flakyInfo)}</span>` : ''}
         </div>
         <div class="location-stats">
           <div class="status-dots">${dots}</div>
