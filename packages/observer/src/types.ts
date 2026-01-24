@@ -61,6 +61,7 @@ export interface ResolutionInfo {
 
 export interface ResolutionStats {
   resolvedFailures: ResolutionInfo[]
+  repeatFailures: number // consecutive failures before a resolution (don't count as separate)
   unresolvedFailures: number
   minDuration: number | null
   maxDuration: number | null

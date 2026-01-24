@@ -201,7 +201,10 @@ export function renderLocationRow(group: LocationGroup): string {
       <div class="location-main" data-action="showSequence" data-key="${keyJson}">
         <div class="location-info">
           <span class="location-file">${escapeHtml(formatLocationShort(group.location))}</span>
-          <span class="location-desc">${escapeHtml(group.description)}</span>
+          <div class="location-desc-row">
+            <span class="location-desc">${escapeHtml(group.description)}</span>
+            ${flakyInfo ? `<span class="flaky-info ${lastFailed ? 'failing' : 'resolved'}" title="${escapeHtmlAttr(flakyInfo)}">${escapeHtml(flakyInfo)}</span>` : ''}
+          </div>
         </div>
         <div class="location-stats">
           <div class="status-dots">${dots}</div>
@@ -211,7 +214,6 @@ export function renderLocationRow(group: LocationGroup): string {
             ${failCount > 0 ? `<span class="stat fail">\u2717${failCount}</span>` : ''}
           </div>
         </div>
-        ${flakyInfo ? `<div class="flaky-info ${lastFailed ? 'failing' : 'resolved'}">${escapeHtml(flakyInfo)}</div>` : ''}
       </div>
       <div class="location-actions">
         <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
