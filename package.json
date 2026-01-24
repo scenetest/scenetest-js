@@ -16,7 +16,7 @@
     "docs": "pnpx serve docs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm test:unit && pnpm test:e2e",
-    "test:unit": "pnpm --filter @scenetest/vite-plugin test",
+    "test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/observer test",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@
 
 import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
 import { getHistoryStats, formatHistorySummary } from './history.js'
-import { escapeHtml, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
+import { escapeHtml, escapeHtmlAttr, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
 import { getNoteInfo } from './audio.js'
 
 /**
@@ -39,7 +39,7 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
 export function renderPanelItemWithTime(a: AssertionResult): string {
   const histStats = getHistoryStats(a.description, a._index ?? 0)
   const histSummary = formatHistorySummary(histStats)
-  const locJson = a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'
+  const locJson = a.location ? escapeHtmlAttr(JSON.stringify(a.location)) : 'null'
   const titleAttr = a.context
     ? escapeHtml(formatContext(a.context))
     : a.location
@@ -92,7 +92,7 @@ export function renderPanelGroup(g: AssertionGroup): string {
 export function renderFullscreenItem(a: AssertionResult): string {
   const histStats = getHistoryStats(a.description, a._index ?? 0)
   const histSummary = formatHistorySummary(histStats)
-  const locJson = a.location ? JSON.stringify(a.location).replace(/"/g, '&quot;') : 'null'
+  const locJson = a.location ? escapeHtmlAttr(JSON.stringify(a.location)) : 'null'
   const noteInfo = getNoteInfo(a.description)
 
   return `
@@ -144,7 +144,8 @@ export function renderLocationRow(group: LocationGroup): string {
   const passCount = group.entries.filter(e => e.result).length
   const failCount = group.entries.filter(e => !e.result).length
   const total = group.entries.length
-  const keyJson = JSON.stringify(group.key).replace(/"/g, '&quot;')
+  const keyJson = escapeHtmlAttr(JSON.stringify(group.key))
+  const locJson = escapeHtmlAttr(JSON.stringify(group.location))
   const noteInfo = getNoteInfo(group.description)
 
   // Generate status dots (most recent 10 runs) with ✗ marker for failures
@@ -193,7 +194,7 @@ export function renderLocationRow(group: LocationGroup): string {
       </div>
       <div class="location-actions">
         <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
-        <button class="loc-btn" onclick="event.stopPropagation(); window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${JSON.stringify(group.location).replace(/"/g, '&quot;')}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${JSON.stringify(group.location).replace(/"/g, '&quot;')})" title="Open in editor">\u270E</button>
+        <button class="loc-btn" onclick="event.stopPropagation(); window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})" title="Open in editor">\u270E</button>
       </div>
     </div>
   `
@@ -361,7 +362,7 @@ export function renderChordTooltip(assertions: AssertionResult[]): string {
  * Render the sequence view header showing the location being tracked
  */
 export function renderSequenceHeader(group: LocationGroup): string {
-  const locJson = JSON.stringify(group.location).replace(/"/g, '&quot;')
+  const locJson = escapeHtmlAttr(JSON.stringify(group.location))
   const passCount = group.entries.filter(e => e.result).length
   const failCount = group.entries.filter(e => !e.result).length
   const noteInfo = getNoteInfo(group.description)
