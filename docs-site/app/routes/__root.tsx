@@ -321,4 +321,46 @@ figure.screenshot figcaption {
 .code-block .copy-btn:hover {
   background: white;
 }
+
+/* Guides list */
+.guides-list {
+  list-style: none;
+  margin: 32px 0;
+  padding: 0;
+}
+
+.guides-list li {
+  margin-bottom: 16px;
+}
+
+.guides-list a {
+  display: block;
+  padding: 20px 24px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.guides-list a:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(80, 70, 229, 0.1);
+}
+
+.guides-list strong {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.guides-list span {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
 `
