@@ -368,26 +368,28 @@ useTestEffect(() => {
       const dbProfile = await server.db.get(data.userId)
       should('DB should match local', dbProfile.name === data.local.name)
     },
-    () => ({ userId: profile.id })
+    { userId, profile },
   )
-}, [profile?.id])
+}, [userId, profile?.id])
 ```
 
 Similar helpers exist for other frameworks:
 - Vue: `watchTestEffect(fn)` - wraps `watchEffect`
 - Solid: `createTestEffect(fn, deps?)` - wraps `createEffect`
 - Svelte: `testEffect(fn)` - use inside `$effect`
-```
 
 ### `match(...pairs)`
 
 Compare pairs of values for equality. Returns `true` if all pairs match.
 
 ```tsx
-should('primary fields should match', match(
-  [localDeck.cards, dbDeck.cards],
-  [localDeck.updated_at, dbDeck.updated_at]
-))
+should(
+  'primary fields should match',
+  match(
+    [localDeck.cards, dbDeck.cards],
+    [localDeck.updated_at, dbDeck.updated_at]
+  )
+)
 ```
 
 ---
