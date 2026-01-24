@@ -770,9 +770,24 @@ body {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-left: 3px solid #4ade80;
+}
+.sequence-header.warn {
+  border-left-color: #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, #1a1a2e 50%);
+}
+.sequence-header.fail {
+  border-left-color: #f87171;
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.1) 0%, #1a1a2e 50%);
+}
+.sequence-info {
+  flex: 1;
 }
 .sequence-location {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .sequence-file {
   color: #a0a0ff;
@@ -781,6 +796,17 @@ body {
 }
 .sequence-file:hover {
   text-decoration: underline;
+}
+.sequence-desc {
+  font-size: 15px;
+  color: #e0e0e0;
+  margin-bottom: 8px;
+}
+.sequence-header.warn .sequence-desc {
+  color: #f59e0b;
+}
+.sequence-header.fail .sequence-desc {
+  color: #f87171;
 }
 .sequence-summary {
   display: flex;
@@ -991,6 +1017,115 @@ body {
 .note-badge.fail {
   background: #3a1a1a;
   color: #f87171;
+}
+.note-badge.warn {
+  background: #3a2a0a;
+  color: #f59e0b;
+}
+.note-badge.clickable {
+  cursor: pointer;
+}
+.note-badge.clickable:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.note-badge.clickable:active {
+  transform: scale(0.95);
+}
+
+/* Piano roll visualization */
+.piano-roll {
+  background: #12121f;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.piano-roll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.piano-roll-title {
+  font-weight: 600;
+  color: #a0a0ff;
+  font-size: 14px;
+}
+.piano-roll-hint {
+  font-size: 11px;
+  color: #6a6a8a;
+}
+.piano-roll-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.piano-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+.piano-bar:hover {
+  background: #1a1a2e;
+  transform: translateX(4px);
+}
+.piano-bar:active {
+  transform: translateX(2px) scale(0.99);
+}
+.piano-bar.pass {
+  border-left-color: #4ade80;
+}
+.piano-bar.warn {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+.piano-bar.fail {
+  border-left-color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+.piano-note {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  min-width: 32px;
+  font-size: 12px;
+}
+.piano-bar.pass .piano-note {
+  color: #4ade80;
+}
+.piano-bar.warn .piano-note {
+  color: #f59e0b;
+}
+.piano-bar.fail .piano-note {
+  color: #f87171;
+}
+.piano-bar-fill {
+  flex: 1;
+  height: 12px;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #2a2a4a;
+}
+.piano-bar-pass {
+  background: #4ade80;
+  height: 100%;
+}
+.piano-bar-fail {
+  background: #f87171;
+  height: 100%;
+}
+.piano-count {
+  font-size: 11px;
+  color: #6a6a8a;
+  min-width: 24px;
+  text-align: right;
 }
 
 /* Chord tooltip styles */

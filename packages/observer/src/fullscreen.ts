@@ -20,7 +20,7 @@ import {
   panel,
 } from './state.js'
 import { filterItems } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip } from './render.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -32,6 +32,7 @@ import {
   getSymphonyInfo,
   initAudio,
   playGroupChord,
+  playAssertionSound,
 } from './audio.js'
 import { assertions, GROUP_THRESHOLD_MS } from './state.js'
 
@@ -401,10 +402,14 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
   }
 
   listEl.innerHTML = `
+    ${renderPianoRoll(filteredLocations)}
     <div class="location-list">
       ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
     </div>
   `
+
+  // Set up click handlers for piano bars and note badges
+  setupNoteClickHandlers(_doc, listEl)
 }
 
 /**
@@ -451,6 +456,9 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
 
   // Set up chord hover handlers
   setupChordHoverHandlers(_doc, listEl)
+
+  // Set up note click handlers for the header badge
+  setupNoteClickHandlers(_doc, listEl)
 }
 
 /**
@@ -537,5 +545,66 @@ function setupChordHoverHandlers(doc: Document, listEl: HTMLElement): void {
       tooltipEl.remove()
       tooltipEl = null
     }
+  })
+}
+
+/**
+ * Set up click handlers for note badges and piano bars to play sounds
+ */
+function setupNoteClickHandlers(_doc: Document, listEl: HTMLElement): void {
+  // Handle clickable note badges
+  const noteBadges = listEl.querySelectorAll('.note-badge.clickable')
+  noteBadges.forEach(badge => {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const target = e.currentTarget as HTMLElement
+      const description = target.dataset.description || ''
+      const result = target.dataset.result === 'true'
+
+      if (!description) return
+
+      // Initialize audio and play the note
+      initAudio()
+      playAssertionSound({
+        type: result ? 'pass' : 'fail',
+        description,
+        result,
+        timestamp: Date.now(),
+      })
+
+      // Visual feedback
+      target.style.transform = 'scale(1.3)'
+      setTimeout(() => {
+        target.style.transform = ''
+      }, 150)
+    })
+  })
+
+  // Handle piano bar clicks
+  const pianoBars = listEl.querySelectorAll('.piano-bar')
+  pianoBars.forEach(bar => {
+    bar.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const target = e.currentTarget as HTMLElement
+      const description = target.dataset.description || ''
+      const result = target.dataset.result === 'true'
+
+      if (!description) return
+
+      // Initialize audio and play the note
+      initAudio()
+      playAssertionSound({
+        type: result ? 'pass' : 'fail',
+        description,
+        result,
+        timestamp: Date.now(),
+      })
+
+      // Visual feedback
+      target.style.transform = 'translateX(8px) scale(1.02)'
+      setTimeout(() => {
+        target.style.transform = ''
+      }, 150)
+    })
   })
 }
