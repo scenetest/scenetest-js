@@ -4,6 +4,9 @@ node_modules/
 # Build outputs
 dist/
 *.tsbuildinfo
+.output/
+.nitro/
+.tanstack/
 
 # Playwright
 test-results/
