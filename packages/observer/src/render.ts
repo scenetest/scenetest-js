@@ -205,8 +205,10 @@ export function renderSequenceEntry(
   isFirst: boolean = false,
   isLast: boolean = false
 ): string {
+  const noteInfo = getNoteInfo(entry.description)
+
   return `
-    <div class="sequence-entry ${entry.result ? 'pass' : 'fail'}">
+    <div class="sequence-entry ${entry.result ? 'pass' : 'fail'}" data-timestamp="${entry.timestamp}">
       <div class="timeline-track">
         <div class="timeline-line ${isFirst ? 'first' : ''} ${isLast ? 'last' : ''}"></div>
         <div class="timeline-dot ${entry.result ? 'pass' : 'fail'}">
@@ -214,9 +216,47 @@ export function renderSequenceEntry(
         </div>
       </div>
       <div class="content">
-        <div class="sequence-time">${formatTime(entry.timestamp)}</div>
+        <div class="sequence-time chord-trigger" data-timestamp="${entry.timestamp}" title="Hover to hear this chord">
+          ${formatTime(entry.timestamp)}
+          <span class="chord-icon">\uD83C\uDFB5</span>
+        </div>
         <div class="desc">${escapeHtml(entry.description)}</div>
         ${entry.context ? `<div class="context">${escapeHtml(formatContext(entry.context))}</div>` : ''}
+      </div>
+      <span class="note-badge ${entry.result ? 'pass' : 'fail'}" title="Musical note: ${noteInfo.noteName}">\u266A${noteInfo.noteName}</span>
+    </div>
+  `
+}
+
+/**
+ * Render a chord tooltip showing all assertions that fired together
+ */
+export function renderChordTooltip(assertions: AssertionResult[]): string {
+  if (assertions.length === 0) return ''
+
+  const passes = assertions.filter(a => a.result).length
+  const fails = assertions.length - passes
+
+  return `
+    <div class="chord-tooltip">
+      <div class="chord-header">
+        <span class="chord-title">\uD83C\uDFB5 Chord (${assertions.length} note${assertions.length === 1 ? '' : 's'})</span>
+        <span class="chord-stats">
+          ${passes > 0 ? `<span class="pass">\u2713${passes}</span>` : ''}
+          ${fails > 0 ? `<span class="fail">\u2717${fails}</span>` : ''}
+        </span>
+      </div>
+      <div class="chord-notes">
+        ${assertions.map(a => {
+          const noteInfo = getNoteInfo(a.description)
+          return `
+            <div class="chord-note ${a.result ? 'pass' : 'fail'}">
+              <span class="note-indicator">\u266A${noteInfo.noteName}</span>
+              <span class="note-desc">${escapeHtml(a.description)}</span>
+              <span class="note-status">${a.result ? '\u2713' : '\u2717'}</span>
+            </div>
+          `
+        }).join('')}
       </div>
     </div>
   `

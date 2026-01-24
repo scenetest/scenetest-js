@@ -992,4 +992,111 @@ body {
   background: #3a1a1a;
   color: #f87171;
 }
+
+/* Chord tooltip styles */
+.chord-trigger {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.chord-trigger:hover {
+  background: #2a2a4a;
+}
+.chord-icon {
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.chord-trigger:hover .chord-icon {
+  opacity: 1;
+}
+.chord-tooltip {
+  position: fixed;
+  z-index: 10000;
+  background: #1a1a2e;
+  border: 1px solid #4a4a6a;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 280px;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: chord-fade-in 0.15s ease-out;
+}
+@keyframes chord-fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.chord-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a3a5a;
+}
+.chord-title {
+  font-weight: 600;
+  color: #a0a0ff;
+}
+.chord-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+.chord-stats .pass {
+  color: #4ade80;
+}
+.chord-stats .fail {
+  color: #f87171;
+}
+.chord-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chord-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.chord-note.pass {
+  background: #1a3a1a;
+}
+.chord-note.fail {
+  background: #3a1a1a;
+}
+.note-indicator {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  min-width: 36px;
+}
+.chord-note.pass .note-indicator {
+  color: #4ade80;
+}
+.chord-note.fail .note-indicator {
+  color: #f87171;
+}
+.note-desc {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e0e0e0;
+}
+.note-status {
+  font-size: 14px;
+}
+.chord-note.pass .note-status {
+  color: #4ade80;
+}
+.chord-note.fail .note-status {
+  color: #f87171;
+}
 `
