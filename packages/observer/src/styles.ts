@@ -1034,13 +1034,14 @@ body {
   transform: scale(0.95);
 }
 
-/* Piano roll visualization */
+/* Piano roll visualization - grid style */
 .piano-roll {
   background: #12121f;
   border: 1px solid #3a3a5a;
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
+  overflow-x: auto;
 }
 .piano-roll-header {
   display: flex;
@@ -1057,75 +1058,113 @@ body {
   font-size: 11px;
   color: #6a6a8a;
 }
-.piano-roll-bars {
+.piano-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
-.piano-bar {
+.piano-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
   border-left: 3px solid transparent;
+  padding-left: 4px;
 }
-.piano-bar:hover {
-  background: #1a1a2e;
-  transform: translateX(4px);
-}
-.piano-bar:active {
-  transform: translateX(2px) scale(0.99);
-}
-.piano-bar.pass {
+.piano-row.pass {
   border-left-color: #4ade80;
 }
-.piano-bar.warn {
+.piano-row.warn {
   border-left-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
 }
-.piano-bar.fail {
+.piano-row.fail {
   border-left-color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
 }
 .piano-note {
   font-family: ui-monospace, monospace;
   font-weight: 600;
-  min-width: 32px;
-  font-size: 12px;
+  min-width: 28px;
+  font-size: 11px;
+  text-align: right;
+  padding-right: 6px;
 }
-.piano-bar.pass .piano-note {
+.piano-row.pass .piano-note {
   color: #4ade80;
 }
-.piano-bar.warn .piano-note {
+.piano-row.warn .piano-note {
   color: #f59e0b;
 }
-.piano-bar.fail .piano-note {
+.piano-row.fail .piano-note {
   color: #f87171;
 }
-.piano-bar-fill {
-  flex: 1;
-  height: 12px;
+.piano-cells {
   display: flex;
+  gap: 2px;
+}
+.piano-cell {
+  width: 14px;
+  height: 14px;
   border-radius: 2px;
-  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.piano-cell.empty {
+  background: #1a1a2e;
+}
+.piano-cell.empty:hover {
   background: #2a2a4a;
 }
-.piano-bar-pass {
+.piano-cell.pass {
   background: #4ade80;
-  height: 100%;
+  box-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
 }
-.piano-bar-fail {
+.piano-cell.pass:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+}
+.piano-cell.fail {
   background: #f87171;
-  height: 100%;
+  box-shadow: 0 0 4px rgba(248, 113, 113, 0.4);
 }
-.piano-count {
-  font-size: 11px;
-  color: #6a6a8a;
-  min-width: 24px;
-  text-align: right;
+.piano-cell.fail:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+}
+/* Column highlight on hover */
+.piano-roll.col-hover .piano-cell[data-col].col-active {
+  transform: scale(1.15);
+  outline: 2px solid #a0a0ff;
+  outline-offset: 1px;
+  z-index: 1;
+}
+.piano-timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+.piano-time-markers {
+  display: flex;
+  gap: 2px;
+}
+.piano-time-marker {
+  width: 14px;
+  height: 6px;
+  background: #2a2a4a;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.piano-time-marker:hover {
+  background: #a0a0ff;
+}
+.piano-time-marker.playing {
+  background: #a0a0ff;
+  animation: piano-marker-pulse 0.3s ease-out;
+}
+@keyframes piano-marker-pulse {
+  0% { transform: scaleY(2); }
+  100% { transform: scaleY(1); }
 }
 
 /* Chord tooltip styles */

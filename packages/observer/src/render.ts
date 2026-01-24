@@ -200,55 +200,90 @@ export function renderLocationRow(group: LocationGroup): string {
 }
 
 /**
- * Render a piano roll visualization showing all notes over time
+ * Render a piano roll visualization showing notes over time (chronological grid)
+ * X axis = time (chords), Y axis = notes (pitch)
  */
-export function renderPianoRoll(locations: LocationGroup[]): string {
-  if (locations.length === 0) return ''
+export function renderPianoRoll(locations: LocationGroup[], allAssertions: AssertionResult[]): string {
+  if (locations.length === 0 || allAssertions.length === 0) return ''
 
-  // Get all unique notes and their info
-  const noteData = locations.map(loc => {
-    const noteInfo = getNoteInfo(loc.description)
-    const passCount = loc.entries.filter(e => e.result).length
-    const failCount = loc.entries.filter(e => !e.result).length
-    return {
-      description: loc.description,
-      noteInfo,
-      passCount,
-      failCount,
-      lastResult: loc.lastResult,
-      hasAnyFails: failCount > 0,
+  // Group assertions by timestamp (within 50ms threshold)
+  const GROUP_THRESHOLD = 50
+  const chords: { timestamp: number; assertions: AssertionResult[] }[] = []
+
+  const sortedAssertions = [...allAssertions].sort((a, b) => a.timestamp - b.timestamp)
+
+  sortedAssertions.forEach(assertion => {
+    const lastChord = chords[chords.length - 1]
+    if (lastChord && assertion.timestamp - lastChord.timestamp < GROUP_THRESHOLD) {
+      lastChord.assertions.push(assertion)
+    } else {
+      chords.push({ timestamp: assertion.timestamp, assertions: [assertion] })
     }
   })
 
-  // Sort by note index for piano-like arrangement
-  noteData.sort((a, b) => a.noteInfo.noteIndex - b.noteInfo.noteIndex)
+  // Get unique notes sorted by pitch
+  const noteMap = new Map<string, { noteInfo: ReturnType<typeof getNoteInfo>; description: string; hasAnyFails: boolean; lastResult: boolean }>()
+  locations.forEach(loc => {
+    const noteInfo = getNoteInfo(loc.description)
+    const failCount = loc.entries.filter(e => !e.result).length
+    noteMap.set(loc.description, {
+      noteInfo,
+      description: loc.description,
+      hasAnyFails: failCount > 0,
+      lastResult: loc.lastResult,
+    })
+  })
 
-  // Create bars for each note
-  const bars = noteData.map(note => {
-    const total = note.passCount + note.failCount
-    const passWidth = (note.passCount / total) * 100
+  const notes = Array.from(noteMap.values()).sort((a, b) => a.noteInfo.noteIndex - b.noteInfo.noteIndex)
+
+  // Limit to last N chords to fit reasonably
+  const maxChords = 30
+  const displayChords = chords.slice(-maxChords)
+
+  // Build the grid
+  const rows = notes.map(note => {
     const statusClass = !note.lastResult ? 'fail' : note.hasAnyFails ? 'warn' : 'pass'
 
+    const cells = displayChords.map((chord, colIdx) => {
+      const match = chord.assertions.find(a => a.description === note.description)
+      if (match) {
+        const cellClass = match.result ? 'pass' : 'fail'
+        return `<span class="piano-cell ${cellClass}" data-col="${colIdx}"></span>`
+      }
+      return `<span class="piano-cell empty" data-col="${colIdx}"></span>`
+    }).join('')
+
     return `
-      <div class="piano-bar ${statusClass}" data-description="${escapeHtml(note.description)}" data-result="${note.lastResult}" title="${note.description}">
+      <div class="piano-row ${statusClass}" data-description="${escapeHtml(note.description)}" data-result="${note.lastResult}">
         <span class="piano-note">${note.noteInfo.noteName}</span>
-        <div class="piano-bar-fill">
-          <div class="piano-bar-pass" style="width: ${passWidth}%"></div>
-          <div class="piano-bar-fail" style="width: ${100 - passWidth}%"></div>
-        </div>
-        <span class="piano-count">${total}</span>
+        <div class="piano-cells">${cells}</div>
       </div>
     `
   }).join('')
 
+  // Build chord data for click handlers (JSON encoded)
+  const chordData = displayChords.map(chord => ({
+    timestamp: chord.timestamp,
+    notes: chord.assertions.map(a => ({
+      description: a.description,
+      result: a.result,
+    })),
+  }))
+
   return `
-    <div class="piano-roll">
+    <div class="piano-roll" data-chords="${escapeHtml(JSON.stringify(chordData))}">
       <div class="piano-roll-header">
-        <span class="piano-roll-title">\uD83C\uDFB9 Note Map</span>
-        <span class="piano-roll-hint">Click a bar to hear the note</span>
+        <span class="piano-roll-title">\uD83C\uDFB9 Piano Roll</span>
+        <span class="piano-roll-hint">Click a column to hear that chord</span>
       </div>
-      <div class="piano-roll-bars">
-        ${bars}
+      <div class="piano-grid">
+        ${rows}
+      </div>
+      <div class="piano-timeline">
+        <span class="piano-note"></span>
+        <div class="piano-time-markers">
+          ${displayChords.map((_, i) => `<span class="piano-time-marker" data-col="${i}"></span>`).join('')}
+        </div>
       </div>
     </div>
   `
