@@ -23,6 +23,9 @@ importers:
       '@scenetest/observer':
         specifier: workspace:*
         version: link:../packages/observer
+      '@scenetest/react':
+        specifier: workspace:*
+        version: link:../packages/scenetest-react
       '@tanstack/react-router':
         specifier: ^1.156.0
         version: 1.156.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTestAssertions } from '../useTestAssertions'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  // Enable interactive test assertions for the demo
+  useTestAssertions()
+
   return (
     <article>
       <div className="hero-logo">🎬</div>
