@@ -145,6 +145,7 @@ export function renderLocationRow(group: LocationGroup): string {
   const failCount = group.entries.filter(e => !e.result).length
   const total = group.entries.length
   const keyJson = JSON.stringify(group.key).replace(/"/g, '&quot;')
+  const noteInfo = getNoteInfo(group.description)
 
   // Generate status dots (most recent 10 runs) with ✗ marker for failures
   const recentEntries = group.entries.slice(-10)
@@ -163,6 +164,9 @@ export function renderLocationRow(group: LocationGroup): string {
   const lastFailed = !group.lastResult
   const statusClass = lastFailed ? 'last-fail' : hasAnyFails ? 'has-fails' : 'all-pass'
 
+  // Note badge class based on current state
+  const noteBadgeClass = lastFailed ? 'fail' : hasAnyFails ? 'warn' : 'pass'
+
   // Current state icon - prominent indicator of current status
   const stateIcon = lastFailed
     ? '<span class="state-icon fail">\u2717</span>'
@@ -171,7 +175,7 @@ export function renderLocationRow(group: LocationGroup): string {
       : '<span class="state-icon pass">\u2713</span>'
 
   return `
-    <div class="location-row ${statusClass}" data-location-key="${keyJson}">
+    <div class="location-row ${statusClass}" data-location-key="${keyJson}" data-description="${escapeHtml(group.description)}" data-last-result="${group.lastResult}">
       ${stateIcon}
       <div class="location-main" onclick="window.opener ? window.opener.__scenetest_showSequence && window.opener.__scenetest_showSequence(${keyJson}) : window.__scenetest_showSequence && window.__scenetest_showSequence(${keyJson})">
         <div class="location-info">
@@ -188,7 +192,63 @@ export function renderLocationRow(group: LocationGroup): string {
         </div>
       </div>
       <div class="location-actions">
+        <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
         <button class="loc-btn" onclick="event.stopPropagation(); window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${JSON.stringify(group.location).replace(/"/g, '&quot;')}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${JSON.stringify(group.location).replace(/"/g, '&quot;')})" title="Open in editor">\u270E</button>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Render a piano roll visualization showing all notes over time
+ */
+export function renderPianoRoll(locations: LocationGroup[]): string {
+  if (locations.length === 0) return ''
+
+  // Get all unique notes and their info
+  const noteData = locations.map(loc => {
+    const noteInfo = getNoteInfo(loc.description)
+    const passCount = loc.entries.filter(e => e.result).length
+    const failCount = loc.entries.filter(e => !e.result).length
+    return {
+      description: loc.description,
+      noteInfo,
+      passCount,
+      failCount,
+      lastResult: loc.lastResult,
+      hasAnyFails: failCount > 0,
+    }
+  })
+
+  // Sort by note index for piano-like arrangement
+  noteData.sort((a, b) => a.noteInfo.noteIndex - b.noteInfo.noteIndex)
+
+  // Create bars for each note
+  const bars = noteData.map(note => {
+    const total = note.passCount + note.failCount
+    const passWidth = (note.passCount / total) * 100
+    const statusClass = !note.lastResult ? 'fail' : note.hasAnyFails ? 'warn' : 'pass'
+
+    return `
+      <div class="piano-bar ${statusClass}" data-description="${escapeHtml(note.description)}" data-result="${note.lastResult}" title="${note.description}">
+        <span class="piano-note">${note.noteInfo.noteName}</span>
+        <div class="piano-bar-fill">
+          <div class="piano-bar-pass" style="width: ${passWidth}%"></div>
+          <div class="piano-bar-fail" style="width: ${100 - passWidth}%"></div>
+        </div>
+        <span class="piano-count">${total}</span>
+      </div>
+    `
+  }).join('')
+
+  return `
+    <div class="piano-roll">
+      <div class="piano-roll-header">
+        <span class="piano-roll-title">\uD83C\uDFB9 Note Map</span>
+        <span class="piano-roll-hint">Click a bar to hear the note</span>
+      </div>
+      <div class="piano-roll-bars">
+        ${bars}
       </div>
     </div>
   `
@@ -269,19 +329,37 @@ export function renderSequenceHeader(group: LocationGroup): string {
   const locJson = JSON.stringify(group.location).replace(/"/g, '&quot;')
   const passCount = group.entries.filter(e => e.result).length
   const failCount = group.entries.filter(e => !e.result).length
+  const noteInfo = getNoteInfo(group.description)
+
+  // Determine status: flaky (has both), fail (only fails), or pass
+  const isFlaky = passCount > 0 && failCount > 0
+  const lastFailed = !group.lastResult
+  const statusClass = lastFailed ? 'fail' : isFlaky ? 'warn' : 'pass'
+
+  // State icon like in location rows
+  const stateIcon = lastFailed
+    ? '<span class="state-icon fail">\u2717</span>'
+    : isFlaky
+      ? '<span class="state-icon warn">\u26A0</span>'
+      : '<span class="state-icon pass">\u2713</span>'
 
   return `
-    <div class="sequence-header">
-      <div class="sequence-location">
-        <span class="sequence-file" onclick="window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(group.location))}</span>
-      </div>
-      <div class="sequence-summary">
-        <span class="sequence-total">${group.entries.length} run${group.entries.length === 1 ? '' : 's'}</span>
-        <div class="sequence-stats">
-          ${passCount > 0 ? `<span class="stat pass">\u2713 ${passCount}</span>` : ''}
-          ${failCount > 0 ? `<span class="stat fail">\u2717 ${failCount}</span>` : ''}
+    <div class="sequence-header ${statusClass}">
+      ${stateIcon}
+      <div class="sequence-info">
+        <div class="sequence-location">
+          <span class="sequence-file" onclick="window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(group.location))}</span>
+        </div>
+        <div class="sequence-desc">${escapeHtml(group.description)}</div>
+        <div class="sequence-summary">
+          <span class="sequence-total">${group.entries.length} run${group.entries.length === 1 ? '' : 's'}</span>
+          <div class="sequence-stats">
+            ${passCount > 0 ? `<span class="stat pass">\u2713 ${passCount}</span>` : ''}
+            ${failCount > 0 ? `<span class="stat fail">\u2717 ${failCount}</span>` : ''}
+          </div>
         </div>
       </div>
+      <span class="note-badge clickable ${statusClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }
