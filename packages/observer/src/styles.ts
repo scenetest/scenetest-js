@@ -656,9 +656,10 @@ body {
 .location-main {
   flex: 1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
 }
 .location-info {
   display: flex;
@@ -860,6 +861,48 @@ body {
 .sequence-stats .stat.fail {
   background: #3a1a1a;
   color: #f87171;
+}
+
+/* Flaky test info styles */
+.flaky-info {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 10px;
+  margin-top: 4px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+}
+.flaky-info.failing {
+  background: #3a1a1a;
+  color: #f87171;
+  border-left: 2px solid #f87171;
+}
+.flaky-info.resolved {
+  background: #1a3a1a;
+  color: #4ade80;
+  border-left: 2px solid #4ade80;
+}
+
+.flaky-status {
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: #3a1a1a;
+  color: #f87171;
+  border-left: 3px solid #f87171;
+  font-family: ui-monospace, monospace;
+}
+
+.resolution-info {
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: #1a3a1a;
+  color: #4ade80;
+  border-left: 3px solid #4ade80;
+  font-family: ui-monospace, monospace;
 }
 
 /* Direction hint */
