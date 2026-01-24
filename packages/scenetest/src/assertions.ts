@@ -19,6 +19,24 @@ export function match(...pairs: [unknown, unknown][]): boolean {
 }
 
 /**
+ * Validate that a file path is safe to use in URI schemes.
+ * Rejects paths that could be used for protocol injection or directory traversal.
+ * @internal Exported for testing purposes
+ */
+export function isValidFilePath(path: string): boolean {
+  // Reject paths with embedded protocols (e.g., "javascript:", "data:", "vscode://")
+  if (path.includes('://')) {
+    return false
+  }
+  // Reject paths with directory traversal sequences
+  // Match ".." as a complete path segment (preceded/followed by / or \ or start/end of string)
+  if (/(?:^|[/\\])\.\.(?:[/\\]|$)/.test(path)) {
+    return false
+  }
+  return true
+}
+
+/**
  * Get a simplified stack trace for debugging
  */
 function getStack(): string | undefined {
@@ -43,8 +61,15 @@ function parseLocation(stack: string | undefined): AssertionResult['location'] {
   const match = stack.match(/(?:at\s+)?(?:\S+\s+\()?(?:https?:\/\/[^/]+)?([^:)]+):(\d+)(?::(\d+))?/)
   if (!match) return undefined
 
+  const file = match[1]
+
+  // Validate the file path before using it in URI schemes
+  if (!isValidFilePath(file)) {
+    return undefined
+  }
+
   return {
-    file: match[1],
+    file,
     line: parseInt(match[2], 10),
     column: match[3] ? parseInt(match[3], 10) : undefined,
   }

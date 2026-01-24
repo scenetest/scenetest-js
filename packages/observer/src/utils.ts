@@ -62,7 +62,9 @@ export function openInEditor(loc: AssertionResult['location']): void {
   fetch(`/__open-in-editor?file=${encodeURIComponent(loc.file)}&line=${loc.line}${loc.column ? '&column=' + loc.column : ''}`)
     .catch(() => {
       // Fallback: try vscode:// protocol
-      window.open(`vscode://file${loc.file}:${loc.line}${loc.column ? ':' + loc.column : ''}`)
+      // Use encodeURI to handle special characters while preserving path separators
+      const encodedPath = encodeURI(loc.file)
+      window.open(`vscode://file${encodedPath}:${loc.line}:${loc.column || 1}`)
     })
 }
 
