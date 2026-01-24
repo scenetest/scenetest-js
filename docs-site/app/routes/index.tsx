@@ -154,6 +154,20 @@ export function ProfileForm({ userId }) {
         <figcaption>The dev panel collects should/failed assertions from your inline assertions in your components, effects, and callbacks whenever they execute.</figcaption>
       </figure>
 
+      <p>
+        Because assertions are separate from your script, they may execute many times throughout your run,
+		  so the Observer panel includes a <strong>Location View</strong> that shows you how your assertions
+		  run in order, repeating as components re-render and effects fire and callback get called back.
+
+        Each row represents a place in your code where an assertion fired; columns group together assertions
+		  that fire together (within 50ms).
+      </p>
+
+      <figure className="screenshot">
+        <img src="/images/location-view.png" alt="Viewing by Location looks at each assertion and summarises all its runs to show you failing and flaky assertions" />
+        <figcaption>Viewing by Location looks at each assertion in your app and summarises all its runs to show you failing and flaky tests. Patterns emerge: consistent green means stable code; flickering red helps you spot flaky or timing-dependent assertions that may challenge and hone your understanding of your app throughout the component lifecycle or UX flow.</figcaption>
+      </figure>
+
       <h2>Multi-context comparisons</h2>
 
       <p>
