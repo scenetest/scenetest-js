@@ -107,41 +107,86 @@ function getFrequency(description: string, passed: boolean): number {
 
 /**
  * Play a single note with envelope
+ * Passing notes: clean sine wave
+ * Failing notes: harsh sawtooth with pitch slide down ("sad trombone" effect)
  */
 function playNote(frequency: number, passed: boolean, time?: number): void {
   if (!audioContext || muted) return
 
   const startTime = time ?? audioContext.currentTime
 
-  // Create oscillator
-  const oscillator = audioContext.createOscillator()
-  oscillator.type = passed ? 'sine' : 'triangle' // Different timbre for fails
-  oscillator.frequency.setValueAtTime(frequency, startTime)
+  if (passed) {
+    // Clean, pleasant sine wave for passes
+    const oscillator = audioContext.createOscillator()
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(frequency, startTime)
 
-  // Create gain node for envelope
-  const gainNode = audioContext.createGain()
-  gainNode.gain.setValueAtTime(0, startTime)
-  gainNode.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
-  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
+    const gainNode = audioContext.createGain()
+    gainNode.gain.setValueAtTime(0, startTime)
+    gainNode.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
 
-  // Add slight vibrato for failing notes
-  if (!passed) {
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    oscillator.start(startTime)
+    oscillator.stop(startTime + NOTE_DURATION + 0.1)
+  } else {
+    // OFFENSIVE failure sound: harsh sawtooth with pitch slide down
+    const failDuration = 0.4 // Longer for more drama
+
+    // Main harsh sawtooth oscillator
+    const osc1 = audioContext.createOscillator()
+    osc1.type = 'sawtooth'
+    osc1.frequency.setValueAtTime(frequency, startTime)
+    // Slide pitch down dramatically (sad trombone effect)
+    osc1.frequency.exponentialRampToValueAtTime(frequency * 0.5, startTime + failDuration)
+
+    // Second oscillator slightly detuned for beating/chorus effect
+    const osc2 = audioContext.createOscillator()
+    osc2.type = 'sawtooth'
+    osc2.frequency.setValueAtTime(frequency * 1.02, startTime) // 2% sharp
+    osc2.frequency.exponentialRampToValueAtTime(frequency * 0.51, startTime + failDuration)
+
+    // Third oscillator for extra grit (square wave, lower octave)
+    const osc3 = audioContext.createOscillator()
+    osc3.type = 'square'
+    osc3.frequency.setValueAtTime(frequency * 0.5, startTime) // One octave down
+    osc3.frequency.exponentialRampToValueAtTime(frequency * 0.25, startTime + failDuration)
+
+    // Gain envelope - louder attack, quick decay
+    const gainNode = audioContext.createGain()
+    gainNode.gain.setValueAtTime(0, startTime)
+    gainNode.gain.linearRampToValueAtTime(volume * 1.2, startTime + 0.01) // Quick attack
+    gainNode.gain.exponentialRampToValueAtTime(volume * 0.8, startTime + 0.05)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + failDuration)
+
+    // Fast, aggressive vibrato
     const vibrato = audioContext.createOscillator()
-    vibrato.frequency.setValueAtTime(6, startTime) // 6 Hz vibrato
+    vibrato.frequency.setValueAtTime(12, startTime) // 12 Hz - faster wobble
     const vibratoGain = audioContext.createGain()
-    vibratoGain.gain.setValueAtTime(frequency * 0.02, startTime) // 2% pitch modulation
+    vibratoGain.gain.setValueAtTime(frequency * 0.05, startTime) // 5% pitch modulation
     vibrato.connect(vibratoGain)
-    vibratoGain.connect(oscillator.frequency)
+    vibratoGain.connect(osc1.frequency)
+    vibratoGain.connect(osc2.frequency)
+
+    // Connect all oscillators
+    osc1.connect(gainNode)
+    osc2.connect(gainNode)
+    osc3.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    // Start all
+    osc1.start(startTime)
+    osc2.start(startTime)
+    osc3.start(startTime)
     vibrato.start(startTime)
-    vibrato.stop(startTime + NOTE_DURATION)
+
+    // Stop all
+    osc1.stop(startTime + failDuration + 0.1)
+    osc2.stop(startTime + failDuration + 0.1)
+    osc3.stop(startTime + failDuration + 0.1)
+    vibrato.stop(startTime + failDuration + 0.1)
   }
-
-  // Connect and play
-  oscillator.connect(gainNode)
-  gainNode.connect(audioContext.destination)
-
-  oscillator.start(startTime)
-  oscillator.stop(startTime + NOTE_DURATION + 0.1)
 }
 
 /**

@@ -20,7 +20,7 @@ import {
   panel,
 } from './state.js'
 import { filterItems } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader } from './render.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -31,7 +31,9 @@ import {
   isPlaying,
   getSymphonyInfo,
   initAudio,
+  playGroupChord,
 } from './audio.js'
+import { assertions, GROUP_THRESHOLD_MS } from './state.js'
 
 /**
  * Get the HTML for the fullscreen window
@@ -446,4 +448,94 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
     </div>
     ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
   `
+
+  // Set up chord hover handlers
+  setupChordHoverHandlers(_doc, listEl)
+}
+
+/**
+ * Find all assertions that fired at approximately the same time (within GROUP_THRESHOLD_MS)
+ */
+function findChordSiblings(timestamp: number): typeof assertions {
+  return assertions.filter(
+    a => Math.abs(a.timestamp - timestamp) <= GROUP_THRESHOLD_MS
+  )
+}
+
+/**
+ * Set up hover handlers for chord triggers in the sequence view
+ */
+function setupChordHoverHandlers(doc: Document, listEl: HTMLElement): void {
+  let tooltipEl: HTMLElement | null = null
+  let hideTimeout: ReturnType<typeof setTimeout> | null = null
+
+  const chordTriggers = listEl.querySelectorAll('.chord-trigger')
+
+  chordTriggers.forEach(trigger => {
+    trigger.addEventListener('mouseenter', (e) => {
+      const target = e.target as HTMLElement
+      const timestamp = parseInt(target.dataset.timestamp || '0', 10)
+      if (!timestamp) return
+
+      // Clear any pending hide
+      if (hideTimeout) {
+        clearTimeout(hideTimeout)
+        hideTimeout = null
+      }
+
+      // Find all assertions in this chord
+      const chordMembers = findChordSiblings(timestamp)
+      if (chordMembers.length === 0) return
+
+      // Initialize audio and play the chord
+      initAudio()
+      playGroupChord(chordMembers)
+
+      // Create and show tooltip
+      if (tooltipEl) {
+        tooltipEl.remove()
+      }
+
+      tooltipEl = doc.createElement('div')
+      tooltipEl.innerHTML = renderChordTooltip(chordMembers)
+      const tooltip = tooltipEl.firstElementChild as HTMLElement
+      if (tooltip) {
+        doc.body.appendChild(tooltip)
+
+        // Position tooltip near the trigger
+        const rect = target.getBoundingClientRect()
+        tooltip.style.left = `${rect.right + 12}px`
+        tooltip.style.top = `${rect.top - 8}px`
+
+        // Adjust if off-screen
+        const tooltipRect = tooltip.getBoundingClientRect()
+        if (tooltipRect.right > window.innerWidth - 20) {
+          tooltip.style.left = `${rect.left - tooltipRect.width - 12}px`
+        }
+        if (tooltipRect.bottom > window.innerHeight - 20) {
+          tooltip.style.top = `${window.innerHeight - tooltipRect.height - 20}px`
+        }
+
+        tooltipEl = tooltip
+      }
+    })
+
+    trigger.addEventListener('mouseleave', () => {
+      // Delay hiding to allow moving to tooltip
+      hideTimeout = setTimeout(() => {
+        if (tooltipEl) {
+          tooltipEl.remove()
+          tooltipEl = null
+        }
+      }, 200)
+    })
+  })
+
+  // Also hide tooltip when clicking elsewhere
+  doc.addEventListener('click', () => {
+    if (tooltipEl) {
+      tooltipEl.remove()
+      tooltipEl = null
+    }
+  })
 }
