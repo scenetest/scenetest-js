@@ -3,8 +3,14 @@ import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
+import { execSync } from 'child_process'
+
+const gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
 
 export default defineConfig({
+  define: {
+    __GIT_COMMIT__: JSON.stringify(gitCommit),
+  },
   server: {
     port: 3000,
   },
