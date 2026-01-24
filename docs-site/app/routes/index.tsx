@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { CodeBlock } from '../components/CodeBlock'
 import { useTestAssertions } from '../useTestAssertions'
 
+declare const __GIT_COMMIT__: string
+
 export const Route = createFileRoute('/')({
   component: Home,
 })
@@ -252,7 +254,10 @@ onSettled: (data) => {
         <p className="copyright">
           <span className="footer-logo">🎬</span> &copy; m snook 2026 &bull;{' '}
           <a href="https://github.com/scenetest/scenetest-js">github</a> &bull;{' '}
-          <a href="https://bsky.app/profile/msnook.xyz">contact</a>
+          <a href="https://bsky.app/profile/msnook.xyz">contact</a> &bull;{' '}
+          <a href={`https://github.com/scenetest/scenetest-js/commit/${__GIT_COMMIT__}`}>
+            <code>{__GIT_COMMIT__}</code>
+          </a>
         </p>
       </footer>
     </article>
