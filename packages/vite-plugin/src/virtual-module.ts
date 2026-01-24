@@ -59,6 +59,12 @@ export function removeAssertionsForFile(filename: string): void {
  * Each serverFn receives (server, data, { pass, fail }) where pass/fail
  * are destructured in the function parameters, making them available in scope
  * for the inlined body code.
+ *
+ * SECURITY NOTE: This function embeds user-provided assertion code directly
+ * into the generated module. The code runs in the Vite dev server context
+ * with full Node.js privileges. This is intentional for dev/test tooling,
+ * but means you should only run Scenetest with trusted code. See README.md
+ * "Security Considerations" section for details.
  */
 export function generateVirtualModuleCode(): string {
   const assertions = getAllAssertions()

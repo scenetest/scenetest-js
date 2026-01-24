@@ -42,7 +42,12 @@ export function failed(description: string, context?: Record<string, unknown>): 
 }
 
 /**
- * Create the scenetest middleware for handling RPC requests
+ * Create the scenetest middleware for handling RPC requests.
+ *
+ * SECURITY NOTE: This middleware executes user-provided assertion code
+ * from the virtual module in the dev server context with full Node.js
+ * privileges. This is dev-only tooling - never expose to untrusted code
+ * or networks. See README.md "Security Considerations" for details.
  */
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   return async (req, res, next) => {
