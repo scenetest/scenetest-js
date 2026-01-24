@@ -1,5 +1,9 @@
 /**
  * Rendering functions for the dev panel
+ *
+ * SECURITY NOTE: These functions use data attributes instead of inline onclick
+ * handlers to prevent XSS. Event listeners are attached via delegation in
+ * attachEventListeners() after rendering.
  */
 
 import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
@@ -21,7 +25,8 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
 
   return `
     <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
-         onclick="if(window.__scenetest_openFullscreenToGroup)window.__scenetest_openFullscreenToGroup(${groupId})"
+         data-action="openFullscreenToGroup"
+         data-group-id="${groupId}"
          title="${titleAttr}">
       <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="scenetest-content">
@@ -48,7 +53,8 @@ export function renderPanelItemWithTime(a: AssertionResult): string {
 
   return `
     <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
-         onclick="if(window.__scenetest_openInEditor)window.__scenetest_openInEditor(${locJson})"
+         data-action="openInEditor"
+         data-location="${locJson}"
          title="${titleAttr}">
       <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="scenetest-content">
@@ -69,7 +75,7 @@ export function renderPanelGroup(g: AssertionGroup): string {
 
   return `
     <div class="scenetest-group${g.collapsed ? ' collapsed' : ''}" data-group-id="${g.id}">
-      <div class="scenetest-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <div class="scenetest-group-header" data-action="toggleCollapsed">
         <div class="scenetest-group-summary">
           <span class="scenetest-group-time">${formatTime(g.timestamp)}</span>
           <div class="scenetest-group-stats">
@@ -100,7 +106,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
       <span class="icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="content">
         <div class="desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
-        ${a.location ? `<div class="location" onclick="window.opener && window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(a.location))}</div>` : ''}
+        ${a.location ? `<div class="location" data-action="openInEditorFullscreen" data-location="${locJson}">${escapeHtml(formatLocation(a.location))}</div>` : ''}
         ${histSummary ? `<div class="history">${histSummary}</div>` : ''}
         ${a.context ? `<div class="context">${escapeHtml(formatContext(a.context))}</div>` : ''}
         ${a.stack && !a.context ? `<div class="stack">${escapeHtml(a.stack.split('\n').slice(0, 3).join('\n'))}</div>` : ''}
@@ -118,7 +124,7 @@ export function renderFullscreenGroup(g: AssertionGroup): string {
 
   return `
     <div class="group" data-group-id="${g.id}">
-      <div class="group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <div class="group-header" data-action="toggleCollapsed">
         <div class="group-info">
           <span class="group-time">${formatTime(g.timestamp)}</span>
           <div class="group-stats">
@@ -178,7 +184,7 @@ export function renderLocationRow(group: LocationGroup): string {
   return `
     <div class="location-row ${statusClass}" data-location-key="${keyJson}" data-description="${escapeHtml(group.description)}" data-last-result="${group.lastResult}">
       ${stateIcon}
-      <div class="location-main" onclick="window.opener ? window.opener.__scenetest_showSequence && window.opener.__scenetest_showSequence(${keyJson}) : window.__scenetest_showSequence && window.__scenetest_showSequence(${keyJson})">
+      <div class="location-main" data-action="showSequence" data-key="${keyJson}">
         <div class="location-info">
           <span class="location-file">${escapeHtml(formatLocationShort(group.location))}</span>
           <span class="location-desc">${escapeHtml(group.description)}</span>
@@ -194,7 +200,7 @@ export function renderLocationRow(group: LocationGroup): string {
       </div>
       <div class="location-actions">
         <span class="note-badge clickable ${noteBadgeClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
-        <button class="loc-btn" onclick="event.stopPropagation(); window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})" title="Open in editor">\u270E</button>
+        <button class="loc-btn" data-action="openInEditorFullscreen" data-location="${locJson}" title="Open in editor">\u270E</button>
       </div>
     </div>
   `
@@ -384,7 +390,7 @@ export function renderSequenceHeader(group: LocationGroup): string {
       ${stateIcon}
       <div class="sequence-info">
         <div class="sequence-location">
-          <span class="sequence-file" onclick="window.opener ? window.opener.__scenetest_openInEditor && window.opener.__scenetest_openInEditor(${locJson}) : window.__scenetest_openInEditor && window.__scenetest_openInEditor(${locJson})">${escapeHtml(formatLocation(group.location))}</span>
+          <span class="sequence-file" data-action="openInEditorFullscreen" data-location="${locJson}">${escapeHtml(formatLocation(group.location))}</span>
         </div>
         <div class="sequence-desc">${escapeHtml(group.description)}</div>
         <div class="sequence-summary">
@@ -398,4 +404,107 @@ export function renderSequenceHeader(group: LocationGroup): string {
       <span class="note-badge clickable ${statusClass}" data-description="${escapeHtml(group.description)}" data-result="${group.lastResult}" title="Click to hear this note">\u266A${noteInfo.noteName}</span>
     </div>
   `
+}
+
+/**
+ * Render the back button for sequence view
+ */
+export function renderBackButton(): string {
+  return `<div class="back-btn" data-action="backToLocationView">\u2190 Back to all locations</div>`
+}
+
+/**
+ * Attach event listeners to rendered elements using event delegation.
+ * Call this after rendering HTML to a container.
+ *
+ * @param container - The container element (or document)
+ * @param handlers - Object with handler functions
+ */
+export function attachEventListeners(
+  container: Document | HTMLElement,
+  handlers: {
+    openFullscreenToGroup?: (groupId: number) => void
+    openInEditor?: (location: unknown) => void
+    openInEditorFullscreen?: (location: unknown) => void
+    showSequence?: (key: string) => void
+    backToLocationView?: () => void
+    setViewMode?: (mode: string) => void
+  }
+): void {
+  const root = container instanceof Document ? container.body : container
+
+  root.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
+
+    // Find the element with the data-action attribute
+    const actionEl = target.closest('[data-action]') as HTMLElement | null
+    if (!actionEl) return
+
+    const action = actionEl.dataset.action
+
+    switch (action) {
+      case 'openFullscreenToGroup': {
+        const groupId = parseInt(actionEl.dataset.groupId || '', 10)
+        if (!isNaN(groupId) && handlers.openFullscreenToGroup) {
+          handlers.openFullscreenToGroup(groupId)
+        }
+        break
+      }
+
+      case 'openInEditor': {
+        const locStr = actionEl.dataset.location
+        if (locStr && locStr !== 'null' && handlers.openInEditor) {
+          try {
+            const location = JSON.parse(locStr)
+            handlers.openInEditor(location)
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+        break
+      }
+
+      case 'openInEditorFullscreen': {
+        e.stopPropagation()
+        const locStr = actionEl.dataset.location
+        if (locStr && locStr !== 'null' && handlers.openInEditorFullscreen) {
+          try {
+            const location = JSON.parse(locStr)
+            handlers.openInEditorFullscreen(location)
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+        break
+      }
+
+      case 'showSequence': {
+        const key = actionEl.dataset.key
+        if (key && handlers.showSequence) {
+          try {
+            const keyParsed = JSON.parse(key)
+            handlers.showSequence(keyParsed)
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+        break
+      }
+
+      case 'backToLocationView': {
+        if (handlers.backToLocationView) {
+          handlers.backToLocationView()
+        }
+        break
+      }
+
+      case 'toggleCollapsed': {
+        const parent = actionEl.parentElement
+        if (parent) {
+          parent.classList.toggle('collapsed')
+        }
+        break
+      }
+    }
+  })
 }

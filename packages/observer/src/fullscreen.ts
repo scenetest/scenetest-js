@@ -19,8 +19,8 @@ import {
   clearAll,
   panel,
 } from './state.js'
-import { filterItems } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll } from './render.js'
+import { filterItems, openInEditor } from './utils.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -35,6 +35,48 @@ import {
   playAssertionSound,
 } from './audio.js'
 import { assertions, GROUP_THRESHOLD_MS } from './state.js'
+
+/**
+ * Set up event listeners for fullscreen view rendered content.
+ * Uses event delegation via attachEventListeners from render.js.
+ */
+function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): void {
+  attachEventListeners(listEl, {
+    openInEditorFullscreen: (location) => {
+      // In fullscreen, we need to call the opener's function or our own
+      const opener = window.opener as Window | null
+      if (opener && opener.__scenetest_openInEditor) {
+        opener.__scenetest_openInEditor(location as any)
+      } else if (window.__scenetest_openInEditor) {
+        window.__scenetest_openInEditor(location as any)
+      } else {
+        openInEditor(location as any)
+      }
+    },
+    showSequence: (key) => {
+      // Show sequence view - call opener's function or our own
+      const opener = window.opener as Window | null
+      if (opener && opener.__scenetest_showSequence) {
+        opener.__scenetest_showSequence(key)
+      } else if (window.__scenetest_showSequence) {
+        window.__scenetest_showSequence(key)
+      } else {
+        showSequence(key)
+      }
+    },
+    backToLocationView: () => {
+      // Go back to location view - call opener's function or our own
+      const opener = window.opener as Window | null
+      if (opener && opener.__scenetest_setViewMode) {
+        opener.__scenetest_setViewMode('byLocation')
+      } else if (window.__scenetest_setViewMode) {
+        window.__scenetest_setViewMode('byLocation')
+      } else {
+        backToLocationView()
+      }
+    },
+  })
+}
 
 /**
  * Get the HTML for the fullscreen window
@@ -358,6 +400,9 @@ function renderGroupedView(doc: Document, listEl: HTMLElement): void {
     .reverse()
     .join('')
 
+  // Set up event listeners for rendered content
+  setupFullscreenEventListeners(doc, listEl)
+
   // Restore scroll position
   if (anchorGroupId !== null) {
     const anchorEl = listEl.querySelector(`[data-group-id="${anchorGroupId}"]`)
@@ -408,6 +453,9 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
     </div>
   `
 
+  // Set up event listeners for rendered content
+  setupFullscreenEventListeners(_doc, listEl)
+
   // Set up click handlers for piano roll columns and note badges
   setupPianoRollHandlers(_doc, listEl)
   setupNoteClickHandlers(_doc, listEl)
@@ -433,14 +481,12 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
     entries = entries.filter(e => e.result)
   }
 
-  const backHandler = `window.opener ? window.opener.__scenetest_setViewMode && window.opener.__scenetest_setViewMode('byLocation') : window.__scenetest_setViewMode && window.__scenetest_setViewMode('byLocation')`
-
   // Reverse entries so most recent is at top
   const reversedEntries = entries.slice().reverse()
   const entryCount = reversedEntries.length
 
   listEl.innerHTML = `
-    <div class="back-btn" onclick="${backHandler}">\u2190 Back to all locations</div>
+    ${renderBackButton()}
     ${renderSequenceHeader(group)}
     <div class="sequence-direction-hint">
       <span class="direction-arrow">\u2191</span> Most recent at top
@@ -454,6 +500,9 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
     </div>
     ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
   `
+
+  // Set up event listeners for rendered content
+  setupFullscreenEventListeners(_doc, listEl)
 
   // Set up chord hover handlers
   setupChordHoverHandlers(_doc, listEl)

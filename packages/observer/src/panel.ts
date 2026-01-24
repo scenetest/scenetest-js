@@ -16,7 +16,8 @@ import {
   clearAll,
 } from './state.js'
 import { filterItems } from './utils.js'
-import { renderPanelGroup } from './render.js'
+import { renderPanelGroup, attachEventListeners } from './render.js'
+import { openInEditor } from './utils.js'
 import { panelStyles } from './styles.js'
 import { openFullscreen, updateFullscreenWindow } from './fullscreen.js'
 import {
@@ -212,4 +213,10 @@ export function updatePanel(): void {
     .map(g => renderPanelGroup(g))
     .reverse()
     .join('')
+
+  // Attach event listeners for the rendered content
+  attachEventListeners(listEl, {
+    openFullscreenToGroup: (groupId) => openFullscreen(groupId),
+    openInEditor: (location) => openInEditor(location as any),
+  })
 }
