@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "description": "A local-first testing framework for the Vite ecosystem",
   "license": "MIT",
-  "private": false,
+  "private": true,
   "type": "module",
   "repository": {
     "type": "git",
