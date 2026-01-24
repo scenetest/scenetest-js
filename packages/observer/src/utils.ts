@@ -13,6 +13,19 @@ export function escapeHtml(str: string): string {
 }
 
 /**
+ * Escape for use in HTML attributes (includes quote escaping)
+ * Use this for JSON embedded in onclick handlers, title attributes, etc.
+ */
+export function escapeHtmlAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
  * Format context object for display
  */
 export function formatContext(ctx: Record<string, unknown> | undefined): string {
