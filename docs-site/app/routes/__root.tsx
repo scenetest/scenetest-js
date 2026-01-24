@@ -233,6 +233,17 @@ footer {
 .copyright {
   margin-top: 16px;
   font-size: 0.85rem;
+  color: #888;
+}
+
+.copyright a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.copyright a:hover {
+  color: var(--text);
 }
 
 figure.screenshot {
