@@ -19,6 +19,15 @@ import { filterItems } from './utils.js'
 import { renderPanelGroup } from './render.js'
 import { panelStyles } from './styles.js'
 import { openFullscreen, updateFullscreenWindow } from './fullscreen.js'
+import {
+  clearSymphony,
+  playSymphony,
+  stopSymphony,
+  toggleMute,
+  isPlaying,
+  getSymphonyInfo,
+  initAudio,
+} from './audio.js'
 
 /**
  * Get the HTML template for the panel
@@ -37,6 +46,11 @@ function getPanelHTML(): string {
       <div class="scenetest-btn-group">
         <button class="scenetest-btn active" id="scenetest-filter-all">all</button>
         <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
+      </div>
+      <span class="scenetest-separator"></span>
+      <div class="scenetest-btn-group scenetest-audio-controls">
+        <button class="scenetest-btn scenetest-audio-btn" id="scenetest-mute" title="Toggle sound">\uD83D\uDD0A</button>
+        <button class="scenetest-btn scenetest-audio-btn" id="scenetest-play" title="Play symphony">\u25B6</button>
       </div>
       <span class="scenetest-separator"></span>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
@@ -107,6 +121,7 @@ export function createPanel(): void {
   panelEl.querySelector('#scenetest-clear')?.addEventListener('click', (e) => {
     e.stopPropagation()
     clearAll()
+    clearSymphony()
     updatePanel()
     updateFullscreenWindow()
   })
@@ -115,6 +130,55 @@ export function createPanel(): void {
   panelEl.querySelector('#scenetest-fullscreen')?.addEventListener('click', (e) => {
     e.stopPropagation()
     openFullscreen()
+  })
+
+  // Audio: Mute toggle
+  panelEl.querySelector('#scenetest-mute')?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    // Initialize audio on first user interaction
+    initAudio()
+    const nowMuted = toggleMute()
+    const muteBtn = panelEl.querySelector('#scenetest-mute')
+    if (muteBtn) {
+      muteBtn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A'
+      muteBtn.classList.toggle('muted', nowMuted)
+    }
+  })
+
+  // Audio: Play symphony
+  panelEl.querySelector('#scenetest-play')?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    // Initialize audio on first user interaction
+    initAudio()
+
+    const playBtn = panelEl.querySelector('#scenetest-play')
+    if (isPlaying()) {
+      stopSymphony()
+      if (playBtn) {
+        playBtn.textContent = '\u25B6'
+        playBtn.classList.remove('playing')
+      }
+    } else {
+      const info = getSymphonyInfo()
+      if (info.eventCount === 0) {
+        // Nothing to play
+        return
+      }
+      playSymphony()
+      if (playBtn) {
+        playBtn.textContent = '\u23F9'
+        playBtn.classList.add('playing')
+      }
+
+      // Set up callback for when symphony completes
+      ;(window as any).__scenetest_symphonyComplete = () => {
+        const btn = panel?.querySelector('#scenetest-play')
+        if (btn) {
+          btn.textContent = '\u25B6'
+          btn.classList.remove('playing')
+        }
+      }
+    }
   })
 }
 
