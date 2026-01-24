@@ -35,6 +35,8 @@ const SEMITONE_RATIO = Math.pow(2, 1 / 12)
 // Note duration in seconds
 const NOTE_DURATION = 0.25
 const NOTE_ATTACK = 0.02
+// The dissonant note lingers longer, making it feel awkward/out of place
+const DISSONANT_DURATION = 0.5
 
 // Symphony playback state
 interface SymphonyEvent {
@@ -122,21 +124,22 @@ function playNote(frequency: number, passed: boolean, time?: number): void {
   oscillator.start(startTime)
   oscillator.stop(startTime + NOTE_DURATION + 0.1)
 
-  if (!passed) {
+  if (passed === false) {
     // Add a second note a half step up - creates subtle "off" dissonance
+    // This note lingers longer, making it feel awkward/out of place
     const dissonantOsc = audioContext.createOscillator()
     dissonantOsc.type = 'sine'
     dissonantOsc.frequency.setValueAtTime(frequency * SEMITONE_RATIO, startTime)
 
     const dissonantGain = audioContext.createGain()
     dissonantGain.gain.setValueAtTime(0, startTime)
-    dissonantGain.gain.linearRampToValueAtTime(volume, startTime + NOTE_ATTACK)
-    dissonantGain.gain.exponentialRampToValueAtTime(0.001, startTime + NOTE_DURATION)
+    dissonantGain.gain.linearRampToValueAtTime(volume * 0.8, startTime + NOTE_ATTACK)
+    dissonantGain.gain.exponentialRampToValueAtTime(0.001, startTime + DISSONANT_DURATION)
 
     dissonantOsc.connect(dissonantGain)
     dissonantGain.connect(audioContext.destination)
     dissonantOsc.start(startTime)
-    dissonantOsc.stop(startTime + NOTE_DURATION + 0.1)
+    dissonantOsc.stop(startTime + DISSONANT_DURATION + 0.1)
   }
 }
 
