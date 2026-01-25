@@ -3,13 +3,6 @@
 
 export {}
 
-declare module '@scenetest/core' {
-  interface ServerContext {
-    getServerTime: () => number
-    validateEmail: (email: string) => boolean
-  }
-}
-
 declare module '@scenetest/react' {
   interface ServerContext {
     getServerTime: () => number
