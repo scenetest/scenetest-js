@@ -148,20 +148,9 @@ await user
   .click('close')      // Click modal's close button
 ```
 
-## 5. Assertion Types
+## 5. Off-Script Warnings (Implemented)
 
-### App-Side Assertions
-
-- `should(description, condition, context?)` - Assert truthy condition
-- `failed(description, context?)` - Mark unexpected code path
-
-These live in application code and report via `window.__scenetest_report`.
-
-### Script Warnings (Implemented)
-
-- `warnIf(selector, message)` - Register warning if selector appears
-
-Warnings are script-level observations, not application failures. They indicate "we reached somewhere unexpected in our test script."
+`warnIf()` registers a warning trigger for unexpected paths in your test script. If the selector appears during subsequent actions, a warning is recorded but the test continues.
 
 ```typescript
 // This user should have dismissed the welcome modal
@@ -169,11 +158,28 @@ user.warnIf('welcome-modal', 'user should have dismiss flag set')
 await user.openTo('/dashboard')
 ```
 
-Warnings:
-- Don't fail tests
-- Persist for the entire scene
-- Are reported separately from assertions
-- Help identify flaky or outdated test scripts
+### Characteristics
+
+- **Not an assertion** - Doesn't indicate app failure, indicates script reached unexpected place
+- **Persists for entire scene** - Unlike `if()` watchers which clear after each await
+- **Reported separately** - Shows in `SceneReport.warnings`, not `assertions`
+- **Context captured** - Records selector, message, timestamp, actor, and which action was running
+
+### Use Cases
+
+- Deprecation tracking: "This code path still runs? We thought we migrated everyone"
+- Tech debt markers: "Fallback triggered - should investigate"
+- Flaky test debugging: "Sometimes we see this modal, sometimes not"
+- A/B test monitoring: "User hit control group unexpectedly"
+
+### Output
+
+Warnings show in the summary:
+```
+⚡ 2 script warning(s)
+  └─ [user] welcome-modal: user should have dismiss flag set
+     during: openTo(/dashboard)
+```
 
 ## 6. Timing & Observability (Implemented)
 
