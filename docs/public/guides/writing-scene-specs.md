@@ -10,8 +10,8 @@ With Scenetest, the test writer describes **what they expect to happen** in plai
 // scenes/onboarding.spec.ts
 import { scene } from '@scenetest/cli'
 
-scene('user completes onboarding', async ({ cast }) => {
-  const user = await cast('new-user')
+scene('user completes onboarding', async ({ actor }) => {
+  const user = await actor('new-user')
 
   await user.openTo('/')
   await user.see('welcome-box')
@@ -24,10 +24,10 @@ The test writer focuses on **what** should happen. Engineers then add the necess
 
 ## Actor Methods
 
-The `cast()` function returns an actor representing a user or role. Actors have these methods:
+The `actor()` function returns an actor handle representing a user or role. Actors have these methods:
 
 ```typescript
-const user = await cast('user')
+const user = await actor('user')
 
 // Navigation
 await user.openTo('/path')
@@ -80,8 +80,8 @@ await user.seeToast('success-notification')  // Waits for appear AND disappear
 Write specs from the user's perspective. Each scene should tell a story:
 
 ```typescript
-scene('user can complete checkout', async ({ cast }) => {
-  const customer = await cast('customer')
+scene('user can complete checkout', async ({ actor }) => {
+  const customer = await actor('customer')
 
   await customer.openTo('/cart')
   await customer.see('cart-items')
@@ -155,16 +155,14 @@ import { defineConfig } from '@scenetest/cli'
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
   scenes: './scenes',
-  casts: [
-    { 'new-user': { id: 'user-1' } },
-    { customer: { id: 'user-2', cart: ['item-1'] } },
-  ],
 })
 ```
 
+Actor teams are defined in separate files. See [Building Good Teams of Actors](./building-teams.md) for details.
+
 ## Summary
 
-- Scene specs describe **user journeys** with `scene()` and `cast()`
+- Scene specs describe **user journeys** with `scene()` and `actor()`
 - Write specs in **plain language** from the user's perspective
 - Use stable `data-testid` attributes as the contract with engineers
 - Use **nested selectors** (`'parent child'`) to target specific elements

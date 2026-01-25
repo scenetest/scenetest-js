@@ -1,5 +1,5 @@
 import type { SceneFn, RegisteredScene, SceneContext, SceneReport } from './types.js'
-import { CastSession } from './cast-manager.js'
+import { TeamSession } from './team-manager.js'
 import { when as whenImpl } from './message-bus.js'
 
 /**
@@ -27,8 +27,8 @@ export function setCurrentFile(file: string): void {
  * ```ts
  * import { scene } from '@scenetest/cli'
  *
- * scene('user updates their profile', async ({ cast }) => {
- *   const user = await cast('primary_user_1')
+ * scene('user updates their profile', async ({ actor }) => {
+ *   const user = await actor('primary-user')
  *   await user.openTo('/settings/profile')
  *   await user.see('profile-form')
  * })
@@ -45,12 +45,12 @@ export function scene(name: string, fn: SceneFn): void {
 /**
  * Current session for when() calls
  */
-let currentSession: CastSession | null = null
+let currentSession: TeamSession | null = null
 
 /**
  * Set the current session for when() calls
  */
-export function setCurrentSession(session: CastSession | null): void {
+export function setCurrentSession(session: TeamSession | null): void {
   currentSession = session
 }
 
@@ -81,17 +81,17 @@ export function when(
  */
 export async function runScene(
   registered: RegisteredScene,
-  session: CastSession,
+  session: TeamSession,
   timeout: number
 ): Promise<SceneReport> {
   const start = Date.now()
 
   // Create scene context
   const context: SceneContext = {
-    cast: async (role: string) => {
+    actor: async (role: string) => {
       return session.getActor(role)
     },
-    castIndex: session.castIndex,
+    teamIndex: session.teamIndex,
   }
 
   // Set current session for when() calls
@@ -132,7 +132,7 @@ export async function runScene(
     name: registered.name,
     file: registered.file,
     status,
-    castIndex: session.castIndex,
+    teamIndex: session.teamIndex,
     actors,
     assertions: session.assertions,
     warnings: session.warnings,

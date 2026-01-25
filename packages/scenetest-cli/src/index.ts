@@ -12,7 +12,7 @@ export { setAliases, getAliases, clearAliases, explainSelector } from './selecto
 // Types
 export type {
   ScenetestConfig,
-  CastConfig,
+  TeamConfig,
   ActorConfig,
   SceneContext,
   ActorHandle,

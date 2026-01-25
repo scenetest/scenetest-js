@@ -27,25 +27,26 @@ export interface ActorConfig {
 }
 
 /**
- * A cast is a complete set of actors with roles as keys
+ * A team is a complete set of actors with roles as keys.
+ * Each team is a self-contained world where all relationships hold.
  */
-export type CastConfig = Record<string, ActorConfig>
+export type TeamConfig = Record<string, ActorConfig>
 
 /**
- * Scenetest CLI configuration
+ * Scenetest CLI configuration.
+ *
+ * Actor teams are not defined here — they are auto-discovered from
+ * actor files: `actors.ts` (array of teams) or `actors/*.ts` (one team per file).
  */
 export interface ScenetestConfig {
   /** Base URL for the application */
   baseUrl: string
 
   /** Directory or glob for scene specs */
-  scenes: string
+  scenes?: string
 
   /** Patterns to ignore */
   ignore?: string[]
-
-  /** Complete casts - each is an internally-consistent set of actors */
-  casts: CastConfig[]
 
   /** Browser to use */
   browser?: 'chromium' | 'firefox' | 'webkit'
@@ -163,7 +164,7 @@ export interface SceneReport {
   name: string
   file: string
   status: 'completed' | 'failed' | 'timeout'
-  castIndex: number
+  teamIndex: number
   actors: Record<string, { id: string; username?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
@@ -219,11 +220,11 @@ export interface Actor {
  * Context passed to scene function
  */
 export interface SceneContext {
-  /** Cast an actor from the current cast */
-  cast: (role: string) => Promise<ActorHandle>
+  /** Get an actor by role from the current team */
+  actor: (role: string) => Promise<ActorHandle>
 
-  /** The cast index assigned to this scene */
-  castIndex: number
+  /** The team index assigned to this scene */
+  teamIndex: number
 }
 
 /**

@@ -1,11 +1,10 @@
-import { defineScenetestConfig, should } from '@scenetest/vite-plugin'
+import { defineConfig } from '@scenetest/cli'
 
-export default defineScenetestConfig({
-  serverFunctions: {
-    getServerTime: () => Date.now(),
-    validateEmail: (email: string) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      return emailRegex.test(email)
-    },
-  },
+export default defineConfig({
+  baseUrl: 'http://localhost:5173',
+  scenes: './scenes',
+
+  headed: true,
+  timeout: 30000,
+  actionTimeout: 5000,
 })

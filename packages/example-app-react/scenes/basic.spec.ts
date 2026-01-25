@@ -1,7 +1,7 @@
 import { scene } from '@scenetest/cli'
 
-scene('user can see the welcome page', async ({ cast }) => {
-  const user = await cast('user')
+scene('user can see the welcome page', async ({ actor }) => {
+  const user = await actor('user')
 
   // Navigate to the app
   await user.openTo('/')
@@ -11,8 +11,8 @@ scene('user can see the welcome page', async ({ cast }) => {
   await user.see('name-input')
 })
 
-scene('user can update their name', async ({ cast }) => {
-  const user = await cast('user')
+scene('user can update their name', async ({ actor }) => {
+  const user = await actor('user')
 
   await user.openTo('/')
 

@@ -21,8 +21,8 @@ program
   .option('--config <path>', 'Path to config file')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
-      // Load config
-      const config = await loadConfig(options.config)
+      // Load config and discover actor teams
+      const { config, teams } = await loadConfig(options.config)
 
       // Override config with CLI options
       if (options.headed) {
@@ -43,7 +43,7 @@ program
       }
 
       // Create runner
-      const runner = new SceneRunner(config)
+      const runner = new SceneRunner(config, teams)
 
       // Initialize browser
       await runner.init()
@@ -135,7 +135,7 @@ function generateHtmlReport(report: RunReport): string {
       return `
         <div class="scene">
           <h3 style="color: ${statusColor}">${statusIcon} ${escapeHtml(scene.name)}</h3>
-          <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Cast: ${scene.castIndex}</p>
+          <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Team: ${scene.teamIndex}</p>
           ${scene.error ? `<p class="error">Error: ${escapeHtml(scene.error)}</p>` : ''}
           <h4>Assertions (${scene.assertions.length})</h4>
           <ul>${assertionList || '<li>No assertions</li>'}</ul>
