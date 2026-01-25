@@ -175,52 +175,17 @@ scene('friend request flow', async ({ team }) => {
 
 ## How Teams Relate to Seed Data
 
-Seed data creates users that match the credentials in team config:
+Seed data creates users that match the credentials in team config. It's your
+responsibility as a dev team to create seed data that makes sense for the roles the different
+actors/personas will play in your scenes.
 
 ```
 seed-data.sql:
   INSERT INTO users (email, password_hash, ...) VALUES ('maria@test.com', ...);
   INSERT INTO users (email, password_hash, ...) VALUES ('carlos@test.com', ...);
 
-teams config:
-  'primary-learner': { email: 'maria@test.com', password: 'test123' }
-  'existing-friend': { email: 'carlos@test.com', password: 'test123' }
+teams config: [{
+  'primary-learner': { email: 'maria@test.com', password: 'test123' },
+  'existing-friend': { email: 'carlos@test.com', password: 'test123' },
+}]
 ```
-
-The team config contains **only what's needed to log in**. Everything else (user IDs, profiles, relationships) the actor discovers through the app.
-
-## Migration from Current API
-
-Current:
-```typescript
-casts: [
-  {
-    user: { id: 'user-1', username: 'alice', email: 'alice@test.com' },
-  }
-]
-
-scene('...', async ({ cast }) => {
-  const user = await cast('user')
-  await user.openTo('/')
-})
-```
-
-New:
-```typescript
-teams: [
-  {
-    'primary-user': { username: 'alice', email: 'alice@test.com', password: 'test' },
-  }
-]
-
-scene('...', async ({ team }) => {
-  const user = team['primary-user']
-  await user.openTo('/')
-})
-```
-
-Changes:
-1. Rename `casts` → `teams`
-2. Drop `id` field (actor discovers identity through the app)
-3. Scene receives `team` object with members as properties
-4. No more `await cast('role')` - just `team['role']` and alias it

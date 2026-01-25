@@ -17,15 +17,11 @@ We want developers to write assertions like this:
 ```typescript
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
-    assertion({
-      title: 'Profile update persisted',
-      withData: () => ({
-        odlerId,
-        formInput: data.input,
-        mutationResult: data.result,
-        cacheValue: queryClient.getQueryData(['profile', userId]),
-      }),
-      serverFn: async (server, data) => {
+    queryClient.setQueryData(['profile', userId], data)
+    console.log('Yay we updated the profile! hope the tests pass')
+	 assert(
+      'Profile update persisted',
+      async (server, data) => {
         const dbRecord = await server.getProfile(data.userId)
 
         should('DB should be updated recently',
@@ -37,7 +33,13 @@ const mutation = useUpdateProfile({
         should('Cache should match DB',
           data.cacheValue.name === dbRecord.name)
       },
-    })
+      {
+        odlerId,
+        formInput: data.input,
+        mutationResult: data.result,
+        cacheValue: queryClient.getQueryData(['profile', userId]),
+      },
+    )
   },
 })
 ```
@@ -85,19 +87,19 @@ import { assertion, should } from 'scenetest'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
-    assertion({
-      title: 'Profile update persisted',
-      withData: () => ({
-        userId,
-        newName: data.input.name,
-        cacheValue: queryClient.getQueryData(['profile', userId]),
-      }),
-      serverFn: async (server, data) => {
+    assert(
+      'Profile update persisted'
+      async (server, data) => {
         const db = await server.getProfile(data.userId)
         should('DB should match input', db.name === data.newName)
         should('Cache should match DB', data.cacheValue.name === db.name)
       },
-    })
+		{
+        userId,
+        newName: data.input.name,
+        cacheValue: queryClient.getQueryData(['profile', userId]),
+      },
+    )
   },
 })
 ```
