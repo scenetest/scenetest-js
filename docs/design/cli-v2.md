@@ -1,5 +1,9 @@
 # Scenetest CLI v2 Design Document
 
+**STATUS: Partial Implementation** - Core features implemented, future sections in design.
+
+---
+
 This document captures the design for the next evolution of the scenetest CLI, including implemented features and future considerations.
 
 ## 1. Philosophy
@@ -234,7 +238,9 @@ const result = await explainSelector(page, 'my-selector')
 
 ---
 
-## 7. Future: Network Layer (Design Only)
+## 7. Network Layer
+
+**Section Status: Design Only**
 
 **Purpose:** Environment control, not implementation testing.
 
@@ -294,7 +300,9 @@ scene('handles slow network', async ({ cast, network }) => {
 
 ---
 
-## 8. Future: Snapshots (Design Only)
+## 8. Snapshots
+
+**Section Status: Design Only**
 
 **Purpose:** Assert state hasn't changed unexpectedly.
 
@@ -375,7 +383,9 @@ defineConfig({
 
 ---
 
-## 10. Future: Visualization (Conceptual)
+## 10. Visualization
+
+**Section Status: Conceptual** - User-requested feature, needs design.
 
 The user mentioned wanting a visualization tool that shows:
 
