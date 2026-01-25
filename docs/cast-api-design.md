@@ -14,45 +14,17 @@ Everything else the actor discovers **through the app being tested**. No databas
 A team member is defined by their **role in the story**, not their full profile.
 
 ```typescript
-// ❌ Too much - database data doesn't belong here
 {
-  user: {
-    id: 'user-1',              // ← actor discovers this through the app
-    username: 'alice',
+  'primary-user': {
     email: 'alice@test.com',
     password: 'password123',
-    firstName: 'Alice',        // ← database data
-    lastName: 'Smith',         // ← database data
-    avatar: '/avatars/alice.png',
-    createdAt: '2024-01-01',
-    settings: { theme: 'dark', notifications: true }
-  }
-}
-
-// ✅ Just what they need to log in + what they "remember"
-{
-  user: {
-    email: 'alice@test.com',
+    languageDesired: 'Kannada',
+  },
+  'friend-user': {
+    email: 'bob@test.com',
     password: 'password123',
-  }
-}
-```
-
-## Structure
-
-```typescript
-type ActorConfig = {
-  [key: string]: unknown        // Flat: credentials + "things they remember"
-}
-
-type Team = {
-  [role: string]: ActorConfig   // role = story relationship (learner, friend, stranger)
-}
-
-type Config = {
-  baseUrl: string
-  teams: Team[]
-  // ...
+    // no languageDesired - doesn't need this backstory
+  },
 }
 ```
 
@@ -80,41 +52,35 @@ export default defineConfig({
 
   teams: [
     {
-      // The main character - a new user learning Spanish
-      learner: {
+      'primary-learner': {
         email: 'maria@test.com',
         password: 'test123',
-        // Things she "remembers" but hasn't entered yet:
         nativeLanguage: 'english',
         targetLanguage: 'spanish',
       },
-
-      // A friend who's already on the platform
-      friend: {
+      'existing-friend': {
         email: 'carlos@test.com',
         password: 'test123',
       },
-
-      // A stranger - someone they'll meet organically
-      stranger: {
+      'random-stranger': {
         email: 'stranger@test.com',
         password: 'test123',
       },
     },
 
-    // Second team for parallel test execution
+    // Second team for parallel execution
     {
-      learner: {
+      'primary-learner': {
         email: 'john@test.com',
         password: 'test123',
         nativeLanguage: 'english',
         targetLanguage: 'french',
       },
-      friend: {
+      'existing-friend': {
         email: 'pierre@test.com',
         password: 'test123',
       },
-      stranger: {
+      'random-stranger': {
         email: 'stranger2@test.com',
         password: 'test123',
       },
@@ -129,11 +95,10 @@ For testing logged-out or signup experiences:
 
 ```typescript
 {
-  visitor: {
+  'logged-out-visitor': {
     // No credentials - just a fresh browser context
   },
-  signupUser: {
-    // Will create account during test
+  'new-signup': {
     email: 'newuser@test.com',
     password: 'willsignup123',
   },
@@ -142,49 +107,42 @@ For testing logged-out or signup experiences:
 
 ## Role Naming Convention
 
-Roles should describe **relationship to the story**, not system roles:
+Roles should describe **relationship to the story**, not system roles. Use `kebab-case` for readability - you'll alias them in your scene anyway:
 
 ```typescript
-// ✅ Good - describes relationship/role in the scene
 {
-  protagonist: { ... },      // Main character
-  mentor: { ... },           // Helps the protagonist
-  rival: { ... },            // Competes with protagonist
-  bystander: { ... },        // Observes but doesn't participate
-  newUser: { ... },          // Fresh account, no history
-}
-
-// ❌ Avoid - describes system permissions, not story role
-{
-  admin: { ... },
-  moderator: { ... },
-  premiumUser: { ... },
+  'primary-user': { ... },
+  'helpful-mentor': { ... },
+  'annoying-rival': { ... },
+  'random-stranger': { ... },
+  'new-signup': { ... },
 }
 ```
 
-If you need an admin for a test, the role should reflect WHY:
+If you need an admin for a test, the role should reflect their purpose in the story:
 
 ```typescript
 {
-  reportedUser: { ... },
-  moderator: { ... },        // OK if their role IS to moderate in this scene
+  'reported-user': { ... },
+  'responding-moderator': { ... },
 }
 ```
 
 ## Accessing Team Members in Scenes
 
-The scene receives a pre-constructed `team` with all members ready to go:
+The scene receives a pre-constructed `team` with all members ready to go. Destructure for readability:
 
 ```typescript
 scene('learner completes first lesson', async ({ team }) => {
-  // Access members directly - no await, no ceremony
-  await team.learner.openTo('/login')
-  await team.learner.typeInto('email-input', team.learner.email)
-  await team.learner.typeInto('password-input', team.learner.password)
-  await team.learner.click('submit')
+  const learner = team['primary-learner']
+
+  await learner.openTo('/login')
+  await learner.typeInto('email-input', learner.email)
+  await learner.typeInto('password-input', learner.password)
+  await learner.click('submit')
 
   // "Remembered" metadata available on the actor
-  console.log(team.learner.targetLanguage) // 'spanish'
+  console.log(learner.targetLanguage) // 'spanish'
 })
 ```
 
@@ -192,23 +150,26 @@ scene('learner completes first lesson', async ({ team }) => {
 
 ```typescript
 scene('friend request flow', async ({ team }) => {
-  // Both actors log in
-  await team.learner.openTo('/login')
-  await team.learner.typeInto('email', team.learner.email).typeInto('password', team.learner.password).click('submit')
+  const learner = team['primary-learner']
+  const friend = team['existing-friend']
 
-  await team.friend.openTo('/login')
-  await team.friend.typeInto('email', team.friend.email).typeInto('password', team.friend.password).click('submit')
+  // Both actors log in
+  await learner.openTo('/login')
+  await learner.typeInto('email', learner.email).typeInto('password', learner.password).click('submit')
+
+  await friend.openTo('/login')
+  await friend.typeInto('email', friend.email).typeInto('password', friend.password).click('submit')
 
   // Learner sends friend request
-  await team.learner.openTo('/users')
-  await team.learner.click('add-friend-carlos')
+  await learner.openTo('/users')
+  await learner.click('add-friend-carlos')
 
   // Friend sees and accepts it
-  await team.friend.see('friend-request')
-  await team.friend.click('accept')
+  await friend.see('friend-request')
+  await friend.click('accept')
 
   // Learner sees confirmation
-  await team.learner.see('friend-added')
+  await learner.see('friend-added')
 })
 ```
 
@@ -222,8 +183,8 @@ seed-data.sql:
   INSERT INTO users (email, password_hash, ...) VALUES ('carlos@test.com', ...);
 
 teams config:
-  learner: { email: 'maria@test.com', password: 'test123' }
-  friend: { email: 'carlos@test.com', password: 'test123' }
+  'primary-learner': { email: 'maria@test.com', password: 'test123' }
+  'existing-friend': { email: 'carlos@test.com', password: 'test123' }
 ```
 
 The team config contains **only what's needed to log in**. Everything else (user IDs, profiles, relationships) the actor discovers through the app.
@@ -248,12 +209,13 @@ New:
 ```typescript
 teams: [
   {
-    user: { username: 'alice', email: 'alice@test.com', password: 'test' },
+    'primary-user': { username: 'alice', email: 'alice@test.com', password: 'test' },
   }
 ]
 
 scene('...', async ({ team }) => {
-  await team.user.openTo('/')
+  const user = team['primary-user']
+  await user.openTo('/')
 })
 ```
 
@@ -261,4 +223,4 @@ Changes:
 1. Rename `casts` → `teams`
 2. Drop `id` field (actor discovers identity through the app)
 3. Scene receives `team` object with members as properties
-4. No more `await cast('role')` - just `team.role`
+4. No more `await cast('role')` - just `team['role']` and alias it
