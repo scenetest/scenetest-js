@@ -1,5 +1,9 @@
 # Multi-Context Assertions Design Doc
 
+**STATUS: Design Stage** - Detailed design, not yet implemented.
+
+---
+
 ## Overview
 
 This document describes the design for the `assertion()` API - inline assertions that compare data across browser and server contexts. The pattern is inspired by React Server Actions: code is written colocated and type-aware, but compiled to run on the server.
