@@ -66,6 +66,15 @@ importers:
 
   packages/example-app-react:
     dependencies:
+      '@scenetest/cli':
+        specifier: workspace:*
+        version: link:../scenetest-cli
+      '@scenetest/core':
+        specifier: workspace:*
+        version: link:../scenetest
+      '@scenetest/observer':
+        specifier: workspace:*
+        version: link:../observer
       '@scenetest/react':
         specifier: workspace:*
         version: link:../scenetest-react

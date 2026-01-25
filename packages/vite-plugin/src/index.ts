@@ -173,6 +173,7 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         // Default: enable CSP when devPanel is shown
         cspEnabled = showDevPanel
       }
+
     },
 
     configResolved(config) {
@@ -270,13 +271,13 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return html
       }
 
-      // Inject observer as a module import - Vite handles bundling/HMR
+      // Inject observer via middleware route - serves bundled observer from local installation
       const gitHash = getGitHash()
       const version = getVersion()
       const script = `<script type="module">
 window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
 window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
-import '@scenetest/observer/auto';
+import '/__scenetest/observer.js';
 </script>`
       return html.replace('</body>', `${script}</body>`)
     },

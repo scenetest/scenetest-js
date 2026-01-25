@@ -42,7 +42,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
 }
 
 /**
- * Create the scenetest middleware for handling RPC requests.
+ * Create the scenetest middleware for handling RPC requests and serving the observer.
  *
  * SECURITY NOTE: This middleware executes user-provided assertion code
  * from the virtual module in the dev server context with full Node.js
@@ -51,6 +51,36 @@ export function failed(description: string, context?: Record<string, unknown>): 
  */
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   return async (req, res, next) => {
+    // Serve the observer module at /__scenetest/observer.js
+    if (req.method === 'GET' && req.url === '/__scenetest/observer.js') {
+      try {
+        // Resolve the observer's auto entry point
+        const resolved = await server.pluginContainer.resolveId('@scenetest/observer/auto')
+        if (!resolved) {
+          res.statusCode = 404
+          res.end('Observer module not found')
+          return
+        }
+
+        // Transform the module through Vite's pipeline
+        const result = await server.transformRequest(resolved.id)
+        if (!result) {
+          res.statusCode = 500
+          res.end('Failed to transform observer module')
+          return
+        }
+
+        res.setHeader('Content-Type', 'application/javascript')
+        res.end(result.code)
+        return
+      } catch (err) {
+        console.error('[vite-plugin-scenetest] Error serving observer:', err)
+        res.statusCode = 500
+        res.end('Error serving observer module')
+        return
+      }
+    }
+
     // Only handle POST /__scenetest/run
     if (req.method !== 'POST' || req.url !== '/__scenetest/run') {
       return next()

@@ -12,7 +12,10 @@
     "@tanstack/react-query": "^5.90.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@scenetest/react": "workspace:*"
+    "@scenetest/react": "workspace:*",
+    "@scenetest/core": "workspace:*",
+    "@scenetest/observer": "workspace:*",
+    "@scenetest/cli": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
