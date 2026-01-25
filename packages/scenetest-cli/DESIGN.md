@@ -78,10 +78,10 @@ scene('user updates their profile', async ({ cast }) => {
 
   // Navigate and interact
   await user.goto('/settings/profile')
-  await user.seeId('profile-form')
+  await user.see('profile-form')
   await user.typeInto('display-name', 'New Name')
-  await user.clickId('save-button')
-  await user.seeId('success-toast')
+  await user.click('save-button')
+  await user.seeToast('success-toast')
 })
 ```
 
@@ -98,25 +98,25 @@ scene('sending and receiving friend requests', async ({ cast }) => {
 
   // Sender finds and requests receiver
   await sender.goto(`/friends/search?q=${receiver.username}`)
-  await sender.seeId(`user-card-${receiver.id}`)
-  await sender.clickId('send-request-button')
+  await sender.see(`user-card-${receiver.id}`)
+  await sender.click('send-request-button')
 
   // Declare early: when receiver accepts, sender should see confirmation
   // This goes on the message bus - no race condition worries
   when(
     'receiver accepts request',
-    () => sender.seeId('friend-confirmed-toast')
+    () => sender.seeToast('friend-confirmed-toast')
   )
 
   // Receiver gets notification and accepts
-  await receiver.seeId('notification-badge')
-  await receiver.clickId('notifications-button')
-  await receiver.seeId('friend-request-item')
-  await receiver.clickId('accept-button')
+  await receiver.see('notification-badge')
+  await receiver.click('notifications-button')
+  await receiver.see('friend-request-item')
+  await receiver.click('accept-button')
 
   // Emit to bus - triggers the sender's waiting assertion
   when(
-    () => receiver.seeId('friend-added-toast'),
+    () => receiver.seeToast('friend-added-toast'),
     'receiver accepts request'
   )
 
@@ -263,18 +263,20 @@ user.page       // Playwright Page
 // Navigation
 await user.goto('/path')
 
-// Element interactions (by test ID)
-await user.seeId('element-id')        // wait for visibility
-await user.clickId('button-id')       // click
+// Element interactions (by test ID, supports nested: 'parent child')
+await user.see('element-id')          // wait for visibility
+await user.see('modal form')          // wait for nested element
+await user.click('button-id')         // click
 await user.typeInto('input-id', 'text') // fill input
 await user.seeText('some text')       // wait for text
+await user.seeToast('toast-id')       // wait for appear AND disappear
 
 // Chaining
 await user
-  .seeId('form')
+  .see('form')
   .typeInto('email', 'test@test.com')
-  .clickId('submit')
-  .seeId('success')
+  .click('submit')
+  .seeToast('success')
 
 // Low-level access when needed
 await user.page.locator('.custom-selector').click()
@@ -319,19 +321,19 @@ when(() => stripe.webhookReceived(), 'payment-confirmed')
 ```ts
 // String trigger, function action
 when('user2 accepts', async () => {
-  await user1.seeId('notification')
-  await user1.clickId('view-friend')
+  await user1.see('notification')
+  await user1.click('view-friend')
 })
 
 // Function trigger, string action
 when(
-  () => user2.seeId('request-accepted-toast'),
+  () => user2.seeToast('request-accepted-toast'),
   'user2 accepts'
 )
 
 // Function trigger, function action
 when(
-  () => user1.seeId('form-submitted'),
+  () => user1.see('form-submitted'),
   () => user2.goto('/inbox')
 )
 
@@ -350,11 +352,11 @@ All actor methods return a chainable builder. Call without `await` to build up a
 ```ts
 // Build chain
 const chain = user
-  .seeId('login-form')
+  .see('login-form')
   .typeInto('email', 'test@test.com')
   .typeInto('password', 'secret')
-  .clickId('submit')
-  .seeId('dashboard')
+  .click('submit')
+  .see('dashboard')
 
 // Execute all actions in sequence
 await chain
@@ -363,8 +365,8 @@ await chain
 Or use `await` directly for single actions:
 
 ```ts
-await user.seeId('login-form')
-await user.clickId('submit')
+await user.see('login-form')
+await user.click('submit')
 ```
 
 ### Chain Methods
@@ -372,9 +374,11 @@ await user.clickId('submit')
 ```ts
 user
   .goto('/path')                    // Navigate
-  .seeId('test-id')                 // Wait for element by test ID
+  .see('test-id')                   // Wait for element by test ID
+  .see('parent child')              // Wait for nested element
   .seeText('text')                  // Wait for text content
-  .clickId('test-id')               // Click by test ID
+  .seeToast('toast-id')             // Wait for appear AND disappear
+  .click('test-id')                 // Click by test ID
   .typeInto('test-id', 'value')     // Fill input by test ID
   .check('test-id')                 // Check checkbox
   .select('test-id', 'option')      // Select dropdown option
@@ -425,7 +429,7 @@ Scene runs generate reports containing:
       ],
       "timeline": [
         { "action": "goto", "target": "/settings/profile", "actor": "user", "timestamp": 1705315800000 },
-        { "action": "seeId", "target": "profile-form", "actor": "user", "timestamp": 1705315801000 }
+        { "action": "see", "target": "profile-form", "actor": "user", "timestamp": 1705315801000 }
       ]
     }
   ],
