@@ -1,6 +1,13 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
 
 /**
+ * Selector can be:
+ * - A string: 'button' or 'modal form button' (nested)
+ * - A tuple: ['playlist-row', '12345'] for name + key
+ */
+export type Selector = string | [string, string]
+
+/**
  * Actor credentials and identity from config
  */
 export interface ActorConfig {
@@ -46,6 +53,9 @@ export interface ScenetestConfig {
 
   /** Individual action timeout in ms */
   actionTimeout?: number
+
+  /** Warn threshold in ms - emit warning if action takes longer than this (default: 500) */
+  warnAfter?: number
 
   /** Report output directory */
   reportDir?: string
@@ -94,6 +104,24 @@ export interface AssertionResult {
 }
 
 /**
+ * Script-level warning (not an assertion failure).
+ * These indicate unexpected paths in the test script itself,
+ * not failures in the application under test.
+ */
+export interface ScriptWarning {
+  /** The selector that triggered this warning */
+  selector: string
+  /** Human-readable message explaining why this is unexpected */
+  message: string
+  /** When the warning was triggered */
+  timestamp: number
+  /** Which actor encountered this */
+  actor: string
+  /** Action that was executing when the warning triggered */
+  duringAction?: string
+}
+
+/**
  * Timeline entry for scene actions
  */
 export interface TimelineEntry {
@@ -115,6 +143,7 @@ export interface SceneReport {
   castIndex: number
   actors: Record<string, { id: string; username?: string }>
   assertions: AssertionResult[]
+  warnings: ScriptWarning[]
   timeline: TimelineEntry[]
   duration: number
   error?: string
@@ -136,6 +165,7 @@ export interface RunReport {
       passed: number
       failed: number
     }
+    warnings: number
   }
 }
 
@@ -186,29 +216,41 @@ export interface ActorHandle extends ActorConfig {
   /** Open browser to URL (full page load, not SPA routing) */
   openTo(url: string): ActionChain
 
-  /** Wait for element to be visible. Supports nested selectors: 'parent child' */
-  see(selector: string): ActionChain
+  /**
+   * Wait for element to be visible and set it as the current scope.
+   * Supports nested selectors: 'parent child'
+   * Supports tuple selectors: ['playlist-row', '12345'] for name + key
+   */
+  see(selector: Selector): ActionChain
 
   /** Wait for element to NOT be visible (hidden or detached) */
-  notSee(selector: string): ActionChain
+  notSee(selector: Selector): ActionChain
 
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
 
   /** Wait for element to appear AND disappear (for toasts/notifications) */
-  seeToast(selector: string): ActionChain
+  seeToast(selector: Selector): ActionChain
 
-  /** Click element. Supports nested selectors: 'parent child' */
-  click(selector: string): ActionChain
+  /**
+   * Click element within current scope.
+   * Supports nested selectors: 'parent child'
+   * Supports tuple selectors: ['button', '12345'] for name + key
+   */
+  click(selector: Selector): ActionChain
 
-  /** Type into input. Supports nested selectors: 'parent child' */
-  typeInto(selector: string, value: string): ActionChain
+  /**
+   * Type into input within current scope.
+   * Supports nested selectors: 'parent child'
+   * Supports tuple selectors: ['input', '12345'] for name + key
+   */
+  typeInto(selector: Selector, value: string): ActionChain
 
-  /** Check checkbox. Supports nested selectors: 'parent child' */
-  check(selector: string): ActionChain
+  /** Check checkbox within current scope */
+  check(selector: Selector): ActionChain
 
-  /** Select option in dropdown. Supports nested selectors: 'parent child' */
-  select(selector: string, value: string): ActionChain
+  /** Select option in dropdown within current scope */
+  select(selector: Selector, value: string): ActionChain
 
   /** Wait for specified milliseconds */
   wait(ms: number): ActionChain
@@ -224,7 +266,20 @@ export interface ActorHandle extends ActorConfig {
    * the next awaited action, the callback will be executed.
    * Watchers are cleared after each await.
    */
-  if(selector: string, callback: () => Promise<void>): void
+  if(selector: Selector, callback: () => Promise<void>): void
+
+  /**
+   * Register a script warning. If the selector becomes visible during
+   * subsequent actions, a warning is recorded (but test continues).
+   * Use for unexpected paths that aren't failures.
+   *
+   * @example
+   * ```ts
+   * user.warnIf('welcome-modal', 'should not see welcome - user has dismiss flag')
+   * await user.see('dashboard')
+   * ```
+   */
+  warnIf(selector: Selector, message: string): void
 }
 
 /**
@@ -234,29 +289,32 @@ export interface ActionChain extends PromiseLike<void> {
   /** Open browser to URL (full page load, not SPA routing) */
   openTo(url: string): ActionChain
 
-  /** Wait for element to be visible. Supports nested selectors: 'parent child' */
-  see(selector: string): ActionChain
+  /**
+   * Wait for element to be visible and set it as the current scope.
+   * Subsequent actions (click, typeInto, etc.) will look within this scope.
+   */
+  see(selector: Selector): ActionChain
 
   /** Wait for element to NOT be visible (hidden or detached) */
-  notSee(selector: string): ActionChain
+  notSee(selector: Selector): ActionChain
 
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
 
   /** Wait for element to appear AND disappear (for toasts/notifications) */
-  seeToast(selector: string): ActionChain
+  seeToast(selector: Selector): ActionChain
 
-  /** Click element. Supports nested selectors: 'parent child' */
-  click(selector: string): ActionChain
+  /** Click element within current scope */
+  click(selector: Selector): ActionChain
 
-  /** Type into input. Supports nested selectors: 'parent child' */
-  typeInto(selector: string, value: string): ActionChain
+  /** Type into input within current scope */
+  typeInto(selector: Selector, value: string): ActionChain
 
-  /** Check checkbox. Supports nested selectors: 'parent child' */
-  check(selector: string): ActionChain
+  /** Check checkbox within current scope */
+  check(selector: Selector): ActionChain
 
-  /** Select option in dropdown. Supports nested selectors: 'parent child' */
-  select(selector: string, value: string): ActionChain
+  /** Select option in dropdown within current scope */
+  select(selector: Selector, value: string): ActionChain
 
   /** Wait for specified milliseconds */
   wait(ms: number): ActionChain
@@ -266,6 +324,28 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
+
+  /**
+   * Navigate up to an ancestor matching the selector.
+   * Use with aliases like ~container to find named containers.
+   *
+   * @example
+   * ```ts
+   * user.see('button').up('~container').see('other-element')
+   * ```
+   */
+  up(selector: Selector): ActionChain
+
+  /**
+   * Return to the previously held scope.
+   * Useful after navigating with up() or drilling into a child.
+   *
+   * @example
+   * ```ts
+   * user.see('parent').see('child').prev().click('sibling')
+   * ```
+   */
+  prev(): ActionChain
 }
 
 /**

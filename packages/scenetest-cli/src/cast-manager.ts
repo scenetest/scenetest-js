@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { CastConfig, ActorConfig, AssertionResult, TimelineEntry } from './types.js'
+import type { CastConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
 import { ActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
 
@@ -108,7 +108,8 @@ export class CastManager {
    */
   async createSession(
     castIndex: number,
-    actionTimeout: number
+    actionTimeout: number,
+    warnAfter: number
   ): Promise<CastSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -117,7 +118,8 @@ export class CastManager {
       this.browser,
       this.getCast(castIndex),
       castIndex,
-      actionTimeout
+      actionTimeout,
+      warnAfter
     )
   }
 }
@@ -132,12 +134,14 @@ export class CastSession {
   private bus = new MessageBus()
   readonly timeline: TimelineEntry[] = []
   readonly assertions: AssertionResult[] = []
+  readonly warnings: ScriptWarning[] = []
 
   constructor(
     private browser: Browser,
     private cast: CastConfig,
     readonly castIndex: number,
-    private actionTimeout: number
+    private actionTimeout: number,
+    private warnAfter: number
   ) {}
 
   /**
@@ -175,7 +179,9 @@ export class CastSession {
       context,
       this.bus,
       this.timeline,
-      this.actionTimeout
+      this.warnings,
+      this.actionTimeout,
+      this.warnAfter
     )
 
     this.contexts.set(role, context)
