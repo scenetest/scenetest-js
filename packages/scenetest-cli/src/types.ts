@@ -189,6 +189,9 @@ export interface ActorHandle extends ActorConfig {
   /** Wait for element to be visible. Supports nested selectors: 'parent child' */
   see(selector: string): ActionChain
 
+  /** Wait for element to NOT be visible (hidden or detached) */
+  notSee(selector: string): ActionChain
+
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
 
@@ -215,6 +218,13 @@ export interface ActorHandle extends ActorConfig {
 
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
+
+  /**
+   * Register a conditional watcher. If the selector becomes visible during
+   * the next awaited action, the callback will be executed.
+   * Watchers are cleared after each await.
+   */
+  if(selector: string, callback: () => Promise<void>): void
 }
 
 /**
@@ -226,6 +236,9 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Wait for element to be visible. Supports nested selectors: 'parent child' */
   see(selector: string): ActionChain
+
+  /** Wait for element to NOT be visible (hidden or detached) */
+  notSee(selector: string): ActionChain
 
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
