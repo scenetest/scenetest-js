@@ -57,6 +57,21 @@ export interface ScenetestConfig {
   /** Warn threshold in ms - emit warning if action takes longer than this (default: 500) */
   warnAfter?: number
 
+  /**
+   * Selector aliases - map shorthand names to CSS selectors.
+   * Use with ~ prefix: user.see('~modal')
+   *
+   * @example
+   * ```ts
+   * aliases: {
+   *   modal: '[role=dialog]',
+   *   'btn-p': 'button[type=submit], button.primary',
+   *   nav: '[role=navigation]',
+   * }
+   * ```
+   */
+  aliases?: Record<string, string>
+
   /** Report output directory */
   reportDir?: string
 

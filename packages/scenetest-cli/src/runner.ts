@@ -5,6 +5,7 @@ import path from 'path'
 import type { ScenetestConfig, RunReport, SceneReport } from './types.js'
 import { CastManager } from './cast-manager.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
+import { setAliases } from './selectors.js'
 
 /**
  * Main scene runner
@@ -15,6 +16,11 @@ export class SceneRunner {
 
   constructor(private config: ScenetestConfig) {
     this.castManager = new CastManager(config.casts)
+
+    // Apply aliases from config
+    if (config.aliases) {
+      setAliases(config.aliases)
+    }
   }
 
   /**
