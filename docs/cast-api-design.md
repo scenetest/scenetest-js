@@ -37,38 +37,42 @@ A cast member is defined by their **role in the story**, not their full profile.
 {
   user: {
     id: 'user-1',
-    login: { email: 'alice@test.com', password: 'password123' }
+    email: 'alice@test.com',
+    password: 'password123',
   }
 }
 ```
 
-## Proposed Structure
+## Structure
 
 ```typescript
-type LoginCredentials = {
-  email?: string
-  username?: string
-  password?: string
-  // OAuth tokens, API keys, etc. could go here too
-  [key: string]: unknown
-}
-
 type ActorConfig = {
-  id: string                    // Required: system identifier
-  login?: LoginCredentials      // How they authenticate
-  [key: string]: unknown        // "Things they remember" - sparse metadata
+  id: string                    // Required: system identifier (matches seed data)
+  [key: string]: unknown        // Flat: credentials + "things they remember"
 }
 
-type Crew = {
-  [role: string]: ActorConfig
+type Team = {
+  [role: string]: ActorConfig   // role = story relationship (protagonist, friend, stranger)
 }
 
 type Config = {
   baseUrl: string
-  crews: Crew[]                 // Renamed from "casts" for clarity
+  teams: Team[]
   // ...
 }
 ```
+
+### Why flat credentials?
+
+People will write their own login helpers. Auth could be:
+- Email/password
+- Username/password
+- OAuth tokens
+- Magic links
+- Device-based auth
+- Multi-factor flows
+
+There's no universal `login` shape, so keep it flat and let the test author decide.
 
 ## Example: Language Learning App
 
@@ -76,12 +80,13 @@ type Config = {
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
 
-  crews: [
+  teams: [
     {
       // The main character - a new user learning Spanish
       learner: {
         id: 'user-1',
-        login: { email: 'maria@test.com', password: 'test123' },
+        email: 'maria@test.com',
+        password: 'test123',
         // Things she "remembers" but hasn't entered yet:
         nativeLanguage: 'english',
         targetLanguage: 'spanish',
@@ -90,34 +95,57 @@ export default defineConfig({
       // A friend who's already on the platform
       friend: {
         id: 'user-2',
-        login: { email: 'carlos@test.com', password: 'test123' },
+        email: 'carlos@test.com',
+        password: 'test123',
       },
 
       // A stranger - someone they'll meet organically
       stranger: {
         id: 'user-3',
-        login: { email: 'stranger@test.com', password: 'test123' },
+        email: 'stranger@test.com',
+        password: 'test123',
       },
     },
-    // Second crew for parallel test execution
+
+    // Second team for parallel test execution
     {
       learner: {
         id: 'user-4',
-        login: { email: 'john@test.com', password: 'test123' },
+        email: 'john@test.com',
+        password: 'test123',
         nativeLanguage: 'english',
         targetLanguage: 'french',
       },
       friend: {
         id: 'user-5',
-        login: { email: 'pierre@test.com', password: 'test123' },
+        email: 'pierre@test.com',
+        password: 'test123',
       },
       stranger: {
         id: 'user-6',
-        login: { email: 'stranger2@test.com', password: 'test123' },
+        email: 'stranger2@test.com',
+        password: 'test123',
       },
     },
   ],
 })
+```
+
+## Anonymous Actors
+
+For testing logged-out experiences, actors can omit `id`:
+
+```typescript
+{
+  visitor: {
+    // No id, no credentials - just a fresh browser context
+  },
+  signupUser: {
+    // Will create account during test, no pre-existing id
+    email: 'newuser@test.com',
+    password: 'willsignup123',
+  },
+}
 ```
 
 ## Role Naming Convention
@@ -157,85 +185,36 @@ If you need an admin for a test, the role should reflect WHY:
 scene('learner completes first lesson', async ({ cast }) => {
   const learner = await cast('learner')
 
-  // Login credentials available directly
+  // All config fields available directly on the actor
   await learner.openTo('/login')
-  await learner.typeInto('email', learner.login.email)
-  await learner.typeInto('password', learner.login.password)
+  await learner.typeInto('email-input', learner.email)
+  await learner.typeInto('password-input', learner.password)
   await learner.click('submit')
 
-  // "Remembered" metadata available
+  // "Remembered" metadata available too
   console.log(learner.targetLanguage) // 'spanish'
+  console.log(learner.id)             // 'user-1'
 
   // Everything else - fetch from DB or seed data
   // const profile = await fetchUserProfile(learner.id)
 })
 ```
 
-## Open Questions
+## How Teams Relate to Seed Data
 
-### 1. Should `login` be a reserved nested object or flat?
-
-**Option A: Nested (proposed)**
-```typescript
-{
-  id: 'user-1',
-  login: { email: 'test@test.com', password: 'pass' },
-  targetLanguage: 'spanish',
-}
-```
-
-**Option B: Flat with convention**
-```typescript
-{
-  id: 'user-1',
-  email: 'test@test.com',      // Used for login
-  password: 'pass',            // Used for login
-  targetLanguage: 'spanish',   // Metadata
-}
-```
-
-Option A makes the distinction clearer. Option B is simpler.
-
-### 2. Should we support "anonymous" actors?
-
-```typescript
-{
-  visitor: {
-    // No id, no login - just a fresh browser
-  }
-}
-```
-
-Useful for testing logged-out experiences.
-
-### 3. Should metadata support functions for dynamic values?
-
-```typescript
-{
-  learner: {
-    id: 'user-1',
-    login: { email: 'test@test.com', password: 'pass' },
-    // Generate fresh each run?
-    sessionId: () => crypto.randomUUID(),
-  }
-}
-```
-
-### 4. How do crews relate to seed data?
-
-The assumption is that seed data is **pre-populated** and **matches** the crew config:
+The assumption is that seed data is **pre-populated** and **matches** the team config:
 
 ```
 seed-data.sql:
   INSERT INTO users (id, email, ...) VALUES ('user-1', 'maria@test.com', ...);
   INSERT INTO users (id, email, ...) VALUES ('user-2', 'carlos@test.com', ...);
 
-crews config:
-  learner: { id: 'user-1', login: { email: 'maria@test.com', ... } }
-  friend: { id: 'user-2', login: { email: 'carlos@test.com', ... } }
+teams config:
+  learner: { id: 'user-1', email: 'maria@test.com', password: '...' }
+  friend: { id: 'user-2', email: 'carlos@test.com', password: '...' }
 ```
 
-The crew config is the **minimal slice** of seed data needed to begin.
+The team config is the **minimal slice** of seed data needed to begin.
 
 ## Migration from Current API
 
@@ -248,21 +227,57 @@ casts: [
 ]
 ```
 
-Proposed:
+New:
 ```typescript
-crews: [
+teams: [
   {
-    user: {
-      id: 'user-1',
-      login: { username: 'alice', email: 'alice@test.com', password: 'test' },
-    }
+    user: { id: 'user-1', username: 'alice', email: 'alice@test.com', password: 'test' },
   }
 ]
 ```
 
 The change:
-1. Rename `casts` → `crews` (optional, for clarity)
-2. Move auth fields into `login` object
+1. Rename `casts` → `teams`
+2. Credentials stay flat (no change needed if already flat)
 3. Any additional fields are "remembered metadata"
 
 Both could be supported during migration with a deprecation warning.
+
+## Open Questions
+
+### 1. Should `id` be required or optional?
+
+Currently proposed as required. But for anonymous/signup flows, there's no pre-existing id.
+
+Options:
+- **A)** `id` required, use placeholder like `id: 'new-user'` for signup flows
+- **B)** `id` optional, omit for anonymous actors
+- **C)** Different field name? (`userId`? `dbId`?)
+
+### 2. Should metadata support functions for dynamic values?
+
+```typescript
+{
+  learner: {
+    id: 'user-1',
+    email: 'test@test.com',
+    // Generate fresh each run?
+    verificationCode: () => generateCode(),
+  }
+}
+```
+
+### 3. Config function name: `cast()` vs `actor()` vs `team()`?
+
+In scenes, we currently use `cast('role')` to get an actor:
+
+```typescript
+scene('...', async ({ cast }) => {
+  const user = await cast('user')
+})
+```
+
+Should this change to match the `teams` terminology?
+- `cast('user')` - current
+- `actor('user')` - emphasizes the individual
+- `member('user')` - matches "team member"
