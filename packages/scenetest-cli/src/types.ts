@@ -1,11 +1,19 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
 
 /**
- * Selector can be:
- * - A string: 'button' or 'modal form button' (nested)
- * - A tuple: ['playlist-row', '12345'] for name + key
+ * Selector: space-separated tokens that resolve to DOM elements.
+ *
+ * Each token matches (in order): aria-label, id, data-testid, data-name, data-key, name
+ *
+ * Special behavior: after matching a token, if the SAME element has a data-key
+ * matching the NEXT token, that token is consumed without descending.
+ *
+ * @example
+ * 'button'                        // Simple selector
+ * 'modal form submit-button'      // Nested: modal > form > submit-button
+ * 'playlist-row 12345 like-button' // If playlist-row has data-key="12345", stays on same element
  */
-export type Selector = string | [string, string]
+export type Selector = string
 
 /**
  * Actor credentials and identity from config
