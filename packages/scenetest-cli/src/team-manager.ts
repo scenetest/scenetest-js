@@ -1,21 +1,21 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { CastConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
+import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
 import { ActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
 
 /**
- * Manages cast assignment and lifecycle.
+ * Manages team assignment and lifecycle.
  *
- * Each scene gets exclusive use of one cast.
- * The cast manager tracks which casts are in use.
+ * Each scene gets exclusive use of one team.
+ * The team manager tracks which teams are in use.
  */
-export class CastManager {
-  private casts: CastConfig[]
+export class TeamManager {
+  private teams: TeamConfig[]
   private inUse = new Set<number>()
   private browser: Browser | null = null
 
-  constructor(casts: CastConfig[]) {
-    this.casts = casts
+  constructor(teams: TeamConfig[]) {
+    this.teams = teams
   }
 
   /**
@@ -26,25 +26,25 @@ export class CastManager {
   }
 
   /**
-   * Get the number of available casts
+   * Get the number of available teams
    */
   get availableCount(): number {
-    return this.casts.length - this.inUse.size
+    return this.teams.length - this.inUse.size
   }
 
   /**
-   * Get the total number of casts
+   * Get the total number of teams
    */
   get totalCount(): number {
-    return this.casts.length
+    return this.teams.length
   }
 
   /**
-   * Acquire an available cast for exclusive use.
-   * Returns the cast index, or null if none available.
+   * Acquire an available team for exclusive use.
+   * Returns the team index, or null if none available.
    */
   acquire(): number | null {
-    for (let i = 0; i < this.casts.length; i++) {
+    for (let i = 0; i < this.teams.length; i++) {
       if (!this.inUse.has(i)) {
         this.inUse.add(i)
         return i
@@ -54,7 +54,7 @@ export class CastManager {
   }
 
   /**
-   * Wait for a cast to become available.
+   * Wait for a team to become available.
    */
   async acquireWait(timeout = 60000): Promise<number> {
     const start = Date.now()
@@ -66,7 +66,7 @@ export class CastManager {
       }
 
       if (Date.now() - start > timeout) {
-        throw new Error(`Timeout waiting for available cast (${timeout}ms)`)
+        throw new Error(`Timeout waiting for available team (${timeout}ms)`)
       }
 
       // Wait a bit before trying again
@@ -75,49 +75,49 @@ export class CastManager {
   }
 
   /**
-   * Release a cast back to the pool
+   * Release a team back to the pool
    */
-  release(castIndex: number): void {
-    this.inUse.delete(castIndex)
+  release(teamIndex: number): void {
+    this.inUse.delete(teamIndex)
   }
 
   /**
-   * Get the cast config for a given index
+   * Get the team config for a given index
    */
-  getCast(castIndex: number): CastConfig {
-    if (castIndex < 0 || castIndex >= this.casts.length) {
-      throw new Error(`Invalid cast index: ${castIndex}`)
+  getTeam(teamIndex: number): TeamConfig {
+    if (teamIndex < 0 || teamIndex >= this.teams.length) {
+      throw new Error(`Invalid team index: ${teamIndex}`)
     }
-    return this.casts[castIndex]
+    return this.teams[teamIndex]
   }
 
   /**
-   * Get actor config for a role in a cast
+   * Get actor config for a role in a team
    */
-  getActorConfig(castIndex: number, role: string): ActorConfig {
-    const cast = this.getCast(castIndex)
-    const actor = cast[role]
+  getActorConfig(teamIndex: number, role: string): ActorConfig {
+    const team = this.getTeam(teamIndex)
+    const actor = team[role]
     if (!actor) {
-      throw new Error(`Role "${role}" not found in cast ${castIndex}. Available roles: ${Object.keys(cast).join(', ')}`)
+      throw new Error(`Role "${role}" not found in team ${teamIndex}. Available roles: ${Object.keys(team).join(', ')}`)
     }
     return actor
   }
 
   /**
-   * Create a scene session with a cast
+   * Create a scene session with a team
    */
   async createSession(
-    castIndex: number,
+    teamIndex: number,
     actionTimeout: number,
     warnAfter: number
-  ): Promise<CastSession> {
+  ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
     }
-    return new CastSession(
+    return new TeamSession(
       this.browser,
-      this.getCast(castIndex),
-      castIndex,
+      this.getTeam(teamIndex),
+      teamIndex,
       actionTimeout,
       warnAfter
     )
@@ -125,10 +125,10 @@ export class CastManager {
 }
 
 /**
- * A session for a scene with an assigned cast.
+ * A session for a scene with an assigned team.
  * Manages browser contexts and actors for the scene.
  */
-export class CastSession {
+export class TeamSession {
   private contexts = new Map<string, BrowserContext>()
   private actors = new Map<string, ActorHandleImpl>()
   private bus = new MessageBus()
@@ -138,8 +138,8 @@ export class CastSession {
 
   constructor(
     private browser: Browser,
-    private cast: CastConfig,
-    readonly castIndex: number,
+    private team: TeamConfig,
+    readonly teamIndex: number,
     private actionTimeout: number,
     private warnAfter: number
   ) {}
@@ -155,9 +155,9 @@ export class CastSession {
     }
 
     // Get actor config
-    const config = this.cast[role]
+    const config = this.team[role]
     if (!config) {
-      throw new Error(`Role "${role}" not found in cast. Available roles: ${Object.keys(this.cast).join(', ')}`)
+      throw new Error(`Role "${role}" not found in team. Available roles: ${Object.keys(this.team).join(', ')}`)
     }
 
     // Create new browser context for this actor

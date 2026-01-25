@@ -1,6 +1,6 @@
 # Building Good Teams of Actors
 
-Teams (called "casts" in config) are the foundation of Scenetest's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
+Teams are the foundation of Scenetest's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
 
 This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams.
 
@@ -14,12 +14,12 @@ seed-data.sql:
   INSERT INTO users (email, password_hash) VALUES ('carlos@test.com', ...);
   INSERT INTO friendships (user_a, user_b) VALUES ('maria', 'carlos');
 
-scenetest.config.ts teams[0]:
+actors/team-maria.ts:
   'primary-learner':  { email: 'maria@test.com',  password: 'test123' }
   'existing-friend':  { email: 'carlos@test.com', password: 'test123' }
 ```
 
-If a scene calls `cast('existing-friend')`, that actor must already be friends with `cast('primary-learner')` in the database. The config doesn't create these relationships -- your seed data does.
+If a scene calls `actor('existing-friend')`, that actor must already be friends with `actor('primary-learner')` in the database. The actor files don't create these relationships -- your seed data does.
 
 ## Step 1: Identify Roles From Your Scenes
 
@@ -54,43 +54,143 @@ For each role, decide what pre-existing state that actor needs:
 
 Then write seed data that creates all of this for each team.
 
-## Step 3: Define Teams in Config
+## Step 3: Define Actor Teams in Files
 
-Each team is an object mapping role names to actor credentials. Actors should contain **only what a user remembers when opening the browser** -- login credentials and pre-existing knowledge:
+Actor teams live in files next to your config, not inside the config itself. Scenetest auto-discovers them.
+
+### Option A: Single `actors.ts` file
+
+Export an array of teams. Each team maps role names to actor credentials:
 
 ```typescript
+// actors.ts
+import type { TeamConfig } from '@scenetest/cli'
+
+export default [
+  // Team 0
+  {
+    'primary-learner': {
+      email: 'maria@test.com',
+      password: 'test123',
+      nativeLanguage: 'english',
+      targetLanguage: 'spanish',
+    },
+    'existing-friend': {
+      email: 'carlos@test.com',
+      password: 'test123',
+    },
+    'random-stranger': {
+      email: 'stranger-a@test.com',
+      password: 'test123',
+    },
+    'responding-moderator': {
+      email: 'mod-alpha@test.com',
+      password: 'test123',
+    },
+    'new-signup': {
+      email: 'fresh-a@test.com',
+      password: 'willregister123',
+    },
+  },
+] satisfies TeamConfig[]
+```
+
+### Option B: `actors/` directory (one file per team)
+
+Each file exports a single team. Use this when you have many teams or want to keep each team's data self-contained:
+
+```typescript
+// actors/team-maria.ts
+import type { TeamConfig } from '@scenetest/cli'
+
+export default {
+  'primary-learner': {
+    email: 'maria@test.com',
+    password: 'test123',
+    nativeLanguage: 'english',
+    targetLanguage: 'spanish',
+  },
+  'existing-friend': {
+    email: 'carlos@test.com',
+    password: 'test123',
+  },
+  'random-stranger': {
+    email: 'stranger-a@test.com',
+    password: 'test123',
+  },
+} satisfies TeamConfig
+```
+
+```typescript
+// actors/team-john.ts
+import type { TeamConfig } from '@scenetest/cli'
+
+export default {
+  'primary-learner': {
+    email: 'john@test.com',
+    password: 'test123',
+    nativeLanguage: 'english',
+    targetLanguage: 'french',
+  },
+  'existing-friend': {
+    email: 'pierre@test.com',
+    password: 'test123',
+  },
+  'random-stranger': {
+    email: 'stranger-b@test.com',
+    password: 'test123',
+  },
+} satisfies TeamConfig
+```
+
+### Discovery rules
+
+Scenetest looks for actor files relative to your config file:
+
+1. `actors.ts` (or `.js`/`.mjs`) -- single file exporting an array of teams
+2. `actors/*.ts` -- directory with one file per team
+
+The config file itself has no actor definitions:
+
+```typescript
+// scenetest.config.ts
+import { defineConfig } from '@scenetest/cli'
+
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
   scenes: './scenes',
-
-  teams: [
-    // Team 0
-    {
-      'primary-learner': {
-        email: 'maria@test.com',
-        password: 'test123',
-        nativeLanguage: 'english',
-        targetLanguage: 'spanish',
-      },
-      'existing-friend': {
-        email: 'carlos@test.com',
-        password: 'test123',
-      },
-      'random-stranger': {
-        email: 'stranger-a@test.com',
-        password: 'test123',
-      },
-      'responding-moderator': {
-        email: 'mod-alpha@test.com',
-        password: 'test123',
-      },
-      'new-signup': {
-        email: 'fresh-a@test.com',
-        password: 'willregister123',
-      },
-    },
-  ],
 })
+```
+
+### Project layout
+
+```
+your-project/
+├── scenetest.config.ts          # or scenetest/config.ts
+├── actors.ts                    # or actors/*.ts
+├── scenes/
+│   ├── onboarding.spec.ts
+│   └── social/
+│       └── friend-request.spec.ts
+└── src/
+    └── ...
+```
+
+Or using the `scenetest/` directory convention:
+
+```
+your-project/
+├── scenetest/
+│   ├── config.ts
+│   ├── actors/
+│   │   ├── team-maria.ts
+│   │   └── team-john.ts
+│   └── scenes/
+│       ├── onboarding.spec.ts
+│       └── social/
+│           └── friend-request.spec.ts
+└── src/
+    └── ...
 ```
 
 ### What goes in actor config
@@ -118,31 +218,29 @@ For logged-out or signup flows, actors can have empty or partial credentials:
 
 Scenetest's concurrency model: **N teams = N scenes running in parallel**. Each scene gets exclusive use of one team. No shared state, no race conditions.
 
-To add concurrency, duplicate your team with different actors who have the same relationships:
+To add concurrency, add more actor files (or array entries) with different actors who have the same relationships:
 
 ```typescript
-teams: [
-  // Team 0 -- maria's world
-  {
-    'primary-learner': { email: 'maria@test.com', password: 'test123' },
-    'existing-friend': { email: 'carlos@test.com', password: 'test123' },
-    'random-stranger': { email: 'stranger-a@test.com', password: 'test123' },
-  },
+// actors/team-maria.ts -- maria's world
+export default {
+  'primary-learner': { email: 'maria@test.com', password: 'test123' },
+  'existing-friend': { email: 'carlos@test.com', password: 'test123' },
+  'random-stranger': { email: 'stranger-a@test.com', password: 'test123' },
+}
 
-  // Team 1 -- john's world (same roles, different people)
-  {
-    'primary-learner': { email: 'john@test.com', password: 'test123' },
-    'existing-friend': { email: 'pierre@test.com', password: 'test123' },
-    'random-stranger': { email: 'stranger-b@test.com', password: 'test123' },
-  },
+// actors/team-john.ts -- john's world (same roles, different people)
+export default {
+  'primary-learner': { email: 'john@test.com', password: 'test123' },
+  'existing-friend': { email: 'pierre@test.com', password: 'test123' },
+  'random-stranger': { email: 'stranger-b@test.com', password: 'test123' },
+}
 
-  // Team 2 -- kate's world
-  {
-    'primary-learner': { email: 'kate@test.com', password: 'test123' },
-    'existing-friend': { email: 'leo@test.com', password: 'test123' },
-    'random-stranger': { email: 'stranger-c@test.com', password: 'test123' },
-  },
-]
+// actors/team-kate.ts -- kate's world
+export default {
+  'primary-learner': { email: 'kate@test.com', password: 'test123' },
+  'existing-friend': { email: 'leo@test.com', password: 'test123' },
+  'random-stranger': { email: 'stranger-c@test.com', password: 'test123' },
+}
 ```
 
 Each team's seed data must independently set up all the same relationships. `pierre` must be friends with `john` just like `carlos` is friends with `maria`.
@@ -166,7 +264,7 @@ When scenes change, teams and seed data may need to change too. Common triggers:
 | Scene removed the "stranger" interactions | Consider removing `random-stranger` role if no other scene uses it |
 | New scene needs users with specific content | Seed that content (posts, messages, etc.) for the relevant actors |
 
-The rule: **your seed data is the source of truth for what relationships exist.** The team config just provides the credentials to log in as those users.
+The rule: **your seed data is the source of truth for what relationships exist.** The actor files just provide the credentials to log in as those users.
 
 ## Common Patterns
 
@@ -216,8 +314,8 @@ For B2B SaaS with organizations:
 
 Before running scenes, verify:
 
-- [ ] Every role referenced by `cast('role-name')` in any scene exists in every team
-- [ ] Every actor's email/password in team config matches a user in seed data
+- [ ] Every role referenced by `actor('role-name')` in any scene exists in every team
+- [ ] Every actor's email/password in team files matches a user in seed data
 - [ ] All relationships between actors (friendships, permissions, org membership) exist in seed data
 - [ ] Each team is self-contained -- no actor appears in multiple teams
 - [ ] Anonymous actors (no credentials) are only used in scenes that don't require login
@@ -226,17 +324,17 @@ Before running scenes, verify:
 
 ## LLM Instruction: Audit Teams Against Seeds and Scenes
 
-Copy the following instruction block and paste it into an LLM conversation along with your project's seed data, scene specs, and scenetest config. The LLM will analyze alignment between the three and recommend changes.
+Copy the following instruction block and paste it into an LLM conversation along with your project's seed data, scene specs, and actor files. The LLM will analyze alignment between the three and recommend changes.
 
 ````
-You are a Scenetest team auditor. Your job is to analyze a project's seed data, scene specs, and team configuration to find mismatches and recommend improvements.
+You are a Scenetest team auditor. Your job is to analyze a project's seed data, scene specs, and actor team definitions to find mismatches and recommend improvements.
 
 ## Background
 
 Scenetest uses three connected concepts:
 - **Seeds**: Database seed files that create test users with specific relationships (friendships, permissions, org membership, content, etc.)
-- **Teams** (called `casts` in config): Sets of actor credentials mapped to role names. Each team is a self-contained world -- all relationships between actors must hold within that team's seed data.
-- **Scenes**: Test specs that call `cast('role-name')` to get actors and orchestrate user journeys.
+- **Actor teams**: Files (`actors.ts` or `actors/*.ts`) that define sets of actor credentials mapped to role names. Each team is a self-contained world -- all relationships between actors must hold within that team's seed data.
+- **Scenes**: Test specs that call `actor('role-name')` to get actors and orchestrate user journeys.
 
 These three must stay aligned:
 - Every role used in a scene must exist in every team
@@ -264,7 +362,7 @@ Present this as a table:
 
 Read all `.spec.ts` scene files. For each scene, extract:
 - Scene name
-- Every `cast('role-name')` call -- which roles does this scene need?
+- Every `actor('role-name')` call -- which roles does this scene need?
 - What relationships the scene assumes between actors (e.g., "sender finds receiver in friends list" implies they are friends)
 - What pre-existing state the scene assumes (e.g., "user sees their posts" implies the user has posts)
 
@@ -275,7 +373,7 @@ Present this as a table:
 
 ### 3. Inventory the teams
 
-Read the scenetest config file. For each team, extract:
+Read the actor files (`actors.ts` or `actors/*.ts`). For each team, extract:
 - Role name → actor email mapping
 - Any extra properties on actors (language, preferences, etc.)
 
@@ -283,7 +381,7 @@ Read the scenetest config file. For each team, extract:
 
 Check for these problems:
 
-**Missing roles**: A scene calls `cast('role-name')` but that role doesn't exist in the team config.
+**Missing roles**: A scene calls `actor('role-name')` but that role doesn't exist in the actor files.
 
 **Missing seed users**: A team references an email that doesn't exist in seed data.
 
@@ -291,7 +389,7 @@ Check for these problems:
 
 **Missing state**: A scene assumes pre-existing content (posts, orders, etc.) but seed data doesn't create it.
 
-**Orphaned roles**: A role exists in team config but no scene uses it. (Not necessarily wrong, but worth flagging.)
+**Orphaned roles**: A role exists in the actor files but no scene uses it. (Not necessarily wrong, but worth flagging.)
 
 **Orphaned seed users**: A user exists in seed data but isn't referenced by any team. (May be intentional for manual testing.)
 
@@ -302,9 +400,9 @@ Check for these problems:
 For each mismatch, recommend a specific fix:
 
 - **Add to seeds**: "Add user `banned-user-a@test.com` to seed data with `is_banned: true`"
-- **Add to teams**: "Add role `banned-user` to each team mapping to the new seed user"
+- **Add to actors**: "Add role `banned-user` to each team file mapping to the new seed user"
 - **Add to seeds (relationship)**: "Add friendship between `maria@test.com` and `carlos@test.com` in seed data"
-- **Remove from teams**: "Role `unused-role` is not referenced by any scene -- consider removing"
+- **Remove from actors**: "Role `unused-role` is not referenced by any scene -- consider removing"
 - **Add more teams**: "You have 12 scenes but only 1 team. Add N more teams with equivalent seed data to enable parallel execution. Each new team needs: [list of users and relationships]"
 
 ### 6. Recommend concurrency improvements
@@ -312,7 +410,7 @@ For each mismatch, recommend a specific fix:
 Based on the number of scenes and teams:
 - If scenes > teams, recommend how many additional teams to add
 - For each new team, specify exactly which seed users and relationships need to be created
-- Provide a template for the new team's config entry and seed data
+- Provide a template for the new team's actor file and seed data
 
 ## Output Format
 
@@ -322,7 +420,7 @@ Structure your response as:
 2. **Scene Requirements** (table)
 3. **Team Configuration** (table)
 4. **Mismatches Found** (numbered list with severity: critical/warning/info)
-5. **Recommended Changes** (grouped by: seeds, teams, scenes)
+5. **Recommended Changes** (grouped by: seeds, actors, scenes)
 6. **Concurrency Recommendations** (if applicable)
 
 Be specific. Use exact emails, role names, and file paths. Don't say "add a user" -- say "add `INSERT INTO users (email, password_hash, is_banned) VALUES ('banned-a@test.com', '$hash', true)` to `seed-data.sql`".
@@ -333,7 +431,7 @@ Be specific. Use exact emails, role names, and file paths. Don't say "add a user
 1. Copy the block above into a new LLM conversation
 2. Paste your project's files:
    - Your seed data files (SQL, JSON, or seed scripts)
-   - Your `scenetest.config.ts` (or equivalent config)
+   - Your actor files (`actors.ts` or `actors/*.ts`)
    - Your scene spec files from `scenes/`
 3. Ask: "Audit my teams against my seeds and scenes"
 4. Review the output and apply recommended changes

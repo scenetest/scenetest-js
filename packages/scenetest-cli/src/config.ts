@@ -1,7 +1,8 @@
 import { pathToFileURL } from 'url'
 import path from 'path'
 import fs from 'fs'
-import type { ScenetestConfig } from './types.js'
+import { glob } from 'glob'
+import type { ScenetestConfig, TeamConfig } from './types.js'
 
 /**
  * Default config values
@@ -22,12 +23,12 @@ const defaults: Partial<ScenetestConfig> = {
  * Config file names to search for (in order of preference)
  */
 const CONFIG_FILES = [
-  'scenetest-cli.config.ts',
-  'scenetest-cli.config.js',
-  'scenetest-cli.config.mjs',
-  'scenes.config.ts',
-  'scenes.config.js',
-  'scenes.config.mjs',
+  'scenetest.config.ts',
+  'scenetest.config.js',
+  'scenetest.config.mjs',
+  'scenetest/config.ts',
+  'scenetest/config.js',
+  'scenetest/config.mjs',
 ]
 
 /**
@@ -44,9 +45,65 @@ export function findConfigFile(cwd = process.cwd()): string | null {
 }
 
 /**
- * Load and validate the config file
+ * Discover actor team files relative to the config file directory.
+ *
+ * Looks for:
+ * 1. `actors.ts` (single file exporting an array of teams)
+ * 2. `actors/*.ts` (directory with one file per team)
  */
-export async function loadConfig(configPath?: string): Promise<ScenetestConfig> {
+async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
+  // Check for single actors file first
+  const singleFiles = ['actors.ts', 'actors.js', 'actors.mjs']
+  for (const name of singleFiles) {
+    const filepath = path.join(configDir, name)
+    if (fs.existsSync(filepath)) {
+      const module = await import(pathToFileURL(filepath).href)
+      const exported = module.default
+      if (Array.isArray(exported)) {
+        return exported as TeamConfig[]
+      }
+      // Single team exported as object
+      return [exported as TeamConfig]
+    }
+  }
+
+  // Check for actors directory
+  const actorsDir = path.join(configDir, 'actors')
+  if (fs.existsSync(actorsDir) && fs.statSync(actorsDir).isDirectory()) {
+    const files = await glob('*.{ts,js,mjs}', {
+      cwd: actorsDir,
+      absolute: true,
+    })
+
+    if (files.length === 0) {
+      throw new Error(`actors/ directory found at ${actorsDir} but contains no .ts/.js files`)
+    }
+
+    const teams: TeamConfig[] = []
+    for (const file of files.sort()) {
+      const module = await import(pathToFileURL(file).href)
+      teams.push(module.default as TeamConfig)
+    }
+    return teams
+  }
+
+  throw new Error(
+    `No actor files found. Create actors.ts (exporting an array of teams) or actors/*.ts (one file per team) next to your config file at ${configDir}`
+  )
+}
+
+/**
+ * Loaded config with resolved teams
+ */
+export interface LoadedConfig {
+  config: ScenetestConfig
+  teams: TeamConfig[]
+}
+
+/**
+ * Load and validate the config file, and discover actor teams
+ */
+export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
   const filepath = configPath || findConfigFile()
 
   if (!filepath) {
@@ -68,15 +125,21 @@ export async function loadConfig(configPath?: string): Promise<ScenetestConfig> 
     throw new Error('Config missing required field: baseUrl')
   }
 
-  if (!config.casts || config.casts.length === 0) {
-    throw new Error('Config missing required field: casts (must have at least one cast)')
-  }
-
   // Merge with defaults
-  return {
+  const resolved = {
     ...defaults,
     ...config,
   } as ScenetestConfig
+
+  // Discover actor teams relative to config file
+  const configDir = path.dirname(path.resolve(filepath))
+  const teams = await discoverTeams(configDir)
+
+  if (teams.length === 0) {
+    throw new Error('No actor teams found. Each actor file must export a team (Record<string, ActorConfig>).')
+  }
+
+  return { config: resolved, teams }
 }
 
 /**

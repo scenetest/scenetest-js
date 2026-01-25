@@ -33,8 +33,8 @@ You write scene specs. Engineers add test IDs to make them pass.
 ```typescript
 import { scene } from '@scenetest/cli'
 
-scene('description of the user journey', async ({ cast }) => {
-  const user = await cast('role-name')
+scene('description of the user journey', async ({ actor }) => {
+  const user = await actor('role-name')
 
   // Actor methods (all support nested selectors: 'parent child'):
   await user.openTo('/path')                    // Navigate to URL
@@ -70,8 +70,8 @@ When I describe a user journey:
 ```typescript
 import { scene } from '@scenetest/cli'
 
-scene('user can add item to cart', async ({ cast }) => {
-  const shopper = await cast('shopper')
+scene('user can add item to cart', async ({ actor }) => {
+  const shopper = await actor('shopper')
 
   await shopper.openTo('/products')
   await shopper.see('product-list')

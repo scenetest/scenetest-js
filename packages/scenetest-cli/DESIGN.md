@@ -72,9 +72,9 @@ Scenes run alphabetically by default. Concurrency comes later.
 // scenes/user-updates-profile.spec.ts
 import { scene } from 'scenetest-cli'
 
-scene('user updates their profile', async ({ cast }) => {
-  // Cast an actor from the current cast's "primary_user_1" role
-  const user = await cast('primary_user_1')
+scene('user updates their profile', async ({ actor }) => {
+  // Get an actor from the current team's "primary_user_1" role
+  const user = await actor('primary_user_1')
 
   // Navigate and interact
   await user.openTo('/settings/profile')
@@ -91,10 +91,10 @@ scene('user updates their profile', async ({ cast }) => {
 // scenes/social/friend-request-flow.spec.ts
 import { scene, when } from 'scenetest-cli'
 
-scene('sending and receiving friend requests', async ({ cast }) => {
-  // These come from the same cast - stranger is NOT friends with primary_user_1
-  const sender = await cast('primary_user_1')
-  const receiver = await cast('stranger')
+scene('sending and receiving friend requests', async ({ actor }) => {
+  // These come from the same team - stranger is NOT friends with primary_user_1
+  const sender = await actor('primary_user_1')
+  const receiver = await actor('stranger')
 
   // Sender finds and requests receiver
   await sender.openTo(`/friends/search?q=${receiver.username}`)
@@ -135,9 +135,9 @@ scene('sending and receiving friend requests', async ({ cast }) => {
 
 - **Role**: A relationship configuration in your test world. Not just "a user" but "primary_user_1" or "friend_of_1_and_2" - roles describe how actors relate to each other.
 - **Actor**: A concrete test account that fills a role (e.g., alice@test.com playing "primary_user_1")
-- **Cast**: A complete, internally-consistent set of actors where all relationships hold. Like a theater production - Cast A and Cast B can each perform the whole play.
+- **Team**: A complete, internally-consistent set of actors where all relationships hold. Like a theater production - Team A and Team B can each perform the whole play.
 
-### The Cast Model
+### The Team Model
 
 Roles describe relationships, not just user types. For example:
 - `primary_user_1` - the main character in scenes
@@ -146,10 +146,10 @@ Roles describe relationships, not just user types. For example:
 - `stranger` - someone with no existing relationships
 - `new_user` - fresh account, no activity
 
-A **cast** is a complete set of actors that fulfills all roles with correct relationships:
+A **team** is a complete set of actors that fulfills all roles with correct relationships:
 
 ```
-Cast 0: {
+Team 0: {
   primary_user_1: alice,
   primary_user_2: bob,
   friend_of_1_and_2: charlie,  // charlie is friends with alice AND bob
@@ -157,7 +157,7 @@ Cast 0: {
   new_user: eve
 }
 
-Cast 1: {
+Team 1: {
   primary_user_1: frank,
   primary_user_2: grace,
   friend_of_1_and_2: henry,    // henry is friends with frank AND grace
@@ -165,7 +165,7 @@ Cast 1: {
   new_user: jack
 }
 
-Cast 2: {
+Team 2: {
   primary_user_1: kate,
   primary_user_2: leo,
   friend_of_1_and_2: mia,      // mia is friends with kate AND leo
@@ -174,9 +174,13 @@ Cast 2: {
 }
 ```
 
-Each cast is a self-contained world. The relationships are baked into your seed data.
+Each team is a self-contained world. The relationships are baked into your seed data.
 
 ### Configuration
+
+Teams are defined in actor files, not in the config. They are auto-discovered relative to the config file from either:
+- `actors.ts` - a single file exporting an array of teams
+- `actors/*.ts` - one file per team
 
 ```ts
 // scenetest.config.ts
@@ -186,42 +190,49 @@ export default defineConfig({
   baseUrl: 'http://localhost:5173',
   scenes: './scenes',
 
-  // Define complete casts - each is an internally-consistent world
-  casts: [
-    {
-      primary_user_1: { id: 'alice', username: 'alice', email: 'alice@test.com', password: 'test123' },
-      primary_user_2: { id: 'bob', username: 'bob', email: 'bob@test.com', password: 'test123' },
-      friend_of_1_and_2: { id: 'charlie', username: 'charlie', email: 'charlie@test.com', password: 'test123' },
-      stranger: { id: 'diana', username: 'diana', email: 'diana@test.com', password: 'test123' },
-      new_user: { id: 'eve', username: 'eve', email: 'eve@test.com', password: 'test123' },
-    },
-    {
-      primary_user_1: { id: 'frank', username: 'frank', email: 'frank@test.com', password: 'test123' },
-      primary_user_2: { id: 'grace', username: 'grace', email: 'grace@test.com', password: 'test123' },
-      friend_of_1_and_2: { id: 'henry', username: 'henry', email: 'henry@test.com', password: 'test123' },
-      stranger: { id: 'iris', username: 'iris', email: 'iris@test.com', password: 'test123' },
-      new_user: { id: 'jack', username: 'jack', email: 'jack@test.com', password: 'test123' },
-    },
-    {
-      primary_user_1: { id: 'kate', username: 'kate', email: 'kate@test.com', password: 'test123' },
-      primary_user_2: { id: 'leo', username: 'leo', email: 'leo@test.com', password: 'test123' },
-      friend_of_1_and_2: { id: 'mia', username: 'mia', email: 'mia@test.com', password: 'test123' },
-      stranger: { id: 'noah', username: 'noah', email: 'noah@test.com', password: 'test123' },
-      new_user: { id: 'olivia', username: 'olivia', email: 'olivia@test.com', password: 'test123' },
-    },
-  ],
+  // Actors are auto-discovered from actors.ts or actors/*.ts
+  // relative to this config file. No need to define them here.
 })
 ```
 
-### How Casting Works
+```ts
+// actors.ts (array of teams)
+import { defineActors } from 'scenetest-cli'
 
-When a scene runs, it gets assigned an available cast index. All `cast()` calls within that scene pull from the same cast:
+export default defineActors([
+  {
+    primary_user_1: { id: 'alice', username: 'alice', email: 'alice@test.com', password: 'test123' },
+    primary_user_2: { id: 'bob', username: 'bob', email: 'bob@test.com', password: 'test123' },
+    friend_of_1_and_2: { id: 'charlie', username: 'charlie', email: 'charlie@test.com', password: 'test123' },
+    stranger: { id: 'diana', username: 'diana', email: 'diana@test.com', password: 'test123' },
+    new_user: { id: 'eve', username: 'eve', email: 'eve@test.com', password: 'test123' },
+  },
+  {
+    primary_user_1: { id: 'frank', username: 'frank', email: 'frank@test.com', password: 'test123' },
+    primary_user_2: { id: 'grace', username: 'grace', email: 'grace@test.com', password: 'test123' },
+    friend_of_1_and_2: { id: 'henry', username: 'henry', email: 'henry@test.com', password: 'test123' },
+    stranger: { id: 'iris', username: 'iris', email: 'iris@test.com', password: 'test123' },
+    new_user: { id: 'jack', username: 'jack', email: 'jack@test.com', password: 'test123' },
+  },
+  {
+    primary_user_1: { id: 'kate', username: 'kate', email: 'kate@test.com', password: 'test123' },
+    primary_user_2: { id: 'leo', username: 'leo', email: 'leo@test.com', password: 'test123' },
+    friend_of_1_and_2: { id: 'mia', username: 'mia', email: 'mia@test.com', password: 'test123' },
+    stranger: { id: 'noah', username: 'noah', email: 'noah@test.com', password: 'test123' },
+    new_user: { id: 'olivia', username: 'olivia', email: 'olivia@test.com', password: 'test123' },
+  },
+])
+```
+
+### How Team Assignment Works
+
+When a scene runs, it gets assigned an available team index. All `actor()` calls within that scene pull from the same team:
 
 ```ts
-scene('unfriending flow', async ({ cast }) => {
-  // Scene is assigned cast index 1 (automatically or via cast.which(1))
-  const user = await cast('primary_user_1')        // frank
-  const friend = await cast('friend_of_1_and_2')   // henry (friends with frank)
+scene('unfriending flow', async ({ actor }) => {
+  // Scene is assigned team index 1 (automatically)
+  const user = await actor('primary_user_1')        // frank
+  const friend = await actor('friend_of_1_and_2')   // henry (friends with frank)
 
   // Guaranteed: henry is friends with frank in the seed data
   await user.openTo('/friends')
@@ -232,27 +243,27 @@ scene('unfriending flow', async ({ cast }) => {
 ### Concurrency
 
 Concurrency is trivial with this model:
-- 3 casts = 3 scenes can run simultaneously
-- Each scene gets exclusive use of one cast
+- 3 teams = 3 scenes can run simultaneously
+- Each scene gets exclusive use of one team
 - No conflicts, no race conditions between scenes
-- Want more parallelism? Add more casts to your seed data
+- Want more parallelism? Add more teams to your seed data
 
-### Casting Rules
+### Team Assignment Rules
 
-1. Each scene is assigned one cast index at start
-2. All `cast()` calls in that scene use that index
-3. A cast can only be used by one scene at a time
-4. When the scene ends, the cast is released
-5. If no casts are available, scene waits (or fails with timeout)
+1. Each scene is assigned one team index at start
+2. All `actor()` calls in that scene use that index
+3. A team can only be used by one scene at a time
+4. When the scene ends, the team is released
+5. If no teams are available, scene waits (or fails with timeout)
 
 ### Actor Interface
 
-When you cast an actor, you get a handle with:
+When you request an actor, you get a handle with:
 
 ```ts
-const user = await cast('primary_user_1')
+const user = await actor('primary_user_1')
 
-// Actor properties (from config)
+// Actor properties (from actor files)
 user.id         // 'alice'
 user.username   // 'alice'
 user.email      // 'alice@test.com'
@@ -488,17 +499,8 @@ export default defineConfig({
   scenes: './scenes',           // directory or glob
   ignore: ['**/_*.spec.ts'],    // patterns to skip
 
-  // Casts - each is a complete, internally-consistent set of actors
-  // More casts = more parallelism
-  casts: [
-    {
-      primary_user_1: { id: 'alice', username: 'alice', email: 'alice@test.com', password: 'test123' },
-      primary_user_2: { id: 'bob', username: 'bob', email: 'bob@test.com', password: 'test123' },
-      friend_of_1_and_2: { id: 'charlie', username: 'charlie', email: 'charlie@test.com', password: 'test123' },
-      stranger: { id: 'diana', username: 'diana', email: 'diana@test.com', password: 'test123' },
-    },
-    // Add more casts for more parallelism...
-  ],
+  // Actors are auto-discovered from actors.ts or actors/*.ts
+  // relative to this config file. More teams = more parallelism.
 
   // Browser settings
   browser: 'chromium',          // chromium | firefox | webkit
@@ -529,7 +531,7 @@ scenetest-cli/
 │   ├── cli.ts              # CLI entry point (commander/yargs)
 │   ├── config.ts           # Config loading and validation
 │   ├── runner.ts           # Scene runner orchestration
-│   ├── cast-manager.ts     # Cast assignment and lifecycle
+│   ├── team-manager.ts     # Team assignment and lifecycle
 │   ├── message-bus.ts      # Message bus implementation
 │   ├── scene-context.ts    # Context passed to scene functions
 │   ├── actor.ts            # Actor class with chainable DSL
@@ -553,11 +555,11 @@ scenetest-cli/
 
 ### Concurrency
 
-Concurrency is built into the cast model:
-- N casts = N scenes can run in parallel
-- Each scene gets exclusive use of one cast
-- `--concurrency N` flag to limit parallelism (defaults to number of casts)
-- Want more parallelism? Add more casts to your seed data
+Concurrency is built into the team model:
+- N teams = N scenes can run in parallel
+- Each scene gets exclusive use of one team
+- `--concurrency N` flag to limit parallelism (defaults to number of teams)
+- Want more parallelism? Add more teams to your seed data
 
 ### CI Integration
 
@@ -571,7 +573,7 @@ Eventually:
 
 Common pattern support:
 ```ts
-const user = await cast('primary_user_1', {
+const user = await actor('primary_user_1', {
   authenticate: true  // auto-login before scene starts
 })
 ```

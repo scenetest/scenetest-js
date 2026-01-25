@@ -145,7 +145,6 @@ import { defineConfig } from '@scenetest/cli'
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
   scenes: './scenes',
-  casts: [{ user: { id: 'user-1' } }],
 
   serverFunctions: {
     getUser: (id) => db.users.findById(id),

@@ -2,8 +2,8 @@ import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
 import { pathToFileURL } from 'url'
 import path from 'path'
-import type { ScenetestConfig, RunReport, SceneReport } from './types.js'
-import { CastManager } from './cast-manager.js'
+import type { ScenetestConfig, TeamConfig, RunReport, SceneReport } from './types.js'
+import { TeamManager } from './team-manager.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
 
@@ -12,10 +12,10 @@ import { setAliases } from './selectors.js'
  */
 export class SceneRunner {
   private browser: Browser | null = null
-  private castManager: CastManager
+  private teamManager: TeamManager
 
-  constructor(private config: ScenetestConfig) {
-    this.castManager = new CastManager(config.casts)
+  constructor(private config: ScenetestConfig, teams: TeamConfig[]) {
+    this.teamManager = new TeamManager(teams)
 
     // Apply aliases from config
     if (config.aliases) {
@@ -35,16 +35,17 @@ export class SceneRunner {
       slowMo: this.config.slowMo,
     })
 
-    this.castManager.setBrowser(this.browser)
+    this.teamManager.setBrowser(this.browser)
   }
 
   /**
    * Discover scene files
    */
   async discoverScenes(): Promise<string[]> {
-    const pattern = this.config.scenes.endsWith('.spec.ts')
-      ? this.config.scenes
-      : path.join(this.config.scenes, '**/*.spec.ts')
+    const scenes = this.config.scenes || './scenes'
+    const pattern = scenes.endsWith('.spec.ts')
+      ? scenes
+      : path.join(scenes, '**/*.spec.ts')
 
     const files = await glob(pattern, {
       ignore: this.config.ignore || [],
@@ -91,12 +92,12 @@ export class SceneRunner {
         await this.config.beforeEach({ name: registered.name, file: registered.file })
       }
 
-      // Acquire a cast
-      const castIndex = await this.castManager.acquireWait()
+      // Acquire a team
+      const teamIndex = await this.teamManager.acquireWait()
 
       try {
         // Create session
-        const session = await this.castManager.createSession(castIndex, actionTimeout, warnAfter)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter)
 
         try {
           // Run the scene
@@ -120,8 +121,8 @@ export class SceneRunner {
           await session.close()
         }
       } finally {
-        // Release cast
-        this.castManager.release(castIndex)
+        // Release team
+        this.teamManager.release(teamIndex)
       }
     }
 

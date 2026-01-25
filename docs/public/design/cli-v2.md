@@ -121,7 +121,7 @@ This works with markup like:
 Configure selector aliases in your config file:
 
 ```typescript
-// scenetest-cli.config.ts
+// scenetest.config.ts
 export default defineConfig({
   aliases: {
     container: '[data-container]',
@@ -259,8 +259,8 @@ const result = await explainSelector(page, 'my-selector')
 ### Proposed API
 
 ```typescript
-scene('handles API failure', async ({ cast, network }) => {
-  const user = await cast('user')
+scene('handles API failure', async ({ actor, network }) => {
+  const user = await actor('user')
 
   // Inject failure
   network.fail('/api/profile')
@@ -269,8 +269,8 @@ scene('handles API failure', async ({ cast, network }) => {
   await user.see('error-state')
 })
 
-scene('loads large dataset', async ({ cast, network }) => {
-  const user = await cast('user')
+scene('loads large dataset', async ({ actor, network }) => {
+  const user = await actor('user')
 
   // Mock response
   network.mock('/api/items', {
@@ -281,8 +281,8 @@ scene('loads large dataset', async ({ cast, network }) => {
   await user.see('pagination')
 })
 
-scene('handles slow network', async ({ cast, network }) => {
-  const user = await cast('user')
+scene('handles slow network', async ({ actor, network }) => {
+  const user = await actor('user')
 
   // Add latency
   network.delay('/api/*', 3000)
@@ -365,13 +365,8 @@ defineConfig({
   reportDir: './scenetest-reports',
   reportFormat: 'html', // 'html' | 'json' | 'both'
 
-  // Casts
-  casts: [
-    {
-      user: { id: 'user-1', username: 'alice' },
-      admin: { id: 'admin-1', username: 'admin' },
-    },
-  ],
+  // Actor teams are auto-discovered from actors.ts or actors/*.ts
+  // (not defined in config)
 
   // Hooks
   beforeAll: async () => { /* setup */ },

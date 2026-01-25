@@ -55,8 +55,8 @@ function ProfileForm({ user }) {
 // scenes/profile.spec.ts
 import { scene } from '@scenetest/cli'
 
-scene('user can update their name', async ({ cast }) => {
-  const user = await cast('user')
+scene('user can update their name', async ({ actor }) => {
+  const user = await actor('user')
 
   await user.openTo('/')
   await user

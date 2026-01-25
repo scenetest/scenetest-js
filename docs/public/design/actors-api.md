@@ -1,4 +1,4 @@
-# Cast API Design
+# Actors API Design
 
 **STATUS: Design Complete** - Ready for implementation.
 
@@ -6,7 +6,7 @@
 
 ## Philosophy
 
-The cast config should contain **only what a user remembers when they sit down at the computer**:
+Actor config should contain **only what a user remembers when they sit down at the computer**:
 
 1. **Login credentials** - How they get in
 2. **Pre-existing knowledge** - Things they know but haven't entered yet (language preference, country, etc.)
@@ -50,47 +50,46 @@ The actor should discover everything they need **through the app**. If a test ne
 
 ## Example: Language Learning App
 
+Actor teams live in files next to your config, not inside it. Scenetest auto-discovers them from `actors.ts` or `actors/*.ts`.
+
 ```typescript
-export default defineConfig({
-  baseUrl: 'http://localhost:5173',
+// actors/team-maria.ts
+export default {
+  'primary-learner': {
+    email: 'maria@test.com',
+    password: 'test123',
+    nativeLanguage: 'english',
+    targetLanguage: 'spanish',
+  },
+  'existing-friend': {
+    email: 'carlos@test.com',
+    password: 'test123',
+  },
+  'random-stranger': {
+    email: 'stranger@test.com',
+    password: 'test123',
+  },
+}
+```
 
-  teams: [
-    {
-      'primary-learner': {
-        email: 'maria@test.com',
-        password: 'test123',
-        nativeLanguage: 'english',
-        targetLanguage: 'spanish',
-      },
-      'existing-friend': {
-        email: 'carlos@test.com',
-        password: 'test123',
-      },
-      'random-stranger': {
-        email: 'stranger@test.com',
-        password: 'test123',
-      },
-    },
-
-    // Second team for parallel execution
-    {
-      'primary-learner': {
-        email: 'john@test.com',
-        password: 'test123',
-        nativeLanguage: 'english',
-        targetLanguage: 'french',
-      },
-      'existing-friend': {
-        email: 'pierre@test.com',
-        password: 'test123',
-      },
-      'random-stranger': {
-        email: 'stranger2@test.com',
-        password: 'test123',
-      },
-    },
-  ],
-})
+```typescript
+// actors/team-john.ts — second team for parallel execution
+export default {
+  'primary-learner': {
+    email: 'john@test.com',
+    password: 'test123',
+    nativeLanguage: 'english',
+    targetLanguage: 'french',
+  },
+  'existing-friend': {
+    email: 'pierre@test.com',
+    password: 'test123',
+  },
+  'random-stranger': {
+    email: 'stranger2@test.com',
+    password: 'test123',
+  },
+}
 ```
 
 ## Anonymous Actors
@@ -132,13 +131,13 @@ If you need an admin for a test, the role should reflect their purpose in the st
 }
 ```
 
-## Accessing Team Members in Scenes
+## Accessing Actors in Scenes
 
-The scene receives a pre-constructed `team` with all members ready to go. Destructure for readability:
+Use the `actor()` function to get an actor by role:
 
 ```typescript
-scene('learner completes first lesson', async ({ team }) => {
-  const learner = team['primary-learner']
+scene('learner completes first lesson', async ({ actor }) => {
+  const learner = await actor('primary-learner')
 
   await learner.openTo('/login')
   await learner.typeInto('email-input', learner.email)
@@ -153,9 +152,9 @@ scene('learner completes first lesson', async ({ team }) => {
 ### Multi-actor scenes
 
 ```typescript
-scene('friend request flow', async ({ team }) => {
-  const learner = team['primary-learner']
-  const friend = team['existing-friend']
+scene('friend request flow', async ({ actor }) => {
+  const learner = await actor('primary-learner')
+  const friend = await actor('existing-friend')
 
   // Both actors log in
   await learner.openTo('/login')
@@ -179,7 +178,7 @@ scene('friend request flow', async ({ team }) => {
 
 ## How Teams Relate to Seed Data
 
-Seed data creates users that match the credentials in team config. It's your
+Seed data creates users that match the credentials in actor files. It's your
 responsibility as a dev team to create seed data that makes sense for the roles the different
 actors/personas will play in your scenes.
 
@@ -188,8 +187,7 @@ seed-data.sql:
   INSERT INTO users (email, password_hash, ...) VALUES ('maria@test.com', ...);
   INSERT INTO users (email, password_hash, ...) VALUES ('carlos@test.com', ...);
 
-teams config: [{
+actors/team-maria.ts:
   'primary-learner': { email: 'maria@test.com', password: 'test123' },
   'existing-friend': { email: 'carlos@test.com', password: 'test123' },
-}]
 ```
