@@ -14,9 +14,9 @@ scene('user completes onboarding', async ({ cast }) => {
   const user = await cast('new-user')
 
   await user.goto('/')
-  await user.seeId('welcome-box')
-  await user.clickId('continue-button')
-  await user.seeId('onboarding-step')
+  await user.see('welcome-box')
+  await user.click('continue-button')
+  await user.see('onboarding-step')
 })
 ```
 
@@ -32,19 +32,45 @@ const user = await cast('user')
 // Navigation
 await user.goto('/path')
 
-// Finding elements
-await user.seeId('element-id')       // Wait for data-testid
+// Finding elements (supports nested selectors: 'parent child')
+await user.see('element-id')         // Wait for data-testid
+await user.see('modal form')         // Wait for form inside modal
 await user.seeText('text content')   // Wait for text
+await user.seeToast('success-toast') // Wait for appear AND disappear
 
 // Interactions
-await user.clickId('button-id')
+await user.click('button-id')
 await user.typeInto('input-id', 'text to type')
 
 // Chaining
 await user
-  .seeId('form')
+  .see('form')
   .typeInto('email', 'test@example.com')
-  .clickId('submit')
+  .click('submit')
+```
+
+## Nested Selectors
+
+All selector methods support space-separated test IDs for targeting nested elements:
+
+```typescript
+// Click button inside a specific card
+await user.click('user-card action-button')
+
+// Type into input inside a modal form
+await user.typeInto('settings-modal email-input', 'new@email.com')
+
+// Wait for element inside nested containers
+await user.see('sidebar nav-menu settings-link')
+```
+
+## Toast/Notification Testing
+
+Use `seeToast()` to wait for transient UI elements that appear and then disappear:
+
+```typescript
+await user.click('save-button')
+await user.seeToast('success-notification')  // Waits for appear AND disappear
 ```
 
 ## Writing Effective Scene Specs
@@ -58,11 +84,11 @@ scene('user can complete checkout', async ({ cast }) => {
   const customer = await cast('customer')
 
   await customer.goto('/cart')
-  await customer.seeId('cart-items')
-  await customer.clickId('checkout-button')
-  await customer.seeId('payment-form')
+  await customer.see('cart-items')
+  await customer.click('checkout-button')
+  await customer.see('payment-form')
   await customer.typeInto('card-number', '4242424242424242')
-  await customer.clickId('pay-button')
+  await customer.click('pay-button')
   await customer.seeText('Order confirmed!')
 })
 ```
@@ -141,5 +167,7 @@ export default defineConfig({
 - Scene specs describe **user journeys** with `scene()` and `cast()`
 - Write specs in **plain language** from the user's perspective
 - Use stable `data-testid` attributes as the contract with engineers
+- Use **nested selectors** (`'parent child'`) to target specific elements
+- Use `seeToast()` for transient notifications
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development

@@ -36,12 +36,14 @@ import { scene } from '@scenetest/cli'
 scene('description of the user journey', async ({ cast }) => {
   const user = await cast('role-name')
 
-  // Actor methods:
-  await user.goto('/path')           // Navigate to URL
-  await user.seeId('test-id')        // Wait for data-testid
-  await user.seeText('text')         // Wait for visible text
-  await user.clickId('test-id')      // Click element by test ID
-  await user.typeInto('test-id', 'text')  // Type into input by test ID
+  // Actor methods (all support nested selectors: 'parent child'):
+  await user.goto('/path')                    // Navigate to URL
+  await user.see('test-id')                   // Wait for data-testid
+  await user.see('modal form')                // Wait for nested element
+  await user.seeText('text')                  // Wait for visible text
+  await user.seeToast('toast-id')             // Wait for appear AND disappear
+  await user.click('test-id')                 // Click element by test ID
+  await user.typeInto('test-id', 'text')      // Type into input by test ID
 })
 ```
 
@@ -72,9 +74,9 @@ scene('user can add item to cart', async ({ cast }) => {
   const shopper = await cast('shopper')
 
   await shopper.goto('/products')
-  await shopper.seeId('product-list')
-  await shopper.clickId('add-to-cart-button')
-  await shopper.seeId('cart-badge')
+  await shopper.see('product-list')
+  await shopper.click('add-to-cart-button')
+  await shopper.see('cart-badge')
   await shopper.seeText('1 item')
 })
 ```
