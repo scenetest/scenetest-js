@@ -12,6 +12,15 @@ interface QueuedAction {
 }
 
 /**
+ * Registered watcher for conditional handling
+ */
+interface Watcher {
+  selector: string
+  callback: () => Promise<void>
+  triggered: boolean
+}
+
+/**
  * Resolve a selector string into a Playwright locator.
  * Supports nested selectors separated by spaces: 'parent child grandchild'
  * Each part is treated as a test ID.
@@ -54,6 +63,12 @@ class ActionChainImpl implements ActionChain {
   see(selector: string): ActionChain {
     return this.addAction('see', selector, async () => {
       await resolveSelector(this.page, selector).waitFor({ state: 'visible', timeout: this.actionTimeout })
+    })
+  }
+
+  notSee(selector: string): ActionChain {
+    return this.addAction('notSee', selector, async () => {
+      await resolveSelector(this.page, selector).waitFor({ state: 'hidden', timeout: this.actionTimeout })
     })
   }
 
@@ -114,6 +129,63 @@ class ActionChainImpl implements ActionChain {
   }
 
   /**
+   * Execute a single action while also polling for registered watchers.
+   * If a watcher's selector becomes visible, its callback is executed.
+   */
+  private async executeWithWatchers(action: QueuedAction): Promise<void> {
+    const watchers = this.actor.getWatchers()
+
+    if (watchers.length === 0) {
+      await action.execute()
+      return
+    }
+
+    let actionComplete = false
+    let actionError: unknown = null
+
+    // Run action
+    const actionPromise = action.execute()
+      .then(() => {
+        actionComplete = true
+      })
+      .catch((err) => {
+        actionError = err
+        actionComplete = true
+      })
+
+    // Poll for watchers concurrently
+    const pollWatchers = async () => {
+      const pollInterval = 50
+      while (!actionComplete) {
+        for (const watcher of watchers) {
+          if (watcher.triggered) continue
+          try {
+            const locator = resolveSelector(this.page, watcher.selector)
+            const isVisible = await locator.isVisible()
+            if (isVisible) {
+              watcher.triggered = true
+              // Execute callback - this happens "inline" during the wait
+              await watcher.callback()
+            }
+          } catch {
+            // Ignore errors from isVisible check
+          }
+        }
+        if (!actionComplete) {
+          await new Promise((r) => setTimeout(r, pollInterval))
+        }
+      }
+    }
+
+    // Run both concurrently
+    await Promise.all([actionPromise, pollWatchers()])
+
+    if (actionError) {
+      throw actionError
+    }
+  }
+
+  /**
    * Execute all queued actions in sequence.
    * This is called when the chain is awaited.
    */
@@ -128,7 +200,7 @@ class ActionChainImpl implements ActionChain {
       }
 
       try {
-        await action.execute()
+        await this.executeWithWatchers(action)
         entry.duration = Date.now() - start
       } catch (err) {
         entry.duration = Date.now() - start
@@ -140,6 +212,9 @@ class ActionChainImpl implements ActionChain {
       this.timeline.push(entry)
     }
     this.actions = []
+
+    // Clear watchers after chain completes
+    this.actor.clearWatchers()
   }
 
   /**
@@ -161,6 +236,9 @@ export class ActorHandleImpl implements ActorHandle {
   readonly page: Page
   readonly context: BrowserContext
   readonly assertions: AssertionResult[] = []
+
+  // Registered watchers for conditional handling
+  private watchers: Watcher[] = []
 
   // Forward config properties
   readonly id: string
@@ -193,6 +271,20 @@ export class ActorHandleImpl implements ActorHandle {
     }
   }
 
+  /**
+   * Get registered watchers (used by ActionChainImpl)
+   */
+  getWatchers(): Watcher[] {
+    return this.watchers
+  }
+
+  /**
+   * Clear all registered watchers (called after each await)
+   */
+  clearWatchers(): void {
+    this.watchers = []
+  }
+
   private createChain(): ActionChainImpl {
     return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.actionTimeout)
   }
@@ -203,6 +295,10 @@ export class ActorHandleImpl implements ActorHandle {
 
   see(selector: string): ActionChain {
     return this.createChain().see(selector)
+  }
+
+  notSee(selector: string): ActionChain {
+    return this.createChain().notSee(selector)
   }
 
   seeText(text: string): ActionChain {
@@ -239,5 +335,25 @@ export class ActorHandleImpl implements ActorHandle {
 
   do(fn: (page: Page) => Promise<void>): ActionChain {
     return this.createChain().do(fn)
+  }
+
+  /**
+   * Register a conditional watcher. If the selector becomes visible during
+   * the next awaited action, the callback will be executed.
+   * Watchers are cleared after each await.
+   *
+   * @example
+   * ```ts
+   * // Handle optional welcome page
+   * user.if('welcome-page', () => user.click('dismiss-button'))
+   * await user.see('dashboard')  // if welcome-page appears, clicks dismiss first
+   * ```
+   */
+  if(selector: string, callback: () => Promise<void>): void {
+    this.watchers.push({
+      selector,
+      callback,
+      triggered: false,
+    })
   }
 }
