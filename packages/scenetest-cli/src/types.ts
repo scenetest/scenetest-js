@@ -186,23 +186,26 @@ export interface ActorHandle extends ActorConfig {
   /** Navigate to URL */
   goto(url: string): ActionChain
 
-  /** Wait for element with test ID to be visible */
-  seeId(testId: string): ActionChain
+  /** Wait for element to be visible. Supports nested selectors: 'parent child' */
+  see(selector: string): ActionChain
 
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
 
-  /** Click element with test ID */
-  clickId(testId: string): ActionChain
+  /** Wait for element to appear AND disappear (for toasts/notifications) */
+  seeToast(selector: string): ActionChain
 
-  /** Type into input with test ID */
-  typeInto(testId: string, value: string): ActionChain
+  /** Click element. Supports nested selectors: 'parent child' */
+  click(selector: string): ActionChain
 
-  /** Check checkbox with test ID */
-  check(testId: string): ActionChain
+  /** Type into input. Supports nested selectors: 'parent child' */
+  typeInto(selector: string, value: string): ActionChain
 
-  /** Select option in dropdown with test ID */
-  select(testId: string, value: string): ActionChain
+  /** Check checkbox. Supports nested selectors: 'parent child' */
+  check(selector: string): ActionChain
+
+  /** Select option in dropdown. Supports nested selectors: 'parent child' */
+  select(selector: string, value: string): ActionChain
 
   /** Wait for specified milliseconds */
   wait(ms: number): ActionChain
@@ -221,23 +224,26 @@ export interface ActionChain extends PromiseLike<void> {
   /** Navigate to URL */
   goto(url: string): ActionChain
 
-  /** Wait for element with test ID to be visible */
-  seeId(testId: string): ActionChain
+  /** Wait for element to be visible. Supports nested selectors: 'parent child' */
+  see(selector: string): ActionChain
 
   /** Wait for text to be visible */
   seeText(text: string): ActionChain
 
-  /** Click element with test ID */
-  clickId(testId: string): ActionChain
+  /** Wait for element to appear AND disappear (for toasts/notifications) */
+  seeToast(selector: string): ActionChain
 
-  /** Type into input with test ID */
-  typeInto(testId: string, value: string): ActionChain
+  /** Click element. Supports nested selectors: 'parent child' */
+  click(selector: string): ActionChain
 
-  /** Check checkbox with test ID */
-  check(testId: string): ActionChain
+  /** Type into input. Supports nested selectors: 'parent child' */
+  typeInto(selector: string, value: string): ActionChain
 
-  /** Select option in dropdown with test ID */
-  select(testId: string, value: string): ActionChain
+  /** Check checkbox. Supports nested selectors: 'parent child' */
+  check(selector: string): ActionChain
+
+  /** Select option in dropdown. Supports nested selectors: 'parent child' */
+  select(selector: string, value: string): ActionChain
 
   /** Wait for specified milliseconds */
   wait(ms: number): ActionChain
