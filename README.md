@@ -75,11 +75,22 @@ pnpm scenetest
 
 ## Documentation
 
-- [Writing Scene Specs](./docs-site/public/content/guides/writing-scene-specs.md)
-- [Using AI to Write Specs](./docs-site/public/content/guides/llm-prompt.md)
-- [CLI Design Document](./packages/scenetest-cli/DESIGN.md)
-- [CLI Design Document](./packages/scenetest-cli/DESIGN.md)
-- [Server Actions Design Document](./packages/scenetest-cli/DESIGN.md)
+**Guides**
+- [Writing Scene Specs](./docs/public/guides/writing-scene-specs.md)
+- [Writing Inline Assertions](./docs/public/guides/writing-inline-assertions.md)
+- [Using AI to Write Specs](./docs/public/guides/llm-prompt.md)
+
+**FAQ**
+[Comparing to Playwright](./docs/public/faq/vs-playwright.md)
+[Comparing to Vitest](./docs/public/faq/vs-vitest.md)
+[Comparing to Cypress](./docs/public/faq/vs-cypress.md)
+[Note on Security](./docs/public/faq/security.md)
+
+**Design Docs**
+- [Actors API Design Document](./docs/design/actors-api.md)
+- [CLI Design Document](./docs/design/cli-v2.md)
+- [Server Actions Design Document](./docs/design/server-actions.md)
+- [Reporting System Design Document](./docs/design/dashboard.md)
 
 ## Packages
 

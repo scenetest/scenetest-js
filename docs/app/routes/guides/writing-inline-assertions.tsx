@@ -2,16 +2,16 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Footer } from '../../components/Footer'
 import { MarkdownSection } from '../../components/MarkdownSection'
 
-export const Route = createFileRoute('/guides/llm-prompt')({
-  component: LlmPrompt,
+export const Route = createFileRoute('/guides/writing-inline-assertions')({
+  component: WritingInlineAssertions,
 })
 
-function LlmPrompt() {
+function WritingInlineAssertions() {
   return (
     <article>
       <Link to="/" className="back">&larr; Back</Link>
 
-      <MarkdownSection src="/content/guides/llm-prompt.md" />
+      <MarkdownSection src="/guides/writing-inline-assertions.md" />
 
       <Footer />
     </article>
