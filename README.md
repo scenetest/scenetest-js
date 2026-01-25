@@ -78,18 +78,32 @@ pnpm scenetest
 - [Writing Scene Specs](./docs-site/public/content/guides/writing-scene-specs.md)
 - [Using AI to Write Specs](./docs-site/public/content/guides/llm-prompt.md)
 - [CLI Design Document](./packages/scenetest-cli/DESIGN.md)
+- [CLI Design Document](./packages/scenetest-cli/DESIGN.md)
+- [Server Actions Design Document](./packages/scenetest-cli/DESIGN.md)
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
+| `@scenetest/vite-plugin` | Vite plugin for production stripping and dev panel |
+| `@scenetest/cli` | CLI runner for scene specs |
 | `@scenetest/core` | Core `should()`, `failed()`, `assert()` functions |
 | `@scenetest/react` | React bindings with `useTestEffect` hook |
 | `@scenetest/vue` | Vue bindings with `watchTestEffect` composable |
 | `@scenetest/solid` | Solid bindings with `createTestEffect` primitive |
 | `@scenetest/svelte` | Svelte bindings with `testEffect` helper |
-| `@scenetest/vite-plugin` | Vite plugin for dev panel and production stripping |
-| `@scenetest/cli` | CLI runner for scene specs |
+
+## FAQ
+
+### Is it safe to run scenetest in production?
+
+Mmmm, the short answer is "No." Scenetest's Vite plugin strips all the server
+assertions from the production bundle without deploying them to the server, and it doesn't inject the observer or serve the middleware that powers the collector -- and we do have (some) tests in place for this. And server assertions never have a return value anyway so data access is less of a concern.
+
+So the attack surface is pretty small, but a security audit has not been done. Further the data collection doesn't proactively filter out
+things like personal data and passwords so it is best used on sample or seed data rather than in production systems.
+
+In the future it might be nice to evolve Scenetest into a production tool for event analytics, observalibility, etc., but for now: it only runs on the dev server 😇
 
 ## License
 

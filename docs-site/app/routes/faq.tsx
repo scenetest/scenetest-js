@@ -12,6 +12,7 @@ function FAQ() {
       <Link to="/" className="back">&larr; Back</Link>
       <h1>Frequently Asked Questions</h1>
 
+      <MarkdownSection src="/content/faq/security.md" />
       <MarkdownSection src="/content/faq/vs-playwright.md" />
       <MarkdownSection src="/content/faq/vs-vitest.md" />
       <MarkdownSection src="/content/faq/vs-cypress.md" />
