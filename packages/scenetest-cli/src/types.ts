@@ -183,8 +183,8 @@ export interface ActorHandle extends ActorConfig {
   /** Playwright page */
   page: Page
 
-  /** Navigate to URL */
-  goto(url: string): ActionChain
+  /** Open browser to URL (full page load, not SPA routing) */
+  openTo(url: string): ActionChain
 
   /** Wait for element to be visible. Supports nested selectors: 'parent child' */
   see(selector: string): ActionChain
@@ -231,8 +231,8 @@ export interface ActorHandle extends ActorConfig {
  * Chainable action builder
  */
 export interface ActionChain extends PromiseLike<void> {
-  /** Navigate to URL */
-  goto(url: string): ActionChain
+  /** Open browser to URL (full page load, not SPA routing) */
+  openTo(url: string): ActionChain
 
   /** Wait for element to be visible. Supports nested selectors: 'parent child' */
   see(selector: string): ActionChain

@@ -54,8 +54,8 @@ class ActionChainImpl implements ActionChain {
     return this
   }
 
-  goto(url: string): ActionChain {
-    return this.addAction('goto', url, async () => {
+  openTo(url: string): ActionChain {
+    return this.addAction('openTo', url, async () => {
       await this.page.goto(url, { timeout: this.actionTimeout })
     })
   }
@@ -289,8 +289,8 @@ export class ActorHandleImpl implements ActorHandle {
     return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.actionTimeout)
   }
 
-  goto(url: string): ActionChain {
-    return this.createChain().goto(url)
+  openTo(url: string): ActionChain {
+    return this.createChain().openTo(url)
   }
 
   see(selector: string): ActionChain {

@@ -13,7 +13,7 @@ import { scene } from '@scenetest/cli'
 scene('user completes onboarding', async ({ cast }) => {
   const user = await cast('new-user')
 
-  await user.goto('/')
+  await user.openTo('/')
   await user.see('welcome-box')
   await user.click('continue-button')
   await user.see('onboarding-step')
@@ -30,7 +30,7 @@ The `cast()` function returns an actor representing a user or role. Actors have 
 const user = await cast('user')
 
 // Navigation
-await user.goto('/path')
+await user.openTo('/path')
 
 // Finding elements (supports nested selectors: 'parent child')
 await user.see('element-id')         // Wait for data-testid
@@ -83,7 +83,7 @@ Write specs from the user's perspective. Each scene should tell a story:
 scene('user can complete checkout', async ({ cast }) => {
   const customer = await cast('customer')
 
-  await customer.goto('/cart')
+  await customer.openTo('/cart')
   await customer.see('cart-items')
   await customer.click('checkout-button')
   await customer.see('payment-form')

@@ -29,7 +29,7 @@ export function setCurrentFile(file: string): void {
  *
  * scene('user updates their profile', async ({ cast }) => {
  *   const user = await cast('primary_user_1')
- *   await user.goto('/settings/profile')
+ *   await user.openTo('/settings/profile')
  *   await user.see('profile-form')
  * })
  * ```
