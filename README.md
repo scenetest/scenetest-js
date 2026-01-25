@@ -58,7 +58,7 @@ import { scene } from '@scenetest/cli'
 scene('user can update their name', async ({ cast }) => {
   const user = await cast('user')
 
-  await user.goto('/')
+  await user.openTo('/')
   await user
     .see('name-input')
     .typeInto('name-input', 'New Name')

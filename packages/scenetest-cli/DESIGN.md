@@ -77,7 +77,7 @@ scene('user updates their profile', async ({ cast }) => {
   const user = await cast('primary_user_1')
 
   // Navigate and interact
-  await user.goto('/settings/profile')
+  await user.openTo('/settings/profile')
   await user.see('profile-form')
   await user.typeInto('display-name', 'New Name')
   await user.click('save-button')
@@ -97,7 +97,7 @@ scene('sending and receiving friend requests', async ({ cast }) => {
   const receiver = await cast('stranger')
 
   // Sender finds and requests receiver
-  await sender.goto(`/friends/search?q=${receiver.username}`)
+  await sender.openTo(`/friends/search?q=${receiver.username}`)
   await sender.see(`user-card-${receiver.id}`)
   await sender.click('send-request-button')
 
@@ -121,10 +121,10 @@ scene('sending and receiving friend requests', async ({ cast }) => {
   )
 
   // Both users see each other in friends list
-  await sender.goto('/friends')
+  await sender.openTo('/friends')
   await sender.seeText(receiver.username)
 
-  await receiver.goto('/friends')
+  await receiver.openTo('/friends')
   await receiver.seeText(sender.username)
 })
 ```
@@ -224,7 +224,7 @@ scene('unfriending flow', async ({ cast }) => {
   const friend = await cast('friend_of_1_and_2')   // henry (friends with frank)
 
   // Guaranteed: henry is friends with frank in the seed data
-  await user.goto('/friends')
+  await user.openTo('/friends')
   await user.seeText(friend.username)  // henry appears in frank's friends list
 })
 ```
@@ -261,7 +261,7 @@ user.email      // 'alice@test.com'
 user.page       // Playwright Page
 
 // Navigation
-await user.goto('/path')
+await user.openTo('/path')
 
 // Element interactions (by test ID, supports nested: 'parent child')
 await user.see('element-id')          // wait for visibility
@@ -334,7 +334,7 @@ when(
 // Function trigger, function action
 when(
   () => user1.see('form-submitted'),
-  () => user2.goto('/inbox')
+  () => user2.openTo('/inbox')
 )
 
 // String trigger, string action (relay)
@@ -373,7 +373,7 @@ await user.click('submit')
 
 ```ts
 user
-  .goto('/path')                    // Navigate
+  .openTo('/path')                    // Navigate
   .see('test-id')                   // Wait for element by test ID
   .see('parent child')              // Wait for nested element
   .seeText('text')                  // Wait for text content
@@ -428,7 +428,7 @@ Scene runs generate reports containing:
         }
       ],
       "timeline": [
-        { "action": "goto", "target": "/settings/profile", "actor": "user", "timestamp": 1705315800000 },
+        { "action": "openTo", "target": "/settings/profile", "actor": "user", "timestamp": 1705315800000 },
         { "action": "see", "target": "profile-form", "actor": "user", "timestamp": 1705315801000 }
       ]
     }

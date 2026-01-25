@@ -37,7 +37,7 @@ scene('description of the user journey', async ({ cast }) => {
   const user = await cast('role-name')
 
   // Actor methods (all support nested selectors: 'parent child'):
-  await user.goto('/path')                    // Navigate to URL
+  await user.openTo('/path')                    // Navigate to URL
   await user.see('test-id')                   // Wait for data-testid
   await user.see('modal form')                // Wait for nested element
   await user.seeText('text')                  // Wait for visible text
@@ -73,7 +73,7 @@ import { scene } from '@scenetest/cli'
 scene('user can add item to cart', async ({ cast }) => {
   const shopper = await cast('shopper')
 
-  await shopper.goto('/products')
+  await shopper.openTo('/products')
   await shopper.see('product-list')
   await shopper.click('add-to-cart-button')
   await shopper.see('cart-badge')

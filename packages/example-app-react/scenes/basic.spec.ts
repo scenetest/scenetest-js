@@ -4,7 +4,7 @@ scene('user can see the welcome page', async ({ cast }) => {
   const user = await cast('user')
 
   // Navigate to the app
-  await user.goto('/')
+  await user.openTo('/')
 
   // Should see the main UI elements
   await user.see('display-name')
@@ -14,7 +14,7 @@ scene('user can see the welcome page', async ({ cast }) => {
 scene('user can update their name', async ({ cast }) => {
   const user = await cast('user')
 
-  await user.goto('/')
+  await user.openTo('/')
 
   // Type a new name
   await user

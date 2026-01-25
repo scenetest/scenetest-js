@@ -24,7 +24,7 @@ And you use scene specs to orchestrate user journeys:
 // Scenetest - scene spec
 scene('user sees items', async ({ cast }) => {
   const user = await cast('user')
-  await user.goto('/items')
+  await user.openTo('/items')
   await user.see('item-list')
 })
 ```
