@@ -7,8 +7,8 @@ scene('user can see the welcome page', async ({ cast }) => {
   await user.goto('/')
 
   // Should see the main UI elements
-  await user.seeId('display-name')
-  await user.seeId('name-input')
+  await user.see('display-name')
+  await user.see('name-input')
 })
 
 scene('user can update their name', async ({ cast }) => {
@@ -18,9 +18,9 @@ scene('user can update their name', async ({ cast }) => {
 
   // Type a new name
   await user
-    .seeId('name-input')
+    .see('name-input')
     .typeInto('name-input', 'New Name')
-    .clickId('submit-button')
+    .click('submit-button')
 
   // Should see the updated display
   await user.seeText('New Name')

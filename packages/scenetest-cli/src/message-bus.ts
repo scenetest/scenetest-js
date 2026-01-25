@@ -87,11 +87,11 @@ export class MessageBus {
  * ```ts
  * // String trigger, function action
  * when(bus, 'user2 accepts', async () => {
- *   await user1.seeId('notification')
+ *   await user1.see('notification')
  * })
  *
  * // Function trigger, string action
- * when(bus, () => user2.seeId('toast'), 'user2 accepts')
+ * when(bus, () => user2.see('toast'), 'user2 accepts')
  * ```
  */
 export function when(

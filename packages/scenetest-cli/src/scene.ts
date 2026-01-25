@@ -30,7 +30,7 @@ export function setCurrentFile(file: string): void {
  * scene('user updates their profile', async ({ cast }) => {
  *   const user = await cast('primary_user_1')
  *   await user.goto('/settings/profile')
- *   await user.seeId('profile-form')
+ *   await user.see('profile-form')
  * })
  * ```
  */
@@ -60,10 +60,10 @@ export function setCurrentSession(session: CastSession | null): void {
  * @example
  * ```ts
  * // When message is received, execute action
- * when('user2 accepts', () => user1.seeId('notification'))
+ * when('user2 accepts', () => user1.see('notification'))
  *
  * // When action completes, emit message
- * when(() => user2.seeId('toast'), 'user2 accepts')
+ * when(() => user2.see('toast'), 'user2 accepts')
  * ```
  */
 export function when(

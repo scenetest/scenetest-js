@@ -1,4 +1,4 @@
-import type { Page, BrowserContext } from 'playwright'
+import type { Page, BrowserContext, Locator } from 'playwright'
 import type { ActorConfig, ActorHandle, ActionChain, AssertionResult, TimelineEntry } from './types.js'
 import { MessageBus } from './message-bus.js'
 
@@ -9,6 +9,20 @@ interface QueuedAction {
   name: string
   target?: string
   execute: () => Promise<void>
+}
+
+/**
+ * Resolve a selector string into a Playwright locator.
+ * Supports nested selectors separated by spaces: 'parent child grandchild'
+ * Each part is treated as a test ID.
+ */
+function resolveSelector(page: Page, selector: string): Locator {
+  const parts = selector.trim().split(/\s+/)
+  let locator = page.getByTestId(parts[0])
+  for (let i = 1; i < parts.length; i++) {
+    locator = locator.getByTestId(parts[i])
+  }
+  return locator
 }
 
 /**
@@ -37,9 +51,9 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
-  seeId(testId: string): ActionChain {
-    return this.addAction('seeId', testId, async () => {
-      await this.page.getByTestId(testId).waitFor({ state: 'visible', timeout: this.actionTimeout })
+  see(selector: string): ActionChain {
+    return this.addAction('see', selector, async () => {
+      await resolveSelector(this.page, selector).waitFor({ state: 'visible', timeout: this.actionTimeout })
     })
   }
 
@@ -49,27 +63,35 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
-  clickId(testId: string): ActionChain {
-    return this.addAction('clickId', testId, async () => {
-      await this.page.getByTestId(testId).click({ timeout: this.actionTimeout })
+  seeToast(selector: string): ActionChain {
+    return this.addAction('seeToast', selector, async () => {
+      const locator = resolveSelector(this.page, selector)
+      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
     })
   }
 
-  typeInto(testId: string, value: string): ActionChain {
-    return this.addAction('typeInto', `${testId}=${value}`, async () => {
-      await this.page.getByTestId(testId).fill(value, { timeout: this.actionTimeout })
+  click(selector: string): ActionChain {
+    return this.addAction('click', selector, async () => {
+      await resolveSelector(this.page, selector).click({ timeout: this.actionTimeout })
     })
   }
 
-  check(testId: string): ActionChain {
-    return this.addAction('check', testId, async () => {
-      await this.page.getByTestId(testId).check({ timeout: this.actionTimeout })
+  typeInto(selector: string, value: string): ActionChain {
+    return this.addAction('typeInto', `${selector}=${value}`, async () => {
+      await resolveSelector(this.page, selector).fill(value, { timeout: this.actionTimeout })
     })
   }
 
-  select(testId: string, value: string): ActionChain {
-    return this.addAction('select', `${testId}=${value}`, async () => {
-      await this.page.getByTestId(testId).selectOption(value, { timeout: this.actionTimeout })
+  check(selector: string): ActionChain {
+    return this.addAction('check', selector, async () => {
+      await resolveSelector(this.page, selector).check({ timeout: this.actionTimeout })
+    })
+  }
+
+  select(selector: string, value: string): ActionChain {
+    return this.addAction('select', `${selector}=${value}`, async () => {
+      await resolveSelector(this.page, selector).selectOption(value, { timeout: this.actionTimeout })
     })
   }
 
@@ -179,28 +201,32 @@ export class ActorHandleImpl implements ActorHandle {
     return this.createChain().goto(url)
   }
 
-  seeId(testId: string): ActionChain {
-    return this.createChain().seeId(testId)
+  see(selector: string): ActionChain {
+    return this.createChain().see(selector)
   }
 
   seeText(text: string): ActionChain {
     return this.createChain().seeText(text)
   }
 
-  clickId(testId: string): ActionChain {
-    return this.createChain().clickId(testId)
+  seeToast(selector: string): ActionChain {
+    return this.createChain().seeToast(selector)
   }
 
-  typeInto(testId: string, value: string): ActionChain {
-    return this.createChain().typeInto(testId, value)
+  click(selector: string): ActionChain {
+    return this.createChain().click(selector)
   }
 
-  check(testId: string): ActionChain {
-    return this.createChain().check(testId)
+  typeInto(selector: string, value: string): ActionChain {
+    return this.createChain().typeInto(selector, value)
   }
 
-  select(testId: string, value: string): ActionChain {
-    return this.createChain().select(testId, value)
+  check(selector: string): ActionChain {
+    return this.createChain().check(selector)
+  }
+
+  select(selector: string, value: string): ActionChain {
+    return this.createChain().select(selector, value)
   }
 
   wait(ms: number): ActionChain {
