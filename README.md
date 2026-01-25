@@ -347,6 +347,28 @@ You can verify this by inspecting your production build output.
 3. **Don't put secrets in assertions** - Even though they're stripped, avoid hardcoding sensitive data
 4. **Review assertion code** - Treat it like any other code in your codebase
 
+### Promise Serialization Safety
+
+Recent major vulnerabilities in other frameworks' server actions were about serializing closures that capture sensitive data—function references themselves could leak information when sent over the wire.
+
+Scenetest's architecture is fundamentally different:
+
+| Other Server Actions | Scenetest |
+|----------------------|-----------|
+| Function references sent at runtime | Functions extracted at **build time** via AST |
+| Closures can capture secrets | `serverFn` is bundled server-side, no closure leak |
+| Promises in closures could leak | Only JSON data crosses the wire |
+
+**How Scenetest avoids this class of vulnerability:**
+
+1. **Build-time extraction**: The `serverFn` passed to `assert()` is extracted at build time by the Vite plugin and bundled into server-side code. It is never serialized or sent over the network.
+
+2. **Data-only serialization**: Only the return value of `withData()` is serialized (via `JSON.stringify`), which means only plain data crosses the wire—no functions, no closures, no promises.
+
+3. **No closure capture**: Since server functions are extracted at build time, they cannot accidentally capture variables from their surrounding scope at runtime.
+
+**Note**: If `withData()` returns a Promise, it will serialize to `{}`—you'll get data loss, not a security hole. Always return plain data from `withData()`.
+
 ---
 
 ## API Reference
