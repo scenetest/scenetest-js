@@ -75,9 +75,9 @@ export function generateVirtualModuleCode(): string {
 
   // Generate an object with all serverFn functions
   // The original serverFn body is inlined into a wrapper function that
-  // provides pass/fail in scope via parameter destructuring
+  // provides should/failed in scope via parameter destructuring
   const entries = assertions.map((assertion) => {
-    return `  ${JSON.stringify(assertion.id)}: (server, data, { pass, fail }) => {
+    return `  ${JSON.stringify(assertion.id)}: (server, data, { should, failed }) => {
     ${assertion.serverFnBodyCode}
   }`
   })

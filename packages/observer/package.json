@@ -15,11 +15,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./src/index.ts"
+      "import": "./dist/index.js"
     },
     "./auto": {
       "types": "./dist/auto.d.ts",
-      "import": "./src/auto.ts"
+      "import": "./dist/auto.js"
     }
   },
   "files": ["dist"],

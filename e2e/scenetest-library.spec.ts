@@ -114,6 +114,50 @@ test.describe('scenetest core functionality', () => {
   })
 })
 
+test.describe('serverFn assertions', () => {
+  test('serverFn should() calls are executed and reported', async ({ page }) => {
+    const reportedAssertions: unknown[] = []
+
+    await page.exposeFunction('__scenetest_report', (result: unknown) => {
+      reportedAssertions.push(result)
+    })
+
+    await page.goto('/')
+    await page.waitForSelector('[data-testid="display-name"]')
+    await page.waitForTimeout(300) // Wait for serverFn RPC to complete
+
+    // The App.tsx has a serverFn assertion: "profile email should be valid format"
+    // This runs on the server via RPC and reports back
+    const serverFnAssertion = reportedAssertions.find(
+      (a) => (a as Record<string, unknown>).description === 'profile email should be valid format'
+    ) as Record<string, unknown> | undefined
+
+    expect(serverFnAssertion).toBeDefined()
+    expect(serverFnAssertion?.type).toBe('pass')
+    expect(serverFnAssertion?.result).toBe(true)
+  })
+
+  test('serverFn errors are caught and reported clearly', async ({ page }) => {
+    const reportedAssertions: unknown[] = []
+
+    await page.exposeFunction('__scenetest_report', (result: unknown) => {
+      reportedAssertions.push(result)
+    })
+
+    await page.goto('/')
+    await page.waitForSelector('[data-testid="display-name"]')
+    await page.waitForTimeout(300)
+
+    // There should be NO "serverFn threw an error" assertions
+    // If this fails, it means the serverFn API is broken
+    const errorAssertions = reportedAssertions.filter(
+      (a) => ((a as Record<string, unknown>).description as string)?.includes('serverFn threw an error')
+    )
+
+    expect(errorAssertions).toHaveLength(0)
+  })
+})
+
 test.describe('Vite plugin dev panel', () => {
   test('dev panel is injected in development mode', async ({ page }) => {
     await page.goto('/')
