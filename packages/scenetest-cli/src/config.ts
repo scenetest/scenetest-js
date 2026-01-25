@@ -13,6 +13,7 @@ const defaults: Partial<ScenetestConfig> = {
   slowMo: 0,
   timeout: 30000,
   actionTimeout: 5000,
+  warnAfter: 500,
   reportDir: './scenetest-reports',
   reportFormat: 'html',
 }

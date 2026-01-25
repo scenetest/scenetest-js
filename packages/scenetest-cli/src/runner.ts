@@ -77,6 +77,7 @@ export class SceneRunner {
 
     const timeout = this.config.timeout || 30000
     const actionTimeout = this.config.actionTimeout || 5000
+    const warnAfter = this.config.warnAfter || 500
 
     for (const registered of sceneRegistry) {
       // Run beforeEach hook
@@ -89,7 +90,7 @@ export class SceneRunner {
 
       try {
         // Create session
-        const session = await this.castManager.createSession(castIndex, actionTimeout)
+        const session = await this.castManager.createSession(castIndex, actionTimeout, warnAfter)
 
         try {
           // Run the scene
@@ -130,6 +131,7 @@ export class SceneRunner {
       0
     )
     const failedAssertions = totalAssertions - passedAssertions
+    const totalWarnings = sceneReports.reduce((sum, r) => sum + r.warnings.length, 0)
 
     return {
       timestamp: new Date().toISOString(),
@@ -144,6 +146,7 @@ export class SceneRunner {
           passed: passedAssertions,
           failed: failedAssertions,
         },
+        warnings: totalWarnings,
       },
     }
   }
@@ -165,6 +168,7 @@ export class SceneRunner {
           completed: 0,
           failed: 0,
           assertions: { total: 0, passed: 0, failed: 0 },
+          warnings: 0,
         },
       }
     }
@@ -199,6 +203,19 @@ export function printSummary(report: RunReport): void {
   console.log(`  Scenes:     ${report.summary.completed}/${report.summary.scenes} completed`)
   console.log(`  Assertions: ${report.summary.assertions.passed}/${report.summary.assertions.total} passed`)
   console.log(`  Duration:   ${report.duration}ms`)
+
+  if (report.summary.warnings > 0) {
+    console.log(`\n  ⚡ ${report.summary.warnings} script warning(s)`)
+    // Print details of each warning
+    for (const scene of report.scenes) {
+      for (const warning of scene.warnings) {
+        console.log(`    └─ [${warning.actor}] ${warning.selector}: ${warning.message}`)
+        if (warning.duringAction) {
+          console.log(`       during: ${warning.duringAction}`)
+        }
+      }
+    }
+  }
 
   if (report.summary.assertions.failed > 0) {
     console.log(`\n  ⚠ ${report.summary.assertions.failed} assertion(s) failed`)
