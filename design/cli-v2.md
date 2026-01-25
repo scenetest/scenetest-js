@@ -75,50 +75,64 @@ await runMacro(user, 'login', { username: 'alice', password: 'secret' })
 
 ### Priority Order
 
-Selectors resolve using a combined CSS selector that matches any of:
+Each token in a selector matches against these attributes (in order):
 
-1. `data-testid` - Explicit test identifier
+1. `aria-label` - Accessibility label (encouraged for interactive elements)
 2. `id` - DOM id attribute
-3. `aria-label` - Accessibility label (encouraged for interactive elements)
-4. `name` - Form element name
-5. `data-name` - Custom name attribute
+3. `data-testid` - Explicit test identifier
+4. `data-name` - Custom name attribute
+5. `data-key` - Key for list items
+6. `name` - Form element name
+
+### Nested Selectors with Implicit Key Matching
+
+Space-separated tokens create nested selectors. Special behavior: after matching a token, if the **same element** has a `data-key` matching the **next token**, that token is consumed without descending.
+
+```typescript
+// Simple nesting
+await user.see('modal form submit-button')
+
+// With implicit key matching
+await user.see('playlist-row 12345 like-button')
+// 1. Find element matching 'playlist-row'
+// 2. Check if it has data-key="12345" - if yes, stay on same element
+// 3. If no, look for child matching '12345'
+// 4. Then find 'like-button' child
+```
+
+This works with markup like:
+```html
+<div data-name="playlist-row" data-key="12345">
+  <button aria-label="like-button">Like</button>
+</div>
+```
 
 ### Sigil Prefixes
 
-- `~name` - Alias lookup (configured in `setAliases()`)
+- `~name` - Alias lookup (configured in config file)
 - `@label` - Explicit aria-label lookup
-
-### Tuple Selectors for Lists
-
-For elements in lists, use tuple syntax `[name, key]`:
-
-```typescript
-// Find element with data-name="playlist-row" AND data-key="12345"
-await user.see(['playlist-row', '12345'])
-await user.click(['playlist-row', '12345'])
-
-// Nested with key
-await user.see(['list playlist-row', '12345'])
-```
-
-The key matches against `data-key` attribute, enabling selection of specific items in repeated structures.
 
 ### Aliases
 
-Configure selector aliases for common patterns:
+Configure selector aliases in your config file:
 
 ```typescript
-import { setAliases } from '@scenetest/cli'
-
-setAliases({
-  'container': '[data-container]',
-  'modal': '[role=dialog]',
-  'nav': '[role=navigation]',
+// scenetest-cli.config.ts
+export default defineConfig({
+  aliases: {
+    container: '[data-container]',
+    modal: '[role=dialog]',
+    nav: '[role=navigation]',
+    'btn-p': 'button[type=submit], button.primary',
+  },
 })
+```
 
-// Usage
-await user.see('~container')
-await user.up('~modal')
+Usage:
+```typescript
+await user.see('~modal')
+await user.up('~container')
+await user.click('~btn-p')
 ```
 
 ## 4. Chaining Model (Implemented)
@@ -129,9 +143,9 @@ await user.up('~modal')
 
 ```typescript
 await user
-  .see('playlist-row', '12345')  // Scope → playlist row
-  .click('like-button')          // Click within that row
-  .see('liked-indicator')        // Verify within that row
+  .see('playlist-row 12345')   // Scope → this playlist row (key matched on same element)
+  .click('like-button')        // Click within that row
+  .see('liked-indicator')      // Verify within that row
 ```
 
 ### Navigation Methods

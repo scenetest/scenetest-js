@@ -34,9 +34,6 @@ interface WarningTrigger {
  * Format a Selector for display in logs/errors
  */
 function formatSelector(selector: Selector): string {
-  if (Array.isArray(selector)) {
-    return `${selector[0]}[key=${selector[1]}]`
-  }
   return selector
 }
 
