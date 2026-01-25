@@ -66,15 +66,6 @@ importers:
 
   packages/example-app-react:
     dependencies:
-      '@scenetest/cli':
-        specifier: workspace:*
-        version: link:../scenetest-cli
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
-      '@scenetest/observer':
-        specifier: workspace:*
-        version: link:../observer
       '@scenetest/react':
         specifier: workspace:*
         version: link:../scenetest-react
@@ -88,6 +79,9 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@scenetest/cli':
+        specifier: workspace:*
+        version: link:../scenetest-cli
       '@scenetest/vite-plugin':
         specifier: workspace:*
         version: link:../vite-plugin
