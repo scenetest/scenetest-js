@@ -39,11 +39,19 @@ renderer.heading = function ({ text, depth }: { text: string; depth: number }) {
 renderer.code = function (code: { text: string; lang?: string }) {
   const lang = code.lang || ''
   const text = code.text
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+
+  // Highlight at parse time so the HTML already has hljs classes baked in.
+  // No post-render DOM walk needed.
+  let highlighted: string
+  if (lang && hljs.getLanguage(lang)) {
+    highlighted = hljs.highlight(text, { language: lang }).value
+  } else {
+    highlighted = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
 
   // Use data attribute to store the code text for copying
   // Double-encode to handle all special characters safely in HTML attributes
@@ -54,7 +62,7 @@ renderer.code = function (code: { text: string; lang?: string }) {
       <button class="copy-btn" data-code="${encodedText}">
         Copy
       </button>
-      <pre><code class="language-${lang}">${escaped}</code></pre>
+      <pre><code class="hljs language-${lang}">${highlighted}</code></pre>
     </div>
   `
 }
@@ -91,15 +99,6 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
         setContent(`<p class="error">Error loading content from ${src}</p>`)
       })
   }, [src])
-
-  // Syntax highlighting after content loads
-  useEffect(() => {
-    if (content && containerRef.current) {
-      containerRef.current.querySelectorAll('pre code').forEach((el) => {
-        hljs.highlightElement(el as HTMLElement)
-      })
-    }
-  }, [content])
 
   // Scroll to hash target after content renders or hash changes.
   // Delay slightly so the view transition animation doesn't reset scroll.
