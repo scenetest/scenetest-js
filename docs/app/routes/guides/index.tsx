@@ -21,6 +21,11 @@ const guides = [
     title: 'Using AI to Write Specs',
     description: 'A copyable prompt for using LLMs to convert natural language test descriptions into scene specs.',
   },
+  {
+    slug: 'building-teams',
+    title: 'Building Good Teams of Actors',
+    description: 'Design teams that mirror your seed data, scale concurrency, and keep scenes reliable without shared-state bugs.',
+  },
 ]
 
 function Guides() {
