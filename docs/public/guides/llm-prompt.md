@@ -44,6 +44,9 @@ scene('description of the user journey', async ({ actor }) => {
   await user.see('modal action-form')         // Wait for nested selector
   await user.typeInto('textarea', 'text')     // Type into input by test ID
   await user.seeToast('toast-type')           // Wait for appear AND disappear
+
+  // Also available: seeText, check, select, wait, emit, do, if, warnIf
+  // Full list: /reference/actor-api
 })
 ```
 
@@ -146,3 +149,5 @@ If the generated spec doesn't quite match your intent:
 - Change test ID names to match your naming conventions
 
 The goal is a spec that reads like documentation of what your app should do.
+
+For the complete list of actor methods, selectors, and chaining details, see the [Actor API Reference](/reference/actor-api).

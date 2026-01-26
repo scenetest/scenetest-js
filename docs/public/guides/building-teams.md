@@ -2,7 +2,7 @@
 
 Teams are the foundation of Scenetest's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
 
-This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams.
+This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams. For the full actor method reference, see the [Actor API Reference](/reference/actor-api).
 
 ## Core Principle: Teams Mirror Your Seed Data
 
