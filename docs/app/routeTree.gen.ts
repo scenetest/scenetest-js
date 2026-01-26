@@ -10,14 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReferenceIndexRouteImport } from './routes/reference/index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as FaqIndexRouteImport } from './routes/faq/index'
+import { Route as ReferencePageNameRouteImport } from './routes/reference/$pageName'
 import { Route as GuidesPageNameRouteImport } from './routes/guides/$pageName'
 import { Route as FaqPageNameRouteImport } from './routes/faq/$pageName'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferenceIndexRoute = ReferenceIndexRouteImport.update({
+  id: '/reference/',
+  path: '/reference/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesIndexRoute = GuidesIndexRouteImport.update({
@@ -28,6 +35,11 @@ const GuidesIndexRoute = GuidesIndexRouteImport.update({
 const FaqIndexRoute = FaqIndexRouteImport.update({
   id: '/faq/',
   path: '/faq/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferencePageNameRoute = ReferencePageNameRouteImport.update({
+  id: '/reference/$pageName',
+  path: '/reference/$pageName',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesPageNameRoute = GuidesPageNameRouteImport.update({
@@ -45,44 +57,68 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq/$pageName': typeof FaqPageNameRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
+  '/reference/$pageName': typeof ReferencePageNameRoute
   '/faq/': typeof FaqIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/reference/': typeof ReferenceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq/$pageName': typeof FaqPageNameRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
+  '/reference/$pageName': typeof ReferencePageNameRoute
   '/faq': typeof FaqIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/reference': typeof ReferenceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/faq/$pageName': typeof FaqPageNameRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
+  '/reference/$pageName': typeof ReferencePageNameRoute
   '/faq/': typeof FaqIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/reference/': typeof ReferenceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/faq/$pageName' | '/guides/$pageName' | '/faq/' | '/guides/'
+  fullPaths:
+    | '/'
+    | '/faq/$pageName'
+    | '/guides/$pageName'
+    | '/reference/$pageName'
+    | '/faq/'
+    | '/guides/'
+    | '/reference/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/faq/$pageName' | '/guides/$pageName' | '/faq' | '/guides'
+  to:
+    | '/'
+    | '/faq/$pageName'
+    | '/guides/$pageName'
+    | '/reference/$pageName'
+    | '/faq'
+    | '/guides'
+    | '/reference'
   id:
     | '__root__'
     | '/'
     | '/faq/$pageName'
     | '/guides/$pageName'
+    | '/reference/$pageName'
     | '/faq/'
     | '/guides/'
+    | '/reference/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqPageNameRoute: typeof FaqPageNameRoute
   GuidesPageNameRoute: typeof GuidesPageNameRoute
+  ReferencePageNameRoute: typeof ReferencePageNameRoute
   FaqIndexRoute: typeof FaqIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ReferenceIndexRoute: typeof ReferenceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reference/': {
+      id: '/reference/'
+      path: '/reference'
+      fullPath: '/reference/'
+      preLoaderRoute: typeof ReferenceIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/': {
@@ -106,6 +149,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq/'
       preLoaderRoute: typeof FaqIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reference/$pageName': {
+      id: '/reference/$pageName'
+      path: '/reference/$pageName'
+      fullPath: '/reference/$pageName'
+      preLoaderRoute: typeof ReferencePageNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/$pageName': {
@@ -129,8 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqPageNameRoute: FaqPageNameRoute,
   GuidesPageNameRoute: GuidesPageNameRoute,
+  ReferencePageNameRoute: ReferencePageNameRoute,
   FaqIndexRoute: FaqIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ReferenceIndexRoute: ReferenceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

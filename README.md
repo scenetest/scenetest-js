@@ -87,10 +87,10 @@ pnpm scenetest
 [Note on Security](./docs/public/faq/security.md)
 
 **Design Docs**
-- [Actors API Design Document](./docs/design/actors-api.md)
-- [CLI Design Document](./docs/design/cli-v2.md)
-- [Server Actions Design Document](./docs/design/server-actions.md)
-- [Reporting System Design Document](./docs/design/dashboard.md)
+- [Actors API Design Document](./docs/public/design/actors-api.md)
+- [CLI Design Document](./docs/public/design/cli-v2.md)
+- [Server Actions Design Document](./docs/public/design/server-actions.md)
+- [Reporting System Design Document](./docs/public/design/dashboard.md)
 
 ## Packages
 

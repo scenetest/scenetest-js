@@ -24,7 +24,7 @@ The test writer focuses on **what** should happen. Engineers then add the necess
 
 ## Actor Methods
 
-The `actor()` function returns an actor handle representing a user or role. All action methods return a chainable `ActionChain` that executes when awaited.
+The `actor()` function returns an actor handle representing a user or role. Here are the most common methods:
 
 ```typescript
 const user = await actor('user')
@@ -62,7 +62,10 @@ await user
   .click('submit')
 ```
 
-For the full API reference, see the [Actors API Design](../design/actors-api.md#actor-api-reference).
+Actors also support [form helpers](/reference/actor-api#check) (`check`, `select`), [control flow](/reference/actor-api#wait)
+(`wait`, `emit`, `do`), [scope navigation](/reference/actor-api#up) (`up`, `prev`), and [conditionals](/reference/actor-api#if)
+(`if`, `warnIf`). See the [Actor API Reference](/reference/actor-api) for the complete method list.
+
 
 ## Nested Selectors
 
@@ -232,4 +235,5 @@ Actor teams are defined in separate files. See [Building Good Teams of Actors](.
 - Use `if()` for conditional handling and `warnIf()` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
-- See the full [Actor API Reference](../design/actors-api.md#actor-api-reference) for all available methods
+
+For the complete list of actor methods, selectors, and action chain details, see the [Actor API Reference](/reference/actor-api).

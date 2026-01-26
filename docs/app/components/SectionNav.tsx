@@ -1,17 +1,18 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { guides, faqs } from '../sections'
+import { guides, reference, faqs } from '../sections'
 
 export function SectionNav() {
   const { pathname } = useLocation()
 
   const isGuides = pathname.startsWith('/guides')
+  const isReference = pathname.startsWith('/reference')
   const isFaq = pathname.startsWith('/faq')
 
-  if (!isGuides && !isFaq) return null
+  if (!isGuides && !isReference && !isFaq) return null
 
-  const section = isGuides ? 'guides' : 'faq'
-  const items = isGuides ? guides : faqs
-  const label = isGuides ? 'Guides' : 'FAQ'
+  const section = isGuides ? 'guides' : isReference ? 'reference' : 'faq'
+  const items = isGuides ? guides : isReference ? reference : faqs
+  const label = isGuides ? 'Guides' : isReference ? 'API Ref' : 'FAQ'
 
   // Extract the current slug from /section/slug
   const parts = pathname.split('/')
