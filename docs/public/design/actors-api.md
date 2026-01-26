@@ -1,6 +1,6 @@
 # Actors API Design
 
-**STATUS: Design Complete** - Ready for implementation.
+**STATUS: Implemented** in `packages/scenetest-cli/src/` — actor.ts, team-manager.ts, config.ts.
 
 ---
 
