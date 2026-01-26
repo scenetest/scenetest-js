@@ -293,7 +293,7 @@ export function renderPianoRoll(locations: LocationGroup[], allAssertions: Asser
   }))
 
   return `
-    <div class="piano-roll" data-chords="${escapeHtml(JSON.stringify(chordData))}">
+    <div class="piano-roll" data-chords="${escapeHtmlAttr(JSON.stringify(chordData))}">
       <div class="piano-roll-header">
         <span class="piano-roll-title">\uD83C\uDFB9 Piano Roll</span>
         <span class="piano-roll-hint">Click a column to hear that chord</span>
