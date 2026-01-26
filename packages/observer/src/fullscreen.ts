@@ -279,6 +279,12 @@ export function openFullscreen(groupId?: number): void {
     setFullscreenViewMode('byLocation')
   })
 
+  // Set up event delegation once on the list element (not on every re-render)
+  const listEl = doc.getElementById('list')
+  if (listEl) {
+    setupFullscreenEventListeners(doc, listEl)
+  }
+
   updateFullscreenWindow()
 
   // Scroll to group if requested
@@ -404,9 +410,6 @@ function renderGroupedView(doc: Document, listEl: HTMLElement): void {
     .reverse()
     .join('')
 
-  // Set up event listeners for rendered content
-  setupFullscreenEventListeners(doc, listEl)
-
   // Restore scroll position
   if (anchorGroupId !== null) {
     const anchorEl = listEl.querySelector(`[data-group-id="${anchorGroupId}"]`)
@@ -457,9 +460,6 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
     </div>
   `
 
-  // Set up event listeners for rendered content
-  setupFullscreenEventListeners(_doc, listEl)
-
   // Set up click handlers for piano roll columns and note badges
   setupPianoRollHandlers(_doc, listEl)
   setupNoteClickHandlers(_doc, listEl)
@@ -504,9 +504,6 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
     </div>
     ${entryCount > 1 ? '<div class="sequence-end-label">First event</div>' : ''}
   `
-
-  // Set up event listeners for rendered content
-  setupFullscreenEventListeners(_doc, listEl)
 
   // Set up chord hover handlers
   setupChordHoverHandlers(_doc, listEl)
