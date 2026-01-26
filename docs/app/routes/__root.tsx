@@ -79,13 +79,13 @@ article {
   max-width: 680px;
   margin: 0 auto;
   padding: 80px 24px 120px;
-  margin-right: max(auto, 160px);
+  margin-right: max(auto, 200px);
 }
 
 /* Side nav */
 .side-nav {
   position: fixed;
-  right: 48px;
+  right: 105px;
   top: 80px;
   display: flex;
   flex-direction: column;
