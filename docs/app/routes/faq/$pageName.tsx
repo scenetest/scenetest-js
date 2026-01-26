@@ -1,17 +1,11 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { Footer } from '../../components/Footer'
 import { MarkdownSection } from '../../components/MarkdownSection'
-
-const faqPages = [
-  'vs-playwright',
-  'vs-vitest',
-  'vs-cypress',
-  'security',
-]
+import { faqs } from '../../sections'
 
 export const Route = createFileRoute('/faq/$pageName')({
   loader: ({ params }) => {
-    if (!faqPages.includes(params.pageName)) {
+    if (!faqs.some((f) => f.slug === params.pageName)) {
       throw notFound()
     }
   },

@@ -6,6 +6,7 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { SectionNav } from '../components/SectionNav'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -38,6 +39,7 @@ function RootComponent() {
         <style>{cssStyles}</style>
       </head>
       <body>
+        <SectionNav />
         <Outlet />
         <nav className="side-nav">
           <Link to="/">Home</Link>
@@ -390,6 +392,54 @@ figure.screenshot figcaption {
   line-height: 1.5;
 }
 
+/* Section nav (left sidebar) */
+.section-nav {
+  position: fixed;
+  left: 32px;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  max-width: 180px;
+  view-transition-name: section-nav;
+}
+
+.section-nav-heading {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+.section-nav-heading:hover {
+  color: var(--accent);
+}
+
+.section-nav-link {
+  color: var(--text-light);
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color 0.15s;
+}
+
+.section-nav-link:hover {
+  color: var(--accent);
+}
+
+.section-nav-link.current {
+  color: var(--text);
+  font-weight: 500;
+}
+
+@media (max-width: 1200px) {
+  .section-nav {
+    display: none;
+  }
+}
+
 /* ── View Transitions ── */
 
 article {
@@ -416,9 +466,11 @@ footer {
   view-transition-name: back-nav;
 }
 
-/* Side nav: no transition at all — perfectly still */
+/* Side nav + section nav: no transition at all — perfectly still */
 ::view-transition-old(side-nav),
-::view-transition-new(side-nav) {
+::view-transition-new(side-nav),
+::view-transition-old(section-nav),
+::view-transition-new(section-nav) {
   animation: none;
 }
 

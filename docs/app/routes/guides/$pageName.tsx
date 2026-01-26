@@ -1,17 +1,11 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { Footer } from '../../components/Footer'
 import { MarkdownSection } from '../../components/MarkdownSection'
-
-const guidePages = [
-  'llm-prompt',
-  'writing-inline-assertions',
-  'building-teams',
-  'writing-scene-specs',
-]
+import { guides } from '../../sections'
 
 export const Route = createFileRoute('/guides/$pageName')({
   loader: ({ params }) => {
-    if (!guidePages.includes(params.pageName)) {
+    if (!guides.some((g) => g.slug === params.pageName)) {
       throw notFound()
     }
   },
