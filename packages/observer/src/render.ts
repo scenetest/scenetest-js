@@ -105,7 +105,7 @@ export function renderFullscreenItem(a: AssertionResult): string {
     <div class="item ${a.result ? 'pass' : 'fail'}">
       <span class="icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="content">
-        <div class="desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
+        <div class="desc${a.type === 'fail' && a.result ? ' negated' : ''}" data-action="showSequence" data-key="${escapeHtmlAttr(JSON.stringify(a.description))}">${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="location" data-action="openInEditorFullscreen" data-location="${locJson}">${escapeHtml(formatLocation(a.location))}</div>` : ''}
         ${histSummary ? `<div class="history">${histSummary}</div>` : ''}
         ${a.context ? `<div class="context">${escapeHtml(formatContext(a.context))}</div>` : ''}

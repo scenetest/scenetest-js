@@ -558,6 +558,15 @@ body {
   margin-bottom: 4px;
   word-break: break-word;
 }
+.desc[data-action] {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+}
+.desc[data-action]:hover {
+  background: rgba(160, 160, 255, 0.1);
+}
 .item.fail .desc {
   color: #f87171;
 }
