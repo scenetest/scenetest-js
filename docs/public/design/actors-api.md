@@ -176,6 +176,113 @@ scene('friend request flow', async ({ actor }) => {
 })
 ```
 
+## Actor API Reference
+
+Every actor returned by `actor()` exposes the methods below. All methods (except `if()` and `warnIf()`) return an `ActionChain` that is chainable and thenable -- you can chain multiple actions together and `await` the result.
+
+### Navigation
+
+| Method | Description |
+|--------|-------------|
+| `openTo(url)` | Navigate to URL (full page load). Resets scope to page. |
+
+### Visibility
+
+| Method | Description |
+|--------|-------------|
+| `see(selector)` | Wait for element visible. **Updates scope** to the matched element. |
+| `notSee(selector)` | Wait for element to be hidden or detached. |
+| `seeText(text)` | Wait for text to be visible anywhere on the page. Updates scope. |
+| `seeToast(selector)` | Wait for element to appear AND disappear (for transient UI). Does not update scope. |
+
+### Interaction
+
+| Method | Description |
+|--------|-------------|
+| `click(selector)` | Click element within current scope. |
+| `typeInto(selector, value)` | Fill input within current scope. |
+| `check(selector)` | Check checkbox within current scope. |
+| `select(selector, value)` | Select dropdown option within current scope. |
+
+### Scope Navigation
+
+`see()` sets the current **scope** -- subsequent actions search within that element. Use these methods to navigate scope without drilling deeper:
+
+| Method | Description |
+|--------|-------------|
+| `up(selector)` | Navigate to an ancestor matching the selector. |
+| `prev()` | Return to the previous scope (undo the last scope change). |
+
+```typescript
+await user
+  .see('modal')               // scope → modal
+  .see('form')                // scope → form inside modal
+  .typeInto('name', 'Test')   // types within form
+  .prev()                     // scope → back to modal
+  .click('close')             // clicks modal's close button
+```
+
+### Conditional Handling
+
+| Method | Description |
+|--------|-------------|
+| `if(selector, callback)` | Register a watcher. If selector appears during the next `await`, run callback. Cleared after each await. |
+| `warnIf(selector, message)` | Register a warning trigger. If selector appears during any subsequent action, record a warning. Persists for entire scene. |
+
+```typescript
+// Handle an optional modal that may or may not appear
+user.if('welcome-modal', () => user.click('dismiss'))
+await user.see('dashboard')
+
+// Flag unexpected paths without failing the test
+user.warnIf('error-banner', 'should not see errors after valid submit')
+await user.click('submit')
+```
+
+### Utilities
+
+| Method | Description |
+|--------|-------------|
+| `wait(ms)` | Wait for specified milliseconds. |
+| `emit(message)` | Emit a message to the message bus (for coordinating between actors). |
+| `do(fn)` | Execute a custom async function receiving the Playwright `Page`. |
+| `scrollToBottom()` | Scroll the current scope (or nearest scrollable ancestor) to the bottom. |
+
+```typescript
+// Custom action with full Playwright access
+await user.do(async (page) => {
+  await page.evaluate(() => localStorage.setItem('token', 'abc'))
+})
+
+// Scroll to load lazy content
+await user.scrollToBottom()
+await user.see('load-more')
+```
+
+### Config Properties
+
+All properties from the actor's config are forwarded to the handle instance, so you can access them directly:
+
+```typescript
+const learner = await actor('primary-learner')
+learner.email           // 'maria@test.com'
+learner.password        // 'test123'
+learner.targetLanguage  // 'spanish' (custom property)
+```
+
+### Chaining
+
+All action methods return an `ActionChain` that supports further chaining. The chain executes when awaited:
+
+```typescript
+await user
+  .see('login-form')
+  .typeInto('email', user.email)
+  .typeInto('password', user.password)
+  .click('submit')
+  .see('dashboard')
+```
+
 ## How Teams Relate to Seed Data
 
 Seed data creates users that match the credentials in actor files. It's your
