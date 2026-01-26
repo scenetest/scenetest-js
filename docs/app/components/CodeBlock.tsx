@@ -1,4 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import hljs from 'highlight.js/lib/core'
+import typescript from 'highlight.js/lib/languages/typescript'
+import 'highlight.js/styles/github.css'
+
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('ts', typescript)
 
 interface CodeBlockProps {
   language?: string
@@ -8,6 +14,12 @@ interface CodeBlockProps {
 export function CodeBlock({ language = 'typescript', children }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
   const codeRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (codeRef.current) {
+      hljs.highlightElement(codeRef.current)
+    }
+  }, [children])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(children)

@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { marked } from 'marked'
+import hljs from 'highlight.js/lib/core'
+import typescript from 'highlight.js/lib/languages/typescript'
+import 'highlight.js/styles/github.css'
+
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('ts', typescript)
 
 interface MarkdownSectionProps {
   src: string
@@ -42,6 +48,7 @@ marked.use({ renderer })
 
 export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
   const [content, setContent] = useState<string>('<p>Loading...</p>')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch(src)
@@ -62,10 +69,10 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
 
   useEffect(() => {
     // Apply syntax highlighting after content loads
-    // @ts-expect-error hljs is loaded globally
-    if (content && typeof window !== 'undefined' && window.hljs) {
-      // @ts-expect-error hljs is loaded globally
-      window.hljs.highlightAll()
+    if (content && containerRef.current) {
+      containerRef.current.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el as HTMLElement)
+      })
     }
 
     // Set up copy button handlers
@@ -87,6 +94,7 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
 
   return (
     <div
+      ref={containerRef}
       className={`markdown-section ${className}`}
       dangerouslySetInnerHTML={{ __html: content }}
     />
