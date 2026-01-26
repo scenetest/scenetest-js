@@ -508,6 +508,14 @@ export class ActorHandleImpl implements ActorHandle {
     return this.createChain().scrollToBottom()
   }
 
+  up(selector: Selector): ActionChain {
+    return this.createChain().up(selector)
+  }
+
+  prev(): ActionChain {
+    return this.createChain().prev()
+  }
+
   /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
