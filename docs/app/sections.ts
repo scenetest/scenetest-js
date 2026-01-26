@@ -31,6 +31,15 @@ export const guides: SectionItem[] = [
   },
 ]
 
+export const reference: SectionItem[] = [
+  {
+    slug: 'actor-api',
+    title: 'Actor API',
+    description:
+      'Complete reference for scene(), actor(), action chains, selectors, conditionals, and multi-actor coordination.',
+  },
+]
+
 export const faqs: SectionItem[] = [
   {
     slug: 'vs-playwright',

@@ -45,6 +45,7 @@ function RootComponent() {
         <nav className="side-nav">
           <Link to="/">Home</Link>
           <Link to="/guides">Guides</Link>
+          <Link to="/reference">API Ref</Link>
           <Link to="/faq">FAQ</Link>
           <a href="https://github.com/scenetest/scenetest-js">GitHub</a>
         </nav>
