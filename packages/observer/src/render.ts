@@ -196,9 +196,9 @@ export function renderLocationRow(group: LocationGroup): string {
   }
 
   return `
-    <div class="location-row ${statusClass}" data-location-key="${keyJson}" data-description="${escapeHtml(group.description)}" data-last-result="${group.lastResult}">
+    <div class="location-row ${statusClass}" data-action="showSequence" data-key="${keyJson}" data-location-key="${keyJson}" data-description="${escapeHtmlAttr(group.description)}" data-last-result="${group.lastResult}">
       ${stateIcon}
-      <div class="location-main" data-action="showSequence" data-key="${keyJson}">
+      <div class="location-main">
         <div class="location-info">
           <span class="location-file">${escapeHtml(formatLocationShort(group.location))}</span>
           <span class="location-desc">${escapeHtml(group.description)}</span>
@@ -276,7 +276,7 @@ export function renderPianoRoll(locations: LocationGroup[], allAssertions: Asser
     }).join('')
 
     return `
-      <div class="piano-row ${statusClass}" data-description="${escapeHtml(note.description)}" data-result="${note.lastResult}">
+      <div class="piano-row ${statusClass}" data-description="${escapeHtmlAttr(note.description)}" data-result="${note.lastResult}">
         <span class="piano-note">${note.noteInfo.noteName}</span>
         <div class="piano-cells">${cells}</div>
       </div>
