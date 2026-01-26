@@ -17,6 +17,7 @@ import {
   renderFullscreenItem,
   renderFullscreenGroup,
   renderLocationRow,
+  renderPianoRoll,
   renderSequenceEntry,
   renderSequenceHeader
 } from '../render.js'
@@ -339,6 +340,73 @@ describe('renderSequenceHeader - XSS prevention', () => {
     if (payload.includes('<')) {
       expect(html).toContain('&lt;')
     }
+  })
+})
+
+describe('renderPianoRoll - data-chords attribute', () => {
+  it('escapes quotes in chord JSON so the attribute is not truncated', () => {
+    const locations: LocationGroup[] = [
+      createLocationGroup({ description: 'assertion one' }),
+      createLocationGroup({ description: 'assertion two' }),
+    ]
+    const now = Date.now()
+    const assertions: AssertionResult[] = [
+      createAssertion({ description: 'assertion one', timestamp: now }),
+      createAssertion({ description: 'assertion two', timestamp: now }),
+    ]
+    const html = renderPianoRoll(locations, assertions)
+
+    // The data-chords attribute must use &quot; for quotes so that the
+    // JSON is not truncated by the HTML attribute boundary
+    const match = html.match(/data-chords="([^"]*)"/)
+    expect(match).toBeTruthy()
+
+    // The captured attribute value should contain &quot; (escaped quotes)
+    // rather than raw " which would break the attribute
+    const attrValue = match![1]
+    expect(attrValue).toContain('&quot;')
+
+    // After unescaping HTML entities (simulating what the browser does),
+    // the result should be valid JSON
+    const unescaped = attrValue
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+    const parsed = JSON.parse(unescaped)
+    expect(Array.isArray(parsed)).toBe(true)
+    expect(parsed.length).toBe(1) // both assertions grouped into one chord
+    expect(parsed[0].notes).toHaveLength(2)
+    expect(parsed[0].notes[0].description).toBe('assertion one')
+    expect(parsed[0].notes[1].description).toBe('assertion two')
+  })
+
+  it('handles XSS payloads in assertion descriptions within chord data', () => {
+    const payload = '"><img src=x onerror=alert(1)>'
+    const locations: LocationGroup[] = [
+      createLocationGroup({ description: payload }),
+    ]
+    const assertions: AssertionResult[] = [
+      createAssertion({ description: payload, timestamp: Date.now() }),
+    ]
+    const html = renderPianoRoll(locations, assertions)
+
+    // The raw payload must not appear unescaped in the attribute
+    expect(html).not.toContain(`data-chords="${payload}`)
+    expect(html).not.toContain('<img src=x')
+
+    // Should still produce parseable chord data
+    const match = html.match(/data-chords="([^"]*)"/)
+    expect(match).toBeTruthy()
+    const unescaped = match![1]
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+    const parsed = JSON.parse(unescaped)
+    expect(parsed[0].notes[0].description).toBe(payload)
   })
 })
 
