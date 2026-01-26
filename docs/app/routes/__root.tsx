@@ -79,17 +79,17 @@ article {
   max-width: 680px;
   margin: 0 auto;
   padding: 80px 24px 120px;
-  padding-right: 100px;
+  margin-right: max(auto, 160px);
 }
 
 /* Side nav */
 .side-nav {
   position: fixed;
-  right: 32px;
+  right: 48px;
   top: 80px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.85rem;
 }
@@ -105,13 +105,13 @@ article {
   color: var(--accent);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 960px) {
   .side-nav {
     display: none;
   }
 
   article {
-    padding-right: 24px;
+    margin-right: auto;
   }
 }
 
