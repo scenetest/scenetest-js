@@ -1,8 +1,8 @@
-import { pathToFileURL } from 'url'
 import path from 'path'
 import fs from 'fs'
 import { glob } from 'glob'
 import type { ScenetestConfig, TeamConfig } from './types.js'
+import { importFile } from './loader.js'
 
 /**
  * Default config values
@@ -57,7 +57,7 @@ async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
   for (const name of singleFiles) {
     const filepath = path.join(configDir, name)
     if (fs.existsSync(filepath)) {
-      const module = await import(pathToFileURL(filepath).href)
+      const module = await importFile(filepath)
       const exported = module.default
       if (Array.isArray(exported)) {
         return exported as TeamConfig[]
@@ -81,7 +81,7 @@ async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
 
     const teams: TeamConfig[] = []
     for (const file of files.sort()) {
-      const module = await import(pathToFileURL(file).href)
+      const module = await importFile(file)
       teams.push(module.default as TeamConfig)
     }
     return teams
@@ -117,7 +117,7 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
   }
 
   // Dynamic import
-  const module = await import(pathToFileURL(filepath).href)
+  const module = await importFile(filepath)
   const config = module.default as ScenetestConfig
 
   // Validate required fields

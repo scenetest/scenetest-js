@@ -1,11 +1,11 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
-import { pathToFileURL } from 'url'
 import path from 'path'
 import type { ScenetestConfig, TeamConfig, RunReport, SceneReport } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
+import { importFile } from './loader.js'
 
 /**
  * Main scene runner
@@ -66,7 +66,7 @@ export class SceneRunner {
     for (const file of files) {
       setCurrentFile(file)
       // Dynamic import of scene file
-      await import(pathToFileURL(file).href)
+      await importFile(file)
     }
   }
 
