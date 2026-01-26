@@ -18,8 +18,22 @@ marked.setOptions({
   breaks: false,
 })
 
-// Custom renderer to add copy buttons to code blocks
+// Custom renderer for headings with id anchors, and code blocks with copy buttons
 const renderer = new marked.Renderer()
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .trim()
+}
+
+renderer.heading = function ({ text, depth }: { text: string; depth: number }) {
+  const id = slugify(text)
+  return `<h${depth} id="${id}">${text}</h${depth}>\n`
+}
 
 renderer.code = function (code: { text: string; lang?: string }) {
   const lang = code.lang || ''
@@ -73,6 +87,15 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
       containerRef.current.querySelectorAll('pre code').forEach((el) => {
         hljs.highlightElement(el as HTMLElement)
       })
+    }
+
+    // Scroll to hash target after content renders
+    if (content && window.location.hash) {
+      const id = window.location.hash.slice(1)
+      const el = document.getElementById(id)
+      if (el) {
+        el.scrollIntoView()
+      }
     }
 
     // Set up copy button handlers
