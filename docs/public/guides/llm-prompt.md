@@ -37,13 +37,13 @@ scene('description of the user journey', async ({ actor }) => {
   const user = await actor('role-name')
 
   // Actor methods (all support nested selectors: 'parent child'):
-  await user.openTo('/path')                    // Navigate to URL
-  await user.see('test-id')                   // Wait for data-testid
-  await user.see('modal form')                // Wait for nested element
-  await user.seeText('text')                  // Wait for visible text
-  await user.seeToast('toast-id')             // Wait for appear AND disappear
-  await user.click('test-id')                 // Click element by test ID
-  await user.typeInto('test-id', 'text')      // Type into input by test ID
+  await user.openTo('/path')                  // Open the browser to URL
+  await user.see('test-id')                   // Wait for selector
+  await user.click('element-id')              // Click element
+  await user.notSee('welcome-modal')          // Warn if you see this
+  await user.see('modal action-form')         // Wait for nested selector
+  await user.typeInto('textarea', 'text')     // Type into input by test ID
+  await user.seeToast('toast-type')           // Wait for appear AND disappear
 })
 ```
 
