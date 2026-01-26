@@ -389,4 +389,100 @@ figure.screenshot figcaption {
   color: var(--text-light);
   line-height: 1.5;
 }
+
+/* ── View Transitions ── */
+
+article {
+  view-transition-name: page-content;
+}
+
+article > h1 {
+  view-transition-name: page-title;
+}
+
+.markdown-section h1:first-child {
+  view-transition-name: page-title;
+}
+
+.side-nav {
+  view-transition-name: side-nav;
+}
+
+footer {
+  view-transition-name: page-footer;
+}
+
+.back {
+  view-transition-name: back-nav;
+}
+
+/* Side nav: no transition at all — perfectly still */
+::view-transition-old(side-nav),
+::view-transition-new(side-nav) {
+  animation: none;
+}
+
+/* Root cross-fade: brief, barely there */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+/* Page content: gentle rise */
+::view-transition-old(page-content) {
+  animation: vt-recede 220ms ease-in both;
+}
+
+::view-transition-new(page-content) {
+  animation: vt-arrive 280ms ease-out both;
+}
+
+/* Title: smooth settle, slightly longer to anchor the eye */
+::view-transition-group(page-title) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+::view-transition-old(page-title),
+::view-transition-new(page-title) {
+  animation-duration: 250ms;
+  animation-timing-function: ease-out;
+}
+
+/* Footer: quiet fade */
+::view-transition-old(page-footer),
+::view-transition-new(page-footer) {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+}
+
+/* Back link: understated */
+::view-transition-old(back-nav),
+::view-transition-new(back-nav) {
+  animation-duration: 150ms;
+  animation-timing-function: ease-out;
+}
+
+@keyframes vt-recede {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes vt-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 `
