@@ -17,7 +17,6 @@ export const Route = createRootRoute({
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap' },
-      { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css' },
     ],
   }),
   component: RootComponent,
@@ -29,20 +28,6 @@ function RootComponent() {
     import('@scenetest/observer').then(({ initObserver }) => {
       initObserver()
     })
-
-    // Load highlight.js
-    const script = document.createElement('script')
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'
-    script.onload = () => {
-      const tsScript = document.createElement('script')
-      tsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js'
-      tsScript.onload = () => {
-        // @ts-expect-error hljs is loaded globally
-        window.hljs?.highlightAll()
-      }
-      document.head.appendChild(tsScript)
-    }
-    document.head.appendChild(script)
   }, [])
 
   return (
