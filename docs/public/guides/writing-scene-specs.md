@@ -24,23 +24,36 @@ The test writer focuses on **what** should happen. Engineers then add the necess
 
 ## Actor Methods
 
-The `actor()` function returns an actor handle representing a user or role. Actors have these methods:
+The `actor()` function returns an actor handle representing a user or role. All action methods return a chainable `ActionChain` that executes when awaited.
 
 ```typescript
 const user = await actor('user')
 
 // Navigation
-await user.openTo('/path')
+await user.openTo('/path')            // Full page load
 
-// Finding elements (supports nested selectors: 'parent child')
-await user.see('element-id')         // Wait for data-testid
-await user.see('modal form')         // Wait for form inside modal
-await user.seeText('text content')   // Wait for text
-await user.seeToast('success-toast') // Wait for appear AND disappear
+// Visibility
+await user.see('element-id')          // Wait for element visible (updates scope)
+await user.see('modal form')          // Nested selector: form inside modal
+await user.notSee('loading-spinner')  // Wait for element hidden
+await user.seeText('text content')    // Wait for text visible
+await user.seeToast('success-toast')  // Wait for appear AND disappear
 
 // Interactions
 await user.click('button-id')
 await user.typeInto('input-id', 'text to type')
+await user.check('agree-checkbox')
+await user.select('country-dropdown', 'Canada')
+
+// Scope navigation
+await user.see('modal').see('form').prev()  // Back to modal scope
+await user.see('child').up('~container')    // Up to ancestor
+
+// Utilities
+await user.wait(500)
+await user.scrollToBottom()
+await user.emit('user-ready')              // Message bus for actor coordination
+await user.do(async (page) => { /* ... */ })  // Custom Playwright action
 
 // Chaining
 await user
@@ -48,6 +61,8 @@ await user
   .typeInto('email', 'test@example.com')
   .click('submit')
 ```
+
+For the full API reference, see the [Actors API Design](../design/actors-api.md#actor-api-reference).
 
 ## Nested Selectors
 
@@ -72,6 +87,52 @@ Use `seeToast()` to wait for transient UI elements that appear and then disappea
 await user.click('save-button')
 await user.seeToast('success-notification')  // Waits for appear AND disappear
 ```
+
+## Scope Navigation
+
+`see()` updates the actor's **current scope** -- subsequent actions search within the matched element. Use `prev()` and `up()` to navigate scope without drilling deeper:
+
+```typescript
+await user
+  .see('settings-modal')       // scope → modal
+  .see('profile-form')         // scope → form inside modal
+  .typeInto('name', 'Alice')   // types within form
+  .prev()                      // scope → back to modal
+  .click('close-button')       // clicks modal's close button
+```
+
+`up(selector)` navigates to an ancestor matching the selector. Works well with aliases:
+
+```typescript
+await user
+  .see('nested-item')
+  .up('~container')           // navigate up to a named container
+  .click('action-button')
+```
+
+## Conditional Handling
+
+Use `if()` to register a watcher for elements that may or may not appear. If the selector becomes visible during the next `await`, the callback runs:
+
+```typescript
+// Handle a welcome modal that sometimes appears
+user.if('welcome-modal', () => user.click('dismiss'))
+await user.see('dashboard')  // If modal appears, it gets dismissed first
+```
+
+Watchers are cleared after each `await`, so they only apply to the immediately following action.
+
+## Script Warnings
+
+Use `warnIf()` to flag unexpected paths without failing the test. Unlike `if()`, warnings persist for the entire scene:
+
+```typescript
+user.warnIf('welcome-modal', 'user should have dismiss flag set')
+await user.openTo('/dashboard')
+await user.see('main-content')
+```
+
+Warnings are reported separately in `SceneReport.warnings` and are useful for tracking deprecation paths, flaky conditions, and A/B test monitoring.
 
 ## Writing Effective Scene Specs
 
@@ -166,6 +227,9 @@ Actor teams are defined in separate files. See [Building Good Teams of Actors](.
 - Write specs in **plain language** from the user's perspective
 - Use stable `data-testid` attributes as the contract with engineers
 - Use **nested selectors** (`'parent child'`) to target specific elements
+- Use **scope navigation** (`prev()`, `up()`) to move between scoped contexts
 - Use `seeToast()` for transient notifications
+- Use `if()` for conditional handling and `warnIf()` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
+- See the full [Actor API Reference](../design/actors-api.md#actor-api-reference) for all available methods
