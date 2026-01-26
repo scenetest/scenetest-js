@@ -109,7 +109,8 @@ export class TeamManager {
   async createSession(
     teamIndex: number,
     actionTimeout: number,
-    warnAfter: number
+    warnAfter: number,
+    baseUrl?: string
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -119,7 +120,8 @@ export class TeamManager {
       this.getTeam(teamIndex),
       teamIndex,
       actionTimeout,
-      warnAfter
+      warnAfter,
+      baseUrl
     )
   }
 }
@@ -141,7 +143,8 @@ export class TeamSession {
     private team: TeamConfig,
     readonly teamIndex: number,
     private actionTimeout: number,
-    private warnAfter: number
+    private warnAfter: number,
+    private baseUrl?: string
   ) {}
 
   /**
@@ -161,7 +164,9 @@ export class TeamSession {
     }
 
     // Create new browser context for this actor
-    const context = await this.browser.newContext()
+    const context = await this.browser.newContext({
+      ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
+    })
     const page = await context.newPage()
 
     // Set up assertion collection
