@@ -11,6 +11,7 @@ import {
   filter,
   viewMode,
   sequenceLocationKey,
+  sequenceFromView,
   locationGroups,
   setFullscreenWindow,
   setFilter,
@@ -66,15 +67,7 @@ function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): voi
       }
     },
     backToLocationView: () => {
-      // Go back to location view - call opener's function or our own
-      const opener = window.opener as Window | null
-      if (opener && opener.__scenetest_setViewMode) {
-        opener.__scenetest_setViewMode('byLocation')
-      } else if (window.__scenetest_setViewMode) {
-        window.__scenetest_setViewMode('byLocation')
-      } else {
-        backToLocationView()
-      }
+      backFromSequence()
     },
     toggleCollapsed: (groupId) => {
       toggleGroupCollapsed(groupId)
@@ -162,10 +155,10 @@ export function showSequence(locationKey: string): void {
 }
 
 /**
- * Go back from sequence view to byLocation view
+ * Go back from sequence view to the view we came from
  */
-export function backToLocationView(): void {
-  setViewMode('byLocation')
+export function backFromSequence(): void {
+  setViewMode(sequenceFromView)
   updateFullscreenWindow()
 }
 
@@ -338,10 +331,10 @@ export function updateFullscreenWindow(): void {
   doc.getElementById('filter-fails')?.classList.toggle('active', filter === 'fails')
   doc.getElementById('filter-passes')?.classList.toggle('active', filter === 'passes')
 
-  // Update view mode button states
-  const isSequenceView = viewMode === 'sequence'
-  doc.getElementById('view-grouped')?.classList.toggle('active', viewMode === 'grouped')
-  doc.getElementById('view-byLocation')?.classList.toggle('active', viewMode === 'byLocation' || isSequenceView)
+  // Update view mode button states - sequence view keeps the tab it came from highlighted
+  const activeTab = viewMode === 'sequence' ? sequenceFromView : viewMode
+  doc.getElementById('view-grouped')?.classList.toggle('active', activeTab === 'grouped')
+  doc.getElementById('view-byLocation')?.classList.toggle('active', activeTab === 'byLocation')
 
   const listEl = doc.getElementById('list')
   if (!listEl) return
@@ -490,7 +483,7 @@ function renderSequenceView(_doc: Document, listEl: HTMLElement): void {
   const entryCount = reversedEntries.length
 
   listEl.innerHTML = `
-    ${renderBackButton()}
+    ${renderBackButton(sequenceFromView)}
     ${renderSequenceHeader(group)}
     <div class="sequence-direction-hint">
       <span class="direction-arrow">\u2191</span> Most recent at top

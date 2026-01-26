@@ -442,8 +442,9 @@ export function renderSequenceHeader(group: LocationGroup): string {
 /**
  * Render the back button for sequence view
  */
-export function renderBackButton(): string {
-  return `<div class="back-btn" data-action="backToLocationView">\u2190 Back to all locations</div>`
+export function renderBackButton(fromView: 'grouped' | 'byLocation' = 'byLocation'): string {
+  const label = fromView === 'grouped' ? 'Back to timeline' : 'Back to all locations'
+  return `<div class="back-btn" data-action="backToLocationView">\u2190 ${label}</div>`
 }
 
 /**
