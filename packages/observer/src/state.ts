@@ -35,6 +35,7 @@ export let collapsedMode = true // Always start collapsed
 // View mode state (fullscreen only)
 export let viewMode: ViewMode = 'grouped'
 export let sequenceLocationKey: string | null = null // Which location to show in sequence view
+export let sequenceFromView: 'grouped' | 'byLocation' = 'byLocation' // Which view we entered sequence from
 
 export function setPanel(el: HTMLDivElement): void {
   panel = el
@@ -72,6 +73,7 @@ export function setViewMode(mode: ViewMode): void {
 export function setSequenceLocation(key: string | null): void {
   sequenceLocationKey = key
   if (key !== null) {
+    sequenceFromView = viewMode === 'sequence' ? sequenceFromView : (viewMode as 'grouped' | 'byLocation')
     viewMode = 'sequence'
   }
 }
