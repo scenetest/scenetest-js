@@ -9,19 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as FaqRouteImport } from './routes/faq'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FaqIndexRouteImport } from './routes/faq/index'
+import { Route as FaqPageNameRouteImport } from './routes/faq/$pageName'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as GuidesPageNameRouteImport } from './routes/guides/$pageName'
 
-const FaqRoute = FaqRouteImport.update({
-  id: '/faq',
-  path: '/faq',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqIndexRoute = FaqIndexRouteImport.update({
+  id: '/faq/',
+  path: '/faq/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqPageNameRoute = FaqPageNameRouteImport.update({
+  id: '/faq/$pageName',
+  path: '/faq/$pageName',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesIndexRoute = GuidesIndexRouteImport.update({
@@ -37,20 +43,23 @@ const GuidesPageNameRoute = GuidesPageNameRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/faq': typeof FaqRoute
+  '/faq/$pageName': typeof FaqPageNameRoute
+  '/faq/': typeof FaqIndexRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
   '/guides/': typeof GuidesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/faq': typeof FaqRoute
+  '/faq/$pageName': typeof FaqPageNameRoute
+  '/faq': typeof FaqIndexRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
   '/guides': typeof GuidesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/faq': typeof FaqRoute
+  '/faq/$pageName': typeof FaqPageNameRoute
+  '/faq/': typeof FaqIndexRoute
   '/guides/$pageName': typeof GuidesPageNameRoute
   '/guides/': typeof GuidesIndexRoute
 }
@@ -58,44 +67,55 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/faq'
+    | '/faq/$pageName'
+    | '/faq/'
     | '/guides/$pageName'
     | '/guides/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/faq/$pageName'
     | '/faq'
     | '/guides/$pageName'
     | '/guides'
   id:
     | '__root__'
     | '/'
-    | '/faq'
+    | '/faq/$pageName'
+    | '/faq/'
     | '/guides/$pageName'
     | '/guides/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  FaqRoute: typeof FaqRoute
+  FaqPageNameRoute: typeof FaqPageNameRoute
+  FaqIndexRoute: typeof FaqIndexRoute
   GuidesPageNameRoute: typeof GuidesPageNameRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/faq': {
-      id: '/faq'
-      path: '/faq'
-      fullPath: '/faq'
-      preLoaderRoute: typeof FaqRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq/': {
+      id: '/faq/'
+      path: '/faq'
+      fullPath: '/faq/'
+      preLoaderRoute: typeof FaqIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq/$pageName': {
+      id: '/faq/$pageName'
+      path: '/faq/$pageName'
+      fullPath: '/faq/$pageName'
+      preLoaderRoute: typeof FaqPageNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/': {
@@ -117,7 +137,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  FaqRoute: FaqRoute,
+  FaqPageNameRoute: FaqPageNameRoute,
+  FaqIndexRoute: FaqIndexRoute,
   GuidesPageNameRoute: GuidesPageNameRoute,
   GuidesIndexRoute: GuidesIndexRoute,
 }
