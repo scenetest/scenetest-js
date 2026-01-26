@@ -1195,10 +1195,7 @@ body {
 }
 /* Column highlight on hover */
 .piano-roll.col-hover .piano-cell[data-col].col-active {
-  transform: scale(1.15);
-  outline: 2px solid #a0a0ff;
-  outline-offset: 1px;
-  z-index: 1;
+  filter: brightness(1.3);
 }
 .piano-timeline {
   display: flex;
