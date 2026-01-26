@@ -18,6 +18,9 @@ import type { ActorHandle, Selector } from './types.js'
  *   wait <ms>                       - Wait milliseconds
  *   emit <message>                  - Emit to message bus
  *   warnIf <selector> <message>     - Register script warning
+ *   up <selector>                   - Navigate scope to ancestor
+ *   prev                            - Return to previous scope
+ *   scrollToBottom                   - Scroll current scope to bottom
  *
  * Selectors can be:
  *   - Simple: 'button'
@@ -60,7 +63,7 @@ function parseAction(line: string): ParsedAction {
   const rest = trimmed.slice(firstSpace + 1).trim()
 
   // Actions that take only a selector
-  const selectorOnlyActions = ['see', 'notSee', 'click', 'check', 'seeToast']
+  const selectorOnlyActions = ['see', 'notSee', 'click', 'check', 'seeToast', 'up']
 
   // Actions that take a value only (no selector)
   const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit']
@@ -167,6 +170,19 @@ async function executeAction(actor: ActorHandle, parsed: ParsedAction): Promise<
       if (!selector) throw new Error('warnIf requires a selector')
       if (!value) throw new Error('warnIf requires a message')
       actor.warnIf(selector, value)
+      break
+
+    case 'up':
+      if (!selector) throw new Error('up requires a selector')
+      await actor.up(selector)
+      break
+
+    case 'prev':
+      await actor.prev()
+      break
+
+    case 'scrollToBottom':
+      await actor.scrollToBottom()
       break
 
     default:

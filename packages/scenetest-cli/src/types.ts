@@ -285,6 +285,31 @@ export interface ActorHandle extends ActorConfig {
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
 
+  /** Scroll the current scope (or nearest scrollable ancestor) to the bottom */
+  scrollToBottom(): ActionChain
+
+  /**
+   * Navigate up to an ancestor matching the selector.
+   * Use with aliases like ~container to find named containers.
+   *
+   * @example
+   * ```ts
+   * user.see('button').up('~container').see('other-element')
+   * ```
+   */
+  up(selector: Selector): ActionChain
+
+  /**
+   * Return to the previously held scope.
+   * Useful after navigating with up() or drilling into a child.
+   *
+   * @example
+   * ```ts
+   * user.see('parent').see('child').prev().click('sibling')
+   * ```
+   */
+  prev(): ActionChain
+
   /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
@@ -348,6 +373,9 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
+
+  /** Scroll the current scope (or nearest scrollable ancestor) to the bottom */
+  scrollToBottom(): ActionChain
 
   /**
    * Navigate up to an ancestor matching the selector.

@@ -57,7 +57,12 @@ Actions:
   wait <ms>                       - Wait milliseconds
   emit <message>                  - Emit to message bus
   warnIf <selector> <message>     - Register script warning
+  up <selector>                   - Navigate scope to ancestor
+  prev                            - Return to previous scope
+  scrollToBottom                   - Scroll current scope to bottom
 ```
+
+Note: `do()` and `if()` are code-only methods not available in the text DSL.
 
 ### Macros
 
