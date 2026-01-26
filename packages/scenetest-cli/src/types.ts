@@ -289,6 +289,15 @@ export interface ActorHandle extends ActorConfig {
   scrollToBottom(): ActionChain
 
   /**
+   * Navigate up to an ancestor matching the selector.
+   * Updates scope to the ancestor element.
+   */
+  up(selector: Selector): ActionChain
+
+  /** Return to the previously held scope */
+  prev(): ActionChain
+
+  /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
    * Watchers are cleared after each await.
