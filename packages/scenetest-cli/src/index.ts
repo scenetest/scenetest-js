@@ -16,6 +16,13 @@ export type { MarkdownScene, ActorBlock, SceneAction } from './markdown-scene.js
 // Selector utilities
 export { setAliases, getAliases, clearAliases, explainSelector } from './selectors.js'
 
+// Device rotation
+export { DeviceRotation, builtinDevices } from './devices.js'
+export type { DeviceProfile } from './devices.js'
+
+// Swarm mode
+export { SwarmTrigger } from './swarm.js'
+
 // Types
 export type {
   ScenetestConfig,
@@ -32,4 +39,9 @@ export type {
   ConcurrentActorHandle,
   FlowContext,
   FlowFn,
+  SwarmConfig,
+  SwarmReport,
+  SwarmSceneResult,
+  SwarmRunDetail,
+  SwarmClassification,
 } from './types.js'

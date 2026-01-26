@@ -19,6 +19,8 @@ program
   .option('--report <dir>', 'Report output directory')
   .option('--format <format>', 'Report format (html, json, both)')
   .option('--config <path>', 'Path to config file')
+  .option('--devices', 'Enable device rotation (assign each actor a rotating mobile/tablet/desktop device)')
+  .option('--swarm', 'Force swarm mode: run all teams against all scenes to classify failures')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
       // Load config and discover actor teams
@@ -33,6 +35,9 @@ program
       }
       if (options.format) {
         config.reportFormat = options.format as 'html' | 'json' | 'both'
+      }
+      if (options.devices) {
+        config.devices = true
       }
 
       // Interactive UI mode
@@ -56,14 +61,37 @@ program
           sceneFiles = scenes.map((s) => path.resolve(s))
         }
 
-        // Run scenes
-        const report = await runner.run(sceneFiles)
+        if (options.swarm) {
+          // ── Manual swarm mode ──
+          // Load scenes first, then swarm them all
+          const discovered = sceneFiles || (await runner.discoverScenes())
+          if (discovered.length === 0) {
+            console.log('No scene files found.')
+          } else {
+            await runner.loadScenes(discovered)
 
-        // Print summary
-        printSummary(report)
+            const report = await runner.runSwarmMode('manual')
+            printSummary(report)
+            await writeReport(report, config.reportDir!, config.reportFormat!)
+          }
+        } else {
+          // ── Normal run ──
+          const report = await runner.run(sceneFiles)
+          printSummary(report)
+          await writeReport(report, config.reportDir!, config.reportFormat!)
 
-        // Write report
-        await writeReport(report, config.reportDir!, config.reportFormat!)
+          // Check if swarm should auto-trigger
+          const triggeringScenes = runner.checkSwarmTrigger()
+          if (triggeringScenes.length > 0) {
+            console.log(`\n⚡ Swarm mode auto-triggered for ${triggeringScenes.length} scene(s):`)
+            for (const name of triggeringScenes) {
+              console.log(`   - ${name}`)
+            }
+
+            const swarmReport = await runner.runSwarmMode('auto', triggeringScenes)
+            await writeReport(swarmReport, config.reportDir!, config.reportFormat!)
+          }
+        }
 
         // In UI mode, keep browser open
         if (options.ui) {
@@ -117,6 +145,7 @@ async function writeReport(
 function generateHtmlReport(report: RunReport): string {
   const passedColor = '#22c55e'
   const failedColor = '#ef4444'
+  const warnColor = '#f59e0b'
 
   const sceneRows = report.scenes
     .map((scene) => {
@@ -128,14 +157,22 @@ function generateHtmlReport(report: RunReport): string {
         .map((a) => {
           const icon = a.result ? '✓' : '✗'
           const color = a.result ? passedColor : failedColor
-          return `<li style="color: ${color}">${icon} ${escapeHtml(a.description)}</li>`
+          const deviceTag = a.device ? ` <span class="device-tag">[${escapeHtml(a.device)}]</span>` : ''
+          return `<li style="color: ${color}">${icon} ${escapeHtml(a.description)}${deviceTag}</li>`
         })
         .join('')
+
+      // Device info for actors
+      const actorDevices = Object.entries(scene.actors)
+        .filter(([, a]) => a.device)
+        .map(([role, a]) => `<span class="device-badge">${escapeHtml(role)}: ${escapeHtml(a.device!)}</span>`)
+        .join(' ')
 
       return `
         <div class="scene">
           <h3 style="color: ${statusColor}">${statusIcon} ${escapeHtml(scene.name)}</h3>
           <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Team: ${scene.teamIndex}</p>
+          ${actorDevices ? `<p class="devices">${actorDevices}</p>` : ''}
           ${scene.error ? `<p class="error">Error: ${escapeHtml(scene.error)}</p>` : ''}
           <h4>Assertions (${scene.assertions.length})</h4>
           <ul>${assertionList || '<li>No assertions</li>'}</ul>
@@ -143,6 +180,49 @@ function generateHtmlReport(report: RunReport): string {
       `
     })
     .join('')
+
+  // Swarm section
+  let swarmSection = ''
+  if (report.swarm) {
+    const swarm = report.swarm
+    const swarmRows = swarm.results
+      .map((r) => {
+        const color = r.classification === 'healthy' ? passedColor
+          : r.classification === 'broken' ? failedColor
+          : r.classification === 'flaky' ? warnColor
+          : '#8b5cf6'
+        return `
+          <div class="scene" style="border-left: 4px solid ${color}">
+            <h3>${escapeHtml(r.name)}</h3>
+            <p class="meta">
+              Classification: <strong style="color: ${color}">${escapeHtml(r.classification.toUpperCase())}</strong> |
+              Passed: ${r.passed}/${r.runs} |
+              Failing teams: ${r.failingTeams.length > 0 ? r.failingTeams.join(', ') : 'none'}
+            </p>
+          </div>
+        `
+      })
+      .join('')
+
+    swarmSection = `
+      <h2>Swarm Results (${swarm.trigger})</h2>
+      <div class="summary">
+        <div class="summary-card" style="border-top: 3px solid ${failedColor}">
+          <h2>${swarm.summary.broken}</h2><p>Broken</p>
+        </div>
+        <div class="summary-card" style="border-top: 3px solid ${warnColor}">
+          <h2>${swarm.summary.flaky}</h2><p>Flaky</p>
+        </div>
+        <div class="summary-card" style="border-top: 3px solid #8b5cf6">
+          <h2>${swarm.summary.seedDataEdgeCase}</h2><p>Seed Data Edge</p>
+        </div>
+        <div class="summary-card" style="border-top: 3px solid ${passedColor}">
+          <h2>${swarm.summary.healthy}</h2><p>Healthy</p>
+        </div>
+      </div>
+      ${swarmRows}
+    `
+  }
 
   return `
 <!DOCTYPE html>
@@ -154,7 +234,7 @@ function generateHtmlReport(report: RunReport): string {
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; }
     h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
     .logo { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: rgba(80, 70, 229, 0.12); box-shadow: inset 0 2px 6px rgba(80, 70, 229, 0.25), inset 0 -1px 2px rgba(255, 255, 255, 0.5); font-size: 1.5rem; }
-    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1rem 0; }
     .summary-card { background: #f5f5f5; padding: 1rem; border-radius: 8px; text-align: center; }
     .summary-card h2 { margin: 0; font-size: 2rem; }
     .summary-card p { margin: 0.5rem 0 0; color: #666; }
@@ -162,6 +242,9 @@ function generateHtmlReport(report: RunReport): string {
     .scene h3 { margin-top: 0; }
     .meta { color: #666; font-size: 0.9rem; }
     .error { color: ${failedColor}; background: #fef2f2; padding: 0.5rem; border-radius: 4px; }
+    .devices { margin: 0.5rem 0; }
+    .device-badge { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-right: 4px; }
+    .device-tag { color: #6366f1; font-size: 0.85em; }
     ul { list-style: none; padding-left: 0; }
     li { padding: 0.25rem 0; }
   </style>
@@ -187,8 +270,8 @@ function generateHtmlReport(report: RunReport): string {
     </div>
   </div>
 
-  <h2>Scenes</h2>
-  ${sceneRows || '<p>No scenes ran.</p>'}
+  ${sceneRows ? `<h2>Scenes</h2>${sceneRows}` : ''}
+  ${swarmSection}
 </body>
 </html>
 `

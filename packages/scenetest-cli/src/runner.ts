@@ -3,10 +3,12 @@ import { glob } from 'glob'
 import path from 'path'
 import type { ScenetestConfig, TeamConfig, RunReport, SceneReport } from './types.js'
 import { TeamManager } from './team-manager.js'
+import { DeviceRotation } from './devices.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
 import { importFile } from './loader.js'
 import { loadMarkdownScene } from './markdown-scene.js'
+import { SwarmTrigger, runSwarm } from './swarm.js'
 
 /**
  * Main scene runner
@@ -14,6 +16,7 @@ import { loadMarkdownScene } from './markdown-scene.js'
 export class SceneRunner {
   private browser: Browser | null = null
   private teamManager: TeamManager
+  private swarmTrigger: SwarmTrigger | null = null
 
   constructor(private config: ScenetestConfig, teams: TeamConfig[]) {
     this.teamManager = new TeamManager(teams)
@@ -21,6 +24,17 @@ export class SceneRunner {
     // Apply aliases from config
     if (config.aliases) {
       setAliases(config.aliases)
+    }
+
+    // Set up device rotation if configured
+    if (config.devices) {
+      const devices = Array.isArray(config.devices) ? config.devices : undefined
+      this.teamManager.setDeviceRotation(new DeviceRotation(devices))
+    }
+
+    // Set up swarm trigger if configured
+    if (config.swarm) {
+      this.swarmTrigger = new SwarmTrigger(config.swarm)
     }
   }
 
@@ -100,6 +114,12 @@ export class SceneRunner {
     const actionTimeout = this.config.actionTimeout || 5000
     const warnAfter = this.config.warnAfter || 500
 
+    // Log device rotation status
+    const rotation = this.teamManager.getDeviceRotation()
+    if (rotation) {
+      console.log(`  Device rotation: ON (${rotation.devices.length} devices in pool)\n`)
+    }
+
     for (const registered of sceneRegistry) {
       // Run beforeEach hook
       if (this.config.beforeEach) {
@@ -116,6 +136,17 @@ export class SceneRunner {
         try {
           // Run the scene
           const report = await runScene(registered, session, timeout)
+
+          // Enrich actor info with device assignments
+          for (const [role, actor] of session.getActors()) {
+            const device = session.getActorDevice(role)
+            report.actors[role] = {
+              id: actor.id,
+              username: actor.username,
+              ...(device ? { device: device.name } : {}),
+            }
+          }
+
           sceneReports.push(report)
 
           // Run afterEach hook
@@ -154,7 +185,7 @@ export class SceneRunner {
     const failedAssertions = totalAssertions - passedAssertions
     const totalWarnings = sceneReports.reduce((sum, r) => sum + r.warnings.length, 0)
 
-    return {
+    const report: RunReport = {
       timestamp: new Date().toISOString(),
       duration: Date.now() - start,
       scenes: sceneReports,
@@ -169,6 +200,82 @@ export class SceneRunner {
         },
         warnings: totalWarnings,
       },
+    }
+
+    // Record run for swarm trigger evaluation
+    if (this.swarmTrigger) {
+      this.swarmTrigger.recordRun(report)
+    }
+
+    return report
+  }
+
+  /**
+   * Check if swarm mode should be auto-triggered based on failure history.
+   * Returns the scene names that triggered it, or empty array if no trigger.
+   */
+  checkSwarmTrigger(): string[] {
+    return this.swarmTrigger?.shouldTrigger() ?? []
+  }
+
+  /**
+   * Run swarm mode on specified scenes (or all if none specified).
+   * Executes every scene against every team with multiple repeats
+   * to classify failures as broken, flaky, or seed-data edge cases.
+   */
+  async runSwarmMode(
+    trigger: 'auto' | 'manual',
+    sceneNames?: string[]
+  ): Promise<RunReport> {
+    const timeout = this.config.timeout || 30000
+    const actionTimeout = this.config.actionTimeout || 5000
+    const warnAfter = this.config.warnAfter || 500
+
+    // Filter scenes to swarm
+    const scenes = sceneNames
+      ? sceneRegistry.filter((s) => sceneNames.includes(s.name))
+      : [...sceneRegistry]
+
+    if (scenes.length === 0) {
+      console.log('No scenes to swarm.')
+      return {
+        timestamp: new Date().toISOString(),
+        duration: 0,
+        scenes: [],
+        summary: {
+          scenes: 0,
+          completed: 0,
+          failed: 0,
+          assertions: { total: 0, passed: 0, failed: 0 },
+          warnings: 0,
+        },
+      }
+    }
+
+    const swarmReport = await runSwarm(
+      scenes,
+      this.teamManager,
+      this.config.swarm,
+      timeout,
+      actionTimeout,
+      warnAfter,
+      this.config.baseUrl,
+      trigger
+    )
+
+    // Build a RunReport that includes the swarm results
+    return {
+      timestamp: new Date().toISOString(),
+      duration: 0, // swarm report is supplementary
+      scenes: [],  // individual scene reports are in swarmReport.results
+      summary: {
+        scenes: swarmReport.results.length,
+        completed: swarmReport.summary.healthy,
+        failed: swarmReport.summary.broken + swarmReport.summary.flaky + swarmReport.summary.seedDataEdgeCase,
+        assertions: { total: 0, passed: 0, failed: 0 },
+        warnings: 0,
+      },
+      swarm: swarmReport,
     }
   }
 
@@ -244,6 +351,16 @@ export function printSummary(report: RunReport): void {
 
   if (report.summary.failed > 0) {
     console.log(`\n  ✗ ${report.summary.failed} scene(s) failed`)
+  }
+
+  // Device rotation info
+  for (const scene of report.scenes) {
+    const devicesUsed = Object.entries(scene.actors)
+      .filter(([, a]) => a.device)
+      .map(([role, a]) => `${role}→${a.device}`)
+    if (devicesUsed.length > 0) {
+      console.log(`  ${scene.name}: ${devicesUsed.join(', ')}`)
+    }
   }
 
   console.log('')

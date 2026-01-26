@@ -1,5 +1,7 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
 import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
+import type { DeviceProfile } from './devices.js'
+import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
 
@@ -13,6 +15,7 @@ export class TeamManager {
   private teams: TeamConfig[]
   private inUse = new Set<number>()
   private browser: Browser | null = null
+  private deviceRotation: DeviceRotation | null = null
 
   constructor(teams: TeamConfig[]) {
     this.teams = teams
@@ -23,6 +26,20 @@ export class TeamManager {
    */
   setBrowser(browser: Browser): void {
     this.browser = browser
+  }
+
+  /**
+   * Enable device rotation with the given profiles (or built-in defaults).
+   */
+  setDeviceRotation(rotation: DeviceRotation): void {
+    this.deviceRotation = rotation
+  }
+
+  /**
+   * Get the current device rotation instance, if any.
+   */
+  getDeviceRotation(): DeviceRotation | null {
+    return this.deviceRotation
   }
 
   /**
@@ -121,7 +138,8 @@ export class TeamManager {
       teamIndex,
       actionTimeout,
       warnAfter,
-      baseUrl
+      baseUrl,
+      this.deviceRotation
     )
   }
 }
@@ -133,6 +151,7 @@ export class TeamManager {
 export class TeamSession {
   private contexts = new Map<string, BrowserContext>()
   private actors = new Map<string, SequentialActorHandleImpl>()
+  private actorDevices = new Map<string, DeviceProfile>()
   private bus = new MessageBus()
   readonly timeline: TimelineEntry[] = []
   readonly assertions: AssertionResult[] = []
@@ -144,7 +163,8 @@ export class TeamSession {
     readonly teamIndex: number,
     readonly actionTimeout: number,
     readonly warnAfter: number,
-    private baseUrl?: string
+    private baseUrl?: string,
+    private deviceRotation?: DeviceRotation | null
   ) {}
 
   /**
@@ -169,17 +189,35 @@ export class TeamSession {
       throw new Error(`Role "${role}" not found in team. Available roles: ${Object.keys(this.team).join(', ')}`)
     }
 
-    const context = await this.browser.newContext({
+    // Determine device for this actor (if rotation is enabled)
+    const device = this.deviceRotation?.next() ?? null
+    if (device) {
+      this.actorDevices.set(role, device)
+    }
+
+    // Create context with device emulation if assigned
+    const contextOptions = {
       ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
-    })
+      ...(device ? device.contextOptions : {}),
+    }
+    const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
+    // Track device name for assertions
+    const deviceName = device?.name
+
     await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
-      const enriched = { ...result, actor: role }
+      const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
       this.assertions.push(enriched)
     })
 
     this.contexts.set(role, context)
+
+    // Log device assignment
+    if (device) {
+      console.log(`    [${role}] assigned device: ${device.name} (${device.category})`)
+    }
+
     return page
   }
 
@@ -199,16 +237,27 @@ export class TeamSession {
       throw new Error(`Role "${role}" not found in team. Available roles: ${Object.keys(this.team).join(', ')}`)
     }
 
-    // Create new browser context for this actor
-    const context = await this.browser.newContext({
+    // Determine device for this actor (if rotation is enabled)
+    const device = this.deviceRotation?.next() ?? null
+    if (device) {
+      this.actorDevices.set(role, device)
+    }
+
+    // Create new browser context for this actor, with device emulation if assigned
+    const contextOptions = {
       ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
-    })
+      ...(device ? device.contextOptions : {}),
+    }
+    const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
+
+    // Track device name for assertions
+    const deviceName = device?.name
 
     // Set up assertion collection
     await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
-      // Add actor info to assertion
-      const enriched = { ...result, actor: role }
+      // Add actor and device info to assertion
+      const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
       this.assertions.push(enriched)
     })
 
@@ -228,7 +277,26 @@ export class TeamSession {
     this.contexts.set(role, context)
     this.actors.set(role, actor)
 
+    // Log device assignment
+    if (device) {
+      console.log(`    [${role}] assigned device: ${device.name} (${device.category})`)
+    }
+
     return actor
+  }
+
+  /**
+   * Get the device assigned to an actor role
+   */
+  getActorDevice(role: string): DeviceProfile | undefined {
+    return this.actorDevices.get(role)
+  }
+
+  /**
+   * Get all actor-device assignments
+   */
+  getActorDevices(): Map<string, DeviceProfile> {
+    return this.actorDevices
   }
 
   /**
@@ -254,6 +322,7 @@ export class TeamSession {
     }
     this.contexts.clear()
     this.actors.clear()
+    this.actorDevices.clear()
     this.bus.clear()
   }
 }

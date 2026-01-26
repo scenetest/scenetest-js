@@ -1,4 +1,5 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
+import type { DeviceProfile } from './devices.js'
 
 /**
  * Selector: space-separated tokens that resolve to DOM elements.
@@ -87,6 +88,20 @@ export interface ScenetestConfig {
   /** Report format */
   reportFormat?: 'html' | 'json' | 'both'
 
+  /**
+   * Device rotation: assign each actor a rotating device profile.
+   * When true, uses built-in device pool (mobile, tablet, desktop).
+   * When an array of DeviceProfile, uses that as the pool.
+   * When false or omitted, all actors get the default Playwright context (no device emulation).
+   */
+  devices?: boolean | DeviceProfile[]
+
+  /**
+   * Swarm mode configuration.
+   * When set, enables automatic swarm triggering based on failure thresholds.
+   */
+  swarm?: SwarmConfig
+
   /** Hook: before all scenes run */
   beforeAll?: () => Promise<void>
 
@@ -125,6 +140,8 @@ export interface AssertionResult {
   }
   /** Which actor's browser triggered this */
   actor?: string
+  /** Device the actor was using when this assertion fired */
+  device?: string
 }
 
 /**
@@ -165,7 +182,7 @@ export interface SceneReport {
   file: string
   status: 'completed' | 'failed' | 'timeout'
   teamIndex: number
-  actors: Record<string, { id: string; username?: string }>
+  actors: Record<string, { id: string; username?: string; device?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
   timeline: TimelineEntry[]
@@ -190,6 +207,116 @@ export interface RunReport {
       failed: number
     }
     warnings: number
+  }
+  /** Present when this run was triggered by swarm mode */
+  swarm?: SwarmReport
+}
+
+// ─── Swarm Mode Types ────────────────────────────────────────────────
+
+/**
+ * Swarm mode configuration
+ */
+export interface SwarmConfig {
+  /**
+   * Number of consecutive failed assertions (across runs) before triggering swarm.
+   * Default: 5
+   */
+  failureThreshold?: number
+
+  /**
+   * How many recent runs to consider when evaluating whether failures persist.
+   * Default: 3
+   */
+  windowSize?: number
+
+  /**
+   * Maximum concurrent teams during swarm execution.
+   * Use to limit database/memory pressure.
+   * Default: all teams (no throttle)
+   */
+  concurrency?: number
+
+  /**
+   * Number of times to repeat each scene during swarm mode.
+   * More repeats = better signal on flaky vs broken.
+   * Default: 3
+   */
+  repeats?: number
+
+  /**
+   * Whether to trigger swarm mode automatically when thresholds are exceeded.
+   * When false, swarm is only triggered via CLI flag.
+   * Default: true
+   */
+  auto?: boolean
+}
+
+/**
+ * Classification of a scene after swarm analysis
+ */
+export type SwarmClassification =
+  /** Always fails across all teams and repeats */
+  | 'broken'
+  /** Fails intermittently — sometimes passes, sometimes fails */
+  | 'flaky'
+  /** Fails only with specific team data (seed data edge case) */
+  | 'seed-data-edge-case'
+  /** Passes consistently — the original failure may have been transient */
+  | 'healthy'
+
+/**
+ * Swarm result for a single scene
+ */
+export interface SwarmSceneResult {
+  /** Scene name */
+  name: string
+  /** Scene file */
+  file: string
+  /** How many times this scene was run */
+  runs: number
+  /** How many times it passed */
+  passed: number
+  /** How many times it failed */
+  failed: number
+  /** Which teams experienced failures (indices) */
+  failingTeams: number[]
+  /** Which teams passed (indices) */
+  passingTeams: number[]
+  /** Automatic classification */
+  classification: SwarmClassification
+  /** Per-run detail */
+  details: SwarmRunDetail[]
+}
+
+/**
+ * Detail for a single swarm run of a scene
+ */
+export interface SwarmRunDetail {
+  teamIndex: number
+  repeat: number
+  status: 'completed' | 'failed' | 'timeout'
+  duration: number
+  assertionsFailed: number
+  assertionsTotal: number
+  error?: string
+  actors: Record<string, { device?: string }>
+}
+
+/**
+ * Full swarm report
+ */
+export interface SwarmReport {
+  /** Why swarm was triggered */
+  trigger: 'auto' | 'manual'
+  /** Scenes that were swarmed */
+  results: SwarmSceneResult[]
+  /** Summary counts by classification */
+  summary: {
+    broken: number
+    flaky: number
+    seedDataEdgeCase: number
+    healthy: number
   }
 }
 
@@ -631,4 +758,10 @@ export interface CLIOptions {
 
   /** Config file path */
   config?: string
+
+  /** Enable device rotation */
+  devices?: boolean
+
+  /** Force swarm mode (run all teams against all scenes) */
+  swarm?: boolean
 }
