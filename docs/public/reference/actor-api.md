@@ -343,18 +343,18 @@ scene('friend request flow', async ({ actor }) => {
 
 All selector parameters accept a `Selector` string. Selectors are **space-separated tokens** that resolve to DOM elements.
 
-### Resolution order
+### Attribute matching
 
-Each token matches against these attributes, in order:
+Each token matches against **all** of these attributes simultaneously:
 
-1. `aria-label`
-2. `id`
-3. `data-testid`
-4. `data-name`
-5. `data-key`
-6. `name`
+- `aria-label`
+- `id`
+- `data-testid`
+- `data-name`
+- `data-key`
+- `name`
 
-The first match wins.
+There is no priority between attributes. If multiple elements match (each via a different attribute), the first one in **DOM order** wins. In practice, `data-testid` is the primary convention for scene specs.
 
 ### Nested selectors
 
