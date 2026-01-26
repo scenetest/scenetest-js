@@ -22,7 +22,7 @@ function GuidePage() {
   const { pageName } = Route.useParams()
   return (
     <article>
-      <Link to="/" className="back">&larr; Back</Link>
+      <Link to="/guides" className="back">&larr; Back</Link>
 
       <MarkdownSection src={`/guides/${pageName}.md`} />
 
