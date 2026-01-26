@@ -26,9 +26,9 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "dev": "tsc --watch"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "playwright": "^1.40.0",
