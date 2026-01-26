@@ -97,7 +97,7 @@ export class SceneRunner {
 
       try {
         // Create session
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl)
 
         try {
           // Run the scene
