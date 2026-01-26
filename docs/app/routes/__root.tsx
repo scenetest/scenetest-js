@@ -149,6 +149,10 @@ h1 {
   font-size: 1.1rem;
 }
 
+h2, h3, h4 {
+  scroll-margin-top: 24px;
+}
+
 h2 {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 1.25rem;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from '@tanstack/react-router'
 import { marked } from 'marked'
 import hljs from 'highlight.js/lib/core'
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -60,9 +61,19 @@ renderer.code = function (code: { text: string; lang?: string }) {
 
 marked.use({ renderer })
 
+function scrollToHash(hash: string) {
+  const id = hash.replace(/^#/, '')
+  if (!id) return
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'instant' })
+  }
+}
+
 export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
   const [content, setContent] = useState<string>('<p>Loading...</p>')
   const containerRef = useRef<HTMLDivElement>(null)
+  const { hash } = useLocation()
 
   useEffect(() => {
     fetch(src)
@@ -81,24 +92,46 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
       })
   }, [src])
 
+  // Syntax highlighting after content loads
   useEffect(() => {
-    // Apply syntax highlighting after content loads
     if (content && containerRef.current) {
       containerRef.current.querySelectorAll('pre code').forEach((el) => {
         hljs.highlightElement(el as HTMLElement)
       })
     }
+  }, [content])
 
-    // Scroll to hash target after content renders
-    if (content && window.location.hash) {
-      const id = window.location.hash.slice(1)
-      const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView()
-      }
+  // Scroll to hash target after content renders or hash changes.
+  // Delay slightly so the view transition animation doesn't reset scroll.
+  useEffect(() => {
+    if (!hash || content === '<p>Loading...</p>') return
+    const timeout = setTimeout(() => scrollToHash(hash), 320)
+    return () => clearTimeout(timeout)
+  }, [hash, content])
+
+  // Intercept hash-only link clicks inside rendered markdown so they
+  // scroll directly instead of triggering a router navigation + view transition.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    function handleClick(e: MouseEvent) {
+      const link = (e.target as HTMLElement).closest('a')
+      if (!link) return
+      const href = link.getAttribute('href')
+      if (!href || !href.startsWith('#')) return
+      e.preventDefault()
+      e.stopPropagation()
+      scrollToHash(href)
+      history.replaceState(null, '', href)
     }
 
-    // Set up copy button handlers
+    container.addEventListener('click', handleClick)
+    return () => container.removeEventListener('click', handleClick)
+  }, [content])
+
+  // Copy button handlers
+  useEffect(() => {
     function handleCopyClick(e: MouseEvent) {
       const target = e.target as HTMLElement
       if (target.classList.contains('copy-btn') && target.dataset.code) {
