@@ -1,0 +1,40 @@
+{
+  "name": "@scenetest/eslint-plugin",
+  "version": "0.0.3",
+  "description": "ESLint plugin for scenetest - accessibility and testing best practices",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/eslint-plugin"
+  },
+  "keywords": ["eslint", "eslintplugin", "eslint-plugin", "testing", "accessibility", "aria", "data-testid"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/eslint": "^9.6.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  }
+}
