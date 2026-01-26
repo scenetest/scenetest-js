@@ -18,6 +18,7 @@ import type { ActorHandle, Selector } from './types.js'
  *   wait <ms>                       - Wait milliseconds
  *   emit <message>                  - Emit to message bus
  *   warnIf <selector> <message>     - Register script warning
+ *   scrollToBottom                   - Scroll current scope to bottom
  *
  * Selectors can be:
  *   - Simple: 'button'
@@ -167,6 +168,10 @@ async function executeAction(actor: ActorHandle, parsed: ParsedAction): Promise<
       if (!selector) throw new Error('warnIf requires a selector')
       if (!value) throw new Error('warnIf requires a message')
       actor.warnIf(selector, value)
+      break
+
+    case 'scrollToBottom':
+      await actor.scrollToBottom()
       break
 
     default:

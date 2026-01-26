@@ -176,6 +176,33 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
+  scrollToBottom(): ActionChain {
+    return this.addAction('scrollToBottom', undefined, async () => {
+      const scope = this.getScope()
+      if (scope === this.page) {
+        await this.page.evaluate(() => {
+          window.scrollTo(0, document.body.scrollHeight)
+        })
+      } else {
+        await (scope as Locator).evaluate((el) => {
+          let current: Element | null = el
+          while (current) {
+            const style = window.getComputedStyle(current)
+            if (
+              (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+              current.scrollHeight > current.clientHeight
+            ) {
+              current.scrollTop = current.scrollHeight
+              return
+            }
+            current = current.parentElement
+          }
+          window.scrollTo(0, document.body.scrollHeight)
+        })
+      }
+    })
+  }
+
   up(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('up', target, async () => {
@@ -475,6 +502,10 @@ export class ActorHandleImpl implements ActorHandle {
 
   do(fn: (page: Page) => Promise<void>): ActionChain {
     return this.createChain().do(fn)
+  }
+
+  scrollToBottom(): ActionChain {
+    return this.createChain().scrollToBottom()
   }
 
   /**
