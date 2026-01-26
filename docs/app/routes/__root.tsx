@@ -1,6 +1,7 @@
 import {
   Outlet,
   HeadContent,
+  Link,
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
@@ -38,6 +39,12 @@ function RootComponent() {
       </head>
       <body>
         <Outlet />
+        <nav className="side-nav">
+          <Link to="/">Home</Link>
+          <Link to="/guides">Guides</Link>
+          <Link to="/faq">FAQ</Link>
+          <a href="https://github.com/scenetest/scenetest-js">GitHub</a>
+        </nav>
         <Scripts />
       </body>
     </html>
@@ -72,6 +79,40 @@ article {
   max-width: 680px;
   margin: 0 auto;
   padding: 80px 24px 120px;
+  padding-right: 100px;
+}
+
+/* Side nav */
+.side-nav {
+  position: fixed;
+  right: 32px;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.side-nav a {
+  color: var(--text-light);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.side-nav a:hover,
+.side-nav a.active {
+  color: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .side-nav {
+    display: none;
+  }
+
+  article {
+    padding-right: 24px;
+  }
 }
 
 .hero-logo {
