@@ -66,8 +66,8 @@ scene('user updates their profile', async ({ actor }) => {
 ```typescript
 import { flow } from '@scenetest/cli'
 
-flow('user updates their profile', async ({ actor }) => {
-  const user = await actor('user')
+flow('user updates their profile', ({ actor }) => {
+  const user = actor('user')
 
   user.openTo('/login')
   user
@@ -87,7 +87,7 @@ flow('user updates their profile', async ({ actor }) => {
 })
 ```
 
-**How it works:** DSL calls are **declarations** — they push to a persistent queue on the actor and return the actor itself. Nothing executes during the function body. After the function returns, all actors drain their queues concurrently. Each actor advances through its own queue as fast as the DOM allows.
+**How it works:** The entire function body is **synchronous declaration**. `actor()` returns a handle immediately (config is resolved, browser launches later). DSL calls push to a persistent queue on the actor and return the actor itself. Nothing executes during the function body. After it returns, browsers launch in parallel, then all actors drain their queues concurrently. Each actor advances through its own queue as fast as the DOM allows.
 
 **When to use:** Multi-actor scenes (concurrency is automatic), or when you want to write specs without thinking about timing. `see`/`seeText` naturally poll for DOM state, so cross-actor sync happens through the application, not through `await` ordering.
 
@@ -96,6 +96,8 @@ flow('user updates their profile', async ({ actor }) => {
 | | scene() | flow() |
 |---|---------|--------|
 | **Import** | `import { scene } from '@scenetest/cli'` | `import { flow } from '@scenetest/cli'` |
+| **`actor()` call** | `const user = await actor('user')` | `const user = actor('user')` (sync) |
+| **Function signature** | `async ({ actor }) => { ... }` | `({ actor }) => { ... }` (no async needed) |
 | **DSL calls need `await`?** | Yes — `await` triggers execution | No — calls just queue, execution is automatic |
 | **What DSL methods return** | `ActionChain` (thenable, disposable) | The actor itself (chainable, not thenable) |
 | **Where scope lives** | On the chain (resets at each `await`) | On the actor (flows through the entire queue) |
@@ -106,8 +108,7 @@ flow('user updates their profile', async ({ actor }) => {
 ### Critical: DO NOT mix the two models
 
 - In a `scene()`, you MUST `await` DSL calls. Without `await`, the actions never execute and the scene silently does nothing.
-- In a `flow()`, you MUST NOT `await` DSL calls. The actor is not thenable — `await` would resolve to the actor object and skip all queued actions.
-- The only `await` in a `flow()` body should be `await actor('role')` (creating actors requires async browser setup).
+- In a `flow()`, you MUST NOT `await` anything. Actor creation is synchronous, DSL calls are synchronous. The entire body is pure declaration — no `async`, no `await`.
 
 ---
 
@@ -157,9 +158,9 @@ scene('two users can chat', async ({ actor }) => {
 ### flow() — concurrent by default, explicit synchronization only when needed
 
 ```typescript
-flow('two users can chat', async ({ actor }) => {
-  const alice = await actor('alice')
-  const bob = await actor('bob')
+flow('two users can chat', ({ actor }) => {
+  const alice = actor('alice')
+  const bob = actor('bob')
 
   // Both actors' queues drain concurrently after this function returns.
   // No Promise.all needed — concurrency is the default.
@@ -205,9 +206,9 @@ scene('sender and receiver', async ({ actor }) => {
 ```typescript
 import { flow } from '@scenetest/cli'
 
-flow('sender and receiver', async ({ actor }) => {
-  const sender = await actor('sender')
-  const receiver = await actor('receiver')
+flow('sender and receiver', ({ actor }) => {
+  const sender = actor('sender')
+  const receiver = actor('receiver')
 
   sender.openTo('/login')
   // ... login flow ...

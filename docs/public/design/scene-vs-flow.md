@@ -34,9 +34,9 @@ scene('two users chat', async ({ actor }) => {
 ### flow() — reactive, concurrent draining
 
 ```typescript
-flow('two users chat', async ({ actor }) => {
-  const alice = await actor('alice')
-  const bob = await actor('bob')
+flow('two users chat', ({ actor }) => {
+  const alice = actor('alice')
+  const bob = actor('bob')
 
   alice.openTo('/chat')
   alice.see('input').typeInto('input', 'Hello!').click('send')
@@ -46,8 +46,11 @@ flow('two users chat', async ({ actor }) => {
 })
 ```
 
-- DSL calls are **declarations** — they queue without executing.
-- After the function returns, all actors drain their queues concurrently.
+- The entire body is **synchronous declaration** — no `async`, no `await`.
+- `actor()` returns a handle immediately (browser launches later).
+- DSL calls queue without executing.
+- After the function returns, browsers launch in parallel, then all actors
+  drain their queues concurrently.
 - Cross-actor synchronization happens through the DOM (and optionally the
   message bus), not through `await` ordering.
 - Scope lives on the **actor** and flows through the queue during drain.
