@@ -74,6 +74,8 @@ export type FilterMode = 'all' | 'fails' | 'passes'
 
 export type ViewMode = 'grouped' | 'byLocation' | 'sequence'
 
+export type CornerPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+
 /**
  * Represents a unique assertion location in the code
  * Used for the "by location" view

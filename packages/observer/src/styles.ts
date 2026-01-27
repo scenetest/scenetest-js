@@ -19,6 +19,35 @@ export const panelStyles = `
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
+  transition: top 0.25s ease, bottom 0.25s ease, left 0.25s ease, right 0.25s ease;
+}
+#scenetest-panel.dragging {
+  transition: none;
+  opacity: 0.9;
+}
+#scenetest-panel.corner-bottom-right {
+  bottom: 16px;
+  right: 16px;
+  top: auto;
+  left: auto;
+}
+#scenetest-panel.corner-bottom-left {
+  bottom: 16px;
+  left: 16px;
+  top: auto;
+  right: auto;
+}
+#scenetest-panel.corner-top-right {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+  left: auto;
+}
+#scenetest-panel.corner-top-left {
+  top: 16px;
+  left: 16px;
+  bottom: auto;
+  right: auto;
 }
 #scenetest-panel.collapsed {
   max-height: none;
@@ -35,9 +64,12 @@ export const panelStyles = `
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
   border-bottom: 1px solid #4a4a6a;
+}
+#scenetest-panel.dragging #scenetest-header {
+  cursor: grabbing;
 }
 #scenetest-header:hover {
   background: #2a2a4a;

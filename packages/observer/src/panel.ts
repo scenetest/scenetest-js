@@ -2,7 +2,7 @@
  * Main panel UI management
  */
 
-import type { FilterMode } from './types.js'
+import type { FilterMode, CornerPosition } from './types.js'
 import {
   groups,
   passCount,
@@ -15,6 +15,8 @@ import {
   setFilter,
   clearAll,
   toggleGroupCollapsed,
+  panelCorner,
+  setPanelCorner,
 } from './state.js'
 import { filterItems } from './utils.js'
 import { renderPanelGroup, attachEventListeners } from './render.js'
@@ -79,6 +81,150 @@ function handleSetFilter(newFilter: FilterMode): void {
 }
 
 /**
+ * Apply the correct corner CSS class to the panel
+ */
+function applyCornerClass(el: HTMLElement, corner: CornerPosition): void {
+  el.classList.remove('corner-bottom-right', 'corner-bottom-left', 'corner-top-right', 'corner-top-left')
+  el.classList.add(`corner-${corner}`)
+}
+
+/**
+ * Determine which corner to snap to based on the panel's current center position
+ */
+function getTargetCorner(panelRect: DOMRect): CornerPosition {
+  const centerX = panelRect.left + panelRect.width / 2
+  const centerY = panelRect.top + panelRect.height / 2
+  const vpW = window.innerWidth
+  const vpH = window.innerHeight
+
+  const isRight = centerX > vpW / 2
+  const isBottom = centerY > vpH / 2
+
+  if (isBottom && isRight) return 'bottom-right'
+  if (isBottom && !isRight) return 'bottom-left'
+  if (!isBottom && isRight) return 'top-right'
+  return 'top-left'
+}
+
+const DRAG_THRESHOLD = 5 // px of movement before we consider it a drag
+
+/**
+ * Set up drag-and-snap behavior on the panel header.
+ * Differentiates click (toggle collapse) from drag (reposition).
+ * Supports both mouse and touch events.
+ */
+function setupDrag(panelEl: HTMLDivElement): void {
+  const header = panelEl.querySelector('#scenetest-header') as HTMLElement
+  if (!header) return
+
+  let isDragging = false
+  let startX = 0
+  let startY = 0
+  let offsetX = 0
+  let offsetY = 0
+
+  function onPointerDown(clientX: number, clientY: number): void {
+    const rect = panelEl.getBoundingClientRect()
+    startX = clientX
+    startY = clientY
+    offsetX = clientX - rect.left
+    offsetY = clientY - rect.top
+    isDragging = false
+  }
+
+  function onPointerMove(clientX: number, clientY: number): void {
+    const dx = clientX - startX
+    const dy = clientY - startY
+
+    if (!isDragging) {
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
+      isDragging = true
+      panelEl.classList.add('dragging')
+      // Switch to top/left positioning for smooth dragging
+      const rect = panelEl.getBoundingClientRect()
+      panelEl.style.top = rect.top + 'px'
+      panelEl.style.left = rect.left + 'px'
+      panelEl.style.bottom = 'auto'
+      panelEl.style.right = 'auto'
+      panelEl.classList.remove('corner-bottom-right', 'corner-bottom-left', 'corner-top-right', 'corner-top-left')
+    }
+
+    const newLeft = clientX - offsetX
+    const newTop = clientY - offsetY
+    panelEl.style.left = newLeft + 'px'
+    panelEl.style.top = newTop + 'px'
+  }
+
+  function onPointerUp(): void {
+    if (isDragging) {
+      panelEl.classList.remove('dragging')
+      // Read position before clearing inline styles
+      const rect = panelEl.getBoundingClientRect()
+      const corner = getTargetCorner(rect)
+      // Clear inline positioning and apply corner class
+      panelEl.style.top = ''
+      panelEl.style.left = ''
+      panelEl.style.bottom = ''
+      panelEl.style.right = ''
+      setPanelCorner(corner)
+      applyCornerClass(panelEl, corner)
+    }
+    isDragging = false
+  }
+
+  // Mouse events
+  header.addEventListener('mousedown', (e: MouseEvent) => {
+    // Ignore clicks on interactive children (count badges, etc.)
+    const target = e.target as HTMLElement
+    if (target.classList.contains('scenetest-count')) return
+
+    e.preventDefault()
+    onPointerDown(e.clientX, e.clientY)
+
+    const onMouseMove = (ev: MouseEvent) => {
+      ev.preventDefault()
+      onPointerMove(ev.clientX, ev.clientY)
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      if (!isDragging) {
+        // It was a click, not a drag — toggle collapse
+        panelEl.classList.toggle('collapsed')
+      }
+      onPointerUp()
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  })
+
+  // Touch events
+  header.addEventListener('touchstart', (e: TouchEvent) => {
+    const target = e.target as HTMLElement
+    if (target.classList.contains('scenetest-count')) return
+
+    const touch = e.touches[0]
+    onPointerDown(touch.clientX, touch.clientY)
+
+    const onTouchMove = (ev: TouchEvent) => {
+      const t = ev.touches[0]
+      onPointerMove(t.clientX, t.clientY)
+      if (isDragging) ev.preventDefault()
+    }
+    const onTouchEnd = () => {
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
+      if (!isDragging) {
+        panelEl.classList.toggle('collapsed')
+      }
+      onPointerUp()
+    }
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    document.addEventListener('touchend', onTouchEnd)
+  }, { passive: true })
+}
+
+/**
  * Create and mount the floating panel
  */
 export function createPanel(): void {
@@ -97,12 +243,9 @@ export function createPanel(): void {
     toggleCollapsed: (groupId) => toggleGroupCollapsed(groupId),
   })
 
-  // Toggle collapse
-  panelEl.querySelector('#scenetest-header')?.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement
-    if (target.classList.contains('scenetest-count')) return
-    panelEl.classList.toggle('collapsed')
-  })
+  // Apply initial corner position and set up drag-and-snap
+  applyCornerClass(panelEl, panelCorner)
+  setupDrag(panelEl)
 
   // Filter by clicking counts
   panelEl.querySelector('#scenetest-pass')?.addEventListener('click', (e) => {

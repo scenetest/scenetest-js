@@ -2,7 +2,7 @@
  * Shared state for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup } from './types.js'
+import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup, CornerPosition } from './types.js'
 
 // Assertion storage
 export const assertions: AssertionResult[] = []
@@ -32,6 +32,9 @@ export let filter: FilterMode = 'all'
 export let groupingEnabled = true
 export let collapsedMode = true // Always start collapsed
 
+// Panel corner position
+export let panelCorner: CornerPosition = 'bottom-right'
+
 // View mode state (fullscreen only)
 export let viewMode: ViewMode = 'grouped'
 export let sequenceLocationKey: string | null = null // Which location to show in sequence view
@@ -51,6 +54,10 @@ export function setFullscreenWindow(win: Window | null): void {
 
 export function setFilter(newFilter: FilterMode): void {
   filter = newFilter
+}
+
+export function setPanelCorner(corner: CornerPosition): void {
+  panelCorner = corner
 }
 
 export function toggleGrouping(): boolean {
