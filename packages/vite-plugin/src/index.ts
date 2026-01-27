@@ -92,6 +92,13 @@ export interface ScenetestPluginOptions {
   demo?: boolean
 
   /**
+   * Enable the scene recorder panel.
+   * Shows a left sidebar that captures user interactions as DSL lines.
+   * Defaults to false — opt-in via scenetest({ recorder: true }).
+   */
+  recorder?: boolean
+
+  /**
    * Content Security Policy configuration for dev mode.
    * Adds CSP headers to protect against XSS and other injection attacks.
    * Defaults to enabled in development mode when devPanel is active.
@@ -139,6 +146,7 @@ export interface CspDirectives {
 export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
   let showDevPanel = false
+  let showRecorder = false
   let cspEnabled = false
   let cspDirectives: CspDirectives = DEFAULT_CSP_DIRECTIVES
   let mode = 'development'
@@ -160,6 +168,9 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         // Default: show dev panel in development mode
         showDevPanel = options.devPanel ?? env.mode === 'development'
       }
+
+      // Recorder: opt-in, only in development
+      showRecorder = options.recorder === true && !shouldStrip
 
       // CSP configuration: enabled by default when devPanel is active
       if (typeof options.csp === 'boolean') {
@@ -267,19 +278,31 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
     },
 
     transformIndexHtml(html) {
-      if (!showDevPanel) {
+      if (!showDevPanel && !showRecorder) {
         return html
       }
 
-      // Inject observer via middleware route - serves bundled observer from local installation
       const gitHash = getGitHash()
       const version = getVersion()
-      const script = `<script type="module">
+      let scripts = ''
+
+      if (showDevPanel) {
+        // Inject observer via middleware route - serves bundled observer from local installation
+        scripts += `<script type="module">
 window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
 window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
 import '/__scenetest/observer.js';
 </script>`
-      return html.replace('</body>', `${script}</body>`)
+      }
+
+      if (showRecorder) {
+        // Inject recorder sidebar
+        scripts += `<script type="module">
+import '/__scenetest/recorder.js';
+</script>`
+      }
+
+      return html.replace('</body>', `${scripts}</body>`)
     },
 
     buildStart() {
@@ -295,6 +318,9 @@ import '/__scenetest/observer.js';
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
         if (showDevPanel) {
           console.log('[vite-plugin-scenetest] Dev panel enabled - open your app to see assertions')
+        }
+        if (showRecorder) {
+          console.log('[vite-plugin-scenetest] Scene recorder enabled - record interactions as DSL')
         }
         if (cspEnabled) {
           console.log('[vite-plugin-scenetest] CSP headers enabled for dev server')

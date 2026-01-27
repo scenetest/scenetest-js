@@ -81,6 +81,34 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       }
     }
 
+    // Serve the recorder module at /__scenetest/recorder.js
+    if (req.method === 'GET' && req.url === '/__scenetest/recorder.js') {
+      try {
+        const resolved = await server.pluginContainer.resolveId('@scenetest/recorder/auto')
+        if (!resolved) {
+          res.statusCode = 404
+          res.end('Recorder module not found')
+          return
+        }
+
+        const result = await server.transformRequest(resolved.id)
+        if (!result) {
+          res.statusCode = 500
+          res.end('Failed to transform recorder module')
+          return
+        }
+
+        res.setHeader('Content-Type', 'application/javascript')
+        res.end(result.code)
+        return
+      } catch (err) {
+        console.error('[vite-plugin-scenetest] Error serving recorder:', err)
+        res.statusCode = 500
+        res.end('Error serving recorder module')
+        return
+      }
+    }
+
     // Only handle POST /__scenetest/run
     if (req.method !== 'POST' || req.url !== '/__scenetest/run') {
       return next()
