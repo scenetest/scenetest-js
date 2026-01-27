@@ -129,11 +129,19 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
-  click(selector: Selector): ActionChain {
+  click(selector?: Selector): ActionChain {
+    if (!selector) {
+      return this.addAction('click', '(scope)', async () => {
+        const scope = this.getScope()
+        if (scope === this.page) {
+          throw new Error('click with no selector requires a scope (use see() first)')
+        }
+        await (scope as Locator).click({ timeout: this.actionTimeout })
+      })
+    }
     const target = formatSelector(selector)
     return this.addAction('click', target, async () => {
       await resolveSelector(this.getScope(), selector).click({ timeout: this.actionTimeout })
-      // Click stays in current scope
     })
   }
 
@@ -495,7 +503,7 @@ export class ActorHandleImpl implements ActorHandle {
     return this.createChain().seeToast(selector)
   }
 
-  click(selector: Selector): ActionChain {
+  click(selector?: Selector): ActionChain {
     return this.createChain().click(selector)
   }
 

@@ -1,0 +1,403 @@
+import { describe, it, expect } from 'vitest'
+import { parseMarkdownScenes } from '../markdown-scene.js'
+
+// ---------------------------------------------------------------------------
+// Parser tests
+// ---------------------------------------------------------------------------
+
+describe('parseMarkdownScenes', () => {
+  it('parses a simple single-scene file with # heading', () => {
+    const content = `
+# User logs in
+
+actor user
+openTo /login
+see login-form
+typeInto email alice@test.com
+click submit
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/login.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].name).toBe('User logs in')
+    expect(scenes[0].group).toBeUndefined()
+    expect(scenes[0].blocks).toHaveLength(1)
+    expect(scenes[0].blocks[0].role).toBe('user')
+    expect(scenes[0].blocks[0].actions).toEqual([
+      { type: 'action', line: 'openTo /login' },
+      { type: 'action', line: 'see login-form' },
+      { type: 'action', line: 'typeInto email alice@test.com' },
+      { type: 'action', line: 'click submit' },
+      { type: 'action', line: 'see dashboard' },
+    ])
+  })
+
+  it('parses ## scenes with # groups', () => {
+    const content = `
+# Authentication flows
+
+## user logs in successfully
+
+actor user
+openTo /login
+click submit
+
+## user fails to log in
+
+actor user
+openTo /login
+see error-message
+`
+    const scenes = parseMarkdownScenes(content, '/test/auth.spec.md')
+    expect(scenes).toHaveLength(2)
+
+    expect(scenes[0].name).toBe('user logs in successfully')
+    expect(scenes[0].group).toBe('Authentication flows')
+    expect(scenes[0].blocks).toHaveLength(1)
+
+    expect(scenes[1].name).toBe('user fails to log in')
+    expect(scenes[1].group).toBe('Authentication flows')
+    expect(scenes[1].blocks).toHaveLength(1)
+  })
+
+  it('handles multiple actor blocks in one scene', () => {
+    const content = `
+# two users chat
+
+actor alice
+openTo /chat
+see message-input
+typeInto message-input Hello!
+click send
+
+actor bob
+openTo /chat
+seeText Hello!
+`
+    const scenes = parseMarkdownScenes(content, '/test/chat.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].blocks).toHaveLength(2)
+    expect(scenes[0].blocks[0].role).toBe('alice')
+    expect(scenes[0].blocks[0].actions).toHaveLength(4)
+    expect(scenes[0].blocks[1].role).toBe('bob')
+    expect(scenes[0].blocks[1].actions).toHaveLength(2)
+  })
+
+  it('handles actor switching back to same actor', () => {
+    const content = `
+# friend request
+
+actor alice
+openTo /friends
+click search
+
+actor bob
+openTo /notifications
+
+actor alice
+click send-request
+`
+    const scenes = parseMarkdownScenes(content, '/test/friends.spec.md')
+    expect(scenes).toHaveLength(1)
+    // Three blocks: alice, bob, alice again
+    expect(scenes[0].blocks).toHaveLength(3)
+    expect(scenes[0].blocks[0].role).toBe('alice')
+    expect(scenes[0].blocks[1].role).toBe('bob')
+    expect(scenes[0].blocks[2].role).toBe('alice')
+  })
+
+  it('supports actor aliases', () => {
+    const content = `
+# test
+
+actor primary-user user
+openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/alias.spec.md')
+    expect(scenes[0].blocks[0].role).toBe('primary-user')
+    expect(scenes[0].blocks[0].alias).toBe('user')
+  })
+
+  it('strips leading dash prefix from action lines', () => {
+    const content = `
+# test
+
+actor user
+- openTo /login
+- see login-form
+- click submit
+`
+    const scenes = parseMarkdownScenes(content, '/test/dash.spec.md')
+    expect(scenes[0].blocks[0].actions).toEqual([
+      { type: 'action', line: 'openTo /login' },
+      { type: 'action', line: 'see login-form' },
+      { type: 'action', line: 'click submit' },
+    ])
+  })
+
+  it('parses comments', () => {
+    const content = `
+# test
+
+actor user
+openTo /login
+// Fill in credentials
+typeInto email test@test.com
+`
+    const scenes = parseMarkdownScenes(content, '/test/comments.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(3)
+    expect(actions[0]).toEqual({ type: 'action', line: 'openTo /login' })
+    expect(actions[1]).toEqual({ type: 'comment', text: 'Fill in credentials' })
+    expect(actions[2]).toEqual({ type: 'action', line: 'typeInto email test@test.com' })
+  })
+
+  it('skips empty comments', () => {
+    const content = `
+# test
+
+actor user
+openTo /
+//
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/empty-comment.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(2)
+  })
+
+  it('parses if blocks with indented sub-actions', () => {
+    const content = `
+# test
+
+actor user
+openTo /app
+if welcome-modal
+  click dismiss-button
+  see dashboard
+see main-content
+`
+    const scenes = parseMarkdownScenes(content, '/test/if.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(3)
+
+    expect(actions[0]).toEqual({ type: 'action', line: 'openTo /app' })
+    expect(actions[1]).toEqual({
+      type: 'if',
+      selector: 'welcome-modal',
+      actions: ['click dismiss-button', 'see dashboard'],
+    })
+    expect(actions[2]).toEqual({ type: 'action', line: 'see main-content' })
+  })
+
+  it('strips dash prefix inside if blocks', () => {
+    const content = `
+# test
+
+actor user
+if modal
+  - click close
+  - see content
+see page
+`
+    const scenes = parseMarkdownScenes(content, '/test/if-dash.spec.md')
+    const ifAction = scenes[0].blocks[0].actions[0]
+    expect(ifAction).toEqual({
+      type: 'if',
+      selector: 'modal',
+      actions: ['click close', 'see content'],
+    })
+  })
+
+  it('parses macro invocations', () => {
+    const content = `
+# test
+
+actor user
+login()
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/macro.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(2)
+    expect(actions[0]).toEqual({ type: 'macro', name: 'login', args: [] })
+    expect(actions[1]).toEqual({ type: 'action', line: 'see dashboard' })
+  })
+
+  it('parses macro invocations with args', () => {
+    const content = `
+# test
+
+actor primary-user
+searchForFriend() new-user
+`
+    const scenes = parseMarkdownScenes(content, '/test/macro-args.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[0]).toEqual({
+      type: 'macro',
+      name: 'searchForFriend',
+      args: ['new-user'],
+    })
+  })
+
+  it('parses bare click (no selector)', () => {
+    const content = `
+# test
+
+actor user
+see notifications-badge
+click
+`
+    const scenes = parseMarkdownScenes(content, '/test/bare-click.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[1]).toEqual({ type: 'action', line: 'click' })
+  })
+
+  it('parses waitFor actions', () => {
+    const content = `
+# test
+
+actor alice
+emit setup-done
+
+actor bob
+waitFor setup-done
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/waitfor.spec.md')
+    const bobActions = scenes[0].blocks[1].actions
+    expect(bobActions[0]).toEqual({ type: 'action', line: 'waitFor setup-done' })
+  })
+
+  it('auto-creates scene if content appears before any heading', () => {
+    const content = `
+actor user
+openTo /
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/no-heading.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].name).toBe('no-heading')
+    expect(scenes[0].blocks).toHaveLength(1)
+  })
+
+  it('handles multiple # headings as separate scenes when no ## exists', () => {
+    const content = `
+# Scene one
+
+actor user
+openTo /one
+
+# Scene two
+
+actor user
+openTo /two
+`
+    const scenes = parseMarkdownScenes(content, '/test/multi.spec.md')
+    expect(scenes).toHaveLength(2)
+    expect(scenes[0].name).toBe('Scene one')
+    expect(scenes[1].name).toBe('Scene two')
+  })
+
+  it('handles groups changing between scenes', () => {
+    const content = `
+# Auth flows
+
+## login
+
+actor user
+openTo /login
+
+# Dashboard flows
+
+## view dashboard
+
+actor user
+openTo /dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/groups.spec.md')
+    expect(scenes).toHaveLength(2)
+    expect(scenes[0].group).toBe('Auth flows')
+    expect(scenes[1].group).toBe('Dashboard flows')
+  })
+
+  it('ignores lines before first actor declaration', () => {
+    const content = `
+# test
+
+some random text that is not an action
+more text
+
+actor user
+openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/preamble.spec.md')
+    expect(scenes[0].blocks).toHaveLength(1)
+    expect(scenes[0].blocks[0].actions).toHaveLength(1)
+  })
+
+  it('handles blank lines and whitespace gracefully', () => {
+    const content = `
+
+# test
+
+
+actor user
+
+openTo /login
+
+see form
+
+`
+    const scenes = parseMarkdownScenes(content, '/test/whitespace.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].blocks[0].actions).toHaveLength(2)
+  })
+
+  it('handles complex multi-actor multi-scene file', () => {
+    const content = `
+# User interactions
+
+## new user gets friend request
+
+actor new-user
+openTo /
+see welcome-box
+click continue-button
+
+actor primary-user
+openTo /friends
+click search
+typeInto search-input query
+
+actor new-user
+seeToast friend-request
+see navbar notifications-badge
+click
+
+## old user re-activates
+
+actor returning-user
+openTo /login
+see login-form
+`
+    const scenes = parseMarkdownScenes(content, '/test/complex.spec.md')
+    expect(scenes).toHaveLength(2)
+
+    // First scene
+    expect(scenes[0].name).toBe('new user gets friend request')
+    expect(scenes[0].group).toBe('User interactions')
+    expect(scenes[0].blocks).toHaveLength(3)
+    expect(scenes[0].blocks[0].role).toBe('new-user')
+    expect(scenes[0].blocks[0].actions).toHaveLength(3)
+    expect(scenes[0].blocks[1].role).toBe('primary-user')
+    expect(scenes[0].blocks[1].actions).toHaveLength(3)
+    expect(scenes[0].blocks[2].role).toBe('new-user')
+    expect(scenes[0].blocks[2].actions).toHaveLength(3)
+
+    // Second scene
+    expect(scenes[1].name).toBe('old user re-activates')
+    expect(scenes[1].blocks).toHaveLength(1)
+    expect(scenes[1].blocks[0].role).toBe('returning-user')
+  })
+})
