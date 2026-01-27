@@ -246,6 +246,9 @@ importers:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
 
   packages/scenetest-react:
     dependencies:

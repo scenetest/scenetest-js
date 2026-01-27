@@ -2,6 +2,9 @@
 export { scene, when } from './scene.js'
 export { defineConfig } from './config.js'
 
+// Reactive flow API
+export { flow } from './reactive.js'
+
 // Text DSL for declarative scenes
 export { runDsl, defineMacro, getMacro, runMacro, clearMacros } from './dsl.js'
 export type { DslAction, Macro } from './dsl.js'
@@ -22,4 +25,7 @@ export type {
   AssertionResult,
   ScriptWarning,
   Selector,
+  ReactiveActor,
+  FlowContext,
+  FlowFn,
 } from './types.js'

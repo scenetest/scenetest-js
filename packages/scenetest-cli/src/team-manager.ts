@@ -142,8 +142,8 @@ export class TeamSession {
     private browser: Browser,
     private team: TeamConfig,
     readonly teamIndex: number,
-    private actionTimeout: number,
-    private warnAfter: number,
+    readonly actionTimeout: number,
+    readonly warnAfter: number,
     private baseUrl?: string
   ) {}
 
