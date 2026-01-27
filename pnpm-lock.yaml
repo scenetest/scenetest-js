@@ -213,6 +213,15 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  packages/recorder:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
+
   packages/scenetest:
     devDependencies:
       typescript:
@@ -322,6 +331,9 @@ importers:
       '@scenetest/observer':
         specifier: workspace:*
         version: link:../observer
+      '@scenetest/recorder':
+        specifier: workspace:*
+        version: link:../recorder
       magic-string:
         specifier: ^0.30.10
         version: 0.30.21
