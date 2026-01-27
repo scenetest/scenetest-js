@@ -33,7 +33,22 @@ export let groupingEnabled = true
 export let collapsedMode = true // Always start collapsed
 
 // Panel corner position
-export let panelCorner: CornerPosition = 'bottom-right'
+const CORNER_STORAGE_KEY = 'scenetest-panel-corner'
+const VALID_CORNERS: CornerPosition[] = ['bottom-right', 'bottom-left', 'top-right', 'top-left']
+
+function loadCorner(): CornerPosition {
+  try {
+    const stored = localStorage.getItem(CORNER_STORAGE_KEY)
+    if (stored && VALID_CORNERS.includes(stored as CornerPosition)) {
+      return stored as CornerPosition
+    }
+  } catch {
+    // localStorage unavailable (e.g. sandboxed iframe)
+  }
+  return 'bottom-right'
+}
+
+export let panelCorner: CornerPosition = loadCorner()
 
 // View mode state (fullscreen only)
 export let viewMode: ViewMode = 'grouped'
@@ -58,6 +73,11 @@ export function setFilter(newFilter: FilterMode): void {
 
 export function setPanelCorner(corner: CornerPosition): void {
   panelCorner = corner
+  try {
+    localStorage.setItem(CORNER_STORAGE_KEY, corner)
+  } catch {
+    // localStorage unavailable
+  }
 }
 
 export function toggleGrouping(): boolean {
