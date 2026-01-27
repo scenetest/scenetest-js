@@ -226,12 +226,20 @@ function setupDrag(panelEl: HTMLDivElement): void {
     // Check for unsnap: once mouse moves far enough, panel breaks free
     if (!hasUnsnapped && Math.sqrt(dx * dx + dy * dy) >= UNSNAP_THRESHOLD) {
       hasUnsnapped = true
-      // Recalculate grab offset so the panel doesn't visually jump
-      // when switching from dampened to free-follow mode
-      const currentLeft = anchorX + dx * DAMPING
-      const currentTop = anchorY + dy * DAMPING
-      grabOffsetX = clientX - currentLeft
-      grabOffsetY = clientY - currentTop
+      // Use the original grab point so the panel jumps forward to reclaim
+      // the 70% gap that was suppressed by damping — this is the "pop"
+      grabOffsetX = startX - anchorX
+      grabOffsetY = startY - anchorY
+      // Animate the pop with a quick transition + shadow burst
+      panelEl.classList.add('unsnapping')
+      const onPop = (e: TransitionEvent) => {
+        if (e.target === panelEl && e.propertyName === 'top') {
+          panelEl.removeEventListener('transitionend', onPop)
+          panelEl.classList.remove('unsnapping')
+        }
+      }
+      panelEl.addEventListener('transitionend', onPop)
+      setTimeout(() => panelEl.classList.remove('unsnapping'), 150)
     }
 
     if (hasUnsnapped) {
