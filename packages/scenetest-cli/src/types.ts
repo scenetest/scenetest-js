@@ -414,6 +414,94 @@ export interface RegisteredScene {
   file: string
 }
 
+// ---------------------------------------------------------------------------
+// Reactive flow types
+// ---------------------------------------------------------------------------
+
+/**
+ * A reactive actor handle.
+ *
+ * Every DSL method pushes an action onto the actor's persistent queue and
+ * returns `this`, so methods are chainable without `await`.
+ * Nothing executes until the flow runner calls `drain()`.
+ *
+ * Scope lives on the actor (not on a throwaway chain) and flows through
+ * the queue during sequential drain execution.
+ */
+export interface ReactiveActor {
+  /** Role this actor is playing */
+  readonly role: string
+
+  /** Actor ID from config */
+  readonly id: string
+
+  /** Actor credentials forwarded from config */
+  readonly username?: string
+  readonly email?: string
+  readonly password?: string
+  [key: string]: unknown
+
+  /** Playwright page for low-level access */
+  readonly page: Page
+
+  /** Number of queued actions (for testing/inspection) */
+  readonly pending: number
+
+  // -- Navigation --
+  openTo(url: string): ReactiveActor
+  scrollToBottom(): ReactiveActor
+
+  // -- Observation --
+  see(selector: Selector): ReactiveActor
+  notSee(selector: Selector): ReactiveActor
+  seeText(text: string): ReactiveActor
+  seeToast(selector: Selector): ReactiveActor
+
+  // -- Interaction --
+  click(selector: Selector): ReactiveActor
+  typeInto(selector: Selector, value: string): ReactiveActor
+  check(selector: Selector): ReactiveActor
+  select(selector: Selector, value: string): ReactiveActor
+
+  // -- Scope navigation --
+  up(selector: Selector): ReactiveActor
+  prev(): ReactiveActor
+
+  // -- Timing & coordination --
+  wait(ms: number): ReactiveActor
+  emit(message: string): ReactiveActor
+  /** Block this actor's queue until a message arrives on the bus */
+  waitFor(message: string): ReactiveActor
+
+  // -- Escape hatch --
+  do(fn: (page: Page) => Promise<void>): ReactiveActor
+
+  // -- Monitoring --
+  warnIf(selector: Selector, message: string): void
+}
+
+/**
+ * Context passed to a flow function.
+ *
+ * `actor()` is async because it creates a browser context.
+ * Everything after actor creation is synchronous declaration —
+ * actions queue without executing.
+ */
+export interface FlowContext {
+  /** Get or create a reactive actor by role */
+  actor: (role: string) => Promise<ReactiveActor>
+  /** The team index assigned to this flow */
+  teamIndex: number
+}
+
+/**
+ * Flow definition function.
+ *
+ * The function body is the *declaration phase* — actor DSL calls just queue
+ * actions. After it returns, all actors drain their queues concurrently.
+ */
+export type FlowFn = (context: FlowContext) => void | Promise<void>
+
 /**
  * CLI options
  */

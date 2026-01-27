@@ -55,6 +55,14 @@ export function setCurrentSession(session: TeamSession | null): void {
 }
 
 /**
+ * Get the current session. Used by flow() to access session internals
+ * during reactive scene execution.
+ */
+export function getCurrentSession(): TeamSession | null {
+  return currentSession
+}
+
+/**
  * Coordinate between actors using the message bus.
  *
  * @example
