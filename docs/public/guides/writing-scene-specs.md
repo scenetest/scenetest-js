@@ -1,5 +1,7 @@
 # Writing Scene Specs
 
+> **Note:** This guide uses the `scene()` authoring model. Scenetest also supports `flow()`, a reactive concurrent model where actors drain their queues without `await`. For the full picture — both models side-by-side, comparison table, and "do not mix" rules — see the [test-authoring reference](/design/writing-tests).
+
 Scene specs describe **user journeys**—the flows a person takes through your application. They live in separate spec files and orchestrate browser interactions without touching component internals.
 
 ## The Philosophy: Write the Test First

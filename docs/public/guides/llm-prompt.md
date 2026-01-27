@@ -1,5 +1,7 @@
 # Using AI to Write Scene Specs
 
+> **Note:** The prompt below uses the `scene()` authoring model. Scenetest also supports `flow()`, a reactive concurrent model. For a complete reference covering both models, see the [test-authoring reference](/design/writing-tests).
+
 You can use an LLM (like Claude or ChatGPT) to convert natural language test descriptions into Scenetest scene specs. This guide provides a prompt you can copy and customize.
 
 ## The Workflow
