@@ -69,7 +69,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     notSee(s: string) { calls.push(`notSee:${s}`); return this },
     seeText(t: string) { calls.push(`seeText:${t}`); return this },
     seeToast(s: string) { calls.push(`seeToast:${s}`); return this },
-    click(s: string) { calls.push(`click:${s}`); return this },
+    click(s?: string) { calls.push(`click:${s ?? '(scope)'}`); return this },
     typeInto(s: string, v: string) { calls.push(`typeInto:${s}=${v}`); return this },
     check(s: string) { calls.push(`check:${s}`); return this },
     select(s: string, v: string) { calls.push(`select:${s}=${v}`); return this },
@@ -118,6 +118,11 @@ describe('parseAction', () => {
   it('parses no-argument actions', () => {
     expect(parseAction('prev')).toEqual({ action: 'prev' })
     expect(parseAction('scrollToBottom')).toEqual({ action: 'scrollToBottom' })
+    expect(parseAction('click')).toEqual({ action: 'click' })
+  })
+
+  it('parses waitFor as value-only action', () => {
+    expect(parseAction('waitFor data-ready')).toEqual({ action: 'waitFor', value: 'data-ready' })
   })
 
   it('throws on empty input', () => {
@@ -183,6 +188,26 @@ describe('applyDslAction', () => {
       'scrollToBottom',
       'prev',
     ])
+  })
+
+  it('dispatches bare click (no selector)', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'click' })
+    expect(target.calls).toEqual(['click:(scope)'])
+  })
+
+  it('dispatches waitFor on targets that support it', () => {
+    const target = createSpyTarget()
+    ;(target as any).waitFor = (m: string) => { target.calls.push(`waitFor:${m}`) }
+    applyDslAction(target, { action: 'waitFor', value: 'setup-done' })
+    expect(target.calls).toEqual(['waitFor:setup-done'])
+  })
+
+  it('throws waitFor on targets without waitFor method', () => {
+    const target = createSpyTarget()
+    expect(() => applyDslAction(target, { action: 'waitFor', value: 'x' })).toThrow(
+      'waitFor is only available in flow()'
+    )
   })
 
   it('throws on unknown action', () => {

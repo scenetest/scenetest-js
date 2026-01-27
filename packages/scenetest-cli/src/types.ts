@@ -258,10 +258,11 @@ export interface ActorHandle extends ActorConfig {
 
   /**
    * Click element within current scope.
+   * If no selector is given, clicks the current scope itself (the element from the last see()).
    * Supports nested selectors: 'parent child'
    * Supports tuple selectors: ['button', '12345'] for name + key
    */
-  click(selector: Selector): ActionChain
+  click(selector?: Selector): ActionChain
 
   /**
    * Type into input within current scope.
@@ -369,8 +370,8 @@ export interface ActionChain extends PromiseLike<void> {
   /** Wait for element to appear AND disappear (for toasts/notifications) */
   seeToast(selector: Selector): ActionChain
 
-  /** Click element within current scope */
-  click(selector: Selector): ActionChain
+  /** Click element within current scope, or click current scope if no selector given */
+  click(selector?: Selector): ActionChain
 
   /** Type into input within current scope */
   typeInto(selector: Selector, value: string): ActionChain
@@ -465,7 +466,7 @@ export interface DslTarget {
   notSee(selector: Selector): unknown
   seeText(text: string): unknown
   seeToast(selector: Selector): unknown
-  click(selector: Selector): unknown
+  click(selector?: Selector): unknown
   typeInto(selector: Selector, value: string): unknown
   check(selector: Selector): unknown
   select(selector: Selector, value: string): unknown
@@ -475,6 +476,8 @@ export interface DslTarget {
   up(selector: Selector): unknown
   prev(): unknown
   scrollToBottom(): unknown
+  /** Block until message arrives on the bus (reactive/flow model only) */
+  waitFor?(message: string): unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -521,7 +524,7 @@ export interface ReactiveActor {
   seeToast(selector: Selector): ReactiveActor
 
   // -- Interaction --
-  click(selector: Selector): ReactiveActor
+  click(selector?: Selector): ReactiveActor
   typeInto(selector: Selector, value: string): ReactiveActor
   check(selector: Selector): ReactiveActor
   select(selector: Selector, value: string): ReactiveActor

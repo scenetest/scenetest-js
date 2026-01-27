@@ -6,6 +6,7 @@ import { TeamManager } from './team-manager.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
 import { importFile } from './loader.js'
+import { loadMarkdownScene } from './markdown-scene.js'
 
 /**
  * Main scene runner
@@ -39,14 +40,22 @@ export class SceneRunner {
   }
 
   /**
-   * Discover scene files
+   * Discover scene files (.spec.ts and .spec.md)
    */
   async discoverScenes(): Promise<string[]> {
     const scenes = this.config.scenes || './scenes'
-    const pattern = scenes.endsWith('.spec.ts')
-      ? scenes
-      : path.join(scenes, '**/*.spec.ts')
 
+    // If pointing at a specific file, use it directly
+    if (scenes.endsWith('.spec.ts') || scenes.endsWith('.spec.md')) {
+      const files = await glob(scenes, {
+        ignore: this.config.ignore || [],
+        absolute: true,
+      })
+      return files.sort()
+    }
+
+    // Otherwise discover both .spec.ts and .spec.md files
+    const pattern = path.join(scenes, '**/*.spec.{ts,md}')
     const files = await glob(pattern, {
       ignore: this.config.ignore || [],
       absolute: true,
@@ -64,9 +73,14 @@ export class SceneRunner {
     sceneRegistry.length = 0
 
     for (const file of files) {
-      setCurrentFile(file)
-      // Dynamic import of scene file
-      await importFile(file)
+      if (file.endsWith('.spec.md')) {
+        // Parse markdown scene and register as flow
+        await loadMarkdownScene(file)
+      } else {
+        setCurrentFile(file)
+        // Dynamic import of scene file
+        await importFile(file)
+      }
     }
   }
 

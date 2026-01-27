@@ -9,6 +9,10 @@ export { flow } from './reactive.js'
 export { runDsl, defineMacro, getMacro, runMacro, clearMacros } from './dsl.js'
 export type { DslAction, Macro } from './dsl.js'
 
+// Markdown scene parser
+export { parseMarkdownScenes, loadMarkdownScene } from './markdown-scene.js'
+export type { MarkdownScene, ActorBlock, SceneAction } from './markdown-scene.js'
+
 // Selector utilities
 export { setAliases, getAliases, clearAliases, explainSelector } from './selectors.js'
 

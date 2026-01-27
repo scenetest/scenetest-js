@@ -292,7 +292,16 @@ export class ReactiveActorHandle implements ReactiveActor {
   // Interaction
   // -----------------------------------------------------------------------
 
-  click(selector: Selector): this {
+  click(selector?: Selector): this {
+    if (!selector) {
+      return this.push('click', '(scope)', async () => {
+        const scope = this.scope
+        if (scope === this.page) {
+          throw new Error('click with no selector requires a scope (use see() first)')
+        }
+        await (scope as Locator).click({ timeout: this.actionTimeout })
+      })
+    }
     return this.push('click', selector, async () => {
       await resolveSelector(this.scope, selector).click({
         timeout: this.actionTimeout,

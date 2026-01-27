@@ -11,12 +11,13 @@ import type { DslTarget, Selector } from './types.js'
  *   notSee <selector>               - Wait for element hidden
  *   seeText <text>                  - Wait for text visible
  *   seeToast <selector>             - Wait for element appear then disappear
- *   click <selector>                - Click element
+ *   click [<selector>]              - Click element (or current scope if no selector)
  *   typeInto <selector> <value>     - Fill input
  *   check <selector>                - Check checkbox
  *   select <selector> <value>       - Select dropdown option
  *   wait <ms>                       - Wait milliseconds
  *   emit <message>                  - Emit to message bus
+ *   waitFor <message>               - Block until message arrives (flow/reactive only)
  *   warnIf <selector> <message>     - Register script warning
  *   up <selector>                   - Navigate scope to ancestor
  *   prev                            - Return to previous scope
@@ -55,7 +56,7 @@ export function parseAction(line: string): ParsedAction {
   // Split on first space to get action name
   const firstSpace = trimmed.indexOf(' ')
   if (firstSpace === -1) {
-    // Action with no arguments (shouldn't happen for most actions)
+    // Action with no arguments (click, prev, scrollToBottom)
     return { action: trimmed }
   }
 
@@ -66,7 +67,7 @@ export function parseAction(line: string): ParsedAction {
   const selectorOnlyActions = ['see', 'notSee', 'click', 'check', 'seeToast', 'up']
 
   // Actions that take a value only (no selector)
-  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit']
+  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor']
 
   // Actions that take selector + value (everything after first selector word is value)
   const selectorValueActions = ['typeInto', 'select', 'warnIf']
@@ -149,7 +150,6 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
       break
 
     case 'click':
-      if (!selector) throw new Error('click requires a selector')
       target.click(selector)
       break
 
@@ -199,6 +199,12 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
 
     case 'scrollToBottom':
       target.scrollToBottom()
+      break
+
+    case 'waitFor':
+      if (!value) throw new Error('waitFor requires a message')
+      if (!target.waitFor) throw new Error('waitFor is only available in flow() / .spec.md scenes')
+      target.waitFor(value)
       break
 
     default:
