@@ -105,8 +105,9 @@ function getCornerPosition(corner: CornerPosition, panelWidth: number, panelHeig
 }
 
 const DRAG_THRESHOLD = 5 // px of movement before we consider it a drag
+const UNSNAP_THRESHOLD = 50 // px of mouse movement before panel breaks free
 const DAMPING = 0.3 // Rubber-band resistance (panel moves at 30% of mouse displacement)
-const FLICK_VELOCITY = 250 // px/s minimum to trigger a flick
+const FLICK_VELOCITY = 250 // px/s — momentum can override position-based corner pick
 const VELOCITY_WINDOW = 80 // ms of recent motion to sample for velocity
 
 interface PointerSample {
@@ -116,24 +117,76 @@ interface PointerSample {
 }
 
 /**
- * Set up drag-and-snap behavior with rubber-band tension and velocity-based flick.
+ * Pick a target corner that is NOT the original corner.
+ * Uses the panel's current viewport quadrant, with momentum as a tiebreaker
+ * when the panel is still in the original quadrant.
+ */
+function pickNonOriginalCorner(
+  panelRect: DOMRect,
+  vx: number,
+  vy: number,
+  original: CornerPosition,
+): CornerPosition {
+  const centerX = panelRect.left + panelRect.width / 2
+  const centerY = panelRect.top + panelRect.height / 2
+  const vpW = window.innerWidth
+  const vpH = window.innerHeight
+
+  // 1. Position-based: which quadrant is the panel center in?
+  const isRight = centerX > vpW / 2
+  const isBottom = centerY > vpH / 2
+  const posCorner: CornerPosition = isBottom
+    ? (isRight ? 'bottom-right' : 'bottom-left')
+    : (isRight ? 'top-right' : 'top-left')
+
+  if (posCorner !== original) return posCorner
+
+  // 2. Momentum override: if fast enough, use flick direction
+  const speed = Math.sqrt(vx * vx + vy * vy)
+  if (speed >= FLICK_VELOCITY) {
+    const flickCorner: CornerPosition = vy < 0
+      ? (vx < 0 ? 'top-left' : 'top-right')
+      : (vx < 0 ? 'bottom-left' : 'bottom-right')
+    if (flickCorner !== original) return flickCorner
+  }
+
+  // 3. Fallback: still in the original quadrant with no strong momentum.
+  //    Flip the axis closer to the midline (the direction the user was pulling).
+  const xDist = Math.abs(centerX - vpW / 2)
+  const yDist = Math.abs(centerY - vpH / 2)
+  const [origV, origH] = original.split('-') as ['top' | 'bottom', 'left' | 'right']
+  if (xDist < yDist) {
+    // Closer to vertical midline → flip horizontal axis
+    return `${origV}-${origH === 'right' ? 'left' : 'right'}` as CornerPosition
+  }
+  // Closer to horizontal midline → flip vertical axis
+  return `${origV === 'bottom' ? 'top' : 'bottom'}-${origH}` as CornerPosition
+}
+
+/**
+ * Set up drag-and-snap with rubber-band tension, unsnap, and
+ * position/momentum-based corner selection.
  *
- * - Dragging creates tension: the panel resists movement as if tethered to its corner.
- * - Releasing with enough velocity flings the panel to the corner matching the
- *   flick direction (up-left → top-left, down-right → bottom-right, etc.).
- * - Releasing without enough velocity snaps the panel back to its original corner.
- * - Click (no/minimal movement) toggles collapse.
- * - Supports both mouse and touch.
+ * Phase 1 (< 50px mouse movement): Rubber-band — panel resists as if tethered.
+ * Phase 2 (≥ 50px): Panel unsnaps and follows the mouse freely.
+ *
+ * On release:
+ *   - Never unsnapped → snap back to original corner.
+ *   - Unsnapped → pick the best non-original corner by position, with
+ *     momentum as tiebreaker. The panel never returns to its starting corner.
  */
 function setupDrag(panelEl: HTMLDivElement): void {
   const header = panelEl.querySelector('#scenetest-header') as HTMLElement
   if (!header) return
 
   let isDragging = false
+  let hasUnsnapped = false
   let startX = 0
   let startY = 0
   let anchorX = 0 // Panel's resting left position before drag
   let anchorY = 0 // Panel's resting top position before drag
+  let grabOffsetX = 0 // Offset from pointer to panel left edge (for free-follow)
+  let grabOffsetY = 0
   let isAnimating = false
   const samples: PointerSample[] = []
 
@@ -145,6 +198,7 @@ function setupDrag(panelEl: HTMLDivElement): void {
     anchorX = rect.left
     anchorY = rect.top
     isDragging = false
+    hasUnsnapped = false
     samples.length = 0
     samples.push({ x: clientX, y: clientY, t: performance.now() })
   }
@@ -169,11 +223,26 @@ function setupDrag(panelEl: HTMLDivElement): void {
     // Track velocity samples
     samples.push({ x: clientX, y: clientY, t: performance.now() })
 
-    // Rubber-band: panel moves at DAMPING rate of mouse displacement from anchor
-    const dampedLeft = anchorX + dx * DAMPING
-    const dampedTop = anchorY + dy * DAMPING
-    panelEl.style.left = dampedLeft + 'px'
-    panelEl.style.top = dampedTop + 'px'
+    // Check for unsnap: once mouse moves far enough, panel breaks free
+    if (!hasUnsnapped && Math.sqrt(dx * dx + dy * dy) >= UNSNAP_THRESHOLD) {
+      hasUnsnapped = true
+      // Recalculate grab offset so the panel doesn't visually jump
+      // when switching from dampened to free-follow mode
+      const currentLeft = anchorX + dx * DAMPING
+      const currentTop = anchorY + dy * DAMPING
+      grabOffsetX = clientX - currentLeft
+      grabOffsetY = clientY - currentTop
+    }
+
+    if (hasUnsnapped) {
+      // Free follow: panel tracks mouse 1:1
+      panelEl.style.left = (clientX - grabOffsetX) + 'px'
+      panelEl.style.top = (clientY - grabOffsetY) + 'px'
+    } else {
+      // Rubber-band: panel moves at DAMPING rate of mouse displacement
+      panelEl.style.left = (anchorX + dx * DAMPING) + 'px'
+      panelEl.style.top = (anchorY + dy * DAMPING) + 'px'
+    }
   }
 
   function getVelocity(): { vx: number; vy: number } {
@@ -190,21 +259,6 @@ function setupDrag(panelEl: HTMLDivElement): void {
     }
   }
 
-  function getFlickCorner(vx: number, vy: number): CornerPosition | null {
-    const speed = Math.sqrt(vx * vx + vy * vy)
-    if (speed < FLICK_VELOCITY) return null
-
-    // Direction of velocity determines target corner
-    const target: CornerPosition = vy < 0
-      ? (vx < 0 ? 'top-left' : 'top-right')
-      : (vx < 0 ? 'bottom-left' : 'bottom-right')
-
-    // Don't flick to the corner we're already in
-    if (target === panelCorner) return null
-
-    return target
-  }
-
   function onPointerUp(): void {
     if (!isDragging || isAnimating) {
       isDragging = false
@@ -214,9 +268,19 @@ function setupDrag(panelEl: HTMLDivElement): void {
     panelEl.classList.remove('dragging')
 
     const { vx, vy } = getVelocity()
-    const flickTarget = getFlickCorner(vx, vy)
-    const targetCorner = flickTarget ?? panelCorner
-    const isFlick = flickTarget !== null
+    let targetCorner: CornerPosition
+    let isFlick: boolean
+
+    if (hasUnsnapped) {
+      // Panel broke free — must go to a non-original corner
+      const rect = panelEl.getBoundingClientRect()
+      targetCorner = pickNonOriginalCorner(rect, vx, vy, panelCorner)
+      isFlick = true
+    } else {
+      // Didn't unsnap — rubber-band back to original
+      targetCorner = panelCorner
+      isFlick = false
+    }
 
     // Calculate target pixel position
     const rect = panelEl.getBoundingClientRect()
