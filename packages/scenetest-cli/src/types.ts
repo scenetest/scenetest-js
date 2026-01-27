@@ -478,6 +478,16 @@ export interface ReactiveActor {
 
   // -- Monitoring --
   warnIf(selector: Selector, message: string): void
+
+  /**
+   * Persistent conditional monitor.
+   *
+   * Polls during every subsequent action.  When `selector` becomes
+   * visible, the sub-actions declared inside `callback` execute inline
+   * (one-shot).  The callback receives the actor; DSL calls inside it
+   * are captured as the monitor's sub-actions.
+   */
+  if(selector: Selector, callback: (actor: ReactiveActor) => void): void
 }
 
 /**
