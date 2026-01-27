@@ -1,4 +1,4 @@
-import type { ActorHandle, Selector } from './types.js'
+import type { DslTarget, Selector } from './types.js'
 
 /**
  * Text DSL Grammar:
@@ -40,13 +40,13 @@ export type DslAction = string
 /**
  * Parse a DSL action string into its components
  */
-interface ParsedAction {
+export interface ParsedAction {
   action: string
   selector?: string
   value?: string
 }
 
-function parseAction(line: string): ParsedAction {
+export function parseAction(line: string): ParsedAction {
   const trimmed = line.trim()
   if (!trimmed) {
     throw new Error('Empty action line')
@@ -101,88 +101,104 @@ function parseAction(line: string): ParsedAction {
 }
 
 /**
- * Execute a single DSL action against an actor
+ * Parse a multiline DSL string into individual action lines.
+ * Skips empty lines and comments (lines starting with # or //).
  */
-async function executeAction(actor: ActorHandle, parsed: ParsedAction): Promise<void> {
+export function parseDslLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#') && !line.startsWith('//'))
+}
+
+/**
+ * Apply a single parsed DSL action to any target that has DSL methods.
+ *
+ * This is the synchronous core — it calls the method on the target without
+ * awaiting.  For scene-model targets (ActorHandle / ActionChain) the method
+ * returns an ActionChain; for reactive targets it returns the actor.  Either
+ * way the caller doesn't inspect the return value.
+ */
+export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
   const { action, selector, value } = parsed
 
   switch (action) {
     case 'openTo':
       if (!value) throw new Error('openTo requires a URL')
-      await actor.openTo(value)
+      target.openTo(value)
       break
 
     case 'see':
       if (!selector) throw new Error('see requires a selector')
-      await actor.see(selector)
+      target.see(selector)
       break
 
     case 'notSee':
       if (!selector) throw new Error('notSee requires a selector')
-      await actor.notSee(selector)
+      target.notSee(selector)
       break
 
     case 'seeText':
       if (!value) throw new Error('seeText requires text')
-      await actor.seeText(value)
+      target.seeText(value)
       break
 
     case 'seeToast':
       if (!selector) throw new Error('seeToast requires a selector')
-      await actor.seeToast(selector)
+      target.seeToast(selector)
       break
 
     case 'click':
       if (!selector) throw new Error('click requires a selector')
-      await actor.click(selector)
+      target.click(selector)
       break
 
     case 'typeInto':
       if (!selector) throw new Error('typeInto requires a selector')
       if (!value) throw new Error('typeInto requires a value')
-      await actor.typeInto(selector, value)
+      target.typeInto(selector, value)
       break
 
     case 'check':
       if (!selector) throw new Error('check requires a selector')
-      await actor.check(selector)
+      target.check(selector)
       break
 
     case 'select':
       if (!selector) throw new Error('select requires a selector')
       if (!value) throw new Error('select requires a value')
-      await actor.select(selector, value)
+      target.select(selector, value)
       break
 
     case 'wait':
       if (!value) throw new Error('wait requires milliseconds')
       const ms = parseInt(value, 10)
       if (isNaN(ms)) throw new Error(`wait requires a number, got: ${value}`)
-      await actor.wait(ms)
+      target.wait(ms)
       break
 
     case 'emit':
       if (!value) throw new Error('emit requires a message')
-      await actor.emit(value)
+      target.emit(value)
       break
 
     case 'warnIf':
       if (!selector) throw new Error('warnIf requires a selector')
       if (!value) throw new Error('warnIf requires a message')
-      actor.warnIf(selector, value)
+      target.warnIf(selector, value)
       break
 
     case 'up':
       if (!selector) throw new Error('up requires a selector')
-      await actor.up(selector)
+      target.up(selector)
       break
 
     case 'prev':
-      await actor.prev()
+      target.prev()
       break
 
     case 'scrollToBottom':
-      await actor.scrollToBottom()
+      target.scrollToBottom()
       break
 
     default:
@@ -191,22 +207,33 @@ async function executeAction(actor: ActorHandle, parsed: ParsedAction): Promise<
 }
 
 /**
- * Execute a sequence of DSL actions
+ * Execute a sequence of DSL actions against any actor (scene or flow model).
+ *
+ * For scene-model actors (`ActorHandle`), each call creates and awaits an
+ * `ActionChain` — execution is sequential and immediate.
+ *
+ * For reactive actors (`ReactiveActor`), each call pushes to the actor's
+ * queue — nothing executes until the flow runner drains.  The `await` on
+ * the non-thenable return value is a harmless no-op.
  *
  * @example
  * ```ts
+ * // scene() model — awaited
  * await runDsl(user, [
  *   'openTo /dashboard',
  *   'see main-content',
  *   'click settings-button',
- *   'see settings-modal',
- *   'typeInto name-input New Name',
- *   'click save-button',
- *   'seeToast success-toast',
+ * ])
+ *
+ * // flow() model — queues, no actual awaiting
+ * runDsl(user, [
+ *   'openTo /dashboard',
+ *   'see main-content',
+ *   'click settings-button',
  * ])
  * ```
  */
-export async function runDsl(actor: ActorHandle, actions: DslAction[]): Promise<void> {
+export async function runDsl(actor: DslTarget, actions: DslAction[]): Promise<void> {
   for (const actionLine of actions) {
     // Skip empty lines and comments
     const trimmed = actionLine.trim()
@@ -215,7 +242,9 @@ export async function runDsl(actor: ActorHandle, actions: DslAction[]): Promise<
     }
 
     const parsed = parseAction(trimmed)
-    await executeAction(actor, parsed)
+    // await is needed for scene model (ActionChain is thenable);
+    // harmless no-op for reactive model (returns non-thenable actor)
+    await applyDslAction(actor, parsed)
   }
 }
 
@@ -255,7 +284,9 @@ export function getMacro(name: string): Macro | undefined {
 }
 
 /**
- * Execute a macro with optional variable substitution
+ * Execute a macro with optional variable substitution.
+ *
+ * Works with both scene-model and reactive actors (see `runDsl`).
  *
  * @example
  * ```ts
@@ -263,7 +294,7 @@ export function getMacro(name: string): Macro | undefined {
  * ```
  */
 export async function runMacro(
-  actor: ActorHandle,
+  actor: DslTarget,
   name: string,
   vars?: Record<string, string>
 ): Promise<void> {

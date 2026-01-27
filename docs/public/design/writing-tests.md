@@ -276,6 +276,7 @@ These methods are available on actors in both `scene()` and `flow()` models:
 | `scrollToBottom()` | Scroll current scope or page to bottom |
 | `if(selector, callback)` | Conditional monitor (see "Conditional monitors" above) |
 | `warnIf(selector, message)` | Script warning (persists across scene/flow) |
+| `dsl(text)` | Queue actions from a multiline text DSL string (see "Text DSL" below) |
 
 **In scene():** Methods return an `ActionChain` that is chainable and thenable (await the chain to execute). `if` and `warnIf` return void.
 
@@ -353,11 +354,73 @@ Teams enable parallel scene execution — each scene acquires a team, so scenes 
 
 ## Text DSL
 
-Scenes can also be written as string arrays for simpler flows:
+The text DSL lets you write actions as plain strings — useful for simple flows, code generation, natural-language-to-test pipelines, and debug reproduction scripts.
+
+### Inline `dsl()` method (recommended)
+
+Both scene and flow actors have a `dsl()` method that accepts a multiline string:
+
+**flow() model:**
+
+```typescript
+flow('onboarding flow', ({ actor }) => {
+  const user = actor('user')
+
+  user.dsl(`
+    openTo /
+    see welcome-box
+    click continue-button
+    see onboarding-step
+    typeInto name-input Alice
+    click finish-button
+  `)
+
+  user.see('dashboard')
+})
+```
+
+**scene() model:**
+
+```typescript
+scene('onboarding flow', async ({ actor }) => {
+  const user = await actor('user')
+
+  await user.dsl(`
+    openTo /
+    see welcome-box
+    click continue-button
+    see onboarding-step
+    typeInto name-input Alice
+    click finish-button
+  `)
+
+  await user.see('dashboard')
+})
+```
+
+`dsl()` returns the actor (flow) or an `ActionChain` (scene), so it chains with other methods:
+
+```typescript
+// flow model — all chaining, no await
+user
+  .openTo('/login')
+  .dsl(`
+    see login-form
+    typeInto email alice@test.com
+    typeInto password secret
+    click submit
+  `)
+  .see('dashboard')
+```
+
+### `runDsl()` and `runMacro()` — standalone functions
+
+These work with both scene and flow actors:
 
 ```typescript
 import { runDsl } from '@scenetest/cli'
 
+// In scene() — await triggers execution
 await runDsl(user, [
   'openTo /login',
   'see login-form',
@@ -365,6 +428,14 @@ await runDsl(user, [
   'typeInto password secret',
   'click submit',
   'see dashboard',
+])
+
+// In flow() — just queues actions (await is a no-op)
+runDsl(user, [
+  'openTo /login',
+  'see login-form',
+  'typeInto email alice@test.com',
+  'click submit',
 ])
 ```
 
@@ -382,5 +453,6 @@ defineMacro('login', [
   'see dashboard',
 ])
 
+// Works with both scene and flow actors
 await runMacro(user, 'login', { email: 'alice@test.com', password: 'secret' })
 ```

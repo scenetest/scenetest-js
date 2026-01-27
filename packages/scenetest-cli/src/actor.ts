@@ -2,6 +2,7 @@ import type { Page, BrowserContext, Locator } from 'playwright'
 import type { ActorConfig, ActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
+import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 
 /**
  * Action to be executed in a chain
@@ -234,6 +235,24 @@ class ActionChainImpl implements ActionChain {
         this.currentScope = this.scopeStack.pop()!
       }
     })
+  }
+
+  dsl(text: string): ActionChain {
+    const lines = parseDslLines(text)
+    for (const line of lines) {
+      const parsed = parseAction(line)
+      applyDslAction(this, parsed)
+    }
+    return this
+  }
+
+  /**
+   * Delegate warnIf to the owning actor.
+   * Not part of the ActionChain public interface, but needed so the chain
+   * satisfies DslTarget when dsl() text includes a `warnIf` line.
+   */
+  warnIf(selector: Selector, message: string): void {
+    this.actor.warnIf(selector, message)
   }
 
   /**
@@ -514,6 +533,10 @@ export class ActorHandleImpl implements ActorHandle {
 
   prev(): ActionChain {
     return this.createChain().prev()
+  }
+
+  dsl(text: string): ActionChain {
+    return this.createChain().dsl(text)
   }
 
   /**

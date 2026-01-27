@@ -58,6 +58,7 @@ import type {
 } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
+import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
 
 // ---------------------------------------------------------------------------
@@ -385,6 +386,36 @@ export class ReactiveActorHandle implements ReactiveActor {
     return this.push('do', 'custom', async () => {
       await fn(this.page)
     })
+  }
+
+  // -----------------------------------------------------------------------
+  // Text DSL
+  // -----------------------------------------------------------------------
+
+  /**
+   * Queue actions from a text DSL string.
+   *
+   * Parses the multiline string into individual action lines and pushes
+   * each onto the actor's queue.  Returns `this` for chaining.
+   *
+   * @example
+   * ```ts
+   * user.dsl(`
+   *   openTo /login
+   *   see login-form
+   *   typeInto email alice@test.com
+   *   click submit
+   * `)
+   * user.see('dashboard')
+   * ```
+   */
+  dsl(text: string): this {
+    const lines = parseDslLines(text)
+    for (const line of lines) {
+      const parsed = parseAction(line)
+      applyDslAction(this, parsed)
+    }
+    return this
   }
 
   // -----------------------------------------------------------------------

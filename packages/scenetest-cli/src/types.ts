@@ -311,6 +311,22 @@ export interface ActorHandle extends ActorConfig {
   prev(): ActionChain
 
   /**
+   * Execute a text DSL string.
+   * Parses the multiline string into actions and queues them on the chain.
+   *
+   * @example
+   * ```ts
+   * await user.dsl(`
+   *   openTo /login
+   *   see login-form
+   *   typeInto email alice@test.com
+   *   click submit
+   * `)
+   * ```
+   */
+  dsl(text: string): ActionChain
+
+  /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
    * Watchers are cleared after each await.
@@ -398,6 +414,21 @@ export interface ActionChain extends PromiseLike<void> {
    * ```
    */
   prev(): ActionChain
+
+  /**
+   * Execute a text DSL string.
+   * Parses the multiline string into actions and queues them on the chain.
+   *
+   * @example
+   * ```ts
+   * await user.see('form').dsl(`
+   *   typeInto email alice@test.com
+   *   typeInto password secret
+   *   click submit
+   * `)
+   * ```
+   */
+  dsl(text: string): ActionChain
 }
 
 /**
@@ -412,6 +443,38 @@ export interface RegisteredScene {
   name: string
   fn: SceneFn
   file: string
+}
+
+// ---------------------------------------------------------------------------
+// DslTarget — shared structural type for text DSL
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal interface that both `ActorHandle` and `ReactiveActor` satisfy.
+ *
+ * `runDsl()`, `runMacro()`, and the `dsl()` method on actors all operate
+ * against this structural type so they work with both execution models.
+ *
+ * Return types are `unknown` because scene-model methods return `ActionChain`
+ * while reactive methods return the actor itself — the text DSL doesn't
+ * inspect return values.
+ */
+export interface DslTarget {
+  openTo(url: string): unknown
+  see(selector: Selector): unknown
+  notSee(selector: Selector): unknown
+  seeText(text: string): unknown
+  seeToast(selector: Selector): unknown
+  click(selector: Selector): unknown
+  typeInto(selector: Selector, value: string): unknown
+  check(selector: Selector): unknown
+  select(selector: Selector, value: string): unknown
+  wait(ms: number): unknown
+  emit(message: string): unknown
+  warnIf(selector: Selector, message: string): void
+  up(selector: Selector): unknown
+  prev(): unknown
+  scrollToBottom(): unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -488,6 +551,24 @@ export interface ReactiveActor {
    * are captured as the monitor's sub-actions.
    */
   if(selector: Selector, callback: (actor: ReactiveActor) => void): void
+
+  // -- Text DSL --
+
+  /**
+   * Queue actions from a text DSL string.
+   * Parses the multiline string and pushes each action onto the queue.
+   *
+   * @example
+   * ```ts
+   * user.dsl(`
+   *   openTo /login
+   *   see login-form
+   *   typeInto email alice@test.com
+   *   click submit
+   * `)
+   * ```
+   */
+  dsl(text: string): ReactiveActor
 }
 
 /**
