@@ -80,6 +80,29 @@ interface WarningTrigger {
 }
 
 // ---------------------------------------------------------------------------
+// Conditional monitor — the flow model's answer to if()
+// ---------------------------------------------------------------------------
+
+/**
+ * A persistent conditional monitor.
+ *
+ * Registered via `if()`.  Polls during every subsequent action in the
+ * actor's queue.  When the selector becomes visible, the monitor's
+ * sub-actions execute inline (pausing the current action), then the
+ * monitor is marked triggered and stops polling.
+ *
+ * Sub-actions are collected during the declaration phase using the
+ * queue-swap trick: the actor's queue pointer is temporarily redirected
+ * so that DSL calls inside the callback push to `actions` instead of
+ * the main queue.
+ */
+interface ConditionalMonitor {
+  selector: Selector
+  actions: QueuedAction[]
+  triggered: boolean
+}
+
+// ---------------------------------------------------------------------------
 // ReactiveActorHandle
 // ---------------------------------------------------------------------------
 
@@ -103,6 +126,7 @@ export class ReactiveActorHandle implements ReactiveActor {
   private currentScope: Page | Locator
   private scopeStack: Array<Page | Locator> = []
   private warningTriggers: WarningTrigger[] = []
+  private conditionalMonitors: ConditionalMonitor[] = []
 
   private _draining = false
   private _aborted = false
@@ -348,6 +372,47 @@ export class ReactiveActorHandle implements ReactiveActor {
     this.warningTriggers.push({ selector, message, triggered: false })
   }
 
+  /**
+   * Conditional monitor — "if this appears at any point, do these things."
+   *
+   * Registers a persistent monitor that polls during every subsequent
+   * action in the actor's queue.  When `selector` becomes visible, the
+   * sub-actions declared inside `callback` execute inline (the current
+   * action is paused, the sub-actions run, then the action resumes).
+   * One-shot: the monitor stops polling after it fires once.
+   *
+   * The callback receives `this` (the actor), but while it runs the
+   * actor's internal queue is temporarily swapped so that DSL calls
+   * push to the monitor's sub-action list instead of the main queue.
+   *
+   * @example
+   * ```ts
+   * alice.openTo('/app')
+   * alice.if('welcome-modal', a => a.click('dismiss'))
+   * alice.see('dashboard')
+   * // If the welcome modal pops up during any action after the if(),
+   * // click('dismiss') fires inline, then the action resumes.
+   * ```
+   */
+  if(selector: Selector, callback: (actor: this) => void): void {
+    const monitor: ConditionalMonitor = {
+      selector,
+      actions: [],
+      triggered: false,
+    }
+
+    // Queue-swap: redirect DSL calls to the monitor's sub-action list
+    const mainQueue = this.queue
+    this.queue = monitor.actions
+    try {
+      callback(this)
+    } finally {
+      this.queue = mainQueue
+    }
+
+    this.conditionalMonitors.push(monitor)
+  }
+
   // -----------------------------------------------------------------------
   // Abort
   // -----------------------------------------------------------------------
@@ -408,7 +473,7 @@ export class ReactiveActorHandle implements ReactiveActor {
         }, this.warnAfter)
 
         try {
-          await this.executeWithWarnings(action)
+          await this.executeWithMonitors(action)
           entry.duration = Date.now() - start
 
           if (warned) {
@@ -434,10 +499,16 @@ export class ReactiveActorHandle implements ReactiveActor {
   }
 
   /**
-   * Execute a single action while polling warning triggers concurrently.
+   * Execute a single action while polling monitors concurrently.
+   *
+   * Handles both warning triggers (record a warning) and conditional
+   * monitors (execute sub-actions inline).
    */
-  private async executeWithWarnings(action: QueuedAction): Promise<void> {
-    if (this.warningTriggers.length === 0) {
+  private async executeWithMonitors(action: QueuedAction): Promise<void> {
+    const hasWarnings = this.warningTriggers.some((t) => !t.triggered)
+    const hasMonitors = this.conditionalMonitors.some((m) => !m.triggered)
+
+    if (!hasWarnings && !hasMonitors) {
       await action.execute()
       return
     }
@@ -455,9 +526,10 @@ export class ReactiveActorHandle implements ReactiveActor {
         actionComplete = true
       })
 
-    const pollWarnings = async () => {
+    const poll = async () => {
       const pollInterval = 50
       while (!actionComplete) {
+        // Poll warning triggers
         for (const trigger of this.warningTriggers) {
           if (trigger.triggered) continue
           try {
@@ -478,13 +550,31 @@ export class ReactiveActorHandle implements ReactiveActor {
           }
         }
 
+        // Poll conditional monitors
+        for (const monitor of this.conditionalMonitors) {
+          if (monitor.triggered) continue
+          try {
+            const locator = resolveSelector(this.page, monitor.selector)
+            const isVisible = await locator.isVisible()
+            if (isVisible) {
+              monitor.triggered = true
+              // Execute sub-actions inline — shares the actor's scope
+              for (const subAction of monitor.actions) {
+                await subAction.execute()
+              }
+            }
+          } catch {
+            // Ignore errors from isVisible check
+          }
+        }
+
         if (!actionComplete) {
           await new Promise((r) => setTimeout(r, pollInterval))
         }
       }
     }
 
-    await Promise.all([actionPromise, pollWarnings()])
+    await Promise.all([actionPromise, poll()])
 
     if (actionError) {
       throw actionError
