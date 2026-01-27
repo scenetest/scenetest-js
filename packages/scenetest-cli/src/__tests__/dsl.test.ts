@@ -66,6 +66,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     calls,
     openTo(url: string) { calls.push(`openTo:${url}`); return this },
     see(s: string) { calls.push(`see:${s}`); return this },
+    seeInView(s: string) { calls.push(`seeInView:${s}`); return this },
     notSee(s: string) { calls.push(`notSee:${s}`); return this },
     seeText(t: string) { calls.push(`seeText:${t}`); return this },
     seeToast(s: string) { calls.push(`seeToast:${s}`); return this },
@@ -76,7 +77,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     wait(ms: number) { calls.push(`wait:${ms}`); return this },
     emit(m: string) { calls.push(`emit:${m}`); return this },
     warnIf(s: string, m: string) { calls.push(`warnIf:${s}=${m}`) },
-    up(s: string) { calls.push(`up:${s}`); return this },
+    up(s?: string) { calls.push(`up:${s ?? '(root)'}`); return this },
     prev() { calls.push('prev'); return this },
     scrollToBottom() { calls.push('scrollToBottom'); return this },
   }
@@ -94,8 +95,9 @@ describe('parseAction', () => {
     expect(parseAction('emit user-ready')).toEqual({ action: 'emit', value: 'user-ready' })
   })
 
-  it('parses selector-only actions (see, notSee, click, check, seeToast, up)', () => {
+  it('parses selector-only actions (see, seeInView, notSee, click, check, seeToast, up)', () => {
     expect(parseAction('see main-content')).toEqual({ action: 'see', selector: 'main-content' })
+    expect(parseAction('seeInView hero-section')).toEqual({ action: 'seeInView', selector: 'hero-section' })
     expect(parseAction('notSee spinner')).toEqual({ action: 'notSee', selector: 'spinner' })
     expect(parseAction('click submit-btn')).toEqual({ action: 'click', selector: 'submit-btn' })
     expect(parseAction('check remember-me')).toEqual({ action: 'check', selector: 'remember-me' })
@@ -119,6 +121,7 @@ describe('parseAction', () => {
     expect(parseAction('prev')).toEqual({ action: 'prev' })
     expect(parseAction('scrollToBottom')).toEqual({ action: 'scrollToBottom' })
     expect(parseAction('click')).toEqual({ action: 'click' })
+    expect(parseAction('up')).toEqual({ action: 'up' })
   })
 
   it('parses waitFor as value-only action', () => {
@@ -194,6 +197,24 @@ describe('applyDslAction', () => {
     const target = createSpyTarget()
     applyDslAction(target, { action: 'click' })
     expect(target.calls).toEqual(['click:(scope)'])
+  })
+
+  it('dispatches seeInView', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'seeInView', selector: 'hero' })
+    expect(target.calls).toEqual(['seeInView:hero'])
+  })
+
+  it('dispatches bare up (no selector) for page root reset', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'up' })
+    expect(target.calls).toEqual(['up:(root)'])
+  })
+
+  it('dispatches up with selector', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'up', selector: '~container' })
+    expect(target.calls).toEqual(['up:~container'])
   })
 
   it('dispatches waitFor on targets that support it', () => {

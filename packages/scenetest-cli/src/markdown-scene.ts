@@ -44,7 +44,7 @@
  * - If no `##` headings exist, `#` headings are promoted to scene names
  * - `actor <role> [alias]` switches the active actor for subsequent lines
  * - Action lines map to the standard text DSL (see `dsl.ts`)
- * - Lines may optionally start with `- ` for readability (stripped)
+ * - Lines may start with `- ` or `1. ` (markdown lists) for readability (stripped)
  * - `// comment` lines become `console.log` during execution
  * - Blank lines are ignored
  * - `[actor.field]` interpolates actor config values (id, username, email, etc.)
@@ -200,7 +200,7 @@ export function parseMarkdownScenes(
 
         // Indented line (2+ spaces from start of raw line) = sub-action
         if (/^\s{2,}/.test(nextRaw) && nextTrimmed) {
-          const actionLine = stripDash(nextTrimmed)
+          const actionLine = stripListPrefix(nextTrimmed)
           subActions.push(actionLine)
           i++
         } else {
@@ -225,7 +225,7 @@ export function parseMarkdownScenes(
 
     // ── Regular action line ───────────────────────────────────────────
 
-    const actionLine = stripDash(trimmed)
+    const actionLine = stripListPrefix(trimmed)
     currentBlock.actions.push({ type: 'action', line: actionLine })
   }
 
@@ -236,20 +236,29 @@ export function parseMarkdownScenes(
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Strip optional leading `- ` from an action line */
-function stripDash(line: string): string {
-  return line.startsWith('- ') ? line.slice(2) : line
+/**
+ * Strip optional markdown list prefix from an action line.
+ * Supports unordered (`- `), ordered (`1. `, `2. `, etc.), and plain lines.
+ */
+function stripListPrefix(line: string): string {
+  // Unordered: - action
+  if (line.startsWith('- ')) return line.slice(2)
+  // Ordered: 1. action, 2. action, 10. action, etc.
+  const orderedMatch = line.match(/^\d+\.\s+/)
+  if (orderedMatch) return line.slice(orderedMatch[0].length)
+  return line
 }
 
 /** Check if a line looks like a DSL action or macro invocation */
 function isActionLine(line: string): boolean {
   const actions = [
-    'openTo', 'see', 'notSee', 'seeText', 'seeToast', 'click',
+    'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
     'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
     'warnIf', 'up', 'prev', 'scrollToBottom', 'if',
   ]
-  const first = line.replace(/^- /, '').split(/\s/)[0]
-  return actions.includes(first) || /^[\w][\w-]*\(\)/.test(line)
+  const stripped = stripListPrefix(line)
+  const first = stripped.split(/\s/)[0]
+  return actions.includes(first) || /^[\w][\w-]*\(\)/.test(stripped)
 }
 
 // ---------------------------------------------------------------------------

@@ -103,6 +103,27 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
+  seeInView(selector: Selector): ActionChain {
+    const target = formatSelector(selector)
+    return this.addAction('seeInView', target, async () => {
+      const locator = resolveSelector(this.getScope(), selector)
+      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      // Verify element is within the viewport without scrolling
+      const inViewport = await locator.evaluate((el) => {
+        const rect = el.getBoundingClientRect()
+        const vh = window.innerHeight || document.documentElement.clientHeight
+        const vw = window.innerWidth || document.documentElement.clientWidth
+        return rect.top >= 0 && rect.left >= 0 && rect.bottom <= vh && rect.right <= vw
+      })
+      if (!inViewport) {
+        throw new Error(
+          `Element "${selector}" is visible but not in the viewport (requires scrolling)`
+        )
+      }
+      this.pushScope(locator)
+    })
+  }
+
   notSee(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('notSee', target, async () => {
@@ -212,25 +233,18 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
-  up(selector: Selector): ActionChain {
+  up(selector?: Selector): ActionChain {
+    if (!selector) {
+      return this.addAction('up', '(root)', async () => {
+        this.currentScope = this.page
+        this.scopeStack = []
+      })
+    }
     const target = formatSelector(selector)
     return this.addAction('up', target, async () => {
-      // Navigate up to an ancestor matching the selector
-      // This requires finding the ancestor from the page level
       const ancestorLocator = resolveSelector(this.page, selector)
-
-      // Verify the current scope is actually inside this ancestor
-      // by checking if the ancestor contains our current scope
-      const currentElement = this.currentScope as Locator
-      if ('locator' in this.currentScope) {
-        // Check if ancestor exists and is visible
-        await ancestorLocator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-        this.pushScope(ancestorLocator)
-      } else {
-        // If at page level, just find the selector
-        await ancestorLocator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-        this.pushScope(ancestorLocator)
-      }
+      await ancestorLocator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      this.pushScope(ancestorLocator)
     })
   }
 
@@ -491,6 +505,10 @@ export class ActorHandleImpl implements ActorHandle {
     return this.createChain().see(selector)
   }
 
+  seeInView(selector: Selector): ActionChain {
+    return this.createChain().seeInView(selector)
+  }
+
   notSee(selector: Selector): ActionChain {
     return this.createChain().notSee(selector)
   }
@@ -535,7 +553,7 @@ export class ActorHandleImpl implements ActorHandle {
     return this.createChain().scrollToBottom()
   }
 
-  up(selector: Selector): ActionChain {
+  up(selector?: Selector): ActionChain {
     return this.createChain().up(selector)
   }
 

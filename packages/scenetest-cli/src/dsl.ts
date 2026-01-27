@@ -19,9 +19,10 @@ import type { DslTarget, Selector } from './types.js'
  *   emit <message>                  - Emit to message bus
  *   waitFor <message>               - Block until message arrives (flow/reactive only)
  *   warnIf <selector> <message>     - Register script warning
- *   up <selector>                   - Navigate scope to ancestor
+ *   up [<selector>]                 - Navigate scope to ancestor (or page root if no selector)
  *   prev                            - Return to previous scope
  *   scrollToBottom                   - Scroll current scope to bottom
+ *   seeInView <selector>            - Wait for element visible AND in viewport (no scroll)
  *
  * Selectors can be:
  *   - Simple: 'button'
@@ -64,7 +65,7 @@ export function parseAction(line: string): ParsedAction {
   const rest = trimmed.slice(firstSpace + 1).trim()
 
   // Actions that take only a selector
-  const selectorOnlyActions = ['see', 'notSee', 'click', 'check', 'seeToast', 'up']
+  const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up']
 
   // Actions that take a value only (no selector)
   const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor']
@@ -134,6 +135,11 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
       target.see(selector)
       break
 
+    case 'seeInView':
+      if (!selector) throw new Error('seeInView requires a selector')
+      target.seeInView(selector)
+      break
+
     case 'notSee':
       if (!selector) throw new Error('notSee requires a selector')
       target.notSee(selector)
@@ -189,7 +195,6 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
       break
 
     case 'up':
-      if (!selector) throw new Error('up requires a selector')
       target.up(selector)
       break
 
