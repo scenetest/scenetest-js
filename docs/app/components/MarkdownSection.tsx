@@ -80,6 +80,8 @@ function scrollToHash(hash: string) {
 
 export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
   const [content, setContent] = useState<string>('<p>Loading...</p>')
+  const [rawMarkdown, setRawMarkdown] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { hash } = useLocation()
 
@@ -92,6 +94,7 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
         return res.text()
       })
       .then((md) => {
+        setRawMarkdown(md)
         setContent(marked(md) as string)
       })
       .catch((err) => {
@@ -99,6 +102,13 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
         setContent(`<p class="error">Error loading content from ${src}</p>`)
       })
   }, [src])
+
+  function handleCopyMarkdown() {
+    if (!rawMarkdown) return
+    navigator.clipboard.writeText(rawMarkdown)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   // Scroll to hash target after content renders or hash changes.
   // Delay slightly so the view transition animation doesn't reset scroll.
@@ -148,10 +158,16 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
   }, [content])
 
   return (
-    <div
-      ref={containerRef}
-      className={`markdown-section ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
-    />
+    <div className={`markdown-section ${className}`}>
+      {rawMarkdown && (
+        <button className="copy-md-btn" onClick={handleCopyMarkdown}>
+          {copied ? 'Copied!' : 'Copy markdown'}
+        </button>
+      )}
+      <div
+        ref={containerRef}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    </div>
   )
 }

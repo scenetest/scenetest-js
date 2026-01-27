@@ -493,13 +493,13 @@ export interface ReactiveActor {
 /**
  * Context passed to a flow function.
  *
- * `actor()` is async because it creates a browser context.
- * Everything after actor creation is synchronous declaration —
- * actions queue without executing.
+ * `actor()` is synchronous — it returns a reactive handle immediately.
+ * Browser contexts are created in parallel after the declaration phase,
+ * before actors begin draining their queues.
  */
 export interface FlowContext {
-  /** Get or create a reactive actor by role */
-  actor: (role: string) => Promise<ReactiveActor>
+  /** Get or create a reactive actor by role (synchronous — no await needed) */
+  actor: (role: string) => ReactiveActor
   /** The team index assigned to this flow */
   teamIndex: number
 }
@@ -507,8 +507,12 @@ export interface FlowContext {
 /**
  * Flow definition function.
  *
- * The function body is the *declaration phase* — actor DSL calls just queue
- * actions. After it returns, all actors drain their queues concurrently.
+ * The function body is the *declaration phase* — actor creation and DSL
+ * calls are all synchronous.  After it returns, browsers launch in parallel,
+ * then all actors drain their queues concurrently.
+ *
+ * The function may be async (for backward compatibility or if you need
+ * top-level await for non-actor reasons), but it doesn't need to be.
  */
 export type FlowFn = (context: FlowContext) => void | Promise<void>
 

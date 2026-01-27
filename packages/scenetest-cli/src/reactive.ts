@@ -27,9 +27,9 @@
  * ```ts
  * import { flow } from '@scenetest/cli'
  *
- * flow('two users chat', async ({ actor }) => {
- *   const alice = await actor('alice')
- *   const bob   = await actor('bob')
+ * flow('two users chat', ({ actor }) => {
+ *   const alice = actor('alice')
+ *   const bob   = actor('bob')
  *
  *   // Declaration phase — nothing executes yet
  *   alice.openTo('/chat')
@@ -40,7 +40,8 @@
  *   // ↑ no race: bob will poll for "Hello!" whenever he gets to that
  *   //   instruction in his queue.  alice may or may not have sent it yet.
  *
- *   // When this function returns, both actors drain concurrently.
+ *   // When this function returns, browsers launch in parallel,
+ *   // then both actors drain concurrently.
  * })
  * ```
  */
@@ -115,15 +116,15 @@ interface ConditionalMonitor {
  */
 export class ReactiveActorHandle implements ReactiveActor {
   readonly role: string
-  readonly page: Page
   readonly id: string
   readonly username?: string
   readonly email?: string
   readonly password?: string;
   [key: string]: unknown
 
+  private _page: Page | null
   private queue: QueuedAction[] = []
-  private currentScope: Page | Locator
+  private currentScope: Page | Locator | null
   private scopeStack: Array<Page | Locator> = []
   private warningTriggers: WarningTrigger[] = []
   private conditionalMonitors: ConditionalMonitor[] = []
@@ -135,7 +136,7 @@ export class ReactiveActorHandle implements ReactiveActor {
   constructor(
     role: string,
     config: ActorConfig,
-    page: Page,
+    page: Page | null,
     private bus: MessageBus,
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
@@ -143,7 +144,7 @@ export class ReactiveActorHandle implements ReactiveActor {
     private warnAfter: number
   ) {
     this.role = role
-    this.page = page
+    this._page = page
     this.currentScope = page
     this.id = config.id
 
@@ -155,6 +156,26 @@ export class ReactiveActorHandle implements ReactiveActor {
         ;(this as Record<string, unknown>)[key] = value
       }
     }
+  }
+
+  /**
+   * Playwright page for this actor.
+   * Available after page initialization (before drain).
+   */
+  get page(): Page {
+    if (!this._page) {
+      throw new Error(`Actor "${this.role}" page not initialized. Pages are created before drain.`)
+    }
+    return this._page
+  }
+
+  /**
+   * Set the Playwright page for this actor.
+   * Called by the flow runner after declaration, before drain.
+   */
+  _setPage(page: Page): void {
+    this._page = page
+    this.currentScope = page
   }
 
   // -----------------------------------------------------------------------
@@ -181,6 +202,14 @@ export class ReactiveActorHandle implements ReactiveActor {
   }
 
   // -----------------------------------------------------------------------
+  // Scope helper — scope is always set during drain (page is initialized)
+  // -----------------------------------------------------------------------
+
+  private get scope(): Page | Locator {
+    return this.currentScope ?? this.page
+  }
+
+  // -----------------------------------------------------------------------
   // Navigation
   // -----------------------------------------------------------------------
 
@@ -194,7 +223,7 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   scrollToBottom(): this {
     return this.push('scrollToBottom', undefined, async () => {
-      const scope = this.currentScope
+      const scope = this.scope
       if (scope === this.page) {
         await this.page.evaluate(() => {
           window.scrollTo(0, document.body.scrollHeight)
@@ -225,16 +254,16 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   see(selector: Selector): this {
     return this.push('see', selector, async () => {
-      const locator = resolveSelector(this.currentScope, selector)
+      const locator = resolveSelector(this.scope, selector)
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      this.scopeStack.push(this.currentScope)
+      this.scopeStack.push(this.scope)
       this.currentScope = locator
     })
   }
 
   notSee(selector: Selector): this {
     return this.push('notSee', selector, async () => {
-      await resolveSelector(this.currentScope, selector).waitFor({
+      await resolveSelector(this.scope, selector).waitFor({
         state: 'hidden',
         timeout: this.actionTimeout,
       })
@@ -245,14 +274,14 @@ export class ReactiveActorHandle implements ReactiveActor {
     return this.push('seeText', text, async () => {
       const locator = this.page.getByText(text).first()
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      this.scopeStack.push(this.currentScope)
+      this.scopeStack.push(this.scope)
       this.currentScope = locator
     })
   }
 
   seeToast(selector: Selector): this {
     return this.push('seeToast', selector, async () => {
-      const locator = resolveSelector(this.currentScope, selector)
+      const locator = resolveSelector(this.scope, selector)
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
     })
@@ -264,7 +293,7 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   click(selector: Selector): this {
     return this.push('click', selector, async () => {
-      await resolveSelector(this.currentScope, selector).click({
+      await resolveSelector(this.scope, selector).click({
         timeout: this.actionTimeout,
       })
     })
@@ -272,7 +301,7 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   typeInto(selector: Selector, value: string): this {
     return this.push('typeInto', `${selector}=${value}`, async () => {
-      await resolveSelector(this.currentScope, selector).fill(value, {
+      await resolveSelector(this.scope, selector).fill(value, {
         timeout: this.actionTimeout,
       })
     })
@@ -280,7 +309,7 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   check(selector: Selector): this {
     return this.push('check', selector, async () => {
-      await resolveSelector(this.currentScope, selector).check({
+      await resolveSelector(this.scope, selector).check({
         timeout: this.actionTimeout,
       })
     })
@@ -288,7 +317,7 @@ export class ReactiveActorHandle implements ReactiveActor {
 
   select(selector: Selector, value: string): this {
     return this.push('select', `${selector}=${value}`, async () => {
-      await resolveSelector(this.currentScope, selector).selectOption(value, {
+      await resolveSelector(this.scope, selector).selectOption(value, {
         timeout: this.actionTimeout,
       })
     })
@@ -305,7 +334,7 @@ export class ReactiveActorHandle implements ReactiveActor {
         state: 'visible',
         timeout: this.actionTimeout,
       })
-      this.scopeStack.push(this.currentScope)
+      this.scopeStack.push(this.scope)
       this.currentScope = ancestorLocator
     })
   }
@@ -440,6 +469,9 @@ export class ReactiveActorHandle implements ReactiveActor {
    * approach as `ActionChainImpl.executeWithWatchers`).
    */
   async drain(): Promise<void> {
+    if (!this._page) {
+      throw new Error(`Actor "${this.role}" cannot drain — page not initialized. Call _setPage() first.`)
+    }
     if (this._draining) {
       throw new Error(`Actor "${this.role}" is already draining`)
     }
@@ -642,8 +674,8 @@ export async function drainAll(actors: ReactiveActorHandle[]): Promise<void> {
  * ```ts
  * import { flow } from '@scenetest/cli'
  *
- * flow('user updates profile', async ({ actor }) => {
- *   const user = await actor('user')
+ * flow('user updates profile', ({ actor }) => {
+ *   const user = actor('user')
  *
  *   user.openTo('/login')
  *   user
@@ -665,9 +697,9 @@ export async function drainAll(actors: ReactiveActorHandle[]): Promise<void> {
  *
  * @example Multi-actor
  * ```ts
- * flow('two users chat', async ({ actor }) => {
- *   const alice = await actor('alice')
- *   const bob   = await actor('bob')
+ * flow('two users chat', ({ actor }) => {
+ *   const alice = actor('alice')
+ *   const bob   = actor('bob')
  *
  *   alice.openTo('/chat')
  *   alice.see('message-input').typeInto('message-input', 'Hello!').click('send')
@@ -679,7 +711,7 @@ export async function drainAll(actors: ReactiveActorHandle[]): Promise<void> {
  */
 export function flow(name: string, fn: FlowFn): void {
   // Register as a normal scene — the runner doesn't need to know it's
-  // reactive.  The wrapping scene fn handles the two-phase execution.
+  // reactive.  The wrapping scene fn handles the three-phase execution.
   scene(name, async (context) => {
     const session = getCurrentSession()
     if (!session) {
@@ -687,17 +719,18 @@ export function flow(name: string, fn: FlowFn): void {
     }
 
     const reactiveActors: ReactiveActorHandle[] = []
+    const actorRoles: string[] = []
 
     const flowContext: FlowContext = {
-      actor: async (role: string) => {
-        // Use the existing session to create browser context / page
-        const actorImpl = await session.getActor(role)
+      actor: (role: string) => {
+        // Resolve config synchronously — no browser needed yet
+        const config = session.getActorConfig(role)
 
-        // Wrap with reactive handle sharing the same infrastructure
+        // Create reactive handle without a page (deferred init)
         const reactive = new ReactiveActorHandle(
           role,
-          actorImpl.config,
-          actorImpl.page,
+          config,
+          null, // page created in phase 2
           session.getMessageBus(),
           session.timeline,
           session.warnings,
@@ -706,15 +739,28 @@ export function flow(name: string, fn: FlowFn): void {
         )
 
         reactiveActors.push(reactive)
+        actorRoles.push(role)
         return reactive
       },
       teamIndex: context.teamIndex,
     }
 
-    // Phase 1: Declaration — user code queues actions, nothing executes
-    await fn(flowContext)
+    // Phase 1: Declaration — user code queues actions, nothing executes.
+    //          actor() is synchronous so the flow body can be sync too.
+    const result = fn(flowContext)
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      await result
+    }
 
-    // Phase 2: Execution — all actors drain concurrently
+    // Phase 2: Initialize — create browser contexts in parallel
+    await Promise.all(
+      reactiveActors.map(async (actor, i) => {
+        const page = await session.createPage(actorRoles[i])
+        actor._setPage(page)
+      })
+    )
+
+    // Phase 3: Execution — all actors drain concurrently
     await drainAll(reactiveActors)
   })
 }

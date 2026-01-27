@@ -356,6 +356,36 @@ figure.screenshot figcaption {
   background: white;
 }
 
+/* Page-level copy markdown button */
+.markdown-section {
+  position: relative;
+}
+
+.copy-md-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: var(--text-light);
+}
+
+.markdown-section:hover .copy-md-btn {
+  opacity: 1;
+}
+
+.copy-md-btn:hover {
+  background: white;
+  color: var(--text);
+}
+
 /* Guides list */
 .guides-list {
   list-style: none;

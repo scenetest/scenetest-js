@@ -60,6 +60,30 @@ function createTestActor(
   return { actor, bus, timeline, warnings, page }
 }
 
+/**
+ * Create a ReactiveActorHandle with deferred page (null).
+ * Simulates how flow() creates actors before browser init.
+ */
+function createDeferredActor(role = 'user') {
+  const bus = new MessageBus()
+  const timeline: TimelineEntry[] = []
+  const warnings: ScriptWarning[] = []
+  const page = mockPage()
+
+  const actor = new ReactiveActorHandle(
+    role,
+    { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
+    null, // deferred — page set later via _setPage
+    bus,
+    timeline,
+    warnings,
+    5000,
+    60000
+  )
+
+  return { actor, bus, timeline, warnings, page }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -345,6 +369,62 @@ describe('ReactiveActorHandle', () => {
       // Main queue unaffected
       expect(actor.pending).toBe(0)
     })
+  })
+})
+
+describe('deferred page initialization', () => {
+  it('allows queueing actions before page is set', () => {
+    const { actor } = createDeferredActor()
+
+    actor.openTo('/login')
+    actor.see('form').typeInto('email', 'a@b.com').click('submit')
+
+    expect(actor.pending).toBe(4)
+  })
+
+  it('exposes config properties before page is set', () => {
+    const { actor } = createDeferredActor('alice')
+
+    expect(actor.role).toBe('alice')
+    expect(actor.id).toBe('alice-1')
+    expect(actor.email).toBe('alice@test.com')
+  })
+
+  it('throws when accessing page before initialization', () => {
+    const { actor } = createDeferredActor()
+
+    expect(() => actor.page).toThrow('page not initialized')
+  })
+
+  it('throws when draining without page', async () => {
+    const { actor } = createDeferredActor()
+
+    actor.do(async () => {})
+
+    await expect(actor.drain()).rejects.toThrow('page not initialized')
+  })
+
+  it('drains successfully after _setPage', async () => {
+    const { actor, page } = createDeferredActor()
+    const order: string[] = []
+
+    actor.do(async () => { order.push('first') })
+    actor.do(async () => { order.push('second') })
+
+    // Set page — simulates flow runner phase 2
+    actor._setPage(page as any)
+
+    await actor.drain()
+
+    expect(order).toEqual(['first', 'second'])
+  })
+
+  it('page getter works after _setPage', () => {
+    const { actor, page } = createDeferredActor()
+
+    actor._setPage(page as any)
+
+    expect(() => actor.page).not.toThrow()
   })
 })
 

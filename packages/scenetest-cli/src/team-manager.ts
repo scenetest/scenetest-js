@@ -148,6 +148,42 @@ export class TeamSession {
   ) {}
 
   /**
+   * Get the actor config for a role (sync — no browser setup).
+   * Used by flow() to create reactive handles before browser init.
+   */
+  getActorConfig(role: string): ActorConfig {
+    const config = this.team[role]
+    if (!config) {
+      throw new Error(`Role "${role}" not found in team. Available roles: ${Object.keys(this.team).join(', ')}`)
+    }
+    return config
+  }
+
+  /**
+   * Create a browser context + page for a role and wire up assertion collection.
+   * Returns the Page. Used by flow() to initialize actors after declaration.
+   */
+  async createPage(role: string): Promise<Page> {
+    const config = this.team[role]
+    if (!config) {
+      throw new Error(`Role "${role}" not found in team. Available roles: ${Object.keys(this.team).join(', ')}`)
+    }
+
+    const context = await this.browser.newContext({
+      ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
+    })
+    const page = await context.newPage()
+
+    await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
+      const enriched = { ...result, actor: role }
+      this.assertions.push(enriched)
+    })
+
+    this.contexts.set(role, context)
+    return page
+  }
+
+  /**
    * Get or create an actor for a role
    */
   async getActor(role: string): Promise<ActorHandleImpl> {
