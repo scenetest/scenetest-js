@@ -1,6 +1,6 @@
 # Writing Tests with Scenetest
 
-> **For LLMs and humans writing scenetest specs in application repos.**
+> **For humans and language models writing scenetest specs in application repos.**
 > This is the test-authoring reference. For contributing to scenetest itself, see the repo's CLAUDE.md.
 
 ---
