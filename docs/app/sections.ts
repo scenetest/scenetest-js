@@ -17,12 +17,7 @@ export const guides: SectionItem[] = [
     description:
       'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
   },
-  {
-    slug: 'llm-prompt',
-    title: 'Using AI to Write Specs',
-    description:
-      'A copyable prompt for using LLMs to convert natural language test descriptions into scene specs.',
-  },
+
   {
     slug: 'building-teams',
     title: 'Building Good Teams of Actors',
