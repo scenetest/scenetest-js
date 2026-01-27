@@ -262,6 +262,27 @@ export class ReactiveActorHandle implements ReactiveActor {
     })
   }
 
+  seeInView(selector: Selector): this {
+    return this.push('seeInView', selector, async () => {
+      const locator = resolveSelector(this.scope, selector)
+      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      // Verify element is within the viewport without scrolling
+      const inViewport = await locator.evaluate((el) => {
+        const rect = el.getBoundingClientRect()
+        const vh = window.innerHeight || document.documentElement.clientHeight
+        const vw = window.innerWidth || document.documentElement.clientWidth
+        return rect.top >= 0 && rect.left >= 0 && rect.bottom <= vh && rect.right <= vw
+      })
+      if (!inViewport) {
+        throw new Error(
+          `Element "${selector}" is visible but not in the viewport (requires scrolling)`
+        )
+      }
+      this.scopeStack.push(this.scope)
+      this.currentScope = locator
+    })
+  }
+
   notSee(selector: Selector): this {
     return this.push('notSee', selector, async () => {
       await resolveSelector(this.scope, selector).waitFor({
@@ -337,7 +358,13 @@ export class ReactiveActorHandle implements ReactiveActor {
   // Scope navigation
   // -----------------------------------------------------------------------
 
-  up(selector: Selector): this {
+  up(selector?: Selector): this {
+    if (!selector) {
+      return this.push('up', '(root)', async () => {
+        this.currentScope = this.page
+        this.scopeStack = []
+      })
+    }
     return this.push('up', selector, async () => {
       const ancestorLocator = resolveSelector(this.page, selector)
       await ancestorLocator.waitFor({

@@ -247,6 +247,13 @@ export interface ActorHandle extends ActorConfig {
    */
   see(selector: Selector): ActionChain
 
+  /**
+   * Wait for element to be visible, in the viewport (no scroll), and set it as scope.
+   * Like see() but additionally verifies the element is within the current viewport bounds.
+   * Fails if the element exists but requires scrolling to reach.
+   */
+  seeInView(selector: Selector): ActionChain
+
   /** Wait for element to NOT be visible (hidden or detached) */
   notSee(selector: Selector): ActionChain
 
@@ -291,14 +298,16 @@ export interface ActorHandle extends ActorConfig {
 
   /**
    * Navigate up to an ancestor matching the selector.
+   * If no selector is given, resets scope to page root.
    * Use with aliases like ~container to find named containers.
    *
    * @example
    * ```ts
    * user.see('button').up('~container').see('other-element')
+   * user.see('deep nested thing').up() // back to page root
    * ```
    */
-  up(selector: Selector): ActionChain
+  up(selector?: Selector): ActionChain
 
   /**
    * Return to the previously held scope.
@@ -361,6 +370,12 @@ export interface ActionChain extends PromiseLike<void> {
    */
   see(selector: Selector): ActionChain
 
+  /**
+   * Wait for element to be visible AND in the viewport (no scroll), and set it as scope.
+   * Fails if the element exists but requires scrolling to reach.
+   */
+  seeInView(selector: Selector): ActionChain
+
   /** Wait for element to NOT be visible (hidden or detached) */
   notSee(selector: Selector): ActionChain
 
@@ -394,16 +409,8 @@ export interface ActionChain extends PromiseLike<void> {
   /** Scroll the current scope (or nearest scrollable ancestor) to the bottom */
   scrollToBottom(): ActionChain
 
-  /**
-   * Navigate up to an ancestor matching the selector.
-   * Use with aliases like ~container to find named containers.
-   *
-   * @example
-   * ```ts
-   * user.see('button').up('~container').see('other-element')
-   * ```
-   */
-  up(selector: Selector): ActionChain
+  /** Navigate up to ancestor matching selector, or reset to page root if no selector */
+  up(selector?: Selector): ActionChain
 
   /**
    * Return to the previously held scope.
@@ -463,6 +470,7 @@ export interface RegisteredScene {
 export interface DslTarget {
   openTo(url: string): unknown
   see(selector: Selector): unknown
+  seeInView(selector: Selector): unknown
   notSee(selector: Selector): unknown
   seeText(text: string): unknown
   seeToast(selector: Selector): unknown
@@ -473,7 +481,7 @@ export interface DslTarget {
   wait(ms: number): unknown
   emit(message: string): unknown
   warnIf(selector: Selector, message: string): void
-  up(selector: Selector): unknown
+  up(selector?: Selector): unknown
   prev(): unknown
   scrollToBottom(): unknown
   /** Block until message arrives on the bus (reactive/flow model only) */
@@ -519,6 +527,7 @@ export interface ReactiveActor {
 
   // -- Observation --
   see(selector: Selector): ReactiveActor
+  seeInView(selector: Selector): ReactiveActor
   notSee(selector: Selector): ReactiveActor
   seeText(text: string): ReactiveActor
   seeToast(selector: Selector): ReactiveActor
@@ -530,7 +539,7 @@ export interface ReactiveActor {
   select(selector: Selector, value: string): ReactiveActor
 
   // -- Scope navigation --
-  up(selector: Selector): ReactiveActor
+  up(selector?: Selector): ReactiveActor
   prev(): ReactiveActor
 
   // -- Timing & coordination --

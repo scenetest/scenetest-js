@@ -135,6 +135,46 @@ actor user
     ])
   })
 
+  it('strips numbered list prefix from action lines', () => {
+    const content = `
+# test
+
+actor user
+1. openTo /login
+2. see login-form
+3. typeInto email alice@test.com
+4. click submit
+`
+    const scenes = parseMarkdownScenes(content, '/test/numbered.spec.md')
+    expect(scenes[0].blocks[0].actions).toEqual([
+      { type: 'action', line: 'openTo /login' },
+      { type: 'action', line: 'see login-form' },
+      { type: 'action', line: 'typeInto email alice@test.com' },
+      { type: 'action', line: 'click submit' },
+    ])
+  })
+
+  it('handles mixed list formats (plain, dash, numbered)', () => {
+    const content = `
+# test
+
+actor user
+openTo /login
+- see login-form
+1. typeInto email alice@test.com
+2. click submit
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/mixed.spec.md')
+    expect(scenes[0].blocks[0].actions).toEqual([
+      { type: 'action', line: 'openTo /login' },
+      { type: 'action', line: 'see login-form' },
+      { type: 'action', line: 'typeInto email alice@test.com' },
+      { type: 'action', line: 'click submit' },
+      { type: 'action', line: 'see dashboard' },
+    ])
+  })
+
   it('parses comments', () => {
     const content = `
 # test
@@ -251,6 +291,35 @@ click
     const scenes = parseMarkdownScenes(content, '/test/bare-click.spec.md')
     const actions = scenes[0].blocks[0].actions
     expect(actions[1]).toEqual({ type: 'action', line: 'click' })
+  })
+
+  it('parses seeInView action', () => {
+    const content = `
+# test
+
+actor user
+openTo /
+seeInView hero-banner
+click get-started
+`
+    const scenes = parseMarkdownScenes(content, '/test/seeInView.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[1]).toEqual({ type: 'action', line: 'seeInView hero-banner' })
+  })
+
+  it('parses bare up (no selector)', () => {
+    const content = `
+# test
+
+actor user
+see sidebar menu-item
+click
+up
+see main-content
+`
+    const scenes = parseMarkdownScenes(content, '/test/bare-up.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[2]).toEqual({ type: 'action', line: 'up' })
   })
 
   it('parses waitFor actions', () => {
