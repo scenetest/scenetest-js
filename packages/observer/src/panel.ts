@@ -89,29 +89,41 @@ function applyCornerClass(el: HTMLElement, corner: CornerPosition): void {
 }
 
 /**
- * Determine which corner to snap to based on the panel's current center position
+ * Calculate the pixel position (top, left) for a given corner
  */
-function getTargetCorner(panelRect: DOMRect): CornerPosition {
-  const centerX = panelRect.left + panelRect.width / 2
-  const centerY = panelRect.top + panelRect.height / 2
+function getCornerPosition(corner: CornerPosition, panelWidth: number, panelHeight: number): { top: number; left: number } {
   const vpW = window.innerWidth
   const vpH = window.innerHeight
+  const margin = 16
 
-  const isRight = centerX > vpW / 2
-  const isBottom = centerY > vpH / 2
-
-  if (isBottom && isRight) return 'bottom-right'
-  if (isBottom && !isRight) return 'bottom-left'
-  if (!isBottom && isRight) return 'top-right'
-  return 'top-left'
+  switch (corner) {
+    case 'top-left': return { top: margin, left: margin }
+    case 'top-right': return { top: margin, left: vpW - panelWidth - margin }
+    case 'bottom-left': return { top: vpH - panelHeight - margin, left: margin }
+    case 'bottom-right': return { top: vpH - panelHeight - margin, left: vpW - panelWidth - margin }
+  }
 }
 
 const DRAG_THRESHOLD = 5 // px of movement before we consider it a drag
+const DAMPING = 0.3 // Rubber-band resistance (panel moves at 30% of mouse displacement)
+const FLICK_VELOCITY = 250 // px/s minimum to trigger a flick
+const VELOCITY_WINDOW = 80 // ms of recent motion to sample for velocity
+
+interface PointerSample {
+  x: number
+  y: number
+  t: number
+}
 
 /**
- * Set up drag-and-snap behavior on the panel header.
- * Differentiates click (toggle collapse) from drag (reposition).
- * Supports both mouse and touch events.
+ * Set up drag-and-snap behavior with rubber-band tension and velocity-based flick.
+ *
+ * - Dragging creates tension: the panel resists movement as if tethered to its corner.
+ * - Releasing with enough velocity flings the panel to the corner matching the
+ *   flick direction (up-left → top-left, down-right → bottom-right, etc.).
+ * - Releasing without enough velocity snaps the panel back to its original corner.
+ * - Click (no/minimal movement) toggles collapse.
+ * - Supports both mouse and touch.
  */
 function setupDrag(panelEl: HTMLDivElement): void {
   const header = panelEl.querySelector('#scenetest-header') as HTMLElement
@@ -120,19 +132,25 @@ function setupDrag(panelEl: HTMLDivElement): void {
   let isDragging = false
   let startX = 0
   let startY = 0
-  let offsetX = 0
-  let offsetY = 0
+  let anchorX = 0 // Panel's resting left position before drag
+  let anchorY = 0 // Panel's resting top position before drag
+  let isAnimating = false
+  const samples: PointerSample[] = []
 
   function onPointerDown(clientX: number, clientY: number): void {
+    if (isAnimating) return
     const rect = panelEl.getBoundingClientRect()
     startX = clientX
     startY = clientY
-    offsetX = clientX - rect.left
-    offsetY = clientY - rect.top
+    anchorX = rect.left
+    anchorY = rect.top
     isDragging = false
+    samples.length = 0
+    samples.push({ x: clientX, y: clientY, t: performance.now() })
   }
 
   function onPointerMove(clientX: number, clientY: number): void {
+    if (isAnimating) return
     const dx = clientX - startX
     const dy = clientY - startY
 
@@ -140,43 +158,112 @@ function setupDrag(panelEl: HTMLDivElement): void {
       if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
       isDragging = true
       panelEl.classList.add('dragging')
-      // Switch to top/left positioning for smooth dragging
-      const rect = panelEl.getBoundingClientRect()
-      panelEl.style.top = rect.top + 'px'
-      panelEl.style.left = rect.left + 'px'
+      // Switch to explicit top/left at current anchor position
+      panelEl.style.top = anchorY + 'px'
+      panelEl.style.left = anchorX + 'px'
       panelEl.style.bottom = 'auto'
       panelEl.style.right = 'auto'
       panelEl.classList.remove('corner-bottom-right', 'corner-bottom-left', 'corner-top-right', 'corner-top-left')
     }
 
-    const newLeft = clientX - offsetX
-    const newTop = clientY - offsetY
-    panelEl.style.left = newLeft + 'px'
-    panelEl.style.top = newTop + 'px'
+    // Track velocity samples
+    samples.push({ x: clientX, y: clientY, t: performance.now() })
+
+    // Rubber-band: panel moves at DAMPING rate of mouse displacement from anchor
+    const dampedLeft = anchorX + dx * DAMPING
+    const dampedTop = anchorY + dy * DAMPING
+    panelEl.style.left = dampedLeft + 'px'
+    panelEl.style.top = dampedTop + 'px'
+  }
+
+  function getVelocity(): { vx: number; vy: number } {
+    const now = performance.now()
+    const recent = samples.filter(s => now - s.t < VELOCITY_WINDOW)
+    if (recent.length < 2) return { vx: 0, vy: 0 }
+    const first = recent[0]
+    const last = recent[recent.length - 1]
+    const dt = (last.t - first.t) / 1000
+    if (dt < 0.001) return { vx: 0, vy: 0 }
+    return {
+      vx: (last.x - first.x) / dt,
+      vy: (last.y - first.y) / dt,
+    }
+  }
+
+  function getFlickCorner(vx: number, vy: number): CornerPosition | null {
+    const speed = Math.sqrt(vx * vx + vy * vy)
+    if (speed < FLICK_VELOCITY) return null
+
+    // Direction of velocity determines target corner
+    const target: CornerPosition = vy < 0
+      ? (vx < 0 ? 'top-left' : 'top-right')
+      : (vx < 0 ? 'bottom-left' : 'bottom-right')
+
+    // Don't flick to the corner we're already in
+    if (target === panelCorner) return null
+
+    return target
   }
 
   function onPointerUp(): void {
-    if (isDragging) {
-      panelEl.classList.remove('dragging')
-      // Read position before clearing inline styles
-      const rect = panelEl.getBoundingClientRect()
-      const corner = getTargetCorner(rect)
-      // Clear inline positioning and apply corner class
+    if (!isDragging || isAnimating) {
+      isDragging = false
+      return
+    }
+
+    panelEl.classList.remove('dragging')
+
+    const { vx, vy } = getVelocity()
+    const flickTarget = getFlickCorner(vx, vy)
+    const targetCorner = flickTarget ?? panelCorner
+    const isFlick = flickTarget !== null
+
+    // Calculate target pixel position
+    const rect = panelEl.getBoundingClientRect()
+    const dest = getCornerPosition(targetCorner, rect.width, rect.height)
+
+    // Animate to target
+    isAnimating = true
+    panelEl.classList.add(isFlick ? 'flicking' : 'snapping')
+
+    // Force reflow so the browser captures the current position before we set the target
+    void panelEl.offsetHeight
+
+    panelEl.style.top = dest.top + 'px'
+    panelEl.style.left = dest.left + 'px'
+
+    // Clean up after animation completes
+    let cleaned = false
+    const cleanup = () => {
+      if (cleaned) return
+      cleaned = true
+      panelEl.classList.remove('snapping', 'flicking')
       panelEl.style.top = ''
       panelEl.style.left = ''
       panelEl.style.bottom = ''
       panelEl.style.right = ''
-      setPanelCorner(corner)
-      applyCornerClass(panelEl, corner)
+      if (isFlick) setPanelCorner(targetCorner)
+      applyCornerClass(panelEl, targetCorner)
+      isAnimating = false
     }
+
+    panelEl.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
+      if (e.target === panelEl && (e.propertyName === 'top' || e.propertyName === 'left')) {
+        panelEl.removeEventListener('transitionend', onEnd)
+        cleanup()
+      }
+    })
+    // Fallback in case transitionend doesn't fire
+    setTimeout(cleanup, isFlick ? 450 : 350)
+
     isDragging = false
   }
 
   // Mouse events
   header.addEventListener('mousedown', (e: MouseEvent) => {
-    // Ignore clicks on interactive children (count badges, etc.)
     const target = e.target as HTMLElement
     if (target.classList.contains('scenetest-count')) return
+    if (isAnimating) return
 
     e.preventDefault()
     onPointerDown(e.clientX, e.clientY)
@@ -202,6 +289,7 @@ function setupDrag(panelEl: HTMLDivElement): void {
   header.addEventListener('touchstart', (e: TouchEvent) => {
     const target = e.target as HTMLElement
     if (target.classList.contains('scenetest-count')) return
+    if (isAnimating) return
 
     const touch = e.touches[0]
     onPointerDown(touch.clientX, touch.clientY)

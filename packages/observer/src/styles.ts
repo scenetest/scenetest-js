@@ -19,11 +19,17 @@ export const panelStyles = `
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
-  transition: top 0.25s ease, bottom 0.25s ease, left 0.25s ease, right 0.25s ease;
 }
 #scenetest-panel.dragging {
-  transition: none;
-  opacity: 0.9;
+  opacity: 0.92;
+}
+#scenetest-panel.snapping {
+  transition: top 0.3s cubic-bezier(0.2, 0, 0.2, 1),
+              left 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+}
+#scenetest-panel.flicking {
+  transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 #scenetest-panel.corner-bottom-right {
   bottom: 16px;
