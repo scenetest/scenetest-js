@@ -386,6 +386,61 @@ figure.screenshot figcaption {
   color: var(--text);
 }
 
+/* ── Tabbed code blocks ── */
+.tabbed-code {
+  margin: 28px 0;
+}
+
+.tabbed-code-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding-left: 4px;
+}
+
+.tabbed-code-tab {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.tabbed-code-tab:hover {
+  color: var(--text);
+}
+
+.tabbed-code-tab.active {
+  color: var(--text);
+  background: var(--code-bg);
+  border-color: var(--border);
+}
+
+.tabbed-code-panel {
+  display: none;
+}
+
+.tabbed-code-panel.active {
+  display: block;
+}
+
+.tabbed-code-panel .code-block {
+  margin: 0;
+}
+
+.tabbed-code-panel .code-block pre {
+  margin: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
+}
+
 /* Guides list */
 .guides-list {
   list-style: none;

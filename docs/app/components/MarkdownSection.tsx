@@ -37,8 +37,13 @@ renderer.heading = function ({ text, depth }: { text: string; depth: number }) {
 }
 
 renderer.code = function (code: { text: string; lang?: string }) {
-  const lang = code.lang || ''
+  const rawLang = code.lang || ''
   const text = code.text
+
+  // Check for tab label: ```ts [Tab Label]
+  const tabMatch = rawLang.match(/^(\w*)\s*\[(.+)\]$/)
+  const lang = tabMatch ? tabMatch[1] : rawLang
+  const tabLabel = tabMatch ? tabMatch[2] : ''
 
   // Highlight at parse time so the HTML already has hljs classes baked in.
   // No post-render DOM walk needed.
@@ -57,8 +62,12 @@ renderer.code = function (code: { text: string; lang?: string }) {
   // Double-encode to handle all special characters safely in HTML attributes
   const encodedText = encodeURIComponent(encodeURIComponent(text))
 
+  const tabAttr = tabLabel
+    ? ` data-tab="${tabLabel.replace(/"/g, '&quot;')}"`
+    : ''
+
   return `
-    <div class="code-block" data-language="${lang}">
+    <div class="code-block"${tabAttr} data-language="${lang}">
       <button class="copy-btn" data-code="${encodedText}">
         Copy
       </button>
@@ -68,6 +77,85 @@ renderer.code = function (code: { text: string; lang?: string }) {
 }
 
 marked.use({ renderer })
+
+/**
+ * Post-process marked HTML to group consecutive code blocks that have
+ * data-tab attributes into a single tabbed container.
+ *
+ * Authoring convention in markdown:
+ *
+ *   ```ts [Async Spec]
+ *   scene('login', async ({ actor }) => { ... })
+ *   ```
+ *
+ *   ```ts [Flow]
+ *   flow('login', async ({ actor }) => { ... })
+ *   ```
+ *
+ *   ```ts [DSL]
+ *   ['openTo /login', 'see login-form', ...]
+ *   ```
+ *
+ * Consecutive fenced blocks whose language includes [Label] are merged
+ * into a single .tabbed-code widget.
+ */
+function groupTabbedBlocks(html: string): string {
+  // Match a single tabbed code block.  The inner HTML never contains a
+  // nested <div>, so a lazy match to the first </div> is safe.
+  const blockRe =
+    /<div class="code-block" data-tab="([^"]*)"[^>]*>[\s\S]*?<\/div>/g
+
+  // Collect every tabbed block with its position in the source string.
+  interface Match { full: string; tab: string; start: number; end: number }
+  const matches: Match[] = []
+  let m: RegExpExecArray | null
+  while ((m = blockRe.exec(html)) !== null) {
+    matches.push({ full: m[0], tab: m[1], start: m.index, end: m.index + m[0].length })
+  }
+
+  if (matches.length === 0) return html
+
+  // Group consecutive matches (only whitespace between them).
+  const groups: Match[][] = []
+  let cur: Match[] = [matches[0]]
+  for (let i = 1; i < matches.length; i++) {
+    const between = html.slice(cur[cur.length - 1].end, matches[i].start).trim()
+    if (between === '') {
+      cur.push(matches[i])
+    } else {
+      if (cur.length > 1) groups.push(cur)
+      cur = [matches[i]]
+    }
+  }
+  if (cur.length > 1) groups.push(cur)
+
+  // Replace each group (iterate backwards to preserve positions).
+  let result = html
+  for (let g = groups.length - 1; g >= 0; g--) {
+    const group = groups[g]
+    const start = group[0].start
+    const end = group[group.length - 1].end
+
+    const tabs = group
+      .map(
+        (b, i) =>
+          `<button class="tabbed-code-tab${i === 0 ? ' active' : ''}" data-tab-index="${i}">${b.tab}</button>`,
+      )
+      .join('')
+
+    const panels = group
+      .map(
+        (b, i) =>
+          `<div class="tabbed-code-panel${i === 0 ? ' active' : ''}">${b.full}</div>`,
+      )
+      .join('')
+
+    const widget = `<div class="tabbed-code"><div class="tabbed-code-tabs">${tabs}</div>${panels}</div>`
+    result = result.slice(0, start) + widget + result.slice(end)
+  }
+
+  return result
+}
 
 function scrollToHash(hash: string) {
   const id = hash.replace(/^#/, '')
@@ -95,7 +183,7 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
       })
       .then((md) => {
         setRawMarkdown(md)
-        setContent(marked(md) as string)
+        setContent(groupTabbedBlocks(marked(md) as string))
       })
       .catch((err) => {
         console.error('Error loading markdown:', err)
@@ -155,6 +243,35 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
 
     document.addEventListener('click', handleCopyClick)
     return () => document.removeEventListener('click', handleCopyClick)
+  }, [content])
+
+  // Tab switching for tabbed code blocks
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    function handleTabClick(e: MouseEvent) {
+      const tab = (e.target as HTMLElement).closest('.tabbed-code-tab') as HTMLElement | null
+      if (!tab) return
+      const tabbed = tab.closest('.tabbed-code')
+      if (!tabbed) return
+
+      const index = tab.dataset.tabIndex
+      if (index == null) return
+
+      // Update active tab
+      tabbed.querySelectorAll('.tabbed-code-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === Number(index))
+      })
+
+      // Update active panel
+      tabbed.querySelectorAll('.tabbed-code-panel').forEach((p, i) => {
+        p.classList.toggle('active', i === Number(index))
+      })
+    }
+
+    container.addEventListener('click', handleTabClick)
+    return () => container.removeEventListener('click', handleTabClick)
   }, [content])
 
   return (
