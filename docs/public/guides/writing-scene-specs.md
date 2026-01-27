@@ -8,7 +8,37 @@ Scene specs describe **user journeys**—the flows a person takes through your a
 
 Scenetest offers three authoring styles. Every example in this guide is shown all three ways — click the tabs to compare:
 
-```ts [Async Spec]
+```ts [Declarative flow]
+import { flow } from '@scenetest/cli'
+
+flow('user completes onboarding', ({ actor }) => {
+  const user = actor('new-user')
+
+  // Declarations — nothing executes until the function returns
+  user.openTo('/')
+  user.see('welcome-box')
+  user.click('continue-button')
+  user.see('onboarding-step')
+})
+```
+
+```ts [Text DSL]
+import { flow } from '@scenetest/cli'
+
+// Also works in async mode as `await user.dsl()`
+flow('user completes onboarding', ({ actor }) => {
+  const user = actor('new-user')
+
+  user.dsl(`
+    openTo /
+    see welcome-box
+    click continue-button
+    see onboarding-step
+  `)
+})
+```
+
+```ts [Async spec]
 import { scene } from '@scenetest/cli'
 
 scene('user completes onboarding', async ({ actor }) => {
@@ -21,36 +51,7 @@ scene('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-```ts [Flow]
-import { flow } from '@scenetest/cli'
-
-flow('user completes onboarding', async ({ actor }) => {
-  const user = await actor('new-user')
-
-  // Declarations — nothing executes until the function returns
-  user.openTo('/')
-  user.see('welcome-box')
-  user.click('continue-button')
-  user.see('onboarding-step')
-})
-```
-
-```ts [DSL]
-import { scene, runDsl } from '@scenetest/cli'
-
-scene('user completes onboarding', async ({ actor }) => {
-  const user = await actor('new-user')
-
-  await runDsl(user, [
-    'openTo /',
-    'see welcome-box',
-    'click continue-button',
-    'see onboarding-step',
-  ])
-})
-```
-
-**Async Spec** is the standard model — you `await` each action and control the timeline explicitly. **Flow** is declarative — actions queue up and all actors drain concurrently when the function returns, synchronising through the DOM itself. **DSL** is a text format for simpler flows that lends itself to macros and non-technical authors.
+**Declarative flow** is the reactive model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is a string format for simpler flows that lends itself to macros and non-technical authors. **Async spec** is the explicit model — you `await` each action and control the timeline yourself.
 
 The test writer focuses on **what** should happen. Engineers then add the necessary hooks (test IDs, data attributes) to make the tests pass.
 
@@ -175,23 +176,9 @@ Warnings are reported separately in `SceneReport.warnings` and are useful for tr
 
 Write specs from the user's perspective. Each scene should tell a story:
 
-```ts [Async Spec]
-scene('user can complete checkout', async ({ actor }) => {
-  const customer = await actor('customer')
-
-  await customer.openTo('/cart')
-  await customer.see('cart-items')
-  await customer.click('checkout-button')
-  await customer.see('payment-form')
-  await customer.typeInto('card-number', '4242424242424242')
-  await customer.click('pay-button')
-  await customer.seeText('Order confirmed!')
-})
-```
-
-```ts [Flow]
-flow('user can complete checkout', async ({ actor }) => {
-  const customer = await actor('customer')
+```ts [Declarative flow]
+flow('user can complete checkout', ({ actor }) => {
+  const customer = actor('customer')
 
   customer.openTo('/cart')
   customer.see('cart-items')
@@ -203,19 +190,34 @@ flow('user can complete checkout', async ({ actor }) => {
 })
 ```
 
-```ts [DSL]
+```ts [Text DSL]
+// Also works in async mode as `await customer.dsl()`
+flow('user can complete checkout', ({ actor }) => {
+  const customer = actor('customer')
+
+  customer.dsl(`
+    openTo /cart
+    see cart-items
+    click checkout-button
+    see payment-form
+    typeInto card-number 4242424242424242
+    click pay-button
+    seeText Order confirmed!
+  `)
+})
+```
+
+```ts [Async spec]
 scene('user can complete checkout', async ({ actor }) => {
   const customer = await actor('customer')
 
-  await runDsl(customer, [
-    'openTo /cart',
-    'see cart-items',
-    'click checkout-button',
-    'see payment-form',
-    'typeInto card-number 4242424242424242',
-    'click pay-button',
-    'seeText Order confirmed!',
-  ])
+  await customer.openTo('/cart')
+  await customer.see('cart-items')
+  await customer.click('checkout-button')
+  await customer.see('payment-form')
+  await customer.typeInto('card-number', '4242424242424242')
+  await customer.click('pay-button')
+  await customer.seeText('Order confirmed!')
 })
 ```
 
