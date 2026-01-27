@@ -23,6 +23,12 @@ export const panelStyles = `
 #scenetest-panel.dragging {
   opacity: 0.92;
 }
+#scenetest-panel.unsnapping {
+  transition: top 0.12s cubic-bezier(0.2, 0, 0, 1),
+              left 0.12s cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 0.12s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
 #scenetest-panel.snapping {
   transition: top 0.3s cubic-bezier(0.2, 0, 0.2, 1),
               left 0.3s cubic-bezier(0.2, 0, 0.2, 1);
