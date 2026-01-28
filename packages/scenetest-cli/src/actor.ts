@@ -1,5 +1,5 @@
 import type { Page, BrowserContext, Locator } from 'playwright'
-import type { ActorConfig, ActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector } from './types.js'
+import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
@@ -53,7 +53,7 @@ class ActionChainImpl implements ActionChain {
   private scopeStack: Array<Page | Locator> = []
 
   constructor(
-    private actor: ActorHandleImpl,
+    private actor: SequentialActorHandleImpl,
     private page: Page,
     private bus: MessageBus,
     private timeline: TimelineEntry[],
@@ -424,9 +424,10 @@ class ActionChainImpl implements ActionChain {
 }
 
 /**
- * Actor handle implementation with chainable DSL
+ * Sequential actor handle implementation (classic driver model).
+ * Each DSL method creates a new ActionChain, executed on await.
  */
-export class ActorHandleImpl implements ActorHandle {
+export class SequentialActorHandleImpl implements SequentialActorHandle {
   readonly role: string
   readonly page: Page
   readonly context: BrowserContext

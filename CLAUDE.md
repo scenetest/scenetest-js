@@ -50,8 +50,8 @@ packages/
 
 There are two scene-authoring models with separate implementations:
 
-- **`scene()`** — await-driven sequential orchestration. Implemented in `actor.ts` (`ActorHandleImpl`, `ActionChainImpl`).
-- **`flow()`** — reactive concurrent draining. Implemented in `reactive.ts` (`ReactiveActorHandle`, `drainAll()`).
+- **`scene()`** — await-driven sequential orchestration. Implemented in `actor.ts` (`SequentialActorHandleImpl`, `ActionChainImpl`).
+- **`flow()`** — reactive concurrent draining. Implemented in `reactive.ts` (`ConcurrentActorHandleImpl`, `drainAll()`).
 
 Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runner.ts`) does not know which model a scene uses. Before 1.0, one model will be removed — see `scene-vs-flow.md` for the decision criteria and what needs to be ripped out for each path.
 
@@ -66,8 +66,8 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 
 ### CLI (`packages/scenetest-cli/src/`)
 - `scene.ts` — `scene()` registration, `when()` coordination, `runScene()`
-- `actor.ts` — `ActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (scene model)
-- `reactive.ts` — `ReactiveActorHandle`, `drainAll()`, `flow()` registration (flow model)
+- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (scene model)
+- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `flow()` registration (flow model)
 - `selectors.ts` — `resolveSelector()`, `explainSelector()`, alias registry
 - `dsl.ts` — `runDsl()`, `defineMacro()`, `runMacro()`, text DSL parser
 - `message-bus.ts` — `MessageBus` with sticky messages
@@ -75,7 +75,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks
 - `cli.ts` — CLI entry point, report generation (HTML/JSON)
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
-- `types.ts` — All type definitions (`ScenetestConfig`, `ActorHandle`, `ActionChain`, `ReactiveActor`, `FlowContext`, etc.)
+- `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `FlowContext`, etc.)
 
 ### Vite Plugin (`packages/vite-plugin/src/`)
 - `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)

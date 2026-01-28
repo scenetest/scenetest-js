@@ -7,19 +7,19 @@
  * ```markdown
  * # User friend requests
  * ## new user signs up and gets a friend request
- * actor: new-user
+ * new-user:
  * - openTo /
  * - see welcome-box
  * - click continue-button
  *
- * actor: primary-user
+ * primary-user:
  * - openTo /friends
  * - click main-navbar search
  * - typeInto search-input [new-user.username]
  * - see search-results-section
  * - click friend-request-button
  *
- * actor: new-user
+ * new-user:
  * - seeToast friend-request
  * - see navbar notifications-badge
  * - click
@@ -27,7 +27,7 @@
  * - click
  *
  * ## old user re-activates account
- * actor: returning-user
+ * returning-user:
  * - openTo /login
  * - see login-form
  * - typeInto email [returning-user.email]
@@ -39,7 +39,8 @@
  * - `#` headings are **group names** (optional hierarchy/context)
  * - `##` headings are **scene names** (each becomes a `flow()` registration)
  * - If no `##` headings exist, `#` headings are promoted to scene names
- * - `actor: <role>` or `actor <role> [alias]` switches the active actor for subsequent lines
+ * - `role-name:` switches the active actor for subsequent lines (like a screenplay cue)
+ * - `role-name: action args` is inline shorthand for a one-line actor block
  * - Action lines map to the standard text DSL (see `dsl.ts`)
  * - Lines may start with `- ` or `1. ` (markdown lists) for readability (stripped)
  * - `// comment` lines become `console.log` during execution
@@ -52,7 +53,7 @@
  */
 
 import path from 'path'
-import type { ReactiveActor } from './types.js'
+import type { ConcurrentActorHandle } from './types.js'
 import { parseAction, applyDslAction, getMacro } from './dsl.js'
 import { flow } from './reactive.js'
 import { setCurrentFile } from './scene.js'
@@ -142,7 +143,8 @@ export function parseMarkdownScenes(
     // ── Content lines (need an active scene) ──────────────────────────
 
     // Auto-create scene if content appears before any heading
-    if (!currentScene && (trimmed.startsWith('actor ') || trimmed.startsWith('actor:') || isActionLine(trimmed))) {
+    const earlyDecl = parseActorDeclaration(trimmed)
+    if (!currentScene && (earlyDecl || isActionLine(trimmed))) {
       currentScene = {
         name: path.basename(filePath, '.spec.md'),
         group: undefined,
@@ -155,15 +157,18 @@ export function parseMarkdownScenes(
     if (!currentScene) continue
 
     // ── Actor declaration ─────────────────────────────────────────────
-    // Supports both `actor role` and `actor: role` (with optional alias)
+    // Format: `role-name:` or `role-name: action args`
+    // The first token before `:` is the role name (must not be a known action).
 
-    if (trimmed.startsWith('actor:') || trimmed.startsWith('actor ')) {
-      // Both forms are 6 chars before the role: "actor " or "actor:"
-      const parts = trimmed.slice(6).trim().split(/\s+/)
-      const role = parts[0]
-      const alias = parts.length > 1 ? parts[1] : undefined
-      currentBlock = { role, alias, actions: [] }
+    const actorDecl = earlyDecl ?? parseActorDeclaration(trimmed)
+    if (actorDecl) {
+      currentBlock = { role: actorDecl.role, actions: [] }
       currentScene.blocks.push(currentBlock)
+      // If there's inline content after the colon, parse it as an action
+      if (actorDecl.rest) {
+        const actionLine = stripListPrefix(actorDecl.rest)
+        currentBlock.actions.push({ type: 'action', line: actionLine })
+      }
       continue
     }
 
@@ -248,16 +253,38 @@ function stripListPrefix(line: string): string {
   return line
 }
 
+/** Known DSL action verbs — used to distinguish actions from actor declarations */
+const KNOWN_ACTIONS = [
+  'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
+  'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
+  'warnIf', 'up', 'prev', 'scrollToBottom', 'if',
+]
+
 /** Check if a line looks like a DSL action or macro invocation */
 function isActionLine(line: string): boolean {
-  const actions = [
-    'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
-    'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
-    'warnIf', 'up', 'prev', 'scrollToBottom', 'if',
-  ]
   const stripped = stripListPrefix(line)
   const first = stripped.split(/\s/)[0]
-  return actions.includes(first) || /^[\w][\w-]*\(\)/.test(stripped)
+  return KNOWN_ACTIONS.includes(first) || /^[\w][\w-]*\(\)/.test(stripped)
+}
+
+/**
+ * Parse a line as an actor declaration.
+ *
+ * Actor declarations look like screenplay cues:
+ * - `role-name:`           — block declaration (actions follow on subsequent lines)
+ * - `role-name: see foo`   — inline declaration with first action on same line
+ *
+ * Returns null if the line is not an actor declaration (e.g. it's an action
+ * line or doesn't contain a colon in the right position).
+ */
+function parseActorDeclaration(line: string): { role: string; rest: string } | null {
+  // Match: word-chars (including hyphens) followed by a colon
+  const match = line.match(/^([\w][\w-]*):\s*(.*)$/)
+  if (!match) return null
+  const [, word, rest] = match
+  // Don't treat known action verbs as actor declarations
+  if (KNOWN_ACTIONS.includes(word)) return null
+  return { role: word, rest: rest.trim() }
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +299,7 @@ function isActionLine(line: string): boolean {
  */
 function interpolate(
   line: string,
-  actors: Map<string, ReactiveActor>
+  actors: Map<string, ConcurrentActorHandle>
 ): string {
   return line.replace(
     /\[([\w][\w-]*)\.([\w]+)\]/g,
@@ -312,7 +339,7 @@ export function registerMarkdownScenes(
   for (const scene of scenes) {
     flow(scene.name, ({ actor }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
-      const actors = new Map<string, ReactiveActor>()
+      const actors = new Map<string, ConcurrentActorHandle>()
 
       for (const block of scene.blocks) {
         if (!actors.has(block.role)) {
@@ -349,9 +376,9 @@ export function registerMarkdownScenes(
                 action.selector,
                 actors
               )
-              ;(a as ReactiveActor).if(
+              ;(a as ConcurrentActorHandle).if(
                 interpolatedSelector,
-                (actor: ReactiveActor) => {
+                (actor: ConcurrentActorHandle) => {
                   for (const subLine of action.actions) {
                     const interpolated = interpolate(subLine, actors)
                     const parsed = parseAction(interpolated)

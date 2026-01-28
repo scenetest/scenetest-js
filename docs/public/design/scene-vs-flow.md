@@ -82,7 +82,7 @@ whenever he reaches it in his queue.
 
 ### 2. Fewer abstractions
 
-The classic driver has two objects: `ActorHandle` (creates chains) and
+The classic driver has two objects: `SequentialActorHandle` (creates chains) and
 `ActionChain` (accumulates actions, is thenable).  You need to understand
 that `.see('x').click('y')` is a chain, that chains execute on `await`,
 that scope resets between chains, and that `Promise.all` is required for
@@ -145,10 +145,10 @@ intuitive.
 ### If we keep declarative (flow()), remove classic driver (scene())
 
 - Delete `ActionChainImpl` from `actor.ts` (the thenable chain)
-- Delete `ActorHandleImpl` (the handle that creates throwaway chains)
+- Delete `SequentialActorHandleImpl` (the handle that creates throwaway chains)
 - Remove `scene()` from `scene.ts` (keep `sceneRegistry`, `runScene`,
   `when`)
-- Remove `ActionChain` and `ActorHandle` from `types.ts`
+- Remove `ActionChain` and `SequentialActorHandle` from `types.ts`
 - Update `runner.ts` — it calls `runScene` which calls `scene.fn`,
   which already works with `flow()` since flow registers as a scene
 - Update all example specs from `scene()` to `flow()`
@@ -161,7 +161,7 @@ intuitive.
 
 - Delete `reactive.ts`
 - Remove `flow` export from `index.ts`
-- Remove `ReactiveActor`, `FlowContext`, `FlowFn` from `types.ts`
+- Remove `ConcurrentActorHandle`, `FlowContext`, `FlowFn` from `types.ts`
 - Remove `getCurrentSession()` from `scene.ts`
 - Revert `actionTimeout`/`warnAfter` to `private` on `TeamSession`
   (or leave — no harm)
@@ -217,7 +217,7 @@ rethinking the test logic.
 - The declarative model (`flow()`) registers as a normal `scene()` internally — the runner does
   not know the difference.  This is intentional: it means both models
   share discovery, team management, reporting, and lifecycle hooks.
-- `ReactiveActorHandle` duplicates some logic from `ActionChainImpl`
+- `ConcurrentActorHandleImpl` duplicates some logic from `ActionChainImpl`
   (selector resolution, scope management, warning polling).  If we keep
   the declarative model, we should extract shared helpers.  If we keep the classic driver,
   delete reactive.ts and the duplication goes away.

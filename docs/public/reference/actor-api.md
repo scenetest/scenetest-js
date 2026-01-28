@@ -43,11 +43,11 @@ scene('user can update their profile', async ({ actor }) => {
 ## actor
 
 ```typescript
-// In flow() (declarative) — sync, returns ReactiveActor
-actor(role: string): ReactiveActor
+// In flow() (declarative) — sync, returns ConcurrentActorHandle
+actor(role: string): ConcurrentActorHandle
 
-// In scene() (classic driver) — async, returns ActorHandle
-actor(role: string): Promise<ActorHandle>
+// In scene() (classic driver) — async, returns SequentialActorHandle
+actor(role: string): Promise<SequentialActorHandle>
 ```
 
 Returns an actor handle for the given role from the current team. The role must match a key in your [actor team files](/guides/building-teams).
@@ -273,7 +273,7 @@ await user.do(async (page) => {
 ### waitFor (declarative model only)
 
 ```typescript
-user.waitFor(message: string): ReactiveActor
+user.waitFor(message: string): ConcurrentActorHandle
 ```
 
 Blocks the actor's queue until the named message arrives on the message bus. Only available in `flow()` (declarative model) — in `scene()` (classic driver), use `when()` instead.
@@ -288,7 +288,7 @@ receiver.seeText('New message')
 ### dsl
 
 ```typescript
-user.dsl(text: string): ActionChain | ReactiveActor
+user.dsl(text: string): ActionChain | ConcurrentActorHandle
 ```
 
 Queues actions from a multiline text DSL string. Returns the actor (declarative) or an `ActionChain` (classic driver), so it chains with other methods.
@@ -516,7 +516,7 @@ These methods are only available mid-chain, not directly on the actor handle:
 - [`up(selector?)`](#up) -- navigate to an ancestor (or bare `up` to page root)
 - [`prev()`](#prev) -- return to previous scope
 
-## Reactive actors (declarative model)
+## Concurrent actors (declarative model)
 
 In `flow()` (declarative), every actor method returns the **actor itself**. All methods are chainable and available directly. Scope persists across the actor's entire queue.
 

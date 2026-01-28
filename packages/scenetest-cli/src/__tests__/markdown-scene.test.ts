@@ -10,7 +10,7 @@ describe('parseMarkdownScenes', () => {
     const content = `
 # User logs in
 
-actor user
+user:
 openTo /login
 see login-form
 typeInto email alice@test.com
@@ -38,13 +38,13 @@ see dashboard
 
 ## user logs in successfully
 
-actor user
+user:
 openTo /login
 click submit
 
 ## user fails to log in
 
-actor user
+user:
 openTo /login
 see error-message
 `
@@ -64,13 +64,13 @@ see error-message
     const content = `
 # two users chat
 
-actor alice
+alice:
 openTo /chat
 see message-input
 typeInto message-input Hello!
 click send
 
-actor bob
+bob:
 openTo /chat
 seeText Hello!
 `
@@ -87,14 +87,14 @@ seeText Hello!
     const content = `
 # friend request
 
-actor alice
+alice:
 openTo /friends
 click search
 
-actor bob
+bob:
 openTo /notifications
 
-actor alice
+alice:
 click send-request
 `
     const scenes = parseMarkdownScenes(content, '/test/friends.spec.md')
@@ -106,23 +106,11 @@ click send-request
     expect(scenes[0].blocks[2].role).toBe('alice')
   })
 
-  it('supports actor aliases', () => {
-    const content = `
-# test
-
-actor primary-user user
-openTo /
-`
-    const scenes = parseMarkdownScenes(content, '/test/alias.spec.md')
-    expect(scenes[0].blocks[0].role).toBe('primary-user')
-    expect(scenes[0].blocks[0].alias).toBe('user')
-  })
-
   it('strips leading dash prefix from action lines', () => {
     const content = `
 # test
 
-actor user
+user:
 - openTo /login
 - see login-form
 - click submit
@@ -139,7 +127,7 @@ actor user
     const content = `
 # test
 
-actor user
+user:
 1. openTo /login
 2. see login-form
 3. typeInto email alice@test.com
@@ -158,7 +146,7 @@ actor user
     const content = `
 # test
 
-actor user
+user:
 openTo /login
 - see login-form
 1. typeInto email alice@test.com
@@ -179,7 +167,7 @@ see dashboard
     const content = `
 # test
 
-actor user
+user:
 openTo /login
 // Fill in credentials
 typeInto email test@test.com
@@ -196,7 +184,7 @@ typeInto email test@test.com
     const content = `
 # test
 
-actor user
+user:
 openTo /
 //
 see dashboard
@@ -210,7 +198,7 @@ see dashboard
     const content = `
 # test
 
-actor user
+user:
 openTo /app
 if welcome-modal
   click dismiss-button
@@ -234,7 +222,7 @@ see main-content
     const content = `
 # test
 
-actor user
+user:
 if modal
   - click close
   - see content
@@ -253,7 +241,7 @@ see page
     const content = `
 # test
 
-actor user
+user:
 login()
 see dashboard
 `
@@ -268,7 +256,7 @@ see dashboard
     const content = `
 # test
 
-actor primary-user
+primary-user:
 searchForFriend() new-user
 `
     const scenes = parseMarkdownScenes(content, '/test/macro-args.spec.md')
@@ -284,7 +272,7 @@ searchForFriend() new-user
     const content = `
 # test
 
-actor user
+user:
 see notifications-badge
 click
 `
@@ -297,7 +285,7 @@ click
     const content = `
 # test
 
-actor user
+user:
 openTo /
 seeInView hero-banner
 click get-started
@@ -311,7 +299,7 @@ click get-started
     const content = `
 # test
 
-actor user
+user:
 see sidebar menu-item
 click
 up
@@ -326,10 +314,10 @@ see main-content
     const content = `
 # test
 
-actor alice
+alice:
 emit setup-done
 
-actor bob
+bob:
 waitFor setup-done
 see dashboard
 `
@@ -340,7 +328,7 @@ see dashboard
 
   it('auto-creates scene if content appears before any heading', () => {
     const content = `
-actor user
+user:
 openTo /
 see dashboard
 `
@@ -354,12 +342,12 @@ see dashboard
     const content = `
 # Scene one
 
-actor user
+user:
 openTo /one
 
 # Scene two
 
-actor user
+user:
 openTo /two
 `
     const scenes = parseMarkdownScenes(content, '/test/multi.spec.md')
@@ -374,14 +362,14 @@ openTo /two
 
 ## login
 
-actor user
+user:
 openTo /login
 
 # Dashboard flows
 
 ## view dashboard
 
-actor user
+user:
 openTo /dashboard
 `
     const scenes = parseMarkdownScenes(content, '/test/groups.spec.md')
@@ -397,7 +385,7 @@ openTo /dashboard
 some random text that is not an action
 more text
 
-actor user
+user:
 openTo /
 `
     const scenes = parseMarkdownScenes(content, '/test/preamble.spec.md')
@@ -405,16 +393,15 @@ openTo /
     expect(scenes[0].blocks[0].actions).toHaveLength(1)
   })
 
-  it('supports actor: colon syntax', () => {
+  it('supports inline actor declaration with action', () => {
     const content = `
 # user completes onboarding
-actor: new-user
-- openTo /
+new-user: openTo /
 - see welcome-box
 - click continue-button
 - see onboarding-step
 `
-    const scenes = parseMarkdownScenes(content, '/test/colon.spec.md')
+    const scenes = parseMarkdownScenes(content, '/test/inline.spec.md')
     expect(scenes).toHaveLength(1)
     expect(scenes[0].name).toBe('user completes onboarding')
     expect(scenes[0].blocks).toHaveLength(1)
@@ -427,25 +414,25 @@ actor: new-user
     ])
   })
 
-  it('supports actor: colon syntax with space after colon', () => {
+  it('supports block actor declaration (role-name:)', () => {
     const content = `
 # test
-actor:  primary-user
+primary-user:
 - openTo /
 `
-    const scenes = parseMarkdownScenes(content, '/test/colon-space.spec.md')
+    const scenes = parseMarkdownScenes(content, '/test/block-decl.spec.md')
     expect(scenes[0].blocks[0].role).toBe('primary-user')
   })
 
-  it('auto-creates scene for actor: colon syntax before any heading', () => {
+  it('auto-creates scene for role: syntax before any heading', () => {
     const content = `
-actor: user
+user:
 - openTo /
 - see dashboard
 `
-    const scenes = parseMarkdownScenes(content, '/test/colon-no-heading.spec.md')
+    const scenes = parseMarkdownScenes(content, '/test/role-no-heading.spec.md')
     expect(scenes).toHaveLength(1)
-    expect(scenes[0].name).toBe('colon-no-heading')
+    expect(scenes[0].name).toBe('role-no-heading')
     expect(scenes[0].blocks[0].role).toBe('user')
   })
 
@@ -455,7 +442,7 @@ actor: user
 # test
 
 
-actor user
+user:
 
 openTo /login
 
@@ -473,24 +460,24 @@ see form
 
 ## new user gets friend request
 
-actor new-user
+new-user:
 openTo /
 see welcome-box
 click continue-button
 
-actor primary-user
+primary-user:
 openTo /friends
 click search
 typeInto search-input query
 
-actor new-user
+new-user:
 seeToast friend-request
 see navbar notifications-badge
 click
 
 ## old user re-activates
 
-actor returning-user
+returning-user:
 openTo /login
 see login-form
 `

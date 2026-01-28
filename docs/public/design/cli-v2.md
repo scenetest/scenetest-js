@@ -88,7 +88,7 @@ Scenes can also be written as plain markdown files (`.spec.md`). The runner auto
 
 ```markdown
 ## user completes checkout
-actor: customer
+customer:
 - openTo /cart
 - see cart-items
 - click checkout-button
@@ -99,7 +99,7 @@ actor: customer
 ```
 
 Markdown scenes support the full text DSL grammar plus:
-- **Actor switching**: `actor: <role>` (or `actor <role> [alias]`) lines
+- **Actor switching**: `role-name:` lines (screenplay-cue syntax)
 - **Heading hierarchy**: `#` = groups, `##` = scenes
 - **Interpolation**: `[actor.field]` for cross-actor references
 - **Conditional monitors**: `if <selector>` + indented sub-actions
@@ -367,7 +367,7 @@ await user.expectSnapshot('profile-card', before)
 Single method for snapshot comparison:
 
 ```typescript
-interface ActorHandle {
+interface SequentialActorHandle {
   // Capture current state of selector
   snapshot(selector: Selector): Promise<Snapshot>
 

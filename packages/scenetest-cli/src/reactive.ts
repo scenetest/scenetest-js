@@ -54,7 +54,7 @@ import type {
   ScriptWarning,
   FlowContext,
   FlowFn,
-  ReactiveActor,
+  ConcurrentActorHandle,
 } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
@@ -105,17 +105,17 @@ interface ConditionalMonitor {
 }
 
 // ---------------------------------------------------------------------------
-// ReactiveActorHandle
+// ConcurrentActorHandleImpl
 // ---------------------------------------------------------------------------
 
 /**
- * Reactive actor handle implementation.
+ * Concurrent actor handle implementation (declarative / flow model).
  *
- * Unlike `ActorHandleImpl`, every DSL method pushes to a single persistent
- * queue on the actor itself and returns `this`.  Scope lives on the actor
- * so it flows naturally through the sequential drain.
+ * Unlike `SequentialActorHandleImpl`, every DSL method pushes to a single
+ * persistent queue on the actor itself and returns `this`.  Scope lives on
+ * the actor so it flows naturally through the sequential drain.
  */
-export class ReactiveActorHandle implements ReactiveActor {
+export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   readonly role: string
   readonly id: string
   readonly username?: string
@@ -692,7 +692,7 @@ export class ReactiveActorHandle implements ReactiveActor {
  * for DOM state that will never arrive.  We use `Promise.allSettled` to
  * collect all results and throw the first *original* (non-abort) error.
  */
-export async function drainAll(actors: ReactiveActorHandle[]): Promise<void> {
+export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<void> {
   if (actors.length === 0) return
   if (actors.length === 1) {
     await actors[0].drain()
@@ -785,7 +785,7 @@ export function flow(name: string, fn: FlowFn): void {
       throw new Error('flow() must be run inside the scene runner')
     }
 
-    const reactiveActors: ReactiveActorHandle[] = []
+    const reactiveActors: ConcurrentActorHandleImpl[] = []
     const actorRoles: string[] = []
 
     const flowContext: FlowContext = {
@@ -794,7 +794,7 @@ export function flow(name: string, fn: FlowFn): void {
         const config = session.getActorConfig(role)
 
         // Create reactive handle without a page (deferred init)
-        const reactive = new ReactiveActorHandle(
+        const reactive = new ConcurrentActorHandleImpl(
           role,
           config,
           null, // page created in phase 2

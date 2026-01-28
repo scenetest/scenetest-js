@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
 import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
-import { ActorHandleImpl } from './actor.js'
+import { SequentialActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
 
 /**
@@ -132,7 +132,7 @@ export class TeamManager {
  */
 export class TeamSession {
   private contexts = new Map<string, BrowserContext>()
-  private actors = new Map<string, ActorHandleImpl>()
+  private actors = new Map<string, SequentialActorHandleImpl>()
   private bus = new MessageBus()
   readonly timeline: TimelineEntry[] = []
   readonly assertions: AssertionResult[] = []
@@ -186,7 +186,7 @@ export class TeamSession {
   /**
    * Get or create an actor for a role
    */
-  async getActor(role: string): Promise<ActorHandleImpl> {
+  async getActor(role: string): Promise<SequentialActorHandleImpl> {
     // Return existing actor if already created
     const existing = this.actors.get(role)
     if (existing) {
@@ -213,7 +213,7 @@ export class TeamSession {
     })
 
     // Create actor handle
-    const actor = new ActorHandleImpl(
+    const actor = new SequentialActorHandleImpl(
       role,
       config,
       page,
@@ -241,7 +241,7 @@ export class TeamSession {
   /**
    * Get all actors created in this session
    */
-  getActors(): Map<string, ActorHandleImpl> {
+  getActors(): Map<string, SequentialActorHandleImpl> {
     return this.actors
   }
 
