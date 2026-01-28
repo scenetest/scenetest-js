@@ -62,6 +62,26 @@ import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
 
 // ---------------------------------------------------------------------------
+// Interpolation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Escape a value for safe use in selectors.
+ *
+ * Prevents injection attacks by escaping characters that could break
+ * out of selector context (brackets, quotes, backslashes).
+ */
+function escapeForSelector(value: string): string {
+  // Escape backslashes first, then brackets and quotes
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "\\'")
+}
+
+// ---------------------------------------------------------------------------
 // Queued action
 // ---------------------------------------------------------------------------
 
@@ -134,6 +154,11 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   private _aborted = false
   private _abortReason?: string
 
+  /** Registry of all actors in this scene, for [actor.field] interpolation */
+  private _actorRegistry: Map<string, ConcurrentActorHandle> | null = null
+  /** Team metadata for [team.field] interpolation */
+  private _teamMetadata: Record<string, string> | null = null
+
   constructor(
     role: string,
     config: ActorConfig,
@@ -177,6 +202,21 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   _setPage(page: Page): void {
     this._page = page
     this.currentScope = page
+  }
+
+  /**
+   * Set the actor registry for [actor.field] interpolation.
+   * Called by the flow runner after all actors are created.
+   */
+  _setActorRegistry(registry: Map<string, ConcurrentActorHandle>): void {
+    this._actorRegistry = registry
+  }
+
+  /**
+   * Set team metadata for [team.field] interpolation.
+   */
+  _setTeamMetadata(metadata: Record<string, string>): void {
+    this._teamMetadata = metadata
   }
 
   // -----------------------------------------------------------------------
@@ -448,10 +488,68 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   dsl(text: string): this {
     const lines = parseDslLines(text)
     for (const line of lines) {
-      const parsed = parseAction(line)
+      const interpolated = this._interpolate(line)
+      const parsed = parseAction(interpolated)
       applyDslAction(this, parsed)
     }
     return this
+  }
+
+  /**
+   * Interpolate [namespace.field] references in a string.
+   *
+   * Supported namespaces:
+   * - [self.field] — this actor's own fields
+   * - [role.field] — another actor's fields (requires actor registry)
+   * - [team.field] — team metadata
+   */
+  private _interpolate(line: string): string {
+    return line.replace(
+      /\[([\w][\w-]*)\.([\w]+)\]/g,
+      (match, namespace: string, field: string) => {
+        // [self.field] — current actor's fields
+        if (namespace === 'self') {
+          const value = (this as Record<string, unknown>)[field]
+          if (value === undefined) {
+            throw new Error(`[self.${field}] — actor "${this.role}" has no field "${field}"`)
+          }
+          return escapeForSelector(String(value))
+        }
+
+        // [team.field] — team metadata
+        if (namespace === 'team') {
+          if (!this._teamMetadata) {
+            throw new Error(`[team.${field}] — no team metadata available`)
+          }
+          const value = this._teamMetadata[field]
+          if (value === undefined) {
+            throw new Error(`[team.${field}] — team has no field "${field}"`)
+          }
+          return escapeForSelector(String(value))
+        }
+
+        // [role.field] — another actor's fields
+        if (!this._actorRegistry) {
+          throw new Error(
+            `[${namespace}.${field}] — cannot reference other actors outside a scene context`
+          )
+        }
+        const actor = this._actorRegistry.get(namespace)
+        if (!actor) {
+          const available = [...this._actorRegistry.keys()].join(', ')
+          throw new Error(
+            `[${namespace}.${field}] — unknown actor "${namespace}" (available: ${available})`
+          )
+        }
+        const value = (actor as Record<string, unknown>)[field]
+        if (value === undefined) {
+          throw new Error(
+            `[${namespace}.${field}] — actor "${namespace}" has no field "${field}"`
+          )
+        }
+        return escapeForSelector(String(value))
+      }
+    )
   }
 
   // -----------------------------------------------------------------------
@@ -788,8 +886,17 @@ export function flow(name: string, fn: FlowFn): void {
     const reactiveActors: ConcurrentActorHandleImpl[] = []
     const actorRoles: string[] = []
 
+    // Actor registry for [role.field] interpolation across actors
+    const actorRegistry = new Map<string, ConcurrentActorHandle>()
+
     const flowContext: FlowContext = {
       actor: (role: string) => {
+        // Check if already created (re-referencing an actor)
+        const existing = actorRegistry.get(role)
+        if (existing) {
+          return existing as ConcurrentActorHandleImpl
+        }
+
         // Resolve config synchronously — no browser needed yet
         const config = session.getActorConfig(role)
 
@@ -807,6 +914,7 @@ export function flow(name: string, fn: FlowFn): void {
 
         reactiveActors.push(reactive)
         actorRoles.push(role)
+        actorRegistry.set(role, reactive)
         return reactive
       },
       teamIndex: context.teamIndex,
@@ -817,6 +925,11 @@ export function flow(name: string, fn: FlowFn): void {
     const result = fn(flowContext)
     if (result && typeof (result as Promise<void>).then === 'function') {
       await result
+    }
+
+    // Set actor registry on all actors for [role.field] interpolation
+    for (const actor of reactiveActors) {
+      actor._setActorRegistry(actorRegistry)
     }
 
     // Phase 2: Initialize — create browser contexts in parallel

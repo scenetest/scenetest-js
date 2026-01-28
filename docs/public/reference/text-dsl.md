@@ -163,7 +163,7 @@ receiver:
 
 ## Inline `dsl()` Method
 
-Both declarative and classic driver actors have a `dsl()` method that accepts a multiline string:
+Both declarative and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
 
 ```ts [Declarative (ts)]
 import { scene } from '@scenetest/cli'
@@ -217,6 +217,39 @@ user
   `)
   .see('dashboard')
 ```
+
+### Variable interpolation in dsl()
+
+The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
+
+```typescript
+scene('multi-user interaction', ({ actor }) => {
+  const alice = actor('alice')
+  const bob = actor('bob')
+
+  alice.dsl(`
+    openTo /login
+    typeInto email [self.email]
+    typeInto password [self.password]
+    click submit
+    see dashboard
+  `)
+
+  bob.dsl(`
+    openTo /search
+    typeInto search-input [alice.username]
+    see user-card-[alice.id]
+    click add-friend-button
+  `)
+})
+```
+
+All namespace types work:
+- `[self.field]` — current actor's own fields
+- `[role.field]` — another actor's fields by role name
+- `[team.field]` — team metadata (when available)
+
+Interpolated values are automatically escaped to prevent selector injection attacks.
 
 ---
 
@@ -275,28 +308,3 @@ admin:
 ```
 
 Where the macro can reference `[user1.field]` and `[user2.field]`.
-
-### Calling macros in TypeScript
-
-Use `runMacro()` for programmatic macro invocation with direct value substitution:
-
-```typescript
-import { defineMacro, runMacro } from '@scenetest/cli'
-
-// For TypeScript usage, macros can use {{var}} for direct substitution
-defineMacro('login-with-creds', [
-  'openTo /login',
-  'see login-form',
-  'typeInto email {{email}}',
-  'typeInto password {{password}}',
-  'click submit',
-])
-
-// Pass values directly
-await runMacro(user, 'login-with-creds', {
-  email: 'alice@test.com',
-  password: 'secret'
-})
-```
-
-> **Note:** In `.spec.md` files, use `[namespace.field]` interpolation instead of `{{var}}`. The `{{var}}` syntax is only for `runMacro()` in TypeScript where you pass values directly.
