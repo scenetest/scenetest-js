@@ -1,6 +1,6 @@
 # Writing Scene Specs
 
-> **Note:** This guide shows all three authoring styles side by side. For the full execution model comparison, "do not mix" rules, and `.spec.md` format reference, see the [test-authoring reference](/design/writing-tests).
+> **Note:** This guide shows all three authoring styles side by side. For the full execution model comparison and "do not mix" rules, see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic). For the `.spec.md` format, see the [Text DSL reference](/reference/text-dsl).
 
 Scene specs describe **user journeys** — the flows a person takes through your application. They live in separate spec files (`.spec.ts` or `.spec.md`) and orchestrate browser interactions without touching component internals.
 
@@ -230,7 +230,7 @@ This separation means:
 
 ## Configuration
 
-For configuration, see the [test-authoring reference](/design/writing-tests#configuration).
+For configuration, see the [guides overview](/guides).
 
 ## Summary
 
@@ -246,4 +246,4 @@ For configuration, see the [test-authoring reference](/design/writing-tests#conf
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
 
-For the complete list of actor methods, see the [Actor API Reference](/reference/actor-api). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [test-authoring reference](/design/writing-tests#configuration).
+For the complete list of actor methods, see the [Actor API Reference](/reference/actor-api). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [guides overview](/guides).

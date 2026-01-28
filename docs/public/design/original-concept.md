@@ -3,7 +3,7 @@
 
 > **Historical note:** This is the original concept document written before implementation.
 > API names have since changed: `pass` → `should`, `fail` → `failed`, `scene.play` → `scene()` / `test()`.
-> For current API docs, see the [test-authoring reference](/design/writing-tests) and the [Actor API reference](/reference/actor-api).
+> For current API docs, see the [guides](/guides) and the [Actor API reference](/reference/actor-api).
 
 ---
 
