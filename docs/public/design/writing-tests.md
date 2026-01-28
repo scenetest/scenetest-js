@@ -18,18 +18,100 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 
 | Concern | Where it goes | Who writes it | Example |
 |---------|--------------|---------------|---------|
-| "User can log in and update their profile" | Scene spec file (`scenes/*.spec.ts`) | QA, PM, or developer | `user.openTo('/login')` ... `user.click('submit')` |
+| "User can log in and update their profile" | Scene spec file (`scenes/*.spec.ts` or `scenes/*.spec.md`) | QA, PM, or developer | `user.openTo('/login')` ... `user.click('submit')` |
 | "Profile data should be loaded before render" | Inline assertion in component | Component author | `should('profile loaded', profile !== undefined)` |
 | "Form should not submit with empty name" | Inline assertion in submit handler | Feature developer | `failed('empty name submitted', { name })` |
 | "After mutation, cache matches server" | Multi-context assertion (future) | Feature developer | `assert({ title: '...', serverFn, withData })` |
 
 ---
 
-## Two authoring models: scene() and flow()
+## Authoring models
 
-There are two ways to write spec files. Both use the same actor DSL methods (`see`, `click`, `typeInto`, etc.) and the same selector resolution, configuration, and team management. They differ in **execution model**.
+There are multiple ways to write spec files. All use the same actor DSL methods (`see`, `click`, `typeInto`, etc.) and the same selector resolution, configuration, and team management. They differ in **syntax and execution model**.
 
-> **STATUS: Both models are implemented. We are evaluating which to keep long-term. See `docs/public/design/scene-vs-flow.md` for the trade-off analysis. Before 1.0, one will be removed.**
+| Format | File | Execution model | Best for |
+|--------|------|----------------|----------|
+| **Markdown scenes** | `.spec.md` | Compiles to `flow()` | Non-technical authors, readable specs, documentation-as-tests |
+| **Declarative flow** | `.spec.ts` | `flow()` — reactive concurrent | Multi-actor scenes, writing specs without thinking about timing |
+| **Text DSL** | `.spec.ts` | `flow()` or `scene()` | Simple flows, code generation, macros |
+| **Async spec** | `.spec.ts` | `scene()` — sequential | Explicit step-by-step control, Playwright/Cypress migration |
+
+> **STATUS: Both `scene()` and `flow()` execution models are implemented. We are evaluating which to keep long-term. See `docs/public/design/scene-vs-flow.md` for the trade-off analysis. Before 1.0, one will be removed. Markdown scenes compile to `flow()`.
+
+### Markdown scenes (.spec.md)
+
+Write specs as **human-readable markdown** — GitHub-renderable and executable. Each `.spec.md` file compiles to `flow()` registrations.
+
+```markdown
+# User friend requests
+
+## new user signs up and gets a friend request
+
+actor new-user
+openTo /
+see welcome-box
+click continue-button
+
+actor primary-user
+openTo /friends
+click main-navbar search
+typeInto search-input [new-user.username]
+see search-results-section
+click friend-request-button
+
+actor new-user
+seeToast friend-request
+see navbar notifications-badge
+click
+see notifications-menu-expanded new-friend-request
+click
+
+## old user re-activates account
+
+actor returning-user
+openTo /login
+see login-form
+typeInto email [returning-user.email]
+click submit
+```
+
+**Format rules:**
+- `#` headings are **group names** (optional hierarchy)
+- `##` headings are **scene names** (each becomes a `flow()` registration)
+- If no `##` headings exist, `#` headings are promoted to scene names
+- `actor <role> [alias]` switches the active actor for subsequent lines
+- Action lines use the same text DSL grammar (`openTo`, `see`, `click`, `typeInto`, etc.)
+- Lines may start with `- ` or `1. ` (markdown list prefix is stripped) for readability
+- `// comment` lines become `console.log` during execution
+- `[actor.field]` interpolates actor config values (username, email, etc.)
+- `if <selector>` followed by indented lines creates a conditional monitor
+- `name()` or `name() <args>` invokes a registered macro
+- `waitFor <message>` blocks the actor until a bus message arrives
+- Bare `click` (no selector) clicks the current scope element
+- Bare `up` (no selector) resets scope to the page root
+
+**Multi-actor coordination in markdown:**
+
+```markdown
+# sender and receiver exchange messages
+
+actor sender
+openTo /login
+// log in and compose
+see login-form
+typeInto email [sender.email]
+typeInto password [sender.password]
+click submit
+see compose
+typeInto body Hello!
+click send
+emit sender-ready
+
+actor receiver
+waitFor sender-ready
+openTo /inbox
+seeText New message
+```
 
 ### scene() — await-driven sequential orchestration
 
@@ -261,17 +343,18 @@ These methods are available on actors in both `scene()` and `flow()` models:
 |--------|-------------|
 | `openTo(url)` | Navigate to URL (full page load) |
 | `see(selector)` | Wait for element visible, set as current scope |
+| `seeInView(selector)` | Wait for element visible **in the viewport** (no scrolling needed) |
 | `notSee(selector)` | Wait for element hidden/detached |
 | `seeText(text)` | Wait for text visible on page |
 | `seeToast(selector)` | Wait for element to appear then disappear |
-| `click(selector)` | Click within current scope |
+| `click(selector?)` | Click element within current scope. **Bare `click`** (no selector) clicks the scope element itself |
 | `typeInto(selector, value)` | Fill input within current scope |
 | `check(selector)` | Check checkbox |
 | `select(selector, value)` | Select dropdown option |
 | `wait(ms)` | Wait milliseconds |
 | `emit(message)` | Emit to message bus (for multi-actor coordination) |
 | `do(fn)` | Execute custom function with Playwright page |
-| `up(selector)` | Navigate to ancestor matching selector |
+| `up(selector?)` | Navigate to ancestor matching selector. **Bare `up`** (no selector) resets scope to page root |
 | `prev()` | Return to previous scope |
 | `scrollToBottom()` | Scroll current scope or page to bottom |
 | `if(selector, callback)` | Conditional monitor (see "Conditional monitors" above) |
@@ -281,6 +364,8 @@ These methods are available on actors in both `scene()` and `flow()` models:
 **In scene():** Methods return an `ActionChain` that is chainable and thenable (await the chain to execute). `if` and `warnIf` return void.
 
 **In flow():** Methods return the actor itself (chainable, not thenable). `if`, `warnIf` return void. Additionally, `waitFor(message)` is available to block the actor's queue until a bus message arrives.
+
+**In .spec.md:** All text DSL actions are available directly as lines. `waitFor` is available. Bare `click` and bare `up` work as described above.
 
 ---
 

@@ -7,6 +7,12 @@ which model to keep.  We are NOT shipping two ways to write scenes.  We're
 holding both in the codebase while we evaluate them against real usage on
 [sunlo.app](https://sunlo.app) and other projects.  Then we rip one out.
 
+> **Note:** Markdown scene files (`.spec.md`) compile to `flow()` registrations.
+> This is relevant to the decision — if we keep `flow()`, markdown scenes
+> work natively.  If we keep `scene()`, the markdown parser would need to
+> be rewritten to emit `scene()` registrations (or we keep `flow()` as the
+> internal model for markdown scenes only).
+
 ---
 
 ## The two models
@@ -147,6 +153,7 @@ intuitive.
 - Update CLAUDE.md, README, and design docs
 - Consider renaming `flow()` → `scene()` since there would be only one
   model and "scene" is the better name
+- `.spec.md` files already compile to `flow()` — no changes needed
 
 ### If we keep scene(), remove flow()
 
@@ -157,9 +164,14 @@ intuitive.
 - Revert `actionTimeout`/`warnAfter` to `private` on `TeamSession`
   (or leave — no harm)
 - Delete `reactive.test.ts`
+- **Rewrite `markdown-scene.ts`** to emit `scene()` registrations
+  instead of `flow()` — or keep `flow()` as an internal-only model
+  for markdown scene compilation
 
 The flow removal is much smaller, which is expected — flow was added on
-top of scene infrastructure.
+top of scene infrastructure.  However, `.spec.md` files currently compile
+to `flow()`, so removing flow would require either rewriting the markdown
+parser or keeping `flow()` as an internal mechanism.
 
 ---
 

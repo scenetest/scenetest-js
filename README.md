@@ -51,20 +51,36 @@ function ProfileForm({ user }) {
 
 **3. Write scene specs:**
 
+Choose your style — TypeScript or plain markdown:
+
 ```typescript
 // scenes/profile.spec.ts
-import { scene } from '@scenetest/cli'
+import { flow } from '@scenetest/cli'
 
-scene('user can update their name', async ({ actor }) => {
-  const user = await actor('user')
+flow('user can update their name', ({ actor }) => {
+  const user = actor('user')
 
-  await user.openTo('/')
-  await user
+  user.openTo('/')
+  user
     .see('name-input')
     .typeInto('name-input', 'New Name')
     .click('submit-button')
-  await user.seeText('New Name')
+  user.seeText('New Name')
 })
+```
+
+Or write specs as **human-readable markdown** — GitHub-renderable and executable:
+
+```markdown
+<!-- scenes/profile.spec.md -->
+# user can update their name
+
+actor user
+openTo /
+see name-input
+typeInto name-input New Name
+click submit-button
+seeText New Name
 ```
 
 **4. Run tests:**
@@ -76,21 +92,26 @@ pnpm scenetest
 ## Documentation
 
 **Guides**
-- [Writing Scene Specs](./docs/public/guides/writing-scene-specs.md)
+- [Writing Scene Specs](./docs/public/guides/writing-scene-specs.md) — four authoring styles: declarative flow, text DSL, markdown `.spec.md`, and async spec
 - [Writing Inline Assertions](./docs/public/guides/writing-inline-assertions.md)
-- [Using AI to Write Specs](./docs/public/guides/llm-prompt.md)
+- [Building Good Teams of Actors](./docs/public/guides/building-teams.md)
+
+**Reference**
+- [Actor API Reference](./docs/public/reference/actor-api.md) — complete method list and selector resolution
+- [Writing Tests (Design Reference)](./docs/public/design/writing-tests.md) — both execution models, full DSL reference, macros
 
 **FAQ**
-[Comparing to Playwright](./docs/public/faq/vs-playwright.md)
-[Comparing to Vitest](./docs/public/faq/vs-vitest.md)
-[Comparing to Cypress](./docs/public/faq/vs-cypress.md)
-[Note on Security](./docs/public/faq/security.md)
+- [Comparing to Playwright](./docs/public/faq/vs-playwright.md)
+- [Comparing to Vitest](./docs/public/faq/vs-vitest.md)
+- [Comparing to Cypress](./docs/public/faq/vs-cypress.md)
+- [Note on Security](./docs/public/faq/security.md)
 
 **Design Docs**
-- [Actors API Design Document](./docs/public/design/actors-api.md)
-- [CLI Design Document](./docs/public/design/cli-v2.md)
-- [Server Actions Design Document](./docs/public/design/server-actions.md)
-- [Reporting System Design Document](./docs/public/design/dashboard.md)
+- [scene() vs flow()](./docs/public/design/scene-vs-flow.md) — execution model comparison and decision criteria
+- [Actors API Design](./docs/public/design/actors-api.md)
+- [CLI Design](./docs/public/design/cli-v2.md) — text DSL grammar, selector resolution, warnings
+- [Server Actions Design](./docs/public/design/server-actions.md)
+- [Reporting System Design](./docs/public/design/dashboard.md)
 
 ## Packages
 

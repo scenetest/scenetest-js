@@ -12,7 +12,7 @@ This document captures the design for the next evolution of the scenetest CLI, i
 
 - **User journey testing, not implementation testing** - Test what users see and do, not internal API calls
 - **Accessibility-first selector resolution** - Encourage good accessibility by making aria attributes primary selectors
-- **Declarative scenes as data** - Scenes can be expressed as simple text arrays
+- **Declarative scenes as data** - Scenes can be expressed as text arrays, inline DSL strings, or plain markdown files
 - **Observable but non-blocking warnings** - Script-level warnings (`warnIf`) don't fail tests but surface unexpected paths
 
 ### What Scenetest Is NOT
@@ -42,27 +42,29 @@ await runDsl(user, checkoutFlow)
 ### Grammar
 
 ```
-<action> <selector> [<value>]
+<action> [<selector>] [<value>]
 
 Actions:
   openTo <url>                    - Navigate to URL
   see <selector>                  - Wait for element visible (updates scope)
+  seeInView <selector>            - Wait for element visible in the viewport (no scrolling needed)
   notSee <selector>               - Wait for element hidden
   seeText <text>                  - Wait for text visible
   seeToast <selector>             - Wait for element appear then disappear
-  click <selector>                - Click element within scope
+  click [<selector>]              - Click element within scope (bare click = click current scope)
   typeInto <selector> <value>     - Fill input
   check <selector>                - Check checkbox
   select <selector> <value>       - Select dropdown option
   wait <ms>                       - Wait milliseconds
   emit <message>                  - Emit to message bus
+  waitFor <message>               - Block until bus message arrives (flow model only)
   warnIf <selector> <message>     - Register script warning
-  up <selector>                   - Navigate scope to ancestor
+  up [<selector>]                 - Navigate scope to ancestor (bare up = reset to page root)
   prev                            - Return to previous scope
   scrollToBottom                   - Scroll current scope to bottom
 ```
 
-Note: `do()` and `if()` are code-only methods not available in the text DSL.
+Note: `do()` and `if()` are code-only methods not available in the text DSL (but `if` is available in `.spec.md` files with indented sub-actions).
 
 ### Macros
 
@@ -79,6 +81,34 @@ defineMacro('login', [
 
 await runMacro(user, 'login', { username: 'alice', password: 'secret' })
 ```
+
+### Markdown Scene Files (.spec.md) (Implemented)
+
+Scenes can also be written as plain markdown files (`.spec.md`). The runner auto-discovers them alongside `.spec.ts` files and compiles each one into `flow()` registrations.
+
+```markdown
+## user completes checkout
+
+actor customer
+openTo /cart
+see cart-items
+click checkout-button
+see payment-form
+typeInto card-number 4242424242424242
+click submit
+seeToast success-toast
+```
+
+Markdown scenes support the full text DSL grammar plus:
+- **Actor switching**: `actor <role> [alias]` lines
+- **Heading hierarchy**: `#` = groups, `##` = scenes
+- **Interpolation**: `[actor.field]` for cross-actor references
+- **Conditional monitors**: `if <selector>` + indented sub-actions
+- **Macros**: `name()` or `name() <args>` invocations
+- **List prefixes**: `- ` and `1. ` are stripped (for markdown readability)
+- **Comments**: `// text` becomes `console.log` during drain
+
+See `writing-tests.md` for the full `.spec.md` format reference.
 
 ## 3. Selector Resolution (Implemented)
 
