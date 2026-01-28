@@ -106,14 +106,48 @@ describe('parseAction', () => {
   })
 
   it('parses selector+value actions (typeInto, select, warnIf)', () => {
+    // Simple case: single-word selector, single-word value
     expect(parseAction('typeInto email alice@test.com')).toEqual({
       action: 'typeInto', selector: 'email', value: 'alice@test.com',
     })
     expect(parseAction('select role admin')).toEqual({
       action: 'select', selector: 'role', value: 'admin',
     })
-    expect(parseAction('warnIf modal should not see this')).toEqual({
+    // warnIf with quoted multi-word message
+    expect(parseAction("warnIf modal 'should not see this'")).toEqual({
       action: 'warnIf', selector: 'modal', value: 'should not see this',
+    })
+  })
+
+  it('parses nested selectors with typeInto/select (last token is value)', () => {
+    // Multi-word selector, single-word value
+    expect(parseAction('typeInto modal search-input hello')).toEqual({
+      action: 'typeInto', selector: 'modal search-input', value: 'hello',
+    })
+    expect(parseAction('select form dropdown option1')).toEqual({
+      action: 'select', selector: 'form dropdown', value: 'option1',
+    })
+  })
+
+  it('parses quoted values (single and double quotes)', () => {
+    // Single quotes
+    expect(parseAction("typeInto search-input 'hello world'")).toEqual({
+      action: 'typeInto', selector: 'search-input', value: 'hello world',
+    })
+    // Double quotes
+    expect(parseAction('typeInto search-input "hello world"')).toEqual({
+      action: 'typeInto', selector: 'search-input', value: 'hello world',
+    })
+    // Nested selector with quoted value
+    expect(parseAction("typeInto modal search-input 'hello world'")).toEqual({
+      action: 'typeInto', selector: 'modal search-input', value: 'hello world',
+    })
+  })
+
+  it('handles selector-only for typeInto/select (no value)', () => {
+    // Only selector, no value
+    expect(parseAction('typeInto email-input')).toEqual({
+      action: 'typeInto', selector: 'email-input',
     })
   })
 

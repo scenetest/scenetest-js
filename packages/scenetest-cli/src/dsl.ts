@@ -40,6 +40,56 @@ import type { DslTarget, Selector } from './types.js'
 export type DslAction = string
 
 /**
+ * Extract the last token from a string.
+ * A token is either a quoted string ('...' or "...") or a single word.
+ *
+ * @returns { before: string, token: string } where `before` is everything
+ *          before the last token (trimmed), and `token` is the extracted value
+ *          (with quotes removed if quoted).
+ *
+ * @example
+ * extractLastToken('modal search-input hello')
+ * // => { before: 'modal search-input', token: 'hello' }
+ *
+ * extractLastToken("search-input 'hello world'")
+ * // => { before: 'search-input', token: 'hello world' }
+ *
+ * extractLastToken('single')
+ * // => { before: '', token: 'single' }
+ */
+function extractLastToken(str: string): { before: string; token: string } {
+  const trimmed = str.trim()
+
+  // Check if ends with a quoted string
+  const lastChar = trimmed[trimmed.length - 1]
+  if (lastChar === "'" || lastChar === '"') {
+    // Find the matching opening quote
+    const quote = lastChar
+    let i = trimmed.length - 2
+    while (i >= 0 && trimmed[i] !== quote) {
+      i--
+    }
+    if (i >= 0) {
+      // Found matching quote
+      const token = trimmed.slice(i + 1, -1) // Remove quotes
+      const before = trimmed.slice(0, i).trim()
+      return { before, token }
+    }
+  }
+
+  // No quotes — last word is the token
+  const lastSpace = trimmed.lastIndexOf(' ')
+  if (lastSpace === -1) {
+    return { before: '', token: trimmed }
+  }
+
+  return {
+    before: trimmed.slice(0, lastSpace).trim(),
+    token: trimmed.slice(lastSpace + 1),
+  }
+}
+
+/**
  * Parse a DSL action string into its components
  */
 export interface ParsedAction {
@@ -82,20 +132,22 @@ export function parseAction(line: string): ParsedAction {
   }
 
   if (selectorValueActions.includes(action)) {
-    // For these, we need to figure out where selector ends and value begins
-    // The selector is the first word(s) that form a valid selector
-    // For typeInto/select: 'selector value'
-    // For warnIf: 'selector message with spaces'
+    // For these, selector can be multi-word (nested), value is the last token.
+    // A token is either a quoted string ('...' or "...") or a single word.
+    //
+    // Examples:
+    //   typeInto email alice@test.com        → selector=email, value=alice@test.com
+    //   typeInto modal search-input hello    → selector="modal search-input", value=hello
+    //   typeInto search-input 'hello world'  → selector=search-input, value="hello world"
+    //   warnIf modal 'should not appear'     → selector=modal, value="should not appear"
 
-    // Simple heuristic: first word is selector, rest is value
-    const selectorEnd = rest.indexOf(' ')
-    if (selectorEnd === -1) {
-      return { action, selector: rest }
+    const { before, token } = extractLastToken(rest)
+    if (before) {
+      return { action, selector: before, value: token }
+    } else {
+      // Only one token — it's the selector, no value
+      return { action, selector: token }
     }
-
-    const selector = rest.slice(0, selectorEnd)
-    const value = rest.slice(selectorEnd + 1).trim()
-    return { action, selector, value }
   }
 
   // Unknown action - treat as selector-only

@@ -34,6 +34,27 @@ Actions:
 
 > `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions.
 
+### Nested selectors
+
+For actions that take both selector and value (`typeInto`, `select`, `warnIf`), the selector can be **multi-word** (nested). The **last token** is the value:
+
+```
+typeInto modal search-input hello     # selector="modal search-input", value="hello"
+select form dropdown option1          # selector="form dropdown", value="option1"
+```
+
+### Quoted values
+
+Use single or double quotes for values with spaces:
+
+```
+typeInto search-input 'hello world'           # value="hello world"
+typeInto modal search-input "hello world"     # nested selector + quoted value
+warnIf popup 'unexpected dialog appeared'     # multi-word warning message
+```
+
+Quotes are only needed when the value contains spaces. Single-word values don't need quotes.
+
 For full selector syntax, see the [Selectors reference](/reference/selectors).
 
 ---
