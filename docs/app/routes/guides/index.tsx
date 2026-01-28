@@ -10,7 +10,7 @@ function Guides() {
   return (
     <article>
       <Link to="/" className="back">&larr; Back</Link>
-      <h1>Guides</h1>
+      <h1>Writing Guides</h1>
 
       <p>
         Learn how to use Scenetest effectively with these guides covering core concepts,
