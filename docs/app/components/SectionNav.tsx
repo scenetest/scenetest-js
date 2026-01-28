@@ -12,7 +12,7 @@ export function SectionNav() {
 
   const section = isGuides ? 'guides' : isReference ? 'reference' : 'faq'
   const items = isGuides ? guides : isReference ? reference : faqs
-  const label = isGuides ? 'Guides' : isReference ? 'API Ref' : 'FAQ'
+  const label = isGuides ? 'Writing Guides' : isReference ? 'API Ref' : 'FAQ'
 
   // Extract the current slug from /section/slug
   const parts = pathname.split('/')

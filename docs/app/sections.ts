@@ -7,20 +7,20 @@ export interface SectionItem {
 export const guides: SectionItem[] = [
   {
     slug: 'writing-scene-specs',
-    title: 'Writing Scene Specs',
+    title: 'Scene Specs',
     description:
       'Learn how to write scene specs that describe user journeys and orchestrate browser interactions.',
   },
   {
     slug: 'writing-inline-assertions',
-    title: 'Writing Inline Assertions',
+    title: 'Inline Assertions',
     description:
       'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
   },
 
   {
     slug: 'building-teams',
-    title: 'Building Good Teams of Actors',
+    title: 'Teams of Actors',
     description:
       'Design teams that mirror your seed data, scale concurrency, and keep scenes reliable without shared-state bugs.',
   },
