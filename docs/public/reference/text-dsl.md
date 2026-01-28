@@ -92,7 +92,7 @@ new-user:
 returning-user:
 - openTo /login
 - see login-form
-- typeInto email [returning-user.email]
+- typeInto email [self.email]
 - click submit
 ```
 
@@ -105,12 +105,37 @@ returning-user:
 - Action lines use the text DSL grammar above
 - Lines may start with `- ` or `1. ` — markdown list prefixes are stripped for readability
 - `// comment` lines become `console.log` during execution
-- `[actor.field]` interpolates actor config values (username, email, etc.)
+- `[namespace.field]` interpolates values (see Variable Interpolation below)
 - `if <selector>` followed by indented lines creates a conditional monitor
-- `macro-name` or `macro-name role <actor> team <team>` invokes a registered macro
+- `macro-name` or `macro-name alias=role` invokes a registered macro
 - `waitFor <message>` blocks the actor until a bus message arrives
 - Bare `click` (no selector) clicks the current scope element
 - Bare `up` (no selector) resets scope to the page root
+
+### Variable interpolation
+
+Use `[namespace.field]` to interpolate values into action lines:
+
+```
+[self.field]         # Current actor's own fields (email, username, id, etc.)
+[role-name.field]    # Another actor's fields by role name
+[team.field]         # Team metadata (language, category, etc.)
+[alias.field]        # Aliased role (from macro args)
+```
+
+**Examples:**
+```markdown
+alice:
+- typeInto email [self.email]           # alice's own email
+- see user-card-[bob.id]                # bob's id embedded in selector
+- click [team.language]-section         # team metadata in selector
+```
+
+Variables work inside selectors for compound IDs:
+```
+see user-result-[target.id]             # becomes "see user-result-12345"
+click language-card-[team.language]     # becomes "click language-card-spanish"
+```
 
 ### Multi-actor coordination in markdown
 
@@ -197,28 +222,30 @@ user
 
 ## Macros
 
-Macros are named, reusable action sequences with variable substitution. Define them in TypeScript and call them from `.spec.md` files.
+Macros are named, reusable action sequences. Define them in TypeScript and call them from `.spec.md` files. Macros use the same `[namespace.field]` interpolation syntax as regular action lines.
 
 ### Defining macros
 
 ```typescript
 import { defineMacro } from '@scenetest/cli'
 
+// Simple macro using [self.field] for current actor
 defineMacro('login', [
   'openTo /login',
   'see login-form',
-  'typeInto email {{email}}',
-  'typeInto password {{password}}',
+  'typeInto email [self.email]',
+  'typeInto password [self.password]',
   'click submit',
   'see dashboard',
 ])
 
-// Macro that uses another actor's fields
-// Template vars are named after the role passed in the call
+// Macro that uses an aliased actor
+// The alias (target) is mapped when the macro is called
 defineMacro('send-friend-request', [
   'openTo /friends',
   'click search',
-  'typeInto search-input {{new-user.username}}',
+  'typeInto search-input [target.username]',
+  'see user-card-[target.id]',
   'click send-request-button',
 ])
 ```
@@ -233,27 +260,43 @@ user:
 - see dashboard
 ```
 
-Pass actors to macros with the `role` keyword — their fields become template variables:
+Pass actor mappings with `alias=role` syntax — the alias becomes available in the macro:
 
 ```markdown
 primary-user:
-- send-friend-request role new-user
+- send-friend-request target=new-user
 ```
 
-Pass team references with the `team` keyword:
+Multiple mappings work too:
 
 ```markdown
-user:
-- signup-to-language team language-focus
+admin:
+- setup-friendship user1=alice user2=bob
 ```
+
+Where the macro can reference `[user1.field]` and `[user2.field]`.
 
 ### Calling macros in TypeScript
 
-Use `runMacro()` for programmatic macro invocation:
+Use `runMacro()` for programmatic macro invocation with direct value substitution:
 
 ```typescript
-import { runMacro } from '@scenetest/cli'
+import { defineMacro, runMacro } from '@scenetest/cli'
 
-// Works with both declarative and classic driver actors
-await runMacro(user, 'login', { email: 'alice@test.com', password: 'secret' })
+// For TypeScript usage, macros can use {{var}} for direct substitution
+defineMacro('login-with-creds', [
+  'openTo /login',
+  'see login-form',
+  'typeInto email {{email}}',
+  'typeInto password {{password}}',
+  'click submit',
+])
+
+// Pass values directly
+await runMacro(user, 'login-with-creds', {
+  email: 'alice@test.com',
+  password: 'secret'
+})
 ```
+
+> **Note:** In `.spec.md` files, use `[namespace.field]` interpolation instead of `{{var}}`. The `{{var}}` syntax is only for `runMacro()` in TypeScript where you pass values directly.

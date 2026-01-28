@@ -252,44 +252,47 @@ see dashboard
     expect(actions[1]).toEqual({ type: 'action', line: 'see dashboard' })
   })
 
-  it('parses macro invocations with role keyword', () => {
+  it('parses macro invocations with alias=role mapping', () => {
     const content = `
 # test
 
 primary-user:
-searchForFriend role new-user
+searchForFriend target=new-user
 `
     const scenes = parseMarkdownScenes(content, '/test/macro-args.spec.md')
     const actions = scenes[0].blocks[0].actions
     expect(actions[0]).toEqual({
       type: 'macro',
       name: 'searchForFriend',
-      args: [{ type: 'role', name: 'new-user' }],
+      args: [{ type: 'mapping', alias: 'target', role: 'new-user' }],
     })
   })
 
-  it('parses macro invocations with team keyword', () => {
-    const content = `
-# test
-
-user:
-signupToLanguage team language-focus
-`
-    const scenes = parseMarkdownScenes(content, '/test/macro-team.spec.md')
-    const actions = scenes[0].blocks[0].actions
-    expect(actions[0]).toEqual({
-      type: 'macro',
-      name: 'signupToLanguage',
-      args: [{ type: 'team', name: 'language-focus' }],
-    })
-  })
-
-  it('parses macro invocations with mixed args', () => {
+  it('parses macro invocations with multiple alias mappings', () => {
     const content = `
 # test
 
 admin:
-setupEnv role new-user team language-focus literal-value
+setupFriendship user1=alice user2=bob
+`
+    const scenes = parseMarkdownScenes(content, '/test/macro-multi.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[0]).toEqual({
+      type: 'macro',
+      name: 'setupFriendship',
+      args: [
+        { type: 'mapping', alias: 'user1', role: 'alice' },
+        { type: 'mapping', alias: 'user2', role: 'bob' },
+      ],
+    })
+  })
+
+  it('parses macro invocations with mixed mappings and literals', () => {
+    const content = `
+# test
+
+admin:
+setupEnv target=new-user some-literal-value
 `
     const scenes = parseMarkdownScenes(content, '/test/macro-mixed.spec.md')
     const actions = scenes[0].blocks[0].actions
@@ -297,9 +300,8 @@ setupEnv role new-user team language-focus literal-value
       type: 'macro',
       name: 'setupEnv',
       args: [
-        { type: 'role', name: 'new-user' },
-        { type: 'team', name: 'language-focus' },
-        { type: 'literal', value: 'literal-value' },
+        { type: 'mapping', alias: 'target', role: 'new-user' },
+        { type: 'literal', value: 'some-literal-value' },
       ],
     })
   })
