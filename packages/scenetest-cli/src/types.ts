@@ -464,7 +464,7 @@ export interface RegisteredScene {
 /**
  * Minimal interface that both `SequentialActorHandle` and `ConcurrentActorHandle` satisfy.
  *
- * `runDsl()`, `runMacro()`, and the `dsl()` method on actors all operate
+ * `runMacro()` and the `dsl()` method on actors all operate
  * against this structural type so they work with both execution models.
  *
  * Return types are `unknown` because scene-model methods return `ActionChain`

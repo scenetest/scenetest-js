@@ -43,7 +43,7 @@ export const reference: SectionItem[] = [
     slug: 'text-dsl',
     title: 'Text DSL Format',
     description:
-      'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, macros, and runDsl().',
+      'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
   },
   {
     slug: 'declarative-and-classic',
