@@ -85,24 +85,42 @@ useTestEffect(() => {
       <h2>Scenes and Inline Assertions</h2>
 
       <p>
-        <strong>Scenes</strong> are small user journeys, or the sort of atomic units of a user flow you want to test.
-        <em>e.g.</em> <code>scenetest/profile-update.spec.ts</code>: <em>Log in, navigate to settings, change your username,
+        <strong>Scenes</strong> are small user journeys, the atomic units of a user flow you want to test.
+        <em>e.g.</em> <code>scenes/profile-update.spec.ts</code> or <code>scenes/profile-update.spec.md</code>: <em>Log in, navigate to settings, change your username,
         submit the form, see the success message.</em> Scenes are about orchestration &ndash; driving the
-        browser through a sequence of interactions, and plenty of tools do this just fine,
-        except to add that in theory, writing a scene shouldn't require technical knowledge for how the
-        features are implemented.
+        browser through a sequence of interactions. You can write them in TypeScript or
+        in <strong>plain markdown</strong> that reads like documentation &ndash; writing a scene shouldn't
+        require technical knowledge for how the features are implemented.
       </p>
 
-      <CodeBlock>{`// in scenetest/profile-update.spec.ts
-scene('User updates their profile', async ([user]) => {
-  await user.goto('/profile')
-  await user.get('label[name=Name]').cousin('input').fill('New Name')
-  await user.get('button', { name: 'Save' })
-          .disabled(false)
-          .then(button => button.click())
-  await user.read('success!')
-  // That's it. All the assertions fired automatically.
+      <CodeBlock>{`// scenes/profile-update.spec.ts
+import { flow } from '@scenetest/cli'
+
+flow('user updates their profile', ({ actor }) => {
+  const user = actor('user')
+
+  user.openTo('/profile')
+  user
+    .see('profile-form')
+    .typeInto('name-input', 'New Name')
+    .click('save-button')
+  user.seeText('New Name')
+  // That's it. All the inline assertions fired automatically.
 })`}</CodeBlock>
+
+      <p>
+        Or write it as plain <strong>markdown</strong> — human-readable, GitHub-renderable, and executable:
+      </p>
+
+      <CodeBlock>{`<!-- scenes/profile-update.spec.md -->
+# user updates their profile
+
+actor user
+openTo /profile
+see profile-form
+typeInto name-input New Name
+click save-button
+seeText New Name`}</CodeBlock>
 
       <p>
         <strong>Inline Assertions</strong> are test statements that live inside your application

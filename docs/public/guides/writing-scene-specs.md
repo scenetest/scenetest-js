@@ -1,12 +1,12 @@
 # Writing Scene Specs
 
-> **Note:** This guide uses the `scene()` authoring model. Scenetest also supports `flow()`, a reactive concurrent model where actors drain their queues without `await`. For the full picture — both models side-by-side, comparison table, and "do not mix" rules — see the [test-authoring reference](/design/writing-tests).
+> **Note:** This guide shows all four authoring styles side by side. For the full execution model comparison, "do not mix" rules, and `.spec.md` format reference, see the [test-authoring reference](/design/writing-tests).
 
-Scene specs describe **user journeys**—the flows a person takes through your application. They live in separate spec files and orchestrate browser interactions without touching component internals.
+Scene specs describe **user journeys** — the flows a person takes through your application. They live in separate spec files (`.spec.ts` or `.spec.md`) and orchestrate browser interactions without touching component internals.
 
-## Three Ways to Write Scenes
+## Four Ways to Write Scenes
 
-Scenetest offers three authoring styles. Every example in this guide is shown all three ways — click the tabs to compare:
+Scenetest offers four authoring styles. Every example in this guide is shown all four ways — click the tabs to compare:
 
 ```ts [Declarative flow]
 import { flow } from '@scenetest/cli'
@@ -51,7 +51,17 @@ scene('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-**Declarative flow** is the reactive model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is a string format for simpler flows that lends itself to macros and non-technical authors. **Async spec** is the explicit model — you `await` each action and control the timeline yourself.
+```markdown [Markdown (.spec.md)]
+# user completes onboarding
+
+actor new-user
+openTo /
+see welcome-box
+click continue-button
+see onboarding-step
+```
+
+**Declarative flow** is the reactive model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is a string format for simpler flows that lends itself to macros and non-technical authors. **Async spec** is the explicit model — you `await` each action and control the timeline yourself. **Markdown** is the most minimal format — plain text files (`.spec.md`) that are human-readable, GitHub-renderable, and executable. They compile to `flow()` registrations.
 
 The test writer focuses on **what** should happen. Engineers then add the necessary hooks (test IDs, data attributes) to make the tests pass.
 
@@ -68,12 +78,14 @@ await user.openTo('/path')            // Full page load
 // Visibility
 await user.see('element-id')          // Wait for element visible (updates scope)
 await user.see('modal form')          // Nested selector: form inside modal
+await user.seeInView('hero-banner')   // Wait for element visible in the viewport
 await user.notSee('loading-spinner')  // Wait for element hidden
 await user.seeText('text content')    // Wait for text visible
 await user.seeToast('success-toast')  // Wait for appear AND disappear
 
 // Interactions
-await user.click('button-id')
+await user.click('button-id')         // Click element in scope
+await user.click()                    // Bare click — clicks the current scope element
 await user.typeInto('input-id', 'text to type')
 await user.check('agree-checkbox')
 await user.select('country-dropdown', 'Canada')
@@ -81,12 +93,20 @@ await user.select('country-dropdown', 'Canada')
 // Scope navigation
 await user.see('modal').see('form').prev()  // Back to modal scope
 await user.see('child').up('~container')    // Up to ancestor
+await user.up()                             // Bare up — reset scope to page root
 
 // Utilities
 await user.wait(500)
 await user.scrollToBottom()
 await user.emit('user-ready')              // Message bus for actor coordination
 await user.do(async (page) => { /* ... */ })  // Custom Playwright action
+
+// Text DSL inline
+await user.dsl(`
+  see login-form
+  typeInto email alice@test.com
+  click submit
+`)
 
 // Chaining
 await user
@@ -137,13 +157,17 @@ await user
   .click('close-button')       // clicks modal's close button
 ```
 
-`up(selector)` navigates to an ancestor matching the selector. Works well with aliases:
+`up(selector)` navigates to an ancestor matching the selector. Works well with aliases. `up()` with no selector resets scope to the page root:
 
 ```typescript
 await user
   .see('nested-item')
   .up('~container')           // navigate up to a named container
   .click('action-button')
+
+// Reset to page root
+await user.up()               // scope → page (clears all scope)
+await user.see('other-section')
 ```
 
 ## Conditional Handling
@@ -221,6 +245,19 @@ scene('user can complete checkout', async ({ actor }) => {
 })
 ```
 
+```markdown [Markdown (.spec.md)]
+# user can complete checkout
+
+actor customer
+openTo /cart
+see cart-items
+click checkout-button
+see payment-form
+typeInto card-number 4242424242424242
+click pay-button
+seeText Order confirmed!
+```
+
 ### Use Meaningful Test IDs
 
 Test IDs create stable hooks between specs and components:
@@ -290,11 +327,14 @@ Actor teams are defined in separate files. See [Building Good Teams of Actors](.
 
 ## Summary
 
-- Scene specs describe **user journeys** with `scene()` and `actor()`
+- Scene specs describe **user journeys** using `flow()`, `scene()`, `dsl()`, or `.spec.md` markdown files
 - Write specs in **plain language** from the user's perspective
+- Choose your format: TypeScript for full control, markdown for maximum readability
 - Use stable `data-testid` attributes as the contract with engineers
 - Use **nested selectors** (`'parent child'`) to target specific elements
-- Use **scope navigation** (`prev()`, `up()`) to move between scoped contexts
+- Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
+- Use `seeInView()` to check viewport visibility without scrolling
+- Use bare `click` to click the current scope element
 - Use `seeToast()` for transient notifications
 - Use `if()` for conditional handling and `warnIf()` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
