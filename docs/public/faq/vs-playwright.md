@@ -50,8 +50,8 @@ test('user sees items', async ({ actor }) => {
   await user.see('item-list')
 })
 ```
-```ts [Scenetest style]
-// Concurrent/declarative 'scene'
+```ts [Concurrent style]
+// Concurrent 'scene'
 scene('user sees items', ({ actor }) => {
   const user = actor('user-main-1')
   user.openTo('/items')
@@ -69,7 +69,7 @@ user-main-1:
 
 - **Inline assertions** run every render, catching regressions immediately
 - **Full access to framework state** - no DOM querying needed
-- **Scene specs** use actors (`actor()`) instead of raw Playwright APIs — write `test()` for familiar async style or `scene()` for declarative concurrency
+- **Scene specs** use actors (`actor()`) instead of raw Playwright APIs — write `test()` for familiar async style or `scene()` for concurrent draining
 - **Real-time observer** shows assertions as you develop
 
 Scenetest is inspired by `page.evaluate` but takes the "code in browser" idea further.

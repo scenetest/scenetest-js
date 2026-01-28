@@ -61,7 +61,7 @@ For full selector syntax, see the [Selectors reference](/reference/selectors).
 
 ## Markdown Scene Files (.spec.md)
 
-Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` (declarative) registrations.
+Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` (concurrent) registrations.
 
 ### Example
 
@@ -163,9 +163,9 @@ receiver:
 
 ## Inline `dsl()` Method
 
-Both declarative and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
+Both concurrent and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
 
-```ts [Declarative (ts)]
+```ts [Concurrent (ts)]
 import { scene } from '@scenetest/cli'
 
 scene('onboarding flow', ({ actor }) => {
@@ -203,10 +203,10 @@ test('onboarding flow', async ({ actor }) => {
 })
 ```
 
-`dsl()` returns the actor (declarative) or an `ActionChain` (classic driver), so it chains with other methods:
+`dsl()` returns the actor (concurrent) or an `ActionChain` (classic driver), so it chains with other methods:
 
 ```typescript
-// declarative model — all chaining, no await
+// concurrent model — all chaining, no await
 user
   .openTo('/login')
   .dsl(`

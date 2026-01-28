@@ -12,7 +12,7 @@ This document captures the design for the next evolution of the scenetest CLI, i
 
 - **User journey testing, not implementation testing** - Test what users see and do, not internal API calls
 - **Accessibility-first selector resolution** - Encourage good accessibility by making aria attributes primary selectors
-- **Declarative scenes as data** - Scenes can be expressed as text arrays, inline DSL strings, or plain markdown files
+- **Concurrent scenes as data** - Scenes can be expressed as text arrays, inline DSL strings, or plain markdown files
 - **Observable but non-blocking warnings** - Script-level warnings (`warnIf`) don't fail tests but surface unexpected paths
 
 ### What Scenetest Is NOT

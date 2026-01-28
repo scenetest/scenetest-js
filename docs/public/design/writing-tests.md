@@ -31,13 +31,13 @@ There are three ways to write spec files. All use the same [actor DSL methods](/
 
 | Style | File | Function | Best for |
 |-------|------|----------|----------|
-| **Text DSL (md)** | `.spec.md` | Compiles to `scene()` | Simplest way to write a declarative spec with as many actors as you want |
-| **Declarative (ts)** | `.spec.ts` | `scene()` — reactive concurrent | When macros aren't enough: full TypeScript control over your scene spec |
+| **Text DSL (md)** | `.spec.md` | Compiles to `scene()` | Simplest way to write a concurrent spec with as many actors as you want |
+| **Concurrent (ts)** | `.spec.ts` | `scene()` — reactive concurrent | When macros aren't enough: full TypeScript control over your scene spec |
 | **Classic Driver (ts)** | `.spec.ts` | `test()` — sequential | Same async actor model you know from Cypress/Playwright |
 
 Click the tabs to compare:
 
-```ts [Declarative (ts)]
+```ts [Concurrent (ts)]
 import { scene } from '@scenetest/cli'
 
 scene('user completes onboarding', ({ actor }) => {
@@ -70,11 +70,11 @@ test('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [Declarative and Classic Mode reference](/reference/declarative-and-classic).
+For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic).
 
 For the complete `.spec.md` format rules, interpolation, macros, and `dsl()` method — see the [Text DSL Format reference](/reference/text-dsl).
 
-> **STATUS:** Both `scene()` (declarative) and `test()` (classic driver) execution models are implemented. We are evaluating which to keep long-term. See [Declarative vs Classic — Two Execution Models](/design/scene-vs-flow) for the trade-off analysis. Before 1.0, one will be removed. Text DSL `.spec.md` files compile to `scene()`.
+> **STATUS:** Both `scene()` (concurrent) and `test()` (classic driver) execution models are implemented. We are evaluating which to keep long-term. See [Concurrent vs Classic — Two Execution Models](/design/scene-vs-flow) for the trade-off analysis. Before 1.0, one will be removed. Text DSL `.spec.md` files compile to `scene()`.
 
 ---
 
