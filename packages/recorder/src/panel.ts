@@ -53,13 +53,13 @@ function highlightDsl(text: string): string {
 }
 
 /**
- * Render a single DSL line
+ * Render a single DSL line with `- ` prefix (formal markdown DSL format)
  */
 function renderLine(line: DslLine, index: number): string {
   return `<div class="recorder-line new" data-line-id="${line.id}">
     <span class="recorder-line-number">${index + 1}</span>
     <div class="recorder-line-content">
-      <span class="recorder-line-text">${highlightDsl(line.text)}</span>
+      <span class="recorder-line-text"><span class="recorder-prefix">- </span>${highlightDsl(line.text)}</span>
     </div>
     <button class="recorder-line-delete" data-delete-id="${line.id}" title="Remove line">\u00d7</button>
   </div>`
@@ -95,13 +95,13 @@ export function createRecorderPanel(): HTMLDivElement {
       <button class="recorder-btn active" id="recorder-record-btn">record</button>
       <button class="recorder-btn" id="recorder-pause-btn">pause</button>
       <button class="recorder-btn danger" id="recorder-clear-btn">clear</button>
-      <button class="recorder-btn primary" id="recorder-export-btn">export .dsl</button>
+      <button class="recorder-btn primary" id="recorder-export-btn">export .spec.md</button>
     </div>
     <div class="recorder-lines" id="recorder-lines">
       <div class="recorder-empty">
         <div class="recorder-empty-icon">\u23FA</div>
         Click around the app to start recording...<br>
-        Actions will appear here as DSL.
+        Actions appear here as markdown DSL.
       </div>
     </div>
     <div class="recorder-footer">
@@ -265,7 +265,7 @@ export function clearPanel(): void {
   linesEl.innerHTML = `<div class="recorder-empty">
     <div class="recorder-empty-icon">\u23FA</div>
     Click around the app to start recording...<br>
-    Actions will appear here as DSL.
+    Actions appear here as markdown DSL.
   </div>`
 
   updateLineCount(0)
