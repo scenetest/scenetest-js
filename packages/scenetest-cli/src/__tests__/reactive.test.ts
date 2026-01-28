@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ReactiveActorHandle, drainAll } from '../reactive.js'
+import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
 import type { TimelineEntry, ScriptWarning } from '../types.js'
 
@@ -19,7 +19,7 @@ function mockLocator(visible = true) {
   }
 }
 
-/** Create a mock Page that stubs the methods ReactiveActorHandle uses */
+/** Create a mock Page that stubs the methods ConcurrentActorHandleImpl uses */
 function mockPage() {
   const locator = mockLocator()
   return {
@@ -34,7 +34,7 @@ function mockPage() {
 }
 
 /**
- * Build a ReactiveActorHandle with mocked dependencies.
+ * Build a ConcurrentActorHandleImpl with mocked dependencies.
  * Returns the actor plus shared timeline/warnings arrays for inspection.
  */
 function createTestActor(
@@ -46,7 +46,7 @@ function createTestActor(
   const warnings: ScriptWarning[] = []
   const page = overrides?.page ?? mockPage()
 
-  const actor = new ReactiveActorHandle(
+  const actor = new ConcurrentActorHandleImpl(
     role,
     { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     page as any,
@@ -61,7 +61,7 @@ function createTestActor(
 }
 
 /**
- * Create a ReactiveActorHandle with deferred page (null).
+ * Create a ConcurrentActorHandleImpl with deferred page (null).
  * Simulates how flow() creates actors before browser init.
  */
 function createDeferredActor(role = 'user') {
@@ -70,7 +70,7 @@ function createDeferredActor(role = 'user') {
   const warnings: ScriptWarning[] = []
   const page = mockPage()
 
-  const actor = new ReactiveActorHandle(
+  const actor = new ConcurrentActorHandleImpl(
     role,
     { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     null, // deferred — page set later via _setPage
@@ -88,7 +88,7 @@ function createDeferredActor(role = 'user') {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('ReactiveActorHandle', () => {
+describe('ConcurrentActorHandleImpl', () => {
   describe('queueing (declaration phase)', () => {
     it('queues actions without executing', () => {
       const { actor, page } = createTestActor()

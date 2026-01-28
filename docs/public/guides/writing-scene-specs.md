@@ -28,7 +28,7 @@ flow('user completes onboarding', ({ actor }) => {
 
 ```markdown [Text DSL (md)]
 # user completes onboarding
-actor: new-user
+new-user:
 - openTo /
 - see welcome-box
 - click continue-button
@@ -203,7 +203,7 @@ flow('user can complete checkout', ({ actor }) => {
 
 ```markdown [Text DSL (md)]
 # user can complete checkout
-actor: customer
+customer:
 - openTo /cart
 - see cart-items
 - click checkout-button

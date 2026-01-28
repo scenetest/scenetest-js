@@ -74,7 +74,7 @@ Or write specs as **human-readable markdown** — GitHub-renderable and executab
 ```markdown
 <!-- scenes/profile.spec.md -->
 # user can update their name
-actor: user
+user:
 - openTo /
 - see name-input
 - typeInto name-input New Name

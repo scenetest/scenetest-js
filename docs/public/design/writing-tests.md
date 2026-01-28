@@ -48,19 +48,19 @@ Write specs as **human-readable markdown** — GitHub-renderable and executable.
 ```markdown
 # User friend requests
 ## new user signs up and gets a friend request
-actor: new-user
+new-user:
 - openTo /
 - see welcome-box
 - click continue-button
 
-actor: primary-user
+primary-user:
 - openTo /friends
 - click main-navbar search
 - typeInto search-input [new-user.username]
 - see search-results-section
 - click friend-request-button
 
-actor: new-user
+new-user:
 - seeToast friend-request
 - see navbar notifications-badge
 - click
@@ -68,7 +68,7 @@ actor: new-user
 - click
 
 ## old user re-activates account
-actor: returning-user
+returning-user:
 - openTo /login
 - see login-form
 - typeInto email [returning-user.email]
@@ -79,7 +79,7 @@ actor: returning-user
 - `#` headings are **group names** (optional hierarchy)
 - `##` headings are **scene names** (each becomes a `flow()` registration)
 - If no `##` headings exist, `#` headings are promoted to scene names
-- `actor: <role>` (or `actor <role> [alias]`) switches the active actor for subsequent lines
+- `role-name:` switches the active actor for subsequent lines (screenplay-cue syntax). `role-name: action args` is also supported as an inline shorthand
 - Action lines use the same text DSL grammar (`openTo`, `see`, `click`, `typeInto`, etc.)
 - Lines may start with `- ` or `1. ` (markdown list prefix is stripped) for readability
 - `// comment` lines become `console.log` during execution
@@ -94,7 +94,7 @@ actor: returning-user
 
 ```markdown
 # sender and receiver exchange messages
-actor: sender
+sender:
 - openTo /login
 - // log in and compose
 - see login-form
@@ -106,7 +106,7 @@ actor: sender
 - click send
 - emit sender-ready
 
-actor: receiver
+receiver:
 - waitFor sender-ready
 - openTo /inbox
 - seeText New message

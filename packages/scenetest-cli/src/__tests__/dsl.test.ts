@@ -8,7 +8,7 @@ import {
   runMacro,
   clearMacros,
 } from '../dsl.js'
-import { ReactiveActorHandle, drainAll } from '../reactive.js'
+import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
 import type { TimelineEntry, ScriptWarning, DslTarget } from '../types.js'
 
@@ -45,7 +45,7 @@ function createTestActor(role = 'user') {
   const warnings: ScriptWarning[] = []
   const page = mockPage()
 
-  const actor = new ReactiveActorHandle(
+  const actor = new ConcurrentActorHandleImpl(
     role,
     { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     page as any,
@@ -283,10 +283,10 @@ describe('runDsl', () => {
 })
 
 // ---------------------------------------------------------------------------
-// runDsl / runMacro with ReactiveActorHandle
+// runDsl / runMacro with ConcurrentActorHandleImpl
 // ---------------------------------------------------------------------------
 
-describe('runDsl with ReactiveActorHandle', () => {
+describe('runDsl with ConcurrentActorHandleImpl', () => {
   it('queues actions on a reactive actor', async () => {
     const { actor } = createTestActor()
 
@@ -303,7 +303,7 @@ describe('runDsl with ReactiveActorHandle', () => {
   })
 })
 
-describe('runMacro with ReactiveActorHandle', () => {
+describe('runMacro with ConcurrentActorHandleImpl', () => {
   beforeEach(() => {
     clearMacros()
   })
@@ -329,10 +329,10 @@ describe('runMacro with ReactiveActorHandle', () => {
 })
 
 // ---------------------------------------------------------------------------
-// actor.dsl() method on ReactiveActorHandle
+// actor.dsl() method on ConcurrentActorHandleImpl
 // ---------------------------------------------------------------------------
 
-describe('ReactiveActorHandle.dsl()', () => {
+describe('ConcurrentActorHandleImpl.dsl()', () => {
   it('queues actions from a multiline text DSL string', () => {
     const { actor } = createTestActor()
 

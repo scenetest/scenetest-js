@@ -221,16 +221,20 @@ export interface Actor {
  */
 export interface SceneContext {
   /** Get an actor by role from the current team */
-  actor: (role: string) => Promise<ActorHandle>
+  actor: (role: string) => Promise<SequentialActorHandle>
 
   /** The team index assigned to this scene */
   teamIndex: number
 }
 
 /**
- * Actor handle with chainable DSL
+ * Sequential actor handle with chainable DSL (classic driver model).
+ *
+ * Each DSL call returns an `ActionChain` — a separate object that queues
+ * actions and executes them when awaited.  Scope lives on the chain and
+ * resets at each `await` boundary.
  */
-export interface ActorHandle extends ActorConfig {
+export interface SequentialActorHandle extends ActorConfig {
   /** Role this actor is playing */
   role: string
 
@@ -458,7 +462,7 @@ export interface RegisteredScene {
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal interface that both `ActorHandle` and `ReactiveActor` satisfy.
+ * Minimal interface that both `SequentialActorHandle` and `ConcurrentActorHandle` satisfy.
  *
  * `runDsl()`, `runMacro()`, and the `dsl()` method on actors all operate
  * against this structural type so they work with both execution models.
@@ -493,7 +497,7 @@ export interface DslTarget {
 // ---------------------------------------------------------------------------
 
 /**
- * A reactive actor handle.
+ * Concurrent actor handle (declarative / flow model).
  *
  * Every DSL method pushes an action onto the actor's persistent queue and
  * returns `this`, so methods are chainable without `await`.
@@ -502,7 +506,7 @@ export interface DslTarget {
  * Scope lives on the actor (not on a throwaway chain) and flows through
  * the queue during sequential drain execution.
  */
-export interface ReactiveActor {
+export interface ConcurrentActorHandle {
   /** Role this actor is playing */
   readonly role: string
 
@@ -522,34 +526,34 @@ export interface ReactiveActor {
   readonly pending: number
 
   // -- Navigation --
-  openTo(url: string): ReactiveActor
-  scrollToBottom(): ReactiveActor
+  openTo(url: string): ConcurrentActorHandle
+  scrollToBottom(): ConcurrentActorHandle
 
   // -- Observation --
-  see(selector: Selector): ReactiveActor
-  seeInView(selector: Selector): ReactiveActor
-  notSee(selector: Selector): ReactiveActor
-  seeText(text: string): ReactiveActor
-  seeToast(selector: Selector): ReactiveActor
+  see(selector: Selector): ConcurrentActorHandle
+  seeInView(selector: Selector): ConcurrentActorHandle
+  notSee(selector: Selector): ConcurrentActorHandle
+  seeText(text: string): ConcurrentActorHandle
+  seeToast(selector: Selector): ConcurrentActorHandle
 
   // -- Interaction --
-  click(selector?: Selector): ReactiveActor
-  typeInto(selector: Selector, value: string): ReactiveActor
-  check(selector: Selector): ReactiveActor
-  select(selector: Selector, value: string): ReactiveActor
+  click(selector?: Selector): ConcurrentActorHandle
+  typeInto(selector: Selector, value: string): ConcurrentActorHandle
+  check(selector: Selector): ConcurrentActorHandle
+  select(selector: Selector, value: string): ConcurrentActorHandle
 
   // -- Scope navigation --
-  up(selector?: Selector): ReactiveActor
-  prev(): ReactiveActor
+  up(selector?: Selector): ConcurrentActorHandle
+  prev(): ConcurrentActorHandle
 
   // -- Timing & coordination --
-  wait(ms: number): ReactiveActor
-  emit(message: string): ReactiveActor
+  wait(ms: number): ConcurrentActorHandle
+  emit(message: string): ConcurrentActorHandle
   /** Block this actor's queue until a message arrives on the bus */
-  waitFor(message: string): ReactiveActor
+  waitFor(message: string): ConcurrentActorHandle
 
   // -- Escape hatch --
-  do(fn: (page: Page) => Promise<void>): ReactiveActor
+  do(fn: (page: Page) => Promise<void>): ConcurrentActorHandle
 
   // -- Monitoring --
   warnIf(selector: Selector, message: string): void
@@ -562,7 +566,7 @@ export interface ReactiveActor {
    * (one-shot).  The callback receives the actor; DSL calls inside it
    * are captured as the monitor's sub-actions.
    */
-  if(selector: Selector, callback: (actor: ReactiveActor) => void): void
+  if(selector: Selector, callback: (actor: ConcurrentActorHandle) => void): void
 
   // -- Text DSL --
 
@@ -580,7 +584,7 @@ export interface ReactiveActor {
    * `)
    * ```
    */
-  dsl(text: string): ReactiveActor
+  dsl(text: string): ConcurrentActorHandle
 }
 
 /**
@@ -591,8 +595,8 @@ export interface ReactiveActor {
  * before actors begin draining their queues.
  */
 export interface FlowContext {
-  /** Get or create a reactive actor by role (synchronous — no await needed) */
-  actor: (role: string) => ReactiveActor
+  /** Get or create a concurrent actor by role (synchronous — no await needed) */
+  actor: (role: string) => ConcurrentActorHandle
   /** The team index assigned to this flow */
   teamIndex: number
 }
