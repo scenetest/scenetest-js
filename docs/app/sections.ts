@@ -28,6 +28,12 @@ export const guides: SectionItem[] = [
 
 export const reference: SectionItem[] = [
   {
+    slug: 'cli',
+    title: 'CLI Reference',
+    description:
+      'Command-line options, configuration file format, team discovery, device rotation, swarm mode, and report output.',
+  },
+  {
     slug: 'actor-api',
     title: 'Actor API',
     description:
@@ -54,6 +60,12 @@ export const reference: SectionItem[] = [
 ]
 
 export const faqs: SectionItem[] = [
+  {
+    slug: 'swarm-mode',
+    title: 'What is "swarm mode"?',
+    description:
+      'A diagnostic escalation that runs all teams against failing scenes to classify failures as broken, flaky, or seed-data edge cases.',
+  },
   {
     slug: 'concurrent-vs-classic',
     title: "What's the difference between Concurrent and Classic?",
