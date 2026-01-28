@@ -74,13 +74,12 @@ Or write specs as **human-readable markdown** — GitHub-renderable and executab
 ```markdown
 <!-- scenes/profile.spec.md -->
 # user can update their name
-
-actor user
-openTo /
-see name-input
-typeInto name-input New Name
-click submit-button
-seeText New Name
+actor: user
+- openTo /
+- see name-input
+- typeInto name-input New Name
+- click submit-button
+- seeText New Name
 ```
 
 **4. Run tests:**
@@ -92,7 +91,7 @@ pnpm scenetest
 ## Documentation
 
 **Guides**
-- [Writing Scene Specs](./docs/public/guides/writing-scene-specs.md) — four authoring styles: declarative flow, text DSL, markdown `.spec.md`, and async spec
+- [Writing Scene Specs](./docs/public/guides/writing-scene-specs.md) — three styles: declarative (ts), text DSL (md), classic driver (ts)
 - [Writing Inline Assertions](./docs/public/guides/writing-inline-assertions.md)
 - [Building Good Teams of Actors](./docs/public/guides/building-teams.md)
 
@@ -107,7 +106,7 @@ pnpm scenetest
 - [Note on Security](./docs/public/faq/security.md)
 
 **Design Docs**
-- [scene() vs flow()](./docs/public/design/scene-vs-flow.md) — execution model comparison and decision criteria
+- [Declarative Flow vs Classic Driver](./docs/public/design/scene-vs-flow.md) — execution model comparison and decision criteria
 - [Actors API Design](./docs/public/design/actors-api.md)
 - [CLI Design](./docs/public/design/cli-v2.md) — text DSL grammar, selector resolution, warnings
 - [Server Actions Design](./docs/public/design/server-actions.md)

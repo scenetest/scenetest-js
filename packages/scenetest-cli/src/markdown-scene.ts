@@ -6,35 +6,32 @@
  *
  * ```markdown
  * # User friend requests
- *
  * ## new user signs up and gets a friend request
+ * actor: new-user
+ * - openTo /
+ * - see welcome-box
+ * - click continue-button
  *
- * actor new-user
- * openTo /
- * see welcome-box
- * click continue-button
+ * actor: primary-user
+ * - openTo /friends
+ * - click main-navbar search
+ * - typeInto search-input [new-user.username]
+ * - see search-results-section
+ * - click friend-request-button
  *
- * actor primary-user
- * openTo /friends
- * click main-navbar search
- * typeInto search-input [new-user.username]
- * see search-results-section
- * click friend-request-button
- *
- * actor new-user
- * seeToast friend-request
- * see navbar notifications-badge
- * click
- * see notifications-menu-expanded new-friend-request
- * click
+ * actor: new-user
+ * - seeToast friend-request
+ * - see navbar notifications-badge
+ * - click
+ * - see notifications-menu-expanded new-friend-request
+ * - click
  *
  * ## old user re-activates account
- *
- * actor returning-user
- * openTo /login
- * see login-form
- * typeInto email [returning-user.email]
- * click submit
+ * actor: returning-user
+ * - openTo /login
+ * - see login-form
+ * - typeInto email [returning-user.email]
+ * - click submit
  * ```
  *
  * ## Format rules
@@ -42,7 +39,7 @@
  * - `#` headings are **group names** (optional hierarchy/context)
  * - `##` headings are **scene names** (each becomes a `flow()` registration)
  * - If no `##` headings exist, `#` headings are promoted to scene names
- * - `actor <role> [alias]` switches the active actor for subsequent lines
+ * - `actor: <role>` or `actor <role> [alias]` switches the active actor for subsequent lines
  * - Action lines map to the standard text DSL (see `dsl.ts`)
  * - Lines may start with `- ` or `1. ` (markdown lists) for readability (stripped)
  * - `// comment` lines become `console.log` during execution
@@ -145,7 +142,7 @@ export function parseMarkdownScenes(
     // ── Content lines (need an active scene) ──────────────────────────
 
     // Auto-create scene if content appears before any heading
-    if (!currentScene && (trimmed.startsWith('actor ') || isActionLine(trimmed))) {
+    if (!currentScene && (trimmed.startsWith('actor ') || trimmed.startsWith('actor:') || isActionLine(trimmed))) {
       currentScene = {
         name: path.basename(filePath, '.spec.md'),
         group: undefined,
@@ -158,8 +155,10 @@ export function parseMarkdownScenes(
     if (!currentScene) continue
 
     // ── Actor declaration ─────────────────────────────────────────────
+    // Supports both `actor role` and `actor: role` (with optional alias)
 
-    if (trimmed.startsWith('actor ')) {
+    if (trimmed.startsWith('actor:') || trimmed.startsWith('actor ')) {
+      // Both forms are 6 chars before the role: "actor " or "actor:"
       const parts = trimmed.slice(6).trim().split(/\s+/)
       const role = parts[0]
       const alias = parts.length > 1 ? parts[1] : undefined

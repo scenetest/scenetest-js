@@ -1,15 +1,17 @@
-# scene() vs flow() — Two Execution Models
+# Declarative Flow vs Classic Driver — Two Execution Models
 
 **STATUS: Both implemented.** One of them should be removed before 1.0.
+
+Scenetest currently has two TypeScript execution models — **Declarative** (`flow()`) and **Classic Driver** (`scene()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the declarative model.
 
 This document exists so that future-us can make an informed decision about
 which model to keep.  We are NOT shipping two ways to write scenes.  We're
 holding both in the codebase while we evaluate them against real usage on
 [sunlo.app](https://sunlo.app) and other projects.  Then we rip one out.
 
-> **Note:** Markdown scene files (`.spec.md`) compile to `flow()` registrations.
-> This is relevant to the decision — if we keep `flow()`, markdown scenes
-> work natively.  If we keep `scene()`, the markdown parser would need to
+> **Note:** Text DSL markdown files (`.spec.md`) compile to `flow()` registrations.
+> This is relevant to the decision — if we keep the declarative model, markdown scenes
+> work natively.  If we keep the classic driver, the markdown parser would need to
 > be rewritten to emit `scene()` registrations (or we keep `flow()` as the
 > internal model for markdown scenes only).
 
@@ -17,7 +19,7 @@ holding both in the codebase while we evaluate them against real usage on
 
 ## The two models
 
-### scene() — await-driven, sequential orchestration
+### Classic Driver — scene(), await-driven, sequential orchestration
 
 ```typescript
 scene('two users chat', async ({ actor }) => {
@@ -37,7 +39,7 @@ scene('two users chat', async ({ actor }) => {
 - Multi-actor concurrency requires explicit `Promise.all()`.
 - Scope lives on the **chain** (a new chain starts at each `await`).
 
-### flow() — reactive, concurrent draining
+### Declarative — flow(), reactive, concurrent draining
 
 ```typescript
 flow('two users chat', ({ actor }) => {
@@ -63,16 +65,16 @@ flow('two users chat', ({ actor }) => {
 
 ---
 
-## Why we're considering killing scene()
+## Why we're considering killing the classic driver
 
 ### 1. The conceptualisation race condition
 
-In the `scene()` model the test writer carries a mental timeline.  They
+In the classic driver model the test writer carries a mental timeline.  They
 have to think: "has this happened yet?  should I await before checking?"
 This is exactly the class of bug that `waitUntil` / `waitForSelector` /
 `waitForNavigation` APIs exist to paper over in Playwright and Cypress.
 
-In `flow()` there is no race because each actor's observations (`see`,
+In the declarative model there is no race because each actor's observations (`see`,
 `seeText`) naturally block/poll for DOM state.  You can write
 `bob.seeText('Hello!')` before or after `alice.click('send')` in the
 source code and it doesn't matter — bob will reach that instruction
@@ -80,25 +82,25 @@ whenever he reaches it in his queue.
 
 ### 2. Fewer abstractions
 
-`scene()` has two objects: `ActorHandle` (creates chains) and
+The classic driver has two objects: `ActorHandle` (creates chains) and
 `ActionChain` (accumulates actions, is thenable).  You need to understand
 that `.see('x').click('y')` is a chain, that chains execute on `await`,
 that scope resets between chains, and that `Promise.all` is required for
 concurrency.
 
-`flow()` has one object: the actor.  Every method returns the actor.
+The declarative model has one object: the actor.  Every method returns the actor.
 Scope flows through the actor's queue.  Concurrency is the default, not
 the opt-in.
 
 ### 3. Multi-actor scenes read better
 
-Scene scripts that jump between actors read like screenplays when
-written with `flow()`.  There is no syntactic noise from `await` telling
+Scene scripts that jump between actors read like screenplays in the
+declarative model.  There is no syntactic noise from `await` telling
 the runtime things it could have figured out itself.
 
 ### 4. The await is lying
 
-In `scene()`, `await` looks like it means "do this async thing."  But
+In the classic driver, `await` looks like it means "do this async thing."  But
 the chain methods are synchronous — they just push closures onto an
 array.  The only async thing is `then()`, which flushes the queue.  The
 `await` is sugar for "flush now," which is an implementation detail
@@ -106,33 +108,33 @@ masquerading as a language feature.
 
 ---
 
-## Why we might keep scene()
+## Why we might keep the classic driver
 
 ### 1. Familiarity
 
 Every Playwright / Cypress / Puppeteer test ever written uses await-based
 sequential orchestration.  People migrating from those tools will reach
-for `scene()` instinctively.  Asking them to unlearn await is a cost.
+for `scene()` instinctively.  Asking them to unlearn `await` is a cost.
 
 ### 2. Explicit ordering is sometimes what you want
 
 Some scenes genuinely need cross-actor ordering: "alice does X, then bob
-does Y in response, then alice does Z."  In `scene()` this is trivially
-expressed with sequential awaits.  In `flow()` you need the message bus
+does Y in response, then alice does Z."  In the classic driver this is trivially
+expressed with sequential awaits.  In the declarative model you need the message bus
 (`emit` / `waitFor`) or you rely on DOM state being sufficient, which it
 sometimes isn't (e.g. the ordering isn't observable in the UI).
 
 ### 3. Debugging is simpler
 
-When something fails in `scene()` mode, the stack trace points to a
-specific `await` in a linear script.  In `flow()` mode, multiple actors
+When something fails in classic driver mode, the stack trace points to a
+specific `await` in a linear script.  In the declarative model, multiple actors
 are running concurrently, failures trigger abort cascades, and the
 original error might be obscured by "actor X aborted: actor Y failed."
 
 ### 4. Incremental execution
 
-With `scene()` you can put a breakpoint on any `await` and inspect state
-between steps.  With `flow()`, the declaration phase is instant and the
+With the classic driver you can put a breakpoint on any `await` and inspect state
+between steps.  With the declarative model, the declaration phase is instant and the
 execution phase is a concurrent drain — stepping through it is less
 intuitive.
 
@@ -140,7 +142,7 @@ intuitive.
 
 ## What we'd need to rip out
 
-### If we keep flow(), remove scene()
+### If we keep declarative (flow()), remove classic driver (scene())
 
 - Delete `ActionChainImpl` from `actor.ts` (the thenable chain)
 - Delete `ActorHandleImpl` (the handle that creates throwaway chains)
@@ -155,7 +157,7 @@ intuitive.
   model and "scene" is the better name
 - `.spec.md` files already compile to `flow()` — no changes needed
 
-### If we keep scene(), remove flow()
+### If we keep classic driver (scene()), remove declarative (flow())
 
 - Delete `reactive.ts`
 - Remove `flow` export from `index.ts`
@@ -168,9 +170,9 @@ intuitive.
   instead of `flow()` — or keep `flow()` as an internal-only model
   for markdown scene compilation
 
-The flow removal is much smaller, which is expected — flow was added on
-top of scene infrastructure.  However, `.spec.md` files currently compile
-to `flow()`, so removing flow would require either rewriting the markdown
+The declarative removal is much smaller, which is expected — `flow()` was added on
+top of `scene()` infrastructure.  However, `.spec.md` files currently compile
+to `flow()`, so removing the declarative model would require either rewriting the markdown
 parser or keeping `flow()` as an internal mechanism.
 
 ---
@@ -180,9 +182,9 @@ parser or keeping `flow()` as an internal mechanism.
 When evaluating, pay attention to:
 
 1. **How often do you reach for `Promise.all`?** — If every multi-actor
-   scene needs it, the await model is fighting you.
-2. **How often do you need `emit`/`waitFor` in flows?** — If every
-   multi-actor flow needs explicit bus coordination, the reactive model
+   scene needs it, the classic driver is fighting you.
+2. **How often do you need `emit`/`waitFor` in declarative scenes?** — If every
+   multi-actor scene needs explicit bus coordination, the declarative model
    is fighting you.
 3. **Which produces better error messages when a scene fails?**
 4. **Which is easier to explain to someone who has never written an E2E
@@ -196,12 +198,12 @@ When evaluating, pay attention to:
 
 If we decide to go all-in on one model, the conversion is mechanical:
 
-**scene → flow**: Remove `await` from DSL calls.  Replace `Promise.all`
+**Classic driver → Declarative**: Remove `await` from DSL calls.  Replace `Promise.all`
 multi-actor blocks with plain sequential declarations (concurrency
 becomes automatic).  For cross-actor ordering that relied on `await`
 sequencing, add `emit`/`waitFor` pairs.
 
-**flow → scene**: Add `await` to every DSL call or chain.  Replace
+**Declarative → Classic driver**: Add `await` to every DSL call or chain.  Replace
 `emit`/`waitFor` pairs with sequential `await` ordering.  For
 concurrent actor work, wrap in `Promise.all`.
 
@@ -212,18 +214,18 @@ rethinking the test logic.
 
 ## Implementation notes
 
-- `flow()` registers as a normal `scene()` internally — the runner does
+- The declarative model (`flow()`) registers as a normal `scene()` internally — the runner does
   not know the difference.  This is intentional: it means both models
   share discovery, team management, reporting, and lifecycle hooks.
 - `ReactiveActorHandle` duplicates some logic from `ActionChainImpl`
   (selector resolution, scope management, warning polling).  If we keep
-  flow, we should extract shared helpers.  If we keep scene, delete
-  reactive.ts and the duplication goes away.
+  the declarative model, we should extract shared helpers.  If we keep the classic driver,
+  delete reactive.ts and the duplication goes away.
 - The `if()` watcher API exists in both models but works slightly
-  differently.  In `scene()`, watchers clear after each `await`.  In
-  `flow()`, `if()` is a one-shot persistent monitor — it polls during
+  differently.  In the classic driver, watchers clear after each `await`.  In
+  the declarative model, `if()` is a one-shot persistent monitor — it polls during
   every action from the point it's declared, fires inline when the
-  selector matches, then stops.  The flow version uses a queue-swap
+  selector matches, then stops.  The declarative version uses a queue-swap
   trick: the callback receives the actor, but DSL calls inside it push
   to the monitor's sub-action list instead of the main queue:
   ```ts

@@ -114,13 +114,12 @@ flow('user updates their profile', ({ actor }) => {
 
       <CodeBlock>{`<!-- scenes/profile-update.spec.md -->
 # user updates their profile
-
-actor user
-openTo /profile
-see profile-form
-typeInto name-input New Name
-click save-button
-seeText New Name`}</CodeBlock>
+actor: user
+- openTo /profile
+- see profile-form
+- typeInto name-input New Name
+- click save-button
+- seeText New Name`}</CodeBlock>
 
       <p>
         <strong>Inline Assertions</strong> are test statements that live inside your application
