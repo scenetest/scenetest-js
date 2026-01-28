@@ -2,9 +2,9 @@
 
 Complete reference for the `scene()`, `test()`, `actor()`, and action chain APIs used to write scene specs.
 
-Scenetest has three authoring styles — **Declarative (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
+Scenetest has three authoring styles — **Concurrent (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
 
-## scene (Declarative)
+## scene (Concurrent)
 
 ```typescript
 scene(name: string, fn: (context: SceneContext) => void): void
@@ -43,7 +43,7 @@ test('user can update their profile', async ({ actor }) => {
 ## actor
 
 ```typescript
-// In scene() (declarative) — sync, returns ConcurrentActorHandle
+// In scene() (concurrent) — sync, returns ConcurrentActorHandle
 actor(role: string): ConcurrentActorHandle
 
 // In test() (classic driver) — async, returns SequentialActorHandle
@@ -53,7 +53,7 @@ actor(role: string): Promise<SequentialActorHandle>
 Returns an actor handle for the given role from the current team. The role must match a key in your [actor team files](/guides/building-teams).
 
 ```typescript
-// declarative model
+// concurrent model
 const user = actor('primary-learner')
 const friend = actor('existing-friend')
 
@@ -270,16 +270,16 @@ await user.do(async (page) => {
 })
 ```
 
-### waitFor (declarative model only)
+### waitFor (concurrent model only)
 
 ```typescript
 user.waitFor(message: string): ConcurrentActorHandle
 ```
 
-Blocks the actor's queue until the named message arrives on the message bus. Only available in `scene()` (declarative model) — in `test()` (classic driver), use `when()` instead.
+Blocks the actor's queue until the named message arrives on the message bus. Only available in `scene()` (concurrent model) — in `test()` (classic driver), use `when()` instead.
 
 ```typescript
-// declarative model
+// concurrent model
 receiver.waitFor('data-ready')
 receiver.openTo('/inbox')
 receiver.seeText('New message')
@@ -291,7 +291,7 @@ receiver.seeText('New message')
 user.dsl(text: string): ActionChain | ConcurrentActorHandle
 ```
 
-Queues actions from a multiline text DSL string. Returns the actor (declarative) or an `ActionChain` (classic driver), so it chains with other methods.
+Queues actions from a multiline text DSL string. Returns the actor (concurrent) or an `ActionChain` (classic driver), so it chains with other methods.
 
 ```typescript
 // classic driver model
@@ -302,7 +302,7 @@ await user.dsl(`
   click submit
 `)
 
-// declarative model
+// concurrent model
 user.dsl(`
   see login-form
   typeInto email alice@test.com
@@ -351,7 +351,7 @@ await user
   .click('other-button')         // clicks within first-section
 ```
 
-> In the classic driver model (`test()`), `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In the declarative model (`scene()`), all methods are available directly on the actor.
+> In the classic driver model (`test()`), `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In the concurrent model (`scene()`), all methods are available directly on the actor.
 
 ---
 
@@ -458,4 +458,4 @@ These methods are only available mid-chain, not directly on the actor handle:
 - [`up(selector?)`](#up) -- navigate to an ancestor (or bare `up` to page root)
 - [`prev()`](#prev) -- return to previous scope
 
-For details on action chains vs concurrent actors, see the [Declarative and Classic Mode reference](/reference/declarative-and-classic).
+For details on action chains vs concurrent actors, see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic).

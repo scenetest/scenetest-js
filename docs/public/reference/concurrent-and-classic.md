@@ -1,18 +1,18 @@
-# Declarative and Classic Mode
+# Concurrent and Classic Mode
 
 Scenetest has two TypeScript execution models and a plain-text format. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
 
 | Style | File | Function | Execution model | Best for |
 |-------|------|----------|----------------|----------|
-| **Text DSL** | `.spec.md` | Compiles to `scene()` | Declarative concurrent | Simplest way to write a spec with as many actors as you want |
-| **Declarative** | `.spec.ts` | `scene()` | Reactive concurrent draining | Full TypeScript control with automatic concurrency |
+| **Text DSL** | `.spec.md` | Compiles to `scene()` | Concurrent | Simplest way to write a spec with as many actors as you want |
+| **Concurrent** | `.spec.ts` | `scene()` | Reactive concurrent draining | Full TypeScript control with automatic concurrency |
 | **Classic Driver** | `.spec.ts` | `test()` | Sequential await-driven | Familiar Cypress/Playwright model with explicit control |
 
 > **STATUS:** Both models are implemented. Before 1.0, one will be removed. See the [decision document](/design/scene-vs-flow) for the trade-off analysis. Text DSL `.spec.md` files compile to `scene()`.
 
 ---
 
-## Declarative — scene()
+## Concurrent — scene()
 
 ```typescript
 import { scene } from '@scenetest/cli'
@@ -78,7 +78,7 @@ test('user updates their profile', async ({ actor }) => {
 
 ## How to Tell Them Apart
 
-| | Declarative — `scene()` | Classic Driver — `test()` |
+| | Concurrent — `scene()` | Classic Driver — `test()` |
 |---|---------|--------|
 | **Import** | `import { scene } from '@scenetest/cli'` | `import { test } from '@scenetest/cli'` |
 | **`actor()` call** | `const user = actor('user')` (sync) | `const user = await actor('user')` |
@@ -99,7 +99,7 @@ test('user updates their profile', async ({ actor }) => {
 
 ## Multi-Actor Examples
 
-### Declarative — concurrent by default
+### Concurrent — concurrent by default
 
 ```typescript
 scene('two users can chat', ({ actor }) => {
@@ -150,7 +150,7 @@ test('two users can chat', async ({ actor }) => {
 
 ## Multi-Actor Coordination
 
-### Declarative uses `emit()` and `waitFor()`
+### Concurrent uses `emit()` and `waitFor()`
 
 ```typescript
 scene('sender and receiver', ({ actor }) => {
@@ -208,10 +208,10 @@ user.if('welcome-modal', async () => {
 await user.see('dashboard') // if() polls during this action, clears after
 ```
 
-**Declarative:** Persistent one-shot monitor, polls during all subsequent actions.
+**Concurrent:** Persistent one-shot monitor, polls during all subsequent actions.
 
 ```typescript
-// declarative model
+// concurrent model
 user.if('welcome-modal', a => a.click('dismiss'))
 user.see('dashboard')
 user.openTo('/profile')
@@ -234,7 +234,7 @@ await user
 
 Scope set by `see` carries through the chain. `up()` and `prev()` are available mid-chain only (not directly on the actor handle).
 
-## Reactive Actors (declarative)
+## Reactive Actors (concurrent)
 
 In `scene()`, every actor method returns the **actor itself**. All methods are chainable and available directly. Scope persists across the actor's entire queue:
 
@@ -248,7 +248,7 @@ user
   .click('submit')
   .see('dashboard')
 
-// waitFor is only available in the declarative model
+// waitFor is only available in the concurrent model
 user.waitFor('data-ready')
 user.see('loaded-content')
 ```

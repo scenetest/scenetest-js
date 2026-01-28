@@ -441,6 +441,94 @@ figure.screenshot figcaption {
   border-top: none;
 }
 
+/* Link cards */
+.link-card {
+  display: block;
+  padding: 20px 24px;
+  margin: 24px 0;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  position: relative;
+}
+
+.link-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(80, 70, 229, 0.15);
+  transform: translateY(-2px);
+}
+
+.link-card strong {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.link-card span {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+.link-card-arrow {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.link-card:hover .link-card-arrow {
+  opacity: 1;
+  transform: translateY(-50%) translateX(4px);
+}
+
+.link-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.link-card-grid .link-card {
+  margin: 0;
+}
+
+/* Comparison table */
+.comparison-table {
+  width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.comparison-table th {
+  background: var(--code-bg);
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.comparison-table td {
+  background: white;
+}
+
 /* Guides list */
 .guides-list {
   list-style: none;

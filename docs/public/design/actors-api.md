@@ -137,7 +137,7 @@ If you need an admin for a test, the role should reflect their purpose in the st
 
 Use the `actor()` function to get an actor by role:
 
-```ts [Declarative (ts)]
+```ts [Concurrent (ts)]
 import { scene } from '@scenetest/cli'
 
 scene('learner completes first lesson', ({ actor }) => {
@@ -171,7 +171,7 @@ test('learner completes first lesson', async ({ actor }) => {
 
 ### Multi-actor scenes
 
-```ts [Declarative (ts)]
+```ts [Concurrent (ts)]
 scene('friend request flow', ({ actor }) => {
   const learner = actor('primary-learner')
   const friend = actor('existing-friend')

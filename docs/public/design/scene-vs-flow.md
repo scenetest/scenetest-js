@@ -1,8 +1,8 @@
-# Declarative Scene vs Classic Test — Two Execution Models
+# Concurrent Scene vs Classic Test — Two Execution Models
 
 **STATUS: Both implemented.** One of them should be removed before 1.0.
 
-Scenetest currently has two TypeScript execution models — **Declarative** (`scene()`) and **Classic Driver** (`test()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the declarative model.
+Scenetest currently has two TypeScript execution models — **Concurrent** (`scene()`) and **Classic Driver** (`test()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the concurrent model.
 
 This document exists so that future-us can make an informed decision about
 which model to keep.  We are NOT shipping two ways to write scenes.  We're
@@ -10,18 +10,18 @@ holding both in the codebase while we evaluate them against real usage on
 [sunlo.app](https://sunlo.app) and other projects.  Then we rip one out.
 
 > **Note:** Text DSL markdown files (`.spec.md`) compile to `scene()` registrations.
-> This is relevant to the decision — if we keep the declarative model, markdown scenes
+> This is relevant to the decision — if we keep the concurrent model, markdown scenes
 > work natively.  If we keep the classic driver, the markdown parser would need to
 > be rewritten to emit `test()` registrations (or we keep `scene()` as the
 > internal model for markdown scenes only).
 
-For the full side-by-side comparison of both models (syntax, multi-actor patterns, coordination, conditional monitors), see the [Declarative and Classic Mode reference](/reference/declarative-and-classic).
+For the full side-by-side comparison of both models (syntax, multi-actor patterns, coordination, conditional monitors), see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic).
 
 ---
 
 ## The two models
 
-### Declarative — scene(), reactive, concurrent draining
+### Concurrent — scene(), reactive, concurrent draining
 
 ```typescript
 scene('two users chat', ({ actor }) => {
@@ -76,7 +76,7 @@ have to think: "has this happened yet?  should I await before checking?"
 This is exactly the class of bug that `waitUntil` / `waitForSelector` /
 `waitForNavigation` APIs exist to paper over in Playwright and Cypress.
 
-In the declarative model there is no race because each actor's observations (`see`,
+In the concurrent model there is no race because each actor's observations (`see`,
 `seeText`) naturally block/poll for DOM state.  You can write
 `bob.seeText('Hello!')` before or after `alice.click('send')` in the
 source code and it doesn't matter — bob will reach that instruction
@@ -90,14 +90,14 @@ that `.see('x').click('y')` is a chain, that chains execute on `await`,
 that scope resets between chains, and that `Promise.all` is required for
 concurrency.
 
-The declarative model has one object: the actor.  Every method returns the actor.
+The concurrent model has one object: the actor.  Every method returns the actor.
 Scope flows through the actor's queue.  Concurrency is the default, not
 the opt-in.
 
 ### 3. Multi-actor scenes read better
 
 Scene scripts that jump between actors read like screenplays in the
-declarative model.  There is no syntactic noise from `await` telling
+concurrent model.  There is no syntactic noise from `await` telling
 the runtime things it could have figured out itself.
 
 ### 4. The await is lying
@@ -122,21 +122,21 @@ for `test()` instinctively.  Asking them to unlearn `await` is a cost.
 
 Some scenes genuinely need cross-actor ordering: "alice does X, then bob
 does Y in response, then alice does Z."  In the classic driver this is trivially
-expressed with sequential awaits.  In the declarative model you need the message bus
+expressed with sequential awaits.  In the concurrent model you need the message bus
 (`emit` / `waitFor`) or you rely on DOM state being sufficient, which it
 sometimes isn't (e.g. the ordering isn't observable in the UI).
 
 ### 3. Debugging is simpler
 
 When something fails in classic driver mode, the stack trace points to a
-specific `await` in a linear script.  In the declarative model, multiple actors
+specific `await` in a linear script.  In the concurrent model, multiple actors
 are running concurrently, failures trigger abort cascades, and the
 original error might be obscured by "actor X aborted: actor Y failed."
 
 ### 4. Incremental execution
 
 With the classic driver you can put a breakpoint on any `await` and inspect state
-between steps.  With the declarative model, the declaration phase is instant and the
+between steps.  With the concurrent model, the declaration phase is instant and the
 execution phase is a concurrent drain — stepping through it is less
 intuitive.
 
@@ -144,7 +144,7 @@ intuitive.
 
 ## What we'd need to rip out
 
-### If we keep declarative (scene()), remove classic driver (test())
+### If we keep concurrent (scene()), remove classic driver (test())
 
 - Delete `ActionChainImpl` from `actor.ts` (the thenable chain)
 - Delete `SequentialActorHandleImpl` (the handle that creates throwaway chains)
@@ -157,7 +157,7 @@ intuitive.
 - Update CLAUDE.md, README, and design docs
 - `.spec.md` files already compile to `scene()` — no changes needed
 
-### If we keep classic driver (test()), remove declarative (scene())
+### If we keep classic driver (test()), remove concurrent (scene())
 
 - Delete `reactive.ts`
 - Remove `scene` export from `index.ts`
@@ -169,9 +169,9 @@ intuitive.
 - **Rewrite `markdown-scene.ts`** to emit `test()` registrations
   instead of `scene()` — or keep `scene()` as an internal mechanism
 
-The declarative removal is much smaller, which is expected — `scene()` was added on
+The concurrent removal is much smaller, which is expected — `scene()` was added on
 top of the classic driver infrastructure.  However, `.spec.md` files currently compile
-to `scene()`, so removing the declarative model would require either rewriting the markdown
+to `scene()`, so removing the concurrent model would require either rewriting the markdown
 parser or keeping `scene()` as an internal mechanism.
 
 ---
@@ -182,8 +182,8 @@ When evaluating, pay attention to:
 
 1. **How often do you reach for `Promise.all`?** — If every multi-actor
    scene needs it, the classic driver is fighting you.
-2. **How often do you need `emit`/`waitFor` in declarative scenes?** — If every
-   multi-actor scene needs explicit bus coordination, the declarative model
+2. **How often do you need `emit`/`waitFor` in concurrent scenes?** — If every
+   multi-actor scene needs explicit bus coordination, the concurrent model
    is fighting you.
 3. **Which produces better error messages when a scene fails?**
 4. **Which is easier to explain to someone who has never written an E2E
@@ -197,12 +197,12 @@ When evaluating, pay attention to:
 
 If we decide to go all-in on one model, the conversion is mechanical:
 
-**Classic driver → Declarative**: Remove `await` from DSL calls.  Replace `Promise.all`
+**Classic driver → Concurrent**: Remove `await` from DSL calls.  Replace `Promise.all`
 multi-actor blocks with plain sequential declarations (concurrency
 becomes automatic).  For cross-actor ordering that relied on `await`
 sequencing, add `emit`/`waitFor` pairs.
 
-**Declarative → Classic driver**: Add `await` to every DSL call or chain.  Replace
+**Concurrent → Classic driver**: Add `await` to every DSL call or chain.  Replace
 `emit`/`waitFor` pairs with sequential `await` ordering.  For
 concurrent actor work, wrap in `Promise.all`.
 
@@ -213,18 +213,18 @@ rethinking the test logic.
 
 ## Implementation notes
 
-- The declarative model (`scene()`) registers as a normal scene internally — the runner does
+- The concurrent model (`scene()`) registers as a normal scene internally — the runner does
   not know the difference.  This is intentional: it means both models
   share discovery, team management, reporting, and lifecycle hooks.
 - `ConcurrentActorHandleImpl` duplicates some logic from `ActionChainImpl`
   (selector resolution, scope management, warning polling).  If we keep
-  the declarative model, we should extract shared helpers.  If we keep the classic driver,
+  the concurrent model, we should extract shared helpers.  If we keep the classic driver,
   delete reactive.ts and the duplication goes away.
 - The `if()` watcher API exists in both models but works slightly
   differently.  In the classic driver, watchers clear after each `await`.  In
-  the declarative model, `if()` is a one-shot persistent monitor — it polls during
+  the concurrent model, `if()` is a one-shot persistent monitor — it polls during
   every action from the point it's declared, fires inline when the
-  selector matches, then stops.  The declarative version uses a queue-swap
+  selector matches, then stops.  The concurrent version uses a queue-swap
   trick: the callback receives the actor, but DSL calls inside it push
   to the monitor's sub-action list instead of the main queue:
   ```ts
