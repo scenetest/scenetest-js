@@ -84,15 +84,15 @@ marked.use({ renderer })
  *
  * Authoring convention in markdown:
  *
- *   ```ts [Classic Driver (ts)]
+ *   ```ts [classic.spec.ts]
  *   test('login', async ({ actor }) => { ... })
  *   ```
  *
- *   ```ts [Declarative (ts)]
- *   scene('login', ({ actor }) => { ... })
+ *   ```ts [concurrent.spec.ts]
+ *   scene('login', async ({ actor }) => { ... })
  *   ```
  *
- *   ```ts [DSL]
+ *   ```ts [dsl.spec.md]
  *   ['openTo /login', 'see login-form', ...]
  *   ```
  *

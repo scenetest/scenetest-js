@@ -7,44 +7,53 @@ Scene specs describe **user journeys** — the flows a person takes through your
 ## Three Ways to Write Scenes
 
 - **Text DSL (md)** — the simplest way to write a declarative spec with as many actors as you want. Human-readable `.spec.md` files that compile to declarative actor scripts.
-- **Declarative (ts)** — when macros aren't enough: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`.
-- **Classic Driver (ts)** — same async actor model you know from Cypress/Playwright, but with access to the Scenetest message bus and our document selectors.
+- **Declarative/Concurrent Scene (ts)** — when macros aren't enough: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`.
+- **Classic Sequential Driver (ts)** — same async actor model you know from Cypress/Playwright, but with access to the Scenetest message bus and our document selectors.
 
 Click the tabs to compare:
 
-```ts [Declarative (ts)]
+```ts [concurrent.spec.ts]
 import { scene } from '@scenetest/cli'
 
 scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
+  const friend = actor('best-friend')
 
-  // Declarations — nothing executes until the function returns
   user.openTo('/')
-  user.see('welcome-box')
-  user.click('continue-button')
-  user.see('onboarding-step')
+      .see('welcome-box')
+      .click('continue-button')
+  friend.openTo('/friends/search')
+      .typeInto('search-input', user.username)
+		.see(`results-box ${user.id}`)
 })
 ```
 
-```markdown [Text DSL (md)]
+```markdown [dsl.spec.md]
 # user completes onboarding
 new-user:
 - openTo /
 - see welcome-box
 - click continue-button
-- see onboarding-step
+
+actor: best-friend
+- openTo /friends/search
+- typeInto search-input [new-user.username]
+- see results-box [new-user.id]
 ```
 
-```ts [Classic Driver (ts)]
+```ts [classic.spec.ts]
 import { test } from '@scenetest/cli'
 
 test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
+  const friend = await actor('best-friend')
 
   await user.openTo('/')
   await user.see('welcome-box')
-  await user.click('continue-button')
-  await user.see('onboarding-step')
+            .click('continue-button')
+  await friend.openTo('/friends/search')
+  await friend.typeInto('search-input', user.username)
+  await friend.see(`results-box ${user.id}`)
 })
 ```
 
@@ -67,8 +76,8 @@ All selector methods support space-separated test IDs for targeting nested eleme
 Use `seeToast()` to wait for transient UI elements that appear and then disappear:
 
 ```typescript
-await user.click('save-button')
-await user.seeToast('success-notification')  // Waits for appear AND disappear
+user.click('save-button')
+user.seeToast('success-notification')  // Waits for appear AND disappear
 ```
 
 ## Scope Navigation
@@ -79,7 +88,7 @@ await user.seeToast('success-notification')  // Waits for appear AND disappear
 await user
   .see('settings-modal')       // scope -> modal
   .see('profile-form')         // scope -> form inside modal
-  .typeInto('name', 'Alice')   // types within form
+  .typeInto('input', 'Alice')  // types within form
   .prev()                      // scope -> back to modal
   .click('close-button')       // clicks modal's close button
 ```
@@ -127,21 +136,21 @@ Warnings are reported separately in `SceneReport.warnings` and are useful for tr
 
 Write specs from the user's perspective. Each scene should tell a story:
 
-```ts [Declarative (ts)]
+```ts [declarative.spec.ts]
 scene('user can complete checkout', ({ actor }) => {
   const customer = actor('customer')
 
   customer.openTo('/cart')
-  customer.see('cart-items')
-  customer.click('checkout-button')
+     .see('cart-items')
+     .click('checkout-button')
   customer.see('payment-form')
-  customer.typeInto('card-number', '4242424242424242')
-  customer.click('pay-button')
+     .typeInto('card-number', '4242424242424242')
+     .click('pay-button')
   customer.seeText('Order confirmed!')
 })
 ```
 
-```markdown [Text DSL (md)]
+```markdown [text-dsl.spec.md]
 # user can complete checkout
 customer:
 - openTo /cart
@@ -153,7 +162,8 @@ customer:
 - seeText Order confirmed!
 ```
 
-```ts [Classic Driver (ts)]
+
+```ts [classic.spec.ts]
 test('user can complete checkout', async ({ actor }) => {
   const customer = await actor('customer')
 
