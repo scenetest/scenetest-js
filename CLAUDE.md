@@ -28,7 +28,7 @@ packages/
 ├── scenetest-vue/          # Vue bindings - watchTestEffect composable (re-exports core)
 ├── scenetest-solid/        # Solid bindings - createTestEffect primitive (re-exports core)
 ├── scenetest-svelte/       # Svelte bindings - testEffect helper (re-exports core)
-├── scenetest-cli/          # CLI runner - scene(), flow(), actor DSL, selectors, teams, config
+├── scenetest-cli/          # CLI runner - scene(), test(), actor DSL, selectors, teams, config
 ├── vite-plugin/            # Vite plugin - dev panel injection, prod stripping, RPC middleware
 ├── observer/               # Dev panel UI - floating panel, fullscreen, history, audio
 ├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
@@ -42,7 +42,7 @@ packages/
 
 ## Writing Tests with Scenetest
 
-**For writing scene specs and inline assertions, see [`docs/public/design/writing-tests.md`](docs/public/design/writing-tests.md).** That guide covers both authoring models (`scene()` and `flow()`), the actor DSL, selector resolution, configuration, teams, and the text DSL. It is designed to be self-contained — copy it into your application repo's CLAUDE.md or reference it directly.
+**For writing scene specs and inline assertions, see [`docs/public/design/writing-tests.md`](docs/public/design/writing-tests.md).** That guide covers both authoring models (`scene()` declarative and `test()` classic driver), the actor DSL, and links to canonical references for selectors, text DSL format, and execution models. It is designed to be self-contained — copy it into your application repo's CLAUDE.md or reference it directly.
 
 **For the design rationale behind the two execution models, see [`docs/public/design/scene-vs-flow.md`](docs/public/design/scene-vs-flow.md).**
 
@@ -50,8 +50,8 @@ packages/
 
 There are two scene-authoring models with separate implementations:
 
-- **`scene()`** — await-driven sequential orchestration. Implemented in `actor.ts` (`SequentialActorHandleImpl`, `ActionChainImpl`).
-- **`flow()`** — reactive concurrent draining. Implemented in `reactive.ts` (`ConcurrentActorHandleImpl`, `drainAll()`).
+- **`test()`** — await-driven sequential orchestration (classic driver). Implemented in `actor.ts` (`SequentialActorHandleImpl`, `ActionChainImpl`).
+- **`scene()`** — reactive concurrent draining (declarative). Implemented in `reactive.ts` (`ConcurrentActorHandleImpl`, `drainAll()`).
 
 Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runner.ts`) does not know which model a scene uses. Before 1.0, one model will be removed — see `scene-vs-flow.md` for the decision criteria and what needs to be ripped out for each path.
 
@@ -65,9 +65,9 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `types.ts` — `AssertionResult`, `ServerContext`, RPC types
 
 ### CLI (`packages/scenetest-cli/src/`)
-- `scene.ts` — `scene()` registration, `when()` coordination, `runScene()`
-- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (scene model)
-- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `flow()` registration (flow model)
+- `scene.ts` — `scene()` and `test()` registration, `when()` coordination, `runScene()`
+- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (classic driver model)
+- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (declarative model)
 - `selectors.ts` — `resolveSelector()`, `explainSelector()`, alias registry
 - `dsl.ts` — `runDsl()`, `defineMacro()`, `runMacro()`, text DSL parser
 - `message-bus.ts` — `MessageBus` with sticky messages
@@ -75,7 +75,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks
 - `cli.ts` — CLI entry point, report generation (HTML/JSON)
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
-- `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `FlowContext`, etc.)
+- `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
 
 ### Vite Plugin (`packages/vite-plugin/src/`)
 - `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)

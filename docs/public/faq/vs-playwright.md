@@ -22,7 +22,7 @@ And you use scene specs to orchestrate user journeys:
 
 ```typescript
 // Scenetest - scene spec
-scene('user sees items', async ({ actor }) => {
+test('user sees items', async ({ actor }) => {
   const user = await actor('user')
   await user.openTo('/items')
   await user.see('item-list')
@@ -33,7 +33,7 @@ scene('user sees items', async ({ actor }) => {
 
 - **Inline assertions** run every render, catching regressions immediately
 - **Full access to framework state** - no DOM querying needed
-- **Scene specs** use actors (`actor()`) instead of raw Playwright APIs
+- **Scene specs** use actors (`actor()`) instead of raw Playwright APIs — write `test()` for familiar async style or `scene()` for declarative concurrency
 - **Real-time observer** shows assertions as you develop
 
 Scenetest is inspired by `page.evaluate` but takes the "code in browser" idea further.

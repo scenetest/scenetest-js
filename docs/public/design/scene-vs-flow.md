@@ -1,48 +1,30 @@
-# Declarative Flow vs Classic Driver — Two Execution Models
+# Declarative Scene vs Classic Test — Two Execution Models
 
 **STATUS: Both implemented.** One of them should be removed before 1.0.
 
-Scenetest currently has two TypeScript execution models — **Declarative** (`flow()`) and **Classic Driver** (`scene()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the declarative model.
+Scenetest currently has two TypeScript execution models — **Declarative** (`scene()`) and **Classic Driver** (`test()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the declarative model.
 
 This document exists so that future-us can make an informed decision about
 which model to keep.  We are NOT shipping two ways to write scenes.  We're
 holding both in the codebase while we evaluate them against real usage on
 [sunlo.app](https://sunlo.app) and other projects.  Then we rip one out.
 
-> **Note:** Text DSL markdown files (`.spec.md`) compile to `flow()` registrations.
+> **Note:** Text DSL markdown files (`.spec.md`) compile to `scene()` registrations.
 > This is relevant to the decision — if we keep the declarative model, markdown scenes
 > work natively.  If we keep the classic driver, the markdown parser would need to
-> be rewritten to emit `scene()` registrations (or we keep `flow()` as the
+> be rewritten to emit `test()` registrations (or we keep `scene()` as the
 > internal model for markdown scenes only).
+
+For the full side-by-side comparison of both models (syntax, multi-actor patterns, coordination, conditional monitors), see the [Declarative and Classic Mode reference](/reference/declarative-and-classic).
 
 ---
 
 ## The two models
 
-### Classic Driver — scene(), await-driven, sequential orchestration
+### Declarative — scene(), reactive, concurrent draining
 
 ```typescript
-scene('two users chat', async ({ actor }) => {
-  const alice = await actor('alice')
-  const bob = await actor('bob')
-
-  await alice.openTo('/chat')
-  await alice.see('input').typeInto('input', 'Hello!').click('send')
-
-  await bob.openTo('/chat')
-  await bob.seeText('Hello!')
-})
-```
-
-- Each `await` is an execution boundary.
-- The test author controls ordering explicitly.
-- Multi-actor concurrency requires explicit `Promise.all()`.
-- Scope lives on the **chain** (a new chain starts at each `await`).
-
-### Declarative — flow(), reactive, concurrent draining
-
-```typescript
-flow('two users chat', ({ actor }) => {
+scene('two users chat', ({ actor }) => {
   const alice = actor('alice')
   const bob = actor('bob')
 
@@ -62,6 +44,26 @@ flow('two users chat', ({ actor }) => {
 - Cross-actor synchronization happens through the DOM (and optionally the
   message bus), not through `await` ordering.
 - Scope lives on the **actor** and flows through the queue during drain.
+
+### Classic Driver — test(), await-driven, sequential orchestration
+
+```typescript
+test('two users chat', async ({ actor }) => {
+  const alice = await actor('alice')
+  const bob = await actor('bob')
+
+  await alice.openTo('/chat')
+  await alice.see('input').typeInto('input', 'Hello!').click('send')
+
+  await bob.openTo('/chat')
+  await bob.seeText('Hello!')
+})
+```
+
+- Each `await` is an execution boundary.
+- The test author controls ordering explicitly.
+- Multi-actor concurrency requires explicit `Promise.all()`.
+- Scope lives on the **chain** (a new chain starts at each `await`).
 
 ---
 
@@ -114,7 +116,7 @@ masquerading as a language feature.
 
 Every Playwright / Cypress / Puppeteer test ever written uses await-based
 sequential orchestration.  People migrating from those tools will reach
-for `scene()` instinctively.  Asking them to unlearn `await` is a cost.
+for `test()` instinctively.  Asking them to unlearn `await` is a cost.
 
 ### 2. Explicit ordering is sometimes what you want
 
@@ -142,38 +144,35 @@ intuitive.
 
 ## What we'd need to rip out
 
-### If we keep declarative (flow()), remove classic driver (scene())
+### If we keep declarative (scene()), remove classic driver (test())
 
 - Delete `ActionChainImpl` from `actor.ts` (the thenable chain)
 - Delete `SequentialActorHandleImpl` (the handle that creates throwaway chains)
-- Remove `scene()` from `scene.ts` (keep `sceneRegistry`, `runScene`,
+- Remove `test()` export from `scene.ts` (keep `sceneRegistry`, `runScene`,
   `when`)
 - Remove `ActionChain` and `SequentialActorHandle` from `types.ts`
 - Update `runner.ts` — it calls `runScene` which calls `scene.fn`,
-  which already works with `flow()` since flow registers as a scene
-- Update all example specs from `scene()` to `flow()`
+  which already works with `scene()` since it registers as a scene
+- Update all example specs from `test()` to `scene()`
 - Update CLAUDE.md, README, and design docs
-- Consider renaming `flow()` → `scene()` since there would be only one
-  model and "scene" is the better name
-- `.spec.md` files already compile to `flow()` — no changes needed
+- `.spec.md` files already compile to `scene()` — no changes needed
 
-### If we keep classic driver (scene()), remove declarative (flow())
+### If we keep classic driver (test()), remove declarative (scene())
 
 - Delete `reactive.ts`
-- Remove `flow` export from `index.ts`
-- Remove `ConcurrentActorHandle`, `FlowContext`, `FlowFn` from `types.ts`
+- Remove `scene` export from `index.ts`
+- Remove `ConcurrentActorHandle`, `SceneContext`, `SceneFn` from `types.ts`
 - Remove `getCurrentSession()` from `scene.ts`
 - Revert `actionTimeout`/`warnAfter` to `private` on `TeamSession`
   (or leave — no harm)
 - Delete `reactive.test.ts`
-- **Rewrite `markdown-scene.ts`** to emit `scene()` registrations
-  instead of `flow()` — or keep `flow()` as an internal-only model
-  for markdown scene compilation
+- **Rewrite `markdown-scene.ts`** to emit `test()` registrations
+  instead of `scene()` — or keep `scene()` as an internal mechanism
 
-The declarative removal is much smaller, which is expected — `flow()` was added on
-top of `scene()` infrastructure.  However, `.spec.md` files currently compile
-to `flow()`, so removing the declarative model would require either rewriting the markdown
-parser or keeping `flow()` as an internal mechanism.
+The declarative removal is much smaller, which is expected — `scene()` was added on
+top of the classic driver infrastructure.  However, `.spec.md` files currently compile
+to `scene()`, so removing the declarative model would require either rewriting the markdown
+parser or keeping `scene()` as an internal mechanism.
 
 ---
 
@@ -214,7 +213,7 @@ rethinking the test logic.
 
 ## Implementation notes
 
-- The declarative model (`flow()`) registers as a normal `scene()` internally — the runner does
+- The declarative model (`scene()`) registers as a normal scene internally — the runner does
   not know the difference.  This is intentional: it means both models
   share discovery, team management, reporting, and lifecycle hooks.
 - `ConcurrentActorHandleImpl` duplicates some logic from `ActionChainImpl`

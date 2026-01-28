@@ -39,33 +39,6 @@ const checkoutFlow = [
 await runDsl(user, checkoutFlow)
 ```
 
-### Grammar
-
-```
-<action> [<selector>] [<value>]
-
-Actions:
-  openTo <url>                    - Navigate to URL
-  see <selector>                  - Wait for element visible (updates scope)
-  seeInView <selector>            - Wait for element visible in the viewport (no scrolling needed)
-  notSee <selector>               - Wait for element hidden
-  seeText <text>                  - Wait for text visible
-  seeToast <selector>             - Wait for element appear then disappear
-  click [<selector>]              - Click element within scope (bare click = click current scope)
-  typeInto <selector> <value>     - Fill input
-  check <selector>                - Check checkbox
-  select <selector> <value>       - Select dropdown option
-  wait <ms>                       - Wait milliseconds
-  emit <message>                  - Emit to message bus
-  waitFor <message>               - Block until bus message arrives (declarative model only)
-  warnIf <selector> <message>     - Register script warning
-  up [<selector>]                 - Navigate scope to ancestor (bare up = reset to page root)
-  prev                            - Return to previous scope
-  scrollToBottom                   - Scroll current scope to bottom
-```
-
-Note: `do()` and `if()` are code-only methods not available in the text DSL (but `if` is available in `.spec.md` files with indented sub-actions).
-
 ### Macros
 
 Named, reusable action sequences with variable substitution:
@@ -82,96 +55,11 @@ defineMacro('login', [
 await runMacro(user, 'login', { username: 'alice', password: 'secret' })
 ```
 
-### Markdown Scene Files (.spec.md) (Implemented)
-
-Scenes can also be written as plain markdown files (`.spec.md`). The runner auto-discovers them alongside `.spec.ts` files and compiles each one into declarative (`flow()`) registrations.
-
-```markdown
-## user completes checkout
-customer:
-- openTo /cart
-- see cart-items
-- click checkout-button
-- see payment-form
-- typeInto card-number 4242424242424242
-- click submit
-- seeToast success-toast
-```
-
-Markdown scenes support the full text DSL grammar plus:
-- **Actor switching**: `role-name:` lines (screenplay-cue syntax)
-- **Heading hierarchy**: `#` = groups, `##` = scenes
-- **Interpolation**: `[actor.field]` for cross-actor references
-- **Conditional monitors**: `if <selector>` + indented sub-actions
-- **Macros**: `name()` or `name() <args>` invocations
-- **List prefixes**: `- ` and `1. ` are stripped (for markdown readability)
-- **Comments**: `// text` becomes `console.log` during drain
-
-See `writing-tests.md` for the full `.spec.md` format reference.
+For the full text DSL grammar, `.spec.md` markdown scene format, and complete syntax reference, see [Text DSL Reference](/reference/text-dsl).
 
 ## 3. Selector Resolution (Implemented)
 
-### Priority Order
-
-Each token in a selector matches against these attributes (in order):
-
-1. `aria-label` - Accessibility label (encouraged for interactive elements)
-2. `id` - DOM id attribute
-3. `data-testid` - Explicit test identifier
-4. `data-name` - Custom name attribute
-5. `data-key` - Key for list items
-6. `name` - Form element name
-
-### Nested Selectors with Implicit Key Matching
-
-Space-separated tokens create nested selectors. Special behavior: after matching a token, if the **same element** has a `data-key` matching the **next token**, that token is consumed without descending.
-
-```typescript
-// Simple nesting
-await user.see('modal form submit-button')
-
-// With implicit key matching
-await user.see('playlist-row 12345 like-button')
-// 1. Find element matching 'playlist-row'
-// 2. Check if it has data-key="12345" - if yes, stay on same element
-// 3. If no, look for child matching '12345'
-// 4. Then find 'like-button' child
-```
-
-This works with markup like:
-```html
-<div data-name="playlist-row" data-key="12345">
-  <button aria-label="like-button">Like</button>
-</div>
-```
-
-### Sigil Prefixes
-
-- `~name` - Alias lookup (configured in config file)
-- `@label` - Explicit aria-label lookup
-
-### Aliases
-
-Configure selector aliases in your config file:
-
-```typescript
-// scenetest.config.ts
-export default defineConfig({
-  aliases: {
-    container: '[data-container]',
-    modal: '[role=dialog]',
-    nav: '[role=navigation]',
-    'btn-p': 'button[type=submit], button.primary',
-  },
-})
-```
-
-Usage:
-```typescript
-await user.see('~modal')
-await user.up('~container')
-await user.click('~btn-p')
-```
+For selector priority order, nested selectors, implicit key matching, sigil prefixes, and alias configuration, see [Selector Reference](/reference/selectors).
 
 ## 4. Chaining Model (Implemented)
 
@@ -293,7 +181,7 @@ const result = await explainSelector(page, 'my-selector')
 ### Proposed API
 
 ```typescript
-scene('handles API failure', async ({ actor, network }) => {
+test('handles API failure', async ({ actor, network }) => {
   const user = await actor('user')
 
   // Inject failure
@@ -303,7 +191,7 @@ scene('handles API failure', async ({ actor, network }) => {
   await user.see('error-state')
 })
 
-scene('loads large dataset', async ({ actor, network }) => {
+test('loads large dataset', async ({ actor, network }) => {
   const user = await actor('user')
 
   // Mock response
@@ -315,7 +203,7 @@ scene('loads large dataset', async ({ actor, network }) => {
   await user.see('pagination')
 })
 
-scene('handles slow network', async ({ actor, network }) => {
+test('handles slow network', async ({ actor, network }) => {
   const user = await actor('user')
 
   // Add latency

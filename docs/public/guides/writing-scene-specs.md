@@ -13,9 +13,9 @@ Scene specs describe **user journeys** — the flows a person takes through your
 Click the tabs to compare:
 
 ```ts [Declarative (ts)]
-import { flow } from '@scenetest/cli'
+import { scene } from '@scenetest/cli'
 
-flow('user completes onboarding', ({ actor }) => {
+scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
 
   // Declarations — nothing executes until the function returns
@@ -36,9 +36,9 @@ new-user:
 ```
 
 ```ts [Classic Driver (ts)]
-import { scene } from '@scenetest/cli'
+import { test } from '@scenetest/cli'
 
-scene('user completes onboarding', async ({ actor }) => {
+test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
 
   await user.openTo('/')
@@ -54,73 +54,13 @@ The test writer focuses on **what** should happen. Engineers then add the necess
 
 ## Actor Methods
 
-The `actor()` function returns an actor handle representing a user or role. Here are the most common methods:
+The `actor()` function returns an actor handle representing a user or role. Actors can navigate pages, assert visibility, interact with elements (click, type, check, select), navigate scope, coordinate with other actors via the message bus, and run custom Playwright actions. They also support conditionals, warnings, and inline text DSL via `dsl()`.
 
-```typescript
-const user = await actor('user')
+For the complete method list including all navigation, visibility, interaction, scope, and control flow methods, see the [Actor API Reference](/reference/actor-api).
 
-// Navigation
-await user.openTo('/path')            // Full page load
+## Selectors
 
-// Visibility
-await user.see('element-id')          // Wait for element visible (updates scope)
-await user.see('modal form')          // Nested selector: form inside modal
-await user.seeInView('hero-banner')   // Wait for element visible in the viewport
-await user.notSee('loading-spinner')  // Wait for element hidden
-await user.seeText('text content')    // Wait for text visible
-await user.seeToast('success-toast')  // Wait for appear AND disappear
-
-// Interactions
-await user.click('button-id')         // Click element in scope
-await user.click()                    // Bare click — clicks the current scope element
-await user.typeInto('input-id', 'text to type')
-await user.check('agree-checkbox')
-await user.select('country-dropdown', 'Canada')
-
-// Scope navigation
-await user.see('modal').see('form').prev()  // Back to modal scope
-await user.see('child').up('~container')    // Up to ancestor
-await user.up()                             // Bare up — reset scope to page root
-
-// Utilities
-await user.wait(500)
-await user.scrollToBottom()
-await user.emit('user-ready')              // Message bus for actor coordination
-await user.do(async (page) => { /* ... */ })  // Custom Playwright action
-
-// Text DSL inline
-await user.dsl(`
-  see login-form
-  typeInto email alice@test.com
-  click submit
-`)
-
-// Chaining
-await user
-  .see('form')
-  .typeInto('email', 'test@example.com')
-  .click('submit')
-```
-
-Actors also support [form helpers](/reference/actor-api#check) (`check`, `select`), [control flow](/reference/actor-api#wait)
-(`wait`, `emit`, `do`), [scope navigation](/reference/actor-api#up) (`up`, `prev`), and [conditionals](/reference/actor-api#if)
-(`if`, `warnIf`). See the [Actor API Reference](/reference/actor-api) for the complete method list.
-
-
-## Nested Selectors
-
-All selector methods support space-separated test IDs for targeting nested elements:
-
-```typescript
-// Click button inside a specific card
-await user.click('user-card action-button')
-
-// Type into input inside a modal form
-await user.typeInto('settings-modal email-input', 'new@email.com')
-
-// Wait for element inside nested containers
-await user.see('sidebar nav-menu settings-link')
-```
+All selector methods support space-separated test IDs for targeting nested elements, ancestor navigation with `up()`, and alias resolution. For the full selector syntax and resolution rules, see the [Selectors Reference](/reference/selectors).
 
 ## Toast/Notification Testing
 
@@ -137,10 +77,10 @@ await user.seeToast('success-notification')  // Waits for appear AND disappear
 
 ```typescript
 await user
-  .see('settings-modal')       // scope → modal
-  .see('profile-form')         // scope → form inside modal
+  .see('settings-modal')       // scope -> modal
+  .see('profile-form')         // scope -> form inside modal
   .typeInto('name', 'Alice')   // types within form
-  .prev()                      // scope → back to modal
+  .prev()                      // scope -> back to modal
   .click('close-button')       // clicks modal's close button
 ```
 
@@ -153,7 +93,7 @@ await user
   .click('action-button')
 
 // Reset to page root
-await user.up()               // scope → page (clears all scope)
+await user.up()               // scope -> page (clears all scope)
 await user.see('other-section')
 ```
 
@@ -188,7 +128,7 @@ Warnings are reported separately in `SceneReport.warnings` and are useful for tr
 Write specs from the user's perspective. Each scene should tell a story:
 
 ```ts [Declarative (ts)]
-flow('user can complete checkout', ({ actor }) => {
+scene('user can complete checkout', ({ actor }) => {
   const customer = actor('customer')
 
   customer.openTo('/cart')
@@ -214,7 +154,7 @@ customer:
 ```
 
 ```ts [Classic Driver (ts)]
-scene('user can complete checkout', async ({ actor }) => {
+test('user can complete checkout', async ({ actor }) => {
   const customer = await actor('customer')
 
   await customer.openTo('/cart')
@@ -280,27 +220,14 @@ This separation means:
 
 ## Configuration
 
-Configure your scenes in `scenetest.config.ts`:
-
-```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
-
-export default defineConfig({
-  baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
-})
-```
-
-Actor teams are defined in separate files. See [Building Good Teams of Actors](./building-teams.md) for details.
+For configuration, see the [test-authoring reference](/design/writing-tests#configuration).
 
 ## Summary
 
 - Scene specs describe **user journeys** — write them as declarative TypeScript, text DSL markdown, or classic driver-style TypeScript
 - Write specs in **plain language** from the user's perspective
-- Choose your format: declarative `flow()` for simplicity, `.spec.md` for maximum readability, `scene()` for Playwright/Cypress compatibility
+- Choose your format: declarative `scene()` for simplicity, `.spec.md` for maximum readability, `test()` for Playwright/Cypress compatibility
 - Use stable `data-testid` attributes as the contract with engineers
-- Use **nested selectors** (`'parent child'`) to target specific elements
 - Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
 - Use `seeInView()` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
@@ -309,4 +236,4 @@ Actor teams are defined in separate files. See [Building Good Teams of Actors](.
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
 
-For the complete list of actor methods, selectors, and action chain details, see the [Actor API Reference](/reference/actor-api).
+For the complete list of actor methods, see the [Actor API Reference](/reference/actor-api). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [test-authoring reference](/design/writing-tests#configuration).

@@ -1,6 +1,12 @@
 
 ---
 
+> **Historical note:** This is the original concept document written before implementation.
+> API names have since changed: `pass` → `should`, `fail` → `failed`, `scene.play` → `scene()` / `test()`.
+> For current API docs, see the [test-authoring reference](/design/writing-tests) and the [Actor API reference](/reference/actor-api).
+
+---
+
 ## Concept
 
 Scenetest began from picking at the idea that end-to-end testing kind of seems to be confusing two very different and important things:
