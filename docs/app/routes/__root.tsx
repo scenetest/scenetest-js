@@ -363,7 +363,7 @@ figure.screenshot figcaption {
 
 .copy-md-btn {
   position: absolute;
-  top: 0;
+  top: -36px;
   right: 0;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.75rem;
