@@ -114,12 +114,51 @@ scene('user updates their profile', ({ actor }) => {
 
       <CodeBlock>{`<!-- scenes/profile-update.spec.md -->
 # user updates their profile
-actor: user
+user:
 - openTo /profile
 - see profile-form
 - typeInto name-input New Name
 - click save-button
 - seeText New Name`}</CodeBlock>
+
+      <p>
+        The markdown format really shines for <strong>multi-actor scenarios</strong> — coordinating
+        multiple users interacting with your app simultaneously. Actor cues switch between users,
+        and the <code>emit</code>/<code>waitFor</code> pattern synchronizes their actions:
+      </p>
+
+      <CodeBlock>{`<!-- scenes/friend-request.spec.md -->
+# User sends and receives a friend request
+
+alice:
+- openTo /login
+- typeInto email [self.email]
+- typeInto password [self.password]
+- click submit
+- see dashboard
+- click search-users
+- typeInto search-input [bob.username]
+- see user-card-[bob.id]
+- click send-request-button
+- emit request-sent
+
+bob:
+- waitFor request-sent
+- openTo /notifications
+- seeToast friend-request
+- see notification-badge
+- click
+- see friend-request-from-[alice.id]
+- click accept-button
+
+alice:
+- seeToast request-accepted`}</CodeBlock>
+
+      <p>
+        Variables like <code>[self.email]</code> and <code>[bob.username]</code> are interpolated
+        from actor data, making specs readable without hardcoded test values. See
+        the <Link to="/reference/text-dsl">Text DSL reference</Link> for the full grammar, macros, and more.
+      </p>
 
       <p>
         <strong>Inline Assertions</strong> are test statements that live inside your application
