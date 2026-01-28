@@ -6,9 +6,9 @@ Scene specs describe **user journeys** — the flows a person takes through your
 
 ## Three Ways to Write Scenes
 
-- **Text DSL (md)** — the simplest way to write a declarative spec with as many actors as you want. Human-readable `.spec.md` files that compile to declarative actor scripts.
-- **Declarative/Concurrent Scene (ts)** — when macros aren't enough: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`.
-- **Classic Sequential Driver (ts)** — same async actor model you know from Cypress/Playwright, but with access to the Scenetest message bus and our document selectors.
+- **Text DSL (md)** — the simplest way to write a concurrent spec with as many actors as you want. Human-readable `.spec.md` files that compile to concurrent actor scripts.
+- **Concurrent (ts)** — the native model: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`. Actions queue up per actor and drain concurrently.
+- **Classic Driver (ts)** — the async/await model you know from Cypress/Playwright, with access to the Scenetest message bus and our document selectors.
 
 Click the tabs to compare:
 
@@ -35,7 +35,7 @@ new-user:
 - see welcome-box
 - click continue-button
 
-actor: best-friend
+best-friend:
 - openTo /friends/search
 - typeInto search-input [new-user.username]
 - see results-box [new-user.id]
@@ -57,7 +57,7 @@ test('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-**Declarative** is the native model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is the most minimal format — plain `.spec.md` files that are human-readable, GitHub-renderable, and executable. They compile to declarative scripts. **Classic Driver** is the explicit model for those coming from Playwright or Cypress — you `await` each action and control the timeline yourself.
+**Concurrent** is the native model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is the most minimal format — plain `.spec.md` files that are human-readable, GitHub-renderable, and executable. They compile to concurrent scripts. **Classic Driver** is the async/await model for those coming from Playwright or Cypress — you `await` each action and control the timeline yourself.
 
 The test writer focuses on **what** should happen. Engineers then add the necessary hooks (test IDs, data attributes) to make the tests pass.
 
@@ -136,7 +136,7 @@ Warnings are reported separately in `SceneReport.warnings` and are useful for tr
 
 Write specs from the user's perspective. Each scene should tell a story:
 
-```ts [declarative.spec.ts]
+```ts [concurrent.spec.ts]
 scene('user can complete checkout', ({ actor }) => {
   const customer = actor('customer')
 
@@ -234,9 +234,9 @@ For configuration, see the [test-authoring reference](/design/writing-tests#conf
 
 ## Summary
 
-- Scene specs describe **user journeys** — write them as declarative TypeScript, text DSL markdown, or classic driver-style TypeScript
+- Scene specs describe **user journeys** — write them as concurrent TypeScript, text DSL markdown, or classic driver-style TypeScript
 - Write specs in **plain language** from the user's perspective
-- Choose your format: declarative `scene()` for simplicity, `.spec.md` for maximum readability, `test()` for Playwright/Cypress compatibility
+- Choose your format: concurrent `scene()` for simplicity, `.spec.md` for maximum readability, classic `test()` for async/await compatibility
 - Use stable `data-testid` attributes as the contract with engineers
 - Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
 - Use `seeInView()` to check viewport visibility without scrolling
