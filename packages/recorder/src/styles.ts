@@ -205,6 +205,10 @@ export const recorderStyles = `
 .recorder-value {
   color: #c3e88d;
 }
+.recorder-prefix {
+  color: #6a6a8a;
+  user-select: none;
+}
 
 /* Delete button */
 .recorder-line-delete {

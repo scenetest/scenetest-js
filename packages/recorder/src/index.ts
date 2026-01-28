@@ -187,27 +187,47 @@ function resumeRecording(): void {
 }
 
 /**
- * Export the current DSL lines as a downloadable .dsl file
+ * Export the current DSL lines as a downloadable .spec.md file
+ * in the formal screenplay-cue format.
  */
 function exportDsl(): void {
-  const dslContent = state.lines.map(l => l.text).join('\n')
-
-  if (!dslContent) {
+  if (state.lines.length === 0) {
     console.warn('[scenetest/recorder] Nothing to export')
     return
   }
 
-  // Generate filename from current page path
+  // Generate scene name from current page path
   const pagePath = location.pathname
+    .replace(/^\//, '')
+    .replace(/\//g, ' ')
+    .trim()
+    || 'recorded scene'
+
+  // Build the formal markdown DSL format:
+  // ## scene-name
+  // user:
+  // - action selector
+  // - action selector value
+  const lines = [
+    `## ${pagePath}`,
+    'user:',
+    ...state.lines.map(l => `- ${l.text}`),
+    '', // trailing newline
+  ]
+
+  const content = lines.join('\n')
+
+  // Generate filename
+  const pathSlug = location.pathname
     .replace(/^\//, '')
     .replace(/\//g, '-')
     || 'scene'
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')
-  const filename = `${pagePath}-${timestamp}.dsl`
+  const filename = `${pathSlug}-${timestamp}.spec.md`
 
   // Create and trigger download
-  const blob = new Blob([dslContent + '\n'], { type: 'text/plain' })
+  const blob = new Blob([content], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
