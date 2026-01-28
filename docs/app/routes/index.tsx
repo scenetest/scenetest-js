@@ -94,9 +94,9 @@ useTestEffect(() => {
       </p>
 
       <CodeBlock>{`// scenes/profile-update.spec.ts
-import { flow } from '@scenetest/cli'
+import { scene } from '@scenetest/cli'
 
-flow('user updates their profile', ({ actor }) => {
+scene('user updates their profile', ({ actor }) => {
   const user = actor('user')
 
   user.openTo('/profile')

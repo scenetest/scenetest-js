@@ -1,39 +1,39 @@
 # Actor API Reference
 
-Complete reference for the `flow()`, `scene()`, `actor()`, and action chain APIs used to write scene specs.
+Complete reference for the `scene()`, `test()`, `actor()`, and action chain APIs used to write scene specs.
 
-Scenetest has three authoring styles — **Declarative (ts)** using `flow()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `scene()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
+Scenetest has three authoring styles — **Declarative (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
 
-## flow (Declarative)
+## scene (Declarative)
 
 ```typescript
-flow(name: string, fn: (context: FlowContext) => void): void
+scene(name: string, fn: (context: SceneContext) => void): void
 ```
 
 Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns. This is the **native model** for Scenetest.
 
 ```typescript
-import { flow } from '@scenetest/cli'
+import { scene } from '@scenetest/cli'
 
-flow('user can update their profile', ({ actor }) => {
+scene('user can update their profile', ({ actor }) => {
   const user = actor('primary-learner')
   user.openTo('/profile')
   user.see('profile-form')
 })
 ```
 
-## scene (Classic Driver)
+## test (Classic Driver)
 
 ```typescript
-scene(name: string, fn: (context: SceneContext) => Promise<void>): void
+test(name: string, fn: (context: SceneContext) => Promise<void>): void
 ```
 
 Registers a scene with await-driven sequential orchestration. The callback receives a `SceneContext` with an `actor` function and the assigned `teamIndex`. This is the **compatibility model** for those coming from Playwright or Cypress.
 
 ```typescript
-import { scene } from '@scenetest/cli'
+import { test } from '@scenetest/cli'
 
-scene('user can update their profile', async ({ actor }) => {
+test('user can update their profile', async ({ actor }) => {
   const user = await actor('primary-learner')
   await user.openTo('/profile')
   await user.see('profile-form')
@@ -43,10 +43,10 @@ scene('user can update their profile', async ({ actor }) => {
 ## actor
 
 ```typescript
-// In flow() (declarative) — sync, returns ConcurrentActorHandle
+// In scene() (declarative) — sync, returns ConcurrentActorHandle
 actor(role: string): ConcurrentActorHandle
 
-// In scene() (classic driver) — async, returns SequentialActorHandle
+// In test() (classic driver) — async, returns SequentialActorHandle
 actor(role: string): Promise<SequentialActorHandle>
 ```
 
@@ -98,7 +98,7 @@ await user.openTo('/settings/profile')
 user.see(selector: Selector): ActionChain
 ```
 
-Waits for an element matching the [selector](#selectors) to become visible, then sets it as the **current scope**. Subsequent actions like `click` and `typeInto` look within this scope.
+Waits for an element matching the [selector](/reference/selectors) to become visible, then sets it as the **current scope**. Subsequent actions like `click` and `typeInto` look within this scope.
 
 ```typescript
 await user.see('profile-form')
@@ -276,7 +276,7 @@ await user.do(async (page) => {
 user.waitFor(message: string): ConcurrentActorHandle
 ```
 
-Blocks the actor's queue until the named message arrives on the message bus. Only available in `flow()` (declarative model) — in `scene()` (classic driver), use `when()` instead.
+Blocks the actor's queue until the named message arrives on the message bus. Only available in `scene()` (declarative model) — in `test()` (classic driver), use `when()` instead.
 
 ```typescript
 // declarative model
@@ -322,7 +322,7 @@ Actions like `see` set a **scope** -- a DOM element that subsequent actions sear
 chain.up(selector?: Selector): ActionChain
 ```
 
-Navigates from the current scope **up** to an ancestor matching the selector. When called with **no selector** (bare `up`), resets scope to the page root. Useful with [aliases](#aliases) for finding named containers.
+Navigates from the current scope **up** to an ancestor matching the selector. When called with **no selector** (bare `up`), resets scope to the page root. Useful with [aliases](/reference/selectors) for finding named containers.
 
 ```typescript
 await user
@@ -351,7 +351,7 @@ await user
   .click('other-button')         // clicks within first-section
 ```
 
-> In the classic driver model (`scene()`), `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In the declarative model (`flow()`), all methods are available directly on the actor.
+> In the classic driver model (`test()`), `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In the declarative model (`scene()`), all methods are available directly on the actor.
 
 ---
 
@@ -409,7 +409,7 @@ when(callback: () => ActionChain | Promise<void>, message: string): void
 Coordinates between actors via a message bus. Combine with `emit` for multi-actor scenes:
 
 ```typescript
-scene('friend request flow', async ({ actor }) => {
+test('friend request flow', async ({ actor }) => {
   const sender = await actor('primary-learner')
   const receiver = await actor('existing-friend')
 
@@ -428,71 +428,13 @@ scene('friend request flow', async ({ actor }) => {
 
 ## Selectors
 
-All selector parameters accept a `Selector` string. Selectors are **space-separated tokens** that resolve to DOM elements.
-
-### Attribute matching
-
-Each token matches against **all** of these attributes simultaneously:
-
-- `aria-label`
-- `id`
-- `data-testid`
-- `data-name`
-- `data-key`
-- `name`
-
-There is no priority between attributes. If multiple elements match (each via a different attribute), the first one in **DOM order** wins. In practice, `data-testid` is the primary convention for scene specs.
-
-### Nested selectors
-
-Space-separated tokens drill into the DOM. Each token finds a descendant of the previous match:
-
-```typescript
-await user.see('sidebar nav-menu settings-link')
-// Finds: [data-testid="sidebar"] > ... > [data-testid="nav-menu"] > ... > [data-testid="settings-link"]
-```
-
-### Key selectors
-
-If an element has a `data-key` attribute, the next token can match against it without descending into a child:
-
-```typescript
-await user.click('playlist-row 12345 like-button')
-// playlist-row matches [data-testid="playlist-row"]
-// 12345 matches data-key="12345" on the SAME element
-// like-button matches [data-testid="like-button"] inside that row
-```
-
-This is useful for lists where each row has a unique key.
-
-### Aliases
-
-Configure shorthand selectors in your config with a `~` prefix:
-
-```typescript
-// scenetest.config.ts
-export default defineConfig({
-  baseUrl: 'http://localhost:5173',
-  aliases: {
-    modal: '[role=dialog]',
-    'btn-p': 'button[type=submit], button.primary',
-    nav: '[role=navigation]',
-  },
-})
-```
-
-Use them with the `~` prefix:
-
-```typescript
-await user.see('~modal')               // matches [role=dialog]
-await user.click('~modal ~btn-p')      // matches submit button inside dialog
-```
+For selector syntax, see the [Selectors reference](/reference/selectors).
 
 ---
 
-## Action Chains (classic driver model)
+## Action Chains and Reactive Actors
 
-In `scene()` (classic driver), every actor method returns an `ActionChain`. Chains are **thenable** (`PromiseLike<void>`), so they execute when awaited. You can chain multiple actions that run sequentially:
+In `test()` (classic driver), every actor method returns an `ActionChain`. Chains are **thenable** (`PromiseLike<void>`), so they execute when awaited. You can chain multiple actions that run sequentially:
 
 ```typescript
 // These are equivalent:
@@ -516,22 +458,4 @@ These methods are only available mid-chain, not directly on the actor handle:
 - [`up(selector?)`](#up) -- navigate to an ancestor (or bare `up` to page root)
 - [`prev()`](#prev) -- return to previous scope
 
-## Concurrent actors (declarative model)
-
-In `flow()` (declarative), every actor method returns the **actor itself**. All methods are chainable and available directly. Scope persists across the actor's entire queue.
-
-```typescript
-const user = actor('user')
-
-// All chaining, no await — actions queue for concurrent drain
-user
-  .openTo('/login')
-  .see('login-form')
-  .typeInto('email', user.email!)
-  .click('submit')
-  .see('dashboard')
-
-// waitFor is only available in the declarative model
-user.waitFor('data-ready')
-user.see('loaded-content')
-```
+For details on action chains vs concurrent actors, see the [Declarative and Classic Mode reference](/reference/declarative-and-classic).

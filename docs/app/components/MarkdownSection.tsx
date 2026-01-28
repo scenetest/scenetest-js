@@ -84,12 +84,12 @@ marked.use({ renderer })
  *
  * Authoring convention in markdown:
  *
- *   ```ts [Async Spec]
- *   scene('login', async ({ actor }) => { ... })
+ *   ```ts [Classic Driver (ts)]
+ *   test('login', async ({ actor }) => { ... })
  *   ```
  *
- *   ```ts [Flow]
- *   flow('login', async ({ actor }) => { ... })
+ *   ```ts [Declarative (ts)]
+ *   scene('login', ({ actor }) => { ... })
  *   ```
  *
  *   ```ts [DSL]

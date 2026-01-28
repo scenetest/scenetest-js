@@ -31,7 +31,25 @@ export const reference: SectionItem[] = [
     slug: 'actor-api',
     title: 'Actor API',
     description:
-      'Complete reference for scene(), actor(), action chains, selectors, conditionals, and multi-actor coordination.',
+      'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
+  },
+  {
+    slug: 'selectors',
+    title: 'Selectors',
+    description:
+      'How selectors resolve to DOM elements: attribute matching, nested selectors, key selectors, aliases, and sigil prefixes.',
+  },
+  {
+    slug: 'text-dsl',
+    title: 'Text DSL Format',
+    description:
+      'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, macros, and runDsl().',
+  },
+  {
+    slug: 'declarative-and-classic',
+    title: 'Declarative and Classic Mode',
+    description:
+      'Side-by-side comparison of scene() (declarative) and test() (classic driver): syntax, multi-actor concurrency, coordination, and conditional monitors.',
   },
 ]
 
