@@ -30,7 +30,7 @@
  * returning-user:
  * - openTo /login
  * - see login-form
- * - typeInto email [returning-user.email]
+ * - typeInto email [self.email]
  * - click submit
  * ```
  *
@@ -45,9 +45,13 @@
  * - Lines may start with `- ` or `1. ` (markdown lists) for readability (stripped)
  * - `// comment` lines become `console.log` during execution
  * - Blank lines are ignored
- * - `[actor.field]` interpolates actor config values (id, username, email, etc.)
+ * - `[namespace.field]` interpolation:
+ *   - `[self.field]` — current actor's own fields
+ *   - `[role-name.field]` — another actor's fields
+ *   - `[team.field]` — team metadata
+ *   - `[alias.field]` — aliased role (from macro args)
  * - `if <selector>` followed by indented lines creates a conditional monitor
- * - `macro-name` or `macro-name role <actor> team <team>` invokes a registered macro
+ * - `macro-name` or `macro-name alias=role` invokes a registered macro
  * - `waitFor <message>` blocks the actor until a bus message arrives
  * - Bare `click` (no selector) clicks the current scope
  */
@@ -74,9 +78,14 @@ export interface ActorBlock {
   actions: SceneAction[]
 }
 
+/**
+ * Macro argument types.
+ *
+ * - `mapping`: alias=role mapping, e.g., `target=new-user` makes `[target.field]` resolve to new-user's fields
+ * - `literal`: plain string value for backward compatibility
+ */
 export type MacroArg =
-  | { type: 'role'; name: string }
-  | { type: 'team'; name: string }
+  | { type: 'mapping'; alias: string; role: string }
   | { type: 'literal'; value: string }
 
 export type SceneAction =
@@ -300,34 +309,32 @@ function parseActorDeclaration(line: string): { role: string; rest: string } | n
 /**
  * Parse macro arguments into typed MacroArg objects.
  *
- * Supports:
- * - `role <name>` — reference to an actor by role name
- * - `team <name>` — reference to a team by name
- * - `<literal>` — plain string value
+ * Supports `alias=role` mappings that make `[alias.field]` resolve to the role's fields.
+ * Plain values without `=` are treated as literals for backward compatibility.
  *
  * @example
- * parseMacroArgs(['role', 'best-friend-1'])
- * // => [{ type: 'role', name: 'best-friend-1' }]
+ * parseMacroArgs(['target=new-user'])
+ * // => [{ type: 'mapping', alias: 'target', role: 'new-user' }]
  *
- * parseMacroArgs(['team', 'language-focus', 'role', 'admin'])
- * // => [{ type: 'team', name: 'language-focus' }, { type: 'role', name: 'admin' }]
+ * parseMacroArgs(['target=new-user', 'other=alice'])
+ * // => [{ type: 'mapping', alias: 'target', role: 'new-user' }, { type: 'mapping', alias: 'other', role: 'alice' }]
  */
 function parseMacroArgs(words: string[]): MacroArg[] {
   const args: MacroArg[] = []
-  let i = 0
 
-  while (i < words.length) {
-    const word = words[i]
-
-    if (word === 'role' && i + 1 < words.length) {
-      args.push({ type: 'role', name: words[i + 1] })
-      i += 2
-    } else if (word === 'team' && i + 1 < words.length) {
-      args.push({ type: 'team', name: words[i + 1] })
-      i += 2
+  for (const word of words) {
+    if (word.includes('=')) {
+      const eqIndex = word.indexOf('=')
+      const alias = word.slice(0, eqIndex)
+      const role = word.slice(eqIndex + 1)
+      if (alias && role) {
+        args.push({ type: 'mapping', alias, role })
+      } else {
+        // Malformed mapping — treat as literal
+        args.push({ type: 'literal', value: word })
+      }
     } else {
       args.push({ type: 'literal', value: word })
-      i++
     }
   }
 
@@ -339,28 +346,80 @@ function parseMacroArgs(words: string[]): MacroArg[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Interpolate `[actor.field]` references in an action line.
- *
- * Replaces tokens like `[new-user.username]` with the actual value from
- * the actor's config.  Actors must have been created before interpolation.
+ * Interpolation context for resolving `[namespace.field]` references.
  */
-function interpolate(
-  line: string,
+interface InterpolationContext {
+  /** All actors in the scene, keyed by role name */
   actors: Map<string, ConcurrentActorHandle>
-): string {
+  /** Current actor executing this line (for `[self.field]`) */
+  self?: ConcurrentActorHandle
+  /** Team metadata (for `[team.field]`) */
+  team?: Record<string, string>
+  /** Alias mappings from macros (alias -> role name) */
+  aliases?: Map<string, string>
+}
+
+/**
+ * Interpolate `[namespace.field]` references in an action line.
+ *
+ * Supported namespaces:
+ * - `[self.field]` — current actor's own fields
+ * - `[team.field]` — team metadata
+ * - `[role-name.field]` — another actor's fields
+ * - `[alias.field]` — aliased role (from macro args)
+ *
+ * @example
+ * // In an action line:
+ * interpolate('see user-card-[target.id]', { actors, self, aliases: new Map([['target', 'new-user']]) })
+ * // => 'see user-card-12345'
+ */
+function interpolate(line: string, ctx: InterpolationContext): string {
   return line.replace(
     /\[([\w][\w-]*)\.([\w]+)\]/g,
-    (match, actorRef: string, field: string) => {
-      const actor = actors.get(actorRef)
+    (match, namespace: string, field: string) => {
+      // [self.field] — current actor's fields
+      if (namespace === 'self') {
+        if (!ctx.self) {
+          throw new Error(`Cannot use [self.${field}] — no current actor context`)
+        }
+        const value = (ctx.self as Record<string, unknown>)[field]
+        if (value === undefined) {
+          throw new Error(`[self.${field}] — actor has no field "${field}"`)
+        }
+        return String(value)
+      }
+
+      // [team.field] — team metadata
+      if (namespace === 'team') {
+        if (!ctx.team) {
+          throw new Error(`Cannot use [team.${field}] — no team context`)
+        }
+        const value = ctx.team[field]
+        if (value === undefined) {
+          throw new Error(`[team.${field}] — team has no field "${field}"`)
+        }
+        return String(value)
+      }
+
+      // Check for alias mapping first
+      const resolvedRole = ctx.aliases?.get(namespace) ?? namespace
+
+      // Look up the actor
+      const actor = ctx.actors.get(resolvedRole)
       if (!actor) {
+        const available = [...ctx.actors.keys()].join(', ')
+        const aliasNote = ctx.aliases?.has(namespace)
+          ? ` (alias "${namespace}" -> "${resolvedRole}")`
+          : ''
         throw new Error(
-          `Unknown actor "${actorRef}" in interpolation: ${match}`
+          `Unknown actor "${namespace}"${aliasNote} in [${namespace}.${field}] — available: ${available}`
         )
       }
+
       const value = (actor as Record<string, unknown>)[field]
       if (value === undefined) {
         throw new Error(
-          `Actor "${actorRef}" has no field "${field}" (available: id, username, email, password, ...)`
+          `Actor "${resolvedRole}" has no field "${field}" (available: id, username, email, password, ...)`
         )
       }
       return String(value)
@@ -402,6 +461,14 @@ export function registerMarkdownScenes(
       for (const block of scene.blocks) {
         const a = actors.get(block.alias || block.role)!
 
+        // Base interpolation context for this actor block
+        const baseCtx: InterpolationContext = {
+          actors,
+          self: a,
+          // TODO: wire up team metadata when TeamManager provides it
+          team: undefined,
+        }
+
         for (const action of block.actions) {
           switch (action.type) {
             case 'comment':
@@ -412,22 +479,22 @@ export function registerMarkdownScenes(
               break
 
             case 'action': {
-              const interpolated = interpolate(action.line, actors)
+              const interpolated = interpolate(action.line, baseCtx)
               const parsed = parseAction(interpolated)
               applyDslAction(a, parsed)
               break
             }
 
             case 'if': {
-              const interpolatedSelector = interpolate(
-                action.selector,
-                actors
-              )
+              const interpolatedSelector = interpolate(action.selector, baseCtx)
               ;(a as ConcurrentActorHandle).if(
                 interpolatedSelector,
                 (actor: ConcurrentActorHandle) => {
                   for (const subLine of action.actions) {
-                    const interpolated = interpolate(subLine, actors)
+                    const interpolated = interpolate(subLine, {
+                      ...baseCtx,
+                      self: actor,
+                    })
                     const parsed = parseAction(interpolated)
                     applyDslAction(actor as any, parsed)
                   }
@@ -444,54 +511,32 @@ export function registerMarkdownScenes(
                 )
               }
 
-              // Build template vars from typed args
-              const vars: Record<string, string> = {}
-              let positionalIndex = 0
+              // Build alias mappings from macro args
+              const aliases = new Map<string, string>()
 
               for (const arg of action.args) {
-                switch (arg.type) {
-                  case 'role': {
-                    // Look up actor by role name and make its fields available
-                    const argActor = actors.get(arg.name)
-                    if (argActor) {
-                      for (const [key, value] of Object.entries(argActor)) {
-                        if (typeof value === 'string') {
-                          vars[`${arg.name}.${key}`] = value
-                        }
-                      }
-                    } else {
-                      throw new Error(
-                        `Macro ${action.name}: unknown role "${arg.name}" — actors in this scene: ${[...actors.keys()].join(', ')}`
-                      )
-                    }
-                    break
+                if (arg.type === 'mapping') {
+                  // Verify the role exists
+                  if (!actors.has(arg.role)) {
+                    throw new Error(
+                      `Macro ${action.name}: unknown role "${arg.role}" in mapping "${arg.alias}=${arg.role}" — actors in this scene: ${[...actors.keys()].join(', ')}`
+                    )
                   }
-                  case 'team': {
-                    // Team reference — make the team name available
-                    vars[`team`] = arg.name
-                    break
-                  }
-                  case 'literal': {
-                    // Positional argument
-                    vars[`arg${positionalIndex++}`] = arg.value
-                    break
-                  }
+                  aliases.set(arg.alias, arg.role)
                 }
+                // Literals are ignored for now — macros use [alias.field] syntax
+              }
+
+              // Context for macro interpolation includes aliases
+              const macroCtx: InterpolationContext = {
+                ...baseCtx,
+                aliases,
               }
 
               // Apply macro actions inline (no await — flow model)
+              // Uses unified [namespace.field] syntax — no {{var}} substitution
               for (const actionLine of macro) {
-                let resolved = actionLine
-                for (const [key, value] of Object.entries(vars)) {
-                  resolved = resolved.replace(
-                    new RegExp(
-                      `\\{\\{${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}\\}`,
-                      'g'
-                    ),
-                    value
-                  )
-                }
-                const interpolated = interpolate(resolved, actors)
+                const interpolated = interpolate(actionLine, macroCtx)
                 const parsed = parseAction(interpolated)
                 applyDslAction(a, parsed)
               }
