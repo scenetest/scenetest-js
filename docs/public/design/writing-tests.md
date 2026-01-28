@@ -27,16 +27,19 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 
 ## Authoring models
 
-There are multiple ways to write spec files. All use the same actor DSL methods (`see`, `click`, `typeInto`, etc.) and the same selector resolution, configuration, and team management. They differ in **syntax and execution model**.
+There are three ways to write spec files. All use the same actor DSL methods (`see`, `click`, `typeInto`, etc.) and the same selector resolution, configuration, and team management. They differ in **syntax and execution model**.
 
-| Format | File | Execution model | Best for |
-|--------|------|----------------|----------|
-| **Markdown scenes** | `.spec.md` | Compiles to `flow()` | Non-technical authors, readable specs, documentation-as-tests |
-| **Declarative flow** | `.spec.ts` | `flow()` — reactive concurrent | Multi-actor scenes, writing specs without thinking about timing |
-| **Text DSL** | `.spec.ts` | `flow()` or `scene()` | Simple flows, code generation, macros |
-| **Async spec** | `.spec.ts` | `scene()` — sequential | Explicit step-by-step control, Playwright/Cypress migration |
+| Style | File | Execution model | Best for |
+|-------|------|----------------|----------|
+| **Text DSL (md)** | `.spec.md` | Compiles to `flow()` | Simplest way to write a declarative spec with as many actors as you want |
+| **Declarative (ts)** | `.spec.ts` | `flow()` — reactive concurrent | When macros aren't enough: full TypeScript control over your scene spec |
+| **Classic Driver (ts)** | `.spec.ts` | `scene()` — sequential | Same async actor model you know from Cypress/Playwright, but with access to the Scenetest message bus and our document selectors |
 
-> **STATUS: Both `scene()` and `flow()` execution models are implemented. We are evaluating which to keep long-term. See `docs/public/design/scene-vs-flow.md` for the trade-off analysis. Before 1.0, one will be removed. Markdown scenes compile to `flow()`.
+- **Text DSL** — human-readable `.spec.md` files that compile to declarative actor scripts. Readable and writable by non-engineers.
+- **Declarative** — no async/await, no race conditions, no `Promise.all`. You declare what happens; actors drain their queues concurrently.
+- **Classic Driver** — the Playwright/Cypress model where each `await` fires an instruction at the browser in real time.
+
+> **STATUS: Both `flow()` (declarative) and `scene()` (classic driver) execution models are implemented. We are evaluating which to keep long-term. See `docs/public/design/scene-vs-flow.md` for the trade-off analysis. Before 1.0, one will be removed. Text DSL `.spec.md` files compile to `flow()`.
 
 ### Markdown scenes (.spec.md)
 
@@ -44,42 +47,39 @@ Write specs as **human-readable markdown** — GitHub-renderable and executable.
 
 ```markdown
 # User friend requests
-
 ## new user signs up and gets a friend request
+actor: new-user
+- openTo /
+- see welcome-box
+- click continue-button
 
-actor new-user
-openTo /
-see welcome-box
-click continue-button
+actor: primary-user
+- openTo /friends
+- click main-navbar search
+- typeInto search-input [new-user.username]
+- see search-results-section
+- click friend-request-button
 
-actor primary-user
-openTo /friends
-click main-navbar search
-typeInto search-input [new-user.username]
-see search-results-section
-click friend-request-button
-
-actor new-user
-seeToast friend-request
-see navbar notifications-badge
-click
-see notifications-menu-expanded new-friend-request
-click
+actor: new-user
+- seeToast friend-request
+- see navbar notifications-badge
+- click
+- see notifications-menu-expanded new-friend-request
+- click
 
 ## old user re-activates account
-
-actor returning-user
-openTo /login
-see login-form
-typeInto email [returning-user.email]
-click submit
+actor: returning-user
+- openTo /login
+- see login-form
+- typeInto email [returning-user.email]
+- click submit
 ```
 
 **Format rules:**
 - `#` headings are **group names** (optional hierarchy)
 - `##` headings are **scene names** (each becomes a `flow()` registration)
 - If no `##` headings exist, `#` headings are promoted to scene names
-- `actor <role> [alias]` switches the active actor for subsequent lines
+- `actor: <role>` (or `actor <role> [alias]`) switches the active actor for subsequent lines
 - Action lines use the same text DSL grammar (`openTo`, `see`, `click`, `typeInto`, etc.)
 - Lines may start with `- ` or `1. ` (markdown list prefix is stripped) for readability
 - `// comment` lines become `console.log` during execution
@@ -94,26 +94,25 @@ click submit
 
 ```markdown
 # sender and receiver exchange messages
+actor: sender
+- openTo /login
+- // log in and compose
+- see login-form
+- typeInto email [sender.email]
+- typeInto password [sender.password]
+- click submit
+- see compose
+- typeInto body Hello!
+- click send
+- emit sender-ready
 
-actor sender
-openTo /login
-// log in and compose
-see login-form
-typeInto email [sender.email]
-typeInto password [sender.password]
-click submit
-see compose
-typeInto body Hello!
-click send
-emit sender-ready
-
-actor receiver
-waitFor sender-ready
-openTo /inbox
-seeText New message
+actor: receiver
+- waitFor sender-ready
+- openTo /inbox
+- seeText New message
 ```
 
-### scene() — await-driven sequential orchestration
+### Classic Driver (ts) — scene(), await-driven sequential orchestration
 
 ```typescript
 import { scene } from '@scenetest/cli'
@@ -143,7 +142,7 @@ scene('user updates their profile', async ({ actor }) => {
 
 **When to use:** Single-actor flows where you want explicit step-by-step control, or when migrating from Playwright/Cypress patterns.
 
-### flow() — reactive concurrent draining
+### Declarative (ts) — flow(), reactive concurrent draining
 
 ```typescript
 import { flow } from '@scenetest/cli'
@@ -175,14 +174,14 @@ flow('user updates their profile', ({ actor }) => {
 
 ### How to tell them apart
 
-| | scene() | flow() |
+| | Classic Driver — `scene()` | Declarative — `flow()` |
 |---|---------|--------|
 | **Import** | `import { scene } from '@scenetest/cli'` | `import { flow } from '@scenetest/cli'` |
 | **`actor()` call** | `const user = await actor('user')` | `const user = actor('user')` (sync) |
 | **Function signature** | `async ({ actor }) => { ... }` | `({ actor }) => { ... }` (no async needed) |
 | **DSL calls need `await`?** | Yes — `await` triggers execution | No — calls just queue, execution is automatic |
 | **What DSL methods return** | `ActionChain` (thenable, disposable) | The actor itself (chainable, not thenable) |
-| **Where scope lives** | On the chain (resets at each `await`) | On the actor (flows through the entire queue) |
+| **Where scope lives** | On the chain (resets at each `await`) | On the actor (persists through the entire queue) |
 | **Multi-actor concurrency** | Explicit `Promise.all()` | Automatic — all actors drain concurrently |
 | **`if(selector, cb)`** | Watcher that polls during actions, **cleared after each `await`** | Persistent one-shot monitor, polls for **all subsequent actions** |
 | **`waitFor(message)`** | Not available (use `when()`) | Available — blocks actor's queue until bus message arrives |
@@ -211,7 +210,7 @@ function ProfileForm({ user }) {
 
 ## Multi-actor examples
 
-### scene() — sequential by default, explicit concurrency
+### Classic Driver — sequential by default, explicit concurrency
 
 ```typescript
 scene('two users can chat', async ({ actor }) => {
@@ -237,7 +236,7 @@ scene('two users can chat', async ({ actor }) => {
 })
 ```
 
-### flow() — concurrent by default, explicit synchronization only when needed
+### Declarative — concurrent by default, explicit synchronization only when needed
 
 ```typescript
 flow('two users can chat', ({ actor }) => {
@@ -262,7 +261,7 @@ flow('two users can chat', ({ actor }) => {
 
 ## Multi-actor coordination
 
-**scene() uses `when()` and `emit()`:**
+**Classic Driver uses `when()` and `emit()`:**
 
 ```typescript
 import { scene, when } from '@scenetest/cli'
@@ -283,7 +282,7 @@ scene('sender and receiver', async ({ actor }) => {
 })
 ```
 
-**flow() uses `emit()` and `waitFor()` (but often doesn't need them):**
+**Declarative uses `emit()` and `waitFor()` (but often doesn't need them):**
 
 ```typescript
 import { flow } from '@scenetest/cli'
@@ -312,20 +311,20 @@ flow('sender and receiver', ({ actor }) => {
 
 Both models support `if()` but with different lifecycles:
 
-**scene():** Watcher polls during actions, cleared after each `await`.
+**Classic Driver:** Watcher polls during actions, cleared after each `await`.
 
 ```typescript
-// scene model
+// classic driver model
 user.if('welcome-modal', async () => {
   await user.click('dismiss')
 })
 await user.see('dashboard') // if() polls during this action, clears after
 ```
 
-**flow():** Persistent one-shot monitor, polls during all subsequent actions.
+**Declarative:** Persistent one-shot monitor, polls during all subsequent actions.
 
 ```typescript
-// flow model
+// declarative model
 user.if('welcome-modal', a => a.click('dismiss'))
 user.see('dashboard')
 user.openTo('/profile')
@@ -337,7 +336,7 @@ user.openTo('/profile')
 
 ## Actor DSL Methods
 
-These methods are available on actors in both `scene()` and `flow()` models:
+These methods are available on actors in both the declarative and classic driver models:
 
 | Method | Description |
 |--------|-------------|
@@ -361,11 +360,11 @@ These methods are available on actors in both `scene()` and `flow()` models:
 | `warnIf(selector, message)` | Script warning (persists across scene/flow) |
 | `dsl(text)` | Queue actions from a multiline text DSL string (see "Text DSL" below) |
 
-**In scene():** Methods return an `ActionChain` that is chainable and thenable (await the chain to execute). `if` and `warnIf` return void.
+**Classic Driver (`scene()`):** Methods return an `ActionChain` that is chainable and thenable (await the chain to execute). `if` and `warnIf` return void.
 
-**In flow():** Methods return the actor itself (chainable, not thenable). `if`, `warnIf` return void. Additionally, `waitFor(message)` is available to block the actor's queue until a bus message arrives.
+**Declarative (`flow()`):** Methods return the actor itself (chainable, not thenable). `if`, `warnIf` return void. Additionally, `waitFor(message)` is available to block the actor's queue until a bus message arrives.
 
-**In .spec.md:** All text DSL actions are available directly as lines. `waitFor` is available. Bare `click` and bare `up` work as described above.
+**Text DSL (`.spec.md`):** All text DSL actions are available directly as lines. `waitFor` is available. Bare `click` and bare `up` work as described above.
 
 ---
 
@@ -443,9 +442,9 @@ The text DSL lets you write actions as plain strings — useful for simple flows
 
 ### Inline `dsl()` method (recommended)
 
-Both scene and flow actors have a `dsl()` method that accepts a multiline string:
+Both declarative and classic driver actors have a `dsl()` method that accepts a multiline string:
 
-**flow() model:**
+**Declarative model:**
 
 ```typescript
 flow('onboarding flow', ({ actor }) => {
@@ -464,7 +463,7 @@ flow('onboarding flow', ({ actor }) => {
 })
 ```
 
-**scene() model:**
+**Classic Driver model:**
 
 ```typescript
 scene('onboarding flow', async ({ actor }) => {
@@ -483,10 +482,10 @@ scene('onboarding flow', async ({ actor }) => {
 })
 ```
 
-`dsl()` returns the actor (flow) or an `ActionChain` (scene), so it chains with other methods:
+`dsl()` returns the actor (declarative) or an `ActionChain` (classic driver), so it chains with other methods:
 
 ```typescript
-// flow model — all chaining, no await
+// declarative model — all chaining, no await
 user
   .openTo('/login')
   .dsl(`
@@ -500,12 +499,12 @@ user
 
 ### `runDsl()` and `runMacro()` — standalone functions
 
-These work with both scene and flow actors:
+These work with both declarative and classic driver actors:
 
 ```typescript
 import { runDsl } from '@scenetest/cli'
 
-// In scene() — await triggers execution
+// Classic driver — await triggers execution
 await runDsl(user, [
   'openTo /login',
   'see login-form',
@@ -515,7 +514,7 @@ await runDsl(user, [
   'see dashboard',
 ])
 
-// In flow() — just queues actions (await is a no-op)
+// Declarative — just queues actions (await is a no-op)
 runDsl(user, [
   'openTo /login',
   'see login-form',
@@ -538,6 +537,6 @@ defineMacro('login', [
   'see dashboard',
 ])
 
-// Works with both scene and flow actors
+// Works with both declarative and classic driver actors
 await runMacro(user, 'login', { email: 'alice@test.com', password: 'secret' })
 ```

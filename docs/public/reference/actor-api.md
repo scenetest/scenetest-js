@@ -1,34 +1,16 @@
 # Actor API Reference
 
-Complete reference for the `scene()`, `flow()`, `actor()`, and action chain APIs used to write scene specs.
+Complete reference for the `flow()`, `scene()`, `actor()`, and action chain APIs used to write scene specs.
 
-For a gentler introduction, see [Writing Scene Specs](/guides/writing-scene-specs).
+Scenetest has three authoring styles — **Declarative (ts)** using `flow()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `scene()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
 
-## scene
-
-```typescript
-scene(name: string, fn: (context: SceneContext) => Promise<void>): void
-```
-
-Registers a scene with await-driven sequential orchestration. The callback receives a `SceneContext` with an `actor` function and the assigned `teamIndex`.
-
-```typescript
-import { scene } from '@scenetest/cli'
-
-scene('user can update their profile', async ({ actor }) => {
-  const user = await actor('primary-learner')
-  await user.openTo('/profile')
-  await user.see('profile-form')
-})
-```
-
-## flow
+## flow (Declarative)
 
 ```typescript
 flow(name: string, fn: (context: FlowContext) => void): void
 ```
 
-Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns.
+Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns. This is the **native model** for Scenetest.
 
 ```typescript
 import { flow } from '@scenetest/cli'
@@ -40,26 +22,44 @@ flow('user can update their profile', ({ actor }) => {
 })
 ```
 
+## scene (Classic Driver)
+
+```typescript
+scene(name: string, fn: (context: SceneContext) => Promise<void>): void
+```
+
+Registers a scene with await-driven sequential orchestration. The callback receives a `SceneContext` with an `actor` function and the assigned `teamIndex`. This is the **compatibility model** for those coming from Playwright or Cypress.
+
+```typescript
+import { scene } from '@scenetest/cli'
+
+scene('user can update their profile', async ({ actor }) => {
+  const user = await actor('primary-learner')
+  await user.openTo('/profile')
+  await user.see('profile-form')
+})
+```
+
 ## actor
 
 ```typescript
-// In scene() — async, returns ActorHandle
-actor(role: string): Promise<ActorHandle>
-
-// In flow() — sync, returns ReactiveActor
+// In flow() (declarative) — sync, returns ReactiveActor
 actor(role: string): ReactiveActor
+
+// In scene() (classic driver) — async, returns ActorHandle
+actor(role: string): Promise<ActorHandle>
 ```
 
 Returns an actor handle for the given role from the current team. The role must match a key in your [actor team files](/guides/building-teams).
 
 ```typescript
-// scene model
-const user = await actor('primary-learner')
-const friend = await actor('existing-friend')
-
-// flow model
+// declarative model
 const user = actor('primary-learner')
 const friend = actor('existing-friend')
+
+// classic driver model
+const user = await actor('primary-learner')
+const friend = await actor('existing-friend')
 ```
 
 The returned handle extends `ActorConfig`, so you can access the actor's config properties directly:
@@ -270,16 +270,16 @@ await user.do(async (page) => {
 })
 ```
 
-### waitFor (flow model only)
+### waitFor (declarative model only)
 
 ```typescript
 user.waitFor(message: string): ReactiveActor
 ```
 
-Blocks the actor's queue until the named message arrives on the message bus. Only available in `flow()` — in `scene()`, use `when()` instead.
+Blocks the actor's queue until the named message arrives on the message bus. Only available in `flow()` (declarative model) — in `scene()` (classic driver), use `when()` instead.
 
 ```typescript
-// flow model
+// declarative model
 receiver.waitFor('data-ready')
 receiver.openTo('/inbox')
 receiver.seeText('New message')
@@ -291,10 +291,10 @@ receiver.seeText('New message')
 user.dsl(text: string): ActionChain | ReactiveActor
 ```
 
-Queues actions from a multiline text DSL string. Returns the actor (flow) or an `ActionChain` (scene), so it chains with other methods.
+Queues actions from a multiline text DSL string. Returns the actor (declarative) or an `ActionChain` (classic driver), so it chains with other methods.
 
 ```typescript
-// scene model
+// classic driver model
 await user.dsl(`
   see login-form
   typeInto email alice@test.com
@@ -302,7 +302,7 @@ await user.dsl(`
   click submit
 `)
 
-// flow model
+// declarative model
 user.dsl(`
   see login-form
   typeInto email alice@test.com
@@ -351,7 +351,7 @@ await user
   .click('other-button')         // clicks within first-section
 ```
 
-> In `scene()`, `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In `flow()`, all methods are available directly on the actor.
+> In the classic driver model (`scene()`), `up` and `prev` are only available on action chains (mid-chain), not directly on the actor handle. In the declarative model (`flow()`), all methods are available directly on the actor.
 
 ---
 
@@ -406,7 +406,7 @@ when(message: string, callback: () => ActionChain | Promise<void>): void
 when(callback: () => ActionChain | Promise<void>, message: string): void
 ```
 
-Coordinates between actors via a message bus. Combine with `emit` for multi-actor flows:
+Coordinates between actors via a message bus. Combine with `emit` for multi-actor scenes:
 
 ```typescript
 scene('friend request flow', async ({ actor }) => {
@@ -490,9 +490,9 @@ await user.click('~modal ~btn-p')      // matches submit button inside dialog
 
 ---
 
-## Action Chains (scene model)
+## Action Chains (classic driver model)
 
-In `scene()`, every actor method returns an `ActionChain`. Chains are **thenable** (`PromiseLike<void>`), so they execute when awaited. You can chain multiple actions that run sequentially:
+In `scene()` (classic driver), every actor method returns an `ActionChain`. Chains are **thenable** (`PromiseLike<void>`), so they execute when awaited. You can chain multiple actions that run sequentially:
 
 ```typescript
 // These are equivalent:
@@ -509,16 +509,16 @@ await user
 
 Chains queue actions and execute them in order when the promise settles. Scope set by `see` carries through the chain.
 
-### Available on chains only (scene model)
+### Available on chains only (classic driver model)
 
 These methods are only available mid-chain, not directly on the actor handle:
 
 - [`up(selector?)`](#up) -- navigate to an ancestor (or bare `up` to page root)
 - [`prev()`](#prev) -- return to previous scope
 
-## Reactive actors (flow model)
+## Reactive actors (declarative model)
 
-In `flow()`, every actor method returns the **actor itself**. All methods are chainable and available directly. Scope persists across the actor's entire queue.
+In `flow()` (declarative), every actor method returns the **actor itself**. All methods are chainable and available directly. Scope persists across the actor's entire queue.
 
 ```typescript
 const user = actor('user')
@@ -531,7 +531,7 @@ user
   .click('submit')
   .see('dashboard')
 
-// waitFor is only available in flow model
+// waitFor is only available in the declarative model
 user.waitFor('data-ready')
 user.see('loaded-content')
 ```

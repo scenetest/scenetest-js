@@ -57,7 +57,7 @@ Actions:
   select <selector> <value>       - Select dropdown option
   wait <ms>                       - Wait milliseconds
   emit <message>                  - Emit to message bus
-  waitFor <message>               - Block until bus message arrives (flow model only)
+  waitFor <message>               - Block until bus message arrives (declarative model only)
   warnIf <selector> <message>     - Register script warning
   up [<selector>]                 - Navigate scope to ancestor (bare up = reset to page root)
   prev                            - Return to previous scope
@@ -84,23 +84,22 @@ await runMacro(user, 'login', { username: 'alice', password: 'secret' })
 
 ### Markdown Scene Files (.spec.md) (Implemented)
 
-Scenes can also be written as plain markdown files (`.spec.md`). The runner auto-discovers them alongside `.spec.ts` files and compiles each one into `flow()` registrations.
+Scenes can also be written as plain markdown files (`.spec.md`). The runner auto-discovers them alongside `.spec.ts` files and compiles each one into declarative (`flow()`) registrations.
 
 ```markdown
 ## user completes checkout
-
-actor customer
-openTo /cart
-see cart-items
-click checkout-button
-see payment-form
-typeInto card-number 4242424242424242
-click submit
-seeToast success-toast
+actor: customer
+- openTo /cart
+- see cart-items
+- click checkout-button
+- see payment-form
+- typeInto card-number 4242424242424242
+- click submit
+- seeToast success-toast
 ```
 
 Markdown scenes support the full text DSL grammar plus:
-- **Actor switching**: `actor <role> [alias]` lines
+- **Actor switching**: `actor: <role>` (or `actor <role> [alias]`) lines
 - **Heading hierarchy**: `#` = groups, `##` = scenes
 - **Interpolation**: `[actor.field]` for cross-actor references
 - **Conditional monitors**: `if <selector>` + indented sub-actions

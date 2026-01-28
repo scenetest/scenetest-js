@@ -1,14 +1,18 @@
 # Writing Scene Specs
 
-> **Note:** This guide shows all four authoring styles side by side. For the full execution model comparison, "do not mix" rules, and `.spec.md` format reference, see the [test-authoring reference](/design/writing-tests).
+> **Note:** This guide shows all three authoring styles side by side. For the full execution model comparison, "do not mix" rules, and `.spec.md` format reference, see the [test-authoring reference](/design/writing-tests).
 
 Scene specs describe **user journeys** — the flows a person takes through your application. They live in separate spec files (`.spec.ts` or `.spec.md`) and orchestrate browser interactions without touching component internals.
 
-## Four Ways to Write Scenes
+## Three Ways to Write Scenes
 
-Scenetest offers four authoring styles. Every example in this guide is shown all four ways — click the tabs to compare:
+- **Text DSL (md)** — the simplest way to write a declarative spec with as many actors as you want. Human-readable `.spec.md` files that compile to declarative actor scripts.
+- **Declarative (ts)** — when macros aren't enough: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`.
+- **Classic Driver (ts)** — same async actor model you know from Cypress/Playwright, but with access to the Scenetest message bus and our document selectors.
 
-```ts [Declarative flow]
+Click the tabs to compare:
+
+```ts [Declarative (ts)]
 import { flow } from '@scenetest/cli'
 
 flow('user completes onboarding', ({ actor }) => {
@@ -22,23 +26,16 @@ flow('user completes onboarding', ({ actor }) => {
 })
 ```
 
-```ts [Text DSL]
-import { flow } from '@scenetest/cli'
-
-// Also works in async mode as `await user.dsl()`
-flow('user completes onboarding', ({ actor }) => {
-  const user = actor('new-user')
-
-  user.dsl(`
-    openTo /
-    see welcome-box
-    click continue-button
-    see onboarding-step
-  `)
-})
+```markdown [Text DSL (md)]
+# user completes onboarding
+actor: new-user
+- openTo /
+- see welcome-box
+- click continue-button
+- see onboarding-step
 ```
 
-```ts [Async spec]
+```ts [Classic Driver (ts)]
 import { scene } from '@scenetest/cli'
 
 scene('user completes onboarding', async ({ actor }) => {
@@ -51,17 +48,7 @@ scene('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-```markdown [Markdown (.spec.md)]
-# user completes onboarding
-
-actor new-user
-openTo /
-see welcome-box
-click continue-button
-see onboarding-step
-```
-
-**Declarative flow** is the reactive model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is a string format for simpler flows that lends itself to macros and non-technical authors. **Async spec** is the explicit model — you `await` each action and control the timeline yourself. **Markdown** is the most minimal format — plain text files (`.spec.md`) that are human-readable, GitHub-renderable, and executable. They compile to `flow()` registrations.
+**Declarative** is the native model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is the most minimal format — plain `.spec.md` files that are human-readable, GitHub-renderable, and executable. They compile to declarative scripts. **Classic Driver** is the explicit model for those coming from Playwright or Cypress — you `await` each action and control the timeline yourself.
 
 The test writer focuses on **what** should happen. Engineers then add the necessary hooks (test IDs, data attributes) to make the tests pass.
 
@@ -200,7 +187,7 @@ Warnings are reported separately in `SceneReport.warnings` and are useful for tr
 
 Write specs from the user's perspective. Each scene should tell a story:
 
-```ts [Declarative flow]
+```ts [Declarative (ts)]
 flow('user can complete checkout', ({ actor }) => {
   const customer = actor('customer')
 
@@ -214,24 +201,19 @@ flow('user can complete checkout', ({ actor }) => {
 })
 ```
 
-```ts [Text DSL]
-// Also works in async mode as `await customer.dsl()`
-flow('user can complete checkout', ({ actor }) => {
-  const customer = actor('customer')
-
-  customer.dsl(`
-    openTo /cart
-    see cart-items
-    click checkout-button
-    see payment-form
-    typeInto card-number 4242424242424242
-    click pay-button
-    seeText Order confirmed!
-  `)
-})
+```markdown [Text DSL (md)]
+# user can complete checkout
+actor: customer
+- openTo /cart
+- see cart-items
+- click checkout-button
+- see payment-form
+- typeInto card-number 4242424242424242
+- click pay-button
+- seeText Order confirmed!
 ```
 
-```ts [Async spec]
+```ts [Classic Driver (ts)]
 scene('user can complete checkout', async ({ actor }) => {
   const customer = await actor('customer')
 
@@ -243,19 +225,6 @@ scene('user can complete checkout', async ({ actor }) => {
   await customer.click('pay-button')
   await customer.seeText('Order confirmed!')
 })
-```
-
-```markdown [Markdown (.spec.md)]
-# user can complete checkout
-
-actor customer
-openTo /cart
-see cart-items
-click checkout-button
-see payment-form
-typeInto card-number 4242424242424242
-click pay-button
-seeText Order confirmed!
 ```
 
 ### Use Meaningful Test IDs
@@ -327,9 +296,9 @@ Actor teams are defined in separate files. See [Building Good Teams of Actors](.
 
 ## Summary
 
-- Scene specs describe **user journeys** using `flow()`, `scene()`, `dsl()`, or `.spec.md` markdown files
+- Scene specs describe **user journeys** — write them as declarative TypeScript, text DSL markdown, or classic driver-style TypeScript
 - Write specs in **plain language** from the user's perspective
-- Choose your format: TypeScript for full control, markdown for maximum readability
+- Choose your format: declarative `flow()` for simplicity, `.spec.md` for maximum readability, `scene()` for Playwright/Cypress compatibility
 - Use stable `data-testid` attributes as the contract with engineers
 - Use **nested selectors** (`'parent child'`) to target specific elements
 - Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts

@@ -405,6 +405,50 @@ openTo /
     expect(scenes[0].blocks[0].actions).toHaveLength(1)
   })
 
+  it('supports actor: colon syntax', () => {
+    const content = `
+# user completes onboarding
+actor: new-user
+- openTo /
+- see welcome-box
+- click continue-button
+- see onboarding-step
+`
+    const scenes = parseMarkdownScenes(content, '/test/colon.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].name).toBe('user completes onboarding')
+    expect(scenes[0].blocks).toHaveLength(1)
+    expect(scenes[0].blocks[0].role).toBe('new-user')
+    expect(scenes[0].blocks[0].actions).toEqual([
+      { type: 'action', line: 'openTo /' },
+      { type: 'action', line: 'see welcome-box' },
+      { type: 'action', line: 'click continue-button' },
+      { type: 'action', line: 'see onboarding-step' },
+    ])
+  })
+
+  it('supports actor: colon syntax with space after colon', () => {
+    const content = `
+# test
+actor:  primary-user
+- openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/colon-space.spec.md')
+    expect(scenes[0].blocks[0].role).toBe('primary-user')
+  })
+
+  it('auto-creates scene for actor: colon syntax before any heading', () => {
+    const content = `
+actor: user
+- openTo /
+- see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/colon-no-heading.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].name).toBe('colon-no-heading')
+    expect(scenes[0].blocks[0].role).toBe('user')
+  })
+
   it('handles blank lines and whitespace gracefully', () => {
     const content = `
 
