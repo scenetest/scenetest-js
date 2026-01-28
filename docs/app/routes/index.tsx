@@ -123,40 +123,30 @@ user:
 
       <p>
         The markdown format really shines for <strong>multi-actor scenarios</strong> — coordinating
-        multiple users interacting with your app simultaneously. Actor cues switch between users,
-        and the <code>emit</code>/<code>waitFor</code> pattern synchronizes their actions:
+        multiple users interacting with your app simultaneously. Actor cues switch context,
+        and variables like <code>[new-friend.username]</code> are interpolated from actor data:
       </p>
 
       <CodeBlock>{`<!-- scenes/friend-request.spec.md -->
 # User sends and receives a friend request
 
-alice:
-- openTo /login
-- typeInto email [self.email]
-- typeInto password [self.password]
-- click submit
-- see dashboard
-- click search-users
-- typeInto search-input [bob.username]
-- see user-card-[bob.id]
-- click send-request-button
-- emit request-sent
+new-friend: openTo /home
 
-bob:
-- waitFor request-sent
-- openTo /notifications
-- seeToast friend-request
-- see notification-badge
-- click
-- see friend-request-from-[alice.id]
-- click accept-button
+main-user-1:
+- openTo /search-users
+- typeInto search-input [new-friend.username]
+- click live-results-box [new-friend.id] send-request-button
 
-alice:
-- seeToast request-accepted`}</CodeBlock>
+new-friend:
+- seeToast friend-request-notice
+- see site-navbar notifications-menu
+- click menu-trigger
+- click friend-request-from-[main-user-1.id] accept-button
+
+main-user-1: seeToast friend-request-accepted`}</CodeBlock>
 
       <p>
-        Variables like <code>[self.email]</code> and <code>[bob.username]</code> are interpolated
-        from actor data, making specs readable without hardcoded test values. See
+        Specs are readable without hardcoded test values, and render nicely in GitHub. See
         the <Link to="/reference/text-dsl">Text DSL reference</Link> for the full grammar, macros, and more.
       </p>
 
