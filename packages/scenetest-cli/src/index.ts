@@ -6,7 +6,7 @@ export { defineConfig } from './config.js'
 export { flow } from './reactive.js'
 
 // Text DSL for declarative scenes
-export { runDsl, defineMacro, getMacro, runMacro, clearMacros } from './dsl.js'
+export { defineMacro, getMacro, runMacro, clearMacros } from './dsl.js'
 export type { DslAction, Macro } from './dsl.js'
 
 // Markdown scene parser

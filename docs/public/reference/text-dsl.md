@@ -2,11 +2,10 @@
 
 The text DSL lets you write scene actions as plain strings — useful for simple flows, non-engineer-authored specs, code generation, and natural-language-to-test pipelines.
 
-There are three ways to use the text DSL:
+There are two ways to use the text DSL:
 
 1. **Markdown scene files** (`.spec.md`) — standalone files that compile to `scene()` registrations
 2. **`dsl()` method** — inline multiline strings on actor handles
-3. **`runDsl()` / `runMacro()`** — standalone functions
 
 ## Grammar
 
@@ -87,7 +86,7 @@ returning-user:
 - `// comment` lines become `console.log` during execution
 - `[actor.field]` interpolates actor config values (username, email, etc.)
 - `if <selector>` followed by indented lines creates a conditional monitor
-- `name()` or `name() <args>` invokes a registered macro
+- `macro-name` or `macro-name role <actor> team <team>` invokes a registered macro
 - `waitFor <message>` blocks the actor until a bus message arrives
 - Bare `click` (no selector) clicks the current scope element
 - Bare `up` (no selector) resets scope to the page root
@@ -175,40 +174,14 @@ user
 
 ---
 
-## `runDsl()` and `runMacro()`
-
-Standalone functions that work with both declarative and classic driver actors:
-
-```typescript
-import { runDsl } from '@scenetest/cli'
-
-// Classic driver — await triggers execution
-await runDsl(user, [
-  'openTo /login',
-  'see login-form',
-  'typeInto email alice@test.com',
-  'typeInto password secret',
-  'click submit',
-  'see dashboard',
-])
-
-// Declarative — just queues actions
-runDsl(user, [
-  'openTo /login',
-  'see login-form',
-  'typeInto email alice@test.com',
-  'click submit',
-])
-```
-
----
-
 ## Macros
 
-Named, reusable action sequences with variable substitution:
+Macros are named, reusable action sequences with variable substitution. Define them in TypeScript and call them from `.spec.md` files.
+
+### Defining macros
 
 ```typescript
-import { defineMacro, runMacro } from '@scenetest/cli'
+import { defineMacro } from '@scenetest/cli'
 
 defineMacro('login', [
   'openTo /login',
@@ -219,13 +192,47 @@ defineMacro('login', [
   'see dashboard',
 ])
 
-// Works with both declarative and classic driver actors
-await runMacro(user, 'login', { email: 'alice@test.com', password: 'secret' })
+// Macro that uses another actor's fields
+// Template vars are named after the role passed in the call
+defineMacro('send-friend-request', [
+  'openTo /friends',
+  'click search',
+  'typeInto search-input {{new-user.username}}',
+  'click send-request-button',
+])
 ```
 
-In `.spec.md` files, invoke macros directly:
+### Calling macros in .spec.md
+
+Invoke macros by name — any word that isn't a known DSL action is treated as a macro:
 
 ```markdown
 user:
-- login() alice@test.com secret
+- login
+- see dashboard
+```
+
+Pass actors to macros with the `role` keyword — their fields become template variables:
+
+```markdown
+primary-user:
+- send-friend-request role new-user
+```
+
+Pass team references with the `team` keyword:
+
+```markdown
+user:
+- signup-to-language team language-focus
+```
+
+### Calling macros in TypeScript
+
+Use `runMacro()` for programmatic macro invocation:
+
+```typescript
+import { runMacro } from '@scenetest/cli'
+
+// Works with both declarative and classic driver actors
+await runMacro(user, 'login', { email: 'alice@test.com', password: 'secret' })
 ```

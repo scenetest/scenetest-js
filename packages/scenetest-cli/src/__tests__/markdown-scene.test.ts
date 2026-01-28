@@ -237,12 +237,12 @@ see page
     })
   })
 
-  it('parses macro invocations', () => {
+  it('parses macro invocations (no args)', () => {
     const content = `
 # test
 
 user:
-login()
+login
 see dashboard
 `
     const scenes = parseMarkdownScenes(content, '/test/macro.spec.md')
@@ -252,19 +252,55 @@ see dashboard
     expect(actions[1]).toEqual({ type: 'action', line: 'see dashboard' })
   })
 
-  it('parses macro invocations with args', () => {
+  it('parses macro invocations with role keyword', () => {
     const content = `
 # test
 
 primary-user:
-searchForFriend() new-user
+searchForFriend role new-user
 `
     const scenes = parseMarkdownScenes(content, '/test/macro-args.spec.md')
     const actions = scenes[0].blocks[0].actions
     expect(actions[0]).toEqual({
       type: 'macro',
       name: 'searchForFriend',
-      args: ['new-user'],
+      args: [{ type: 'role', name: 'new-user' }],
+    })
+  })
+
+  it('parses macro invocations with team keyword', () => {
+    const content = `
+# test
+
+user:
+signupToLanguage team language-focus
+`
+    const scenes = parseMarkdownScenes(content, '/test/macro-team.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[0]).toEqual({
+      type: 'macro',
+      name: 'signupToLanguage',
+      args: [{ type: 'team', name: 'language-focus' }],
+    })
+  })
+
+  it('parses macro invocations with mixed args', () => {
+    const content = `
+# test
+
+admin:
+setupEnv role new-user team language-focus literal-value
+`
+    const scenes = parseMarkdownScenes(content, '/test/macro-mixed.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions[0]).toEqual({
+      type: 'macro',
+      name: 'setupEnv',
+      args: [
+        { type: 'role', name: 'new-user' },
+        { type: 'team', name: 'language-focus' },
+        { type: 'literal', value: 'literal-value' },
+      ],
     })
   })
 

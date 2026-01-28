@@ -47,7 +47,7 @@
  * - Blank lines are ignored
  * - `[actor.field]` interpolates actor config values (id, username, email, etc.)
  * - `if <selector>` followed by indented lines creates a conditional monitor
- * - `name()` or `name() <args>` invokes a registered macro
+ * - `macro-name` or `macro-name role <actor> team <team>` invokes a registered macro
  * - `waitFor <message>` blocks the actor until a bus message arrives
  * - Bare `click` (no selector) clicks the current scope
  */
@@ -74,11 +74,16 @@ export interface ActorBlock {
   actions: SceneAction[]
 }
 
+export type MacroArg =
+  | { type: 'role'; name: string }
+  | { type: 'team'; name: string }
+  | { type: 'literal'; value: string }
+
 export type SceneAction =
   | { type: 'action'; line: string }
   | { type: 'comment'; text: string }
   | { type: 'if'; selector: string; actions: string[] }
-  | { type: 'macro'; name: string; args: string[] }
+  | { type: 'macro'; name: string; args: MacroArg[] }
 
 // ---------------------------------------------------------------------------
 // Parser
@@ -216,20 +221,24 @@ export function parseMarkdownScenes(
       continue
     }
 
-    // ── Macro invocation: name() or name() arg1 arg2 ──────────────────
+    // ── Macro invocation ────────────────────────────────────────────────
+    // A macro is any word that isn't a known DSL action, followed by
+    // optional `role <name>` or `team <name>` arguments:
+    //   send-friend-request role best-friend-1
+    //   signup-to-language team language-focus
 
-    const macroMatch = trimmed.match(/^([\w][\w-]*)\(\)\s*(.*)$/)
-    if (macroMatch) {
-      const name = macroMatch[1]
-      const argsStr = macroMatch[2].trim()
-      const args = argsStr ? argsStr.split(/\s+/) : []
-      currentBlock.actions.push({ type: 'macro', name, args })
+    const actionLine = stripListPrefix(trimmed)
+    const words = actionLine.split(/\s+/)
+    const firstWord = words[0]
+
+    if (firstWord && !KNOWN_ACTIONS.includes(firstWord)) {
+      const macroArgs = parseMacroArgs(words.slice(1))
+      currentBlock.actions.push({ type: 'macro', name: firstWord, args: macroArgs })
       continue
     }
 
     // ── Regular action line ───────────────────────────────────────────
 
-    const actionLine = stripListPrefix(trimmed)
     currentBlock.actions.push({ type: 'action', line: actionLine })
   }
 
@@ -264,7 +273,8 @@ const KNOWN_ACTIONS = [
 function isActionLine(line: string): boolean {
   const stripped = stripListPrefix(line)
   const first = stripped.split(/\s/)[0]
-  return KNOWN_ACTIONS.includes(first) || /^[\w][\w-]*\(\)/.test(stripped)
+  // Any word could be either a known action or a macro name
+  return first !== undefined && first.length > 0
 }
 
 /**
@@ -285,6 +295,43 @@ function parseActorDeclaration(line: string): { role: string; rest: string } | n
   // Don't treat known action verbs as actor declarations
   if (KNOWN_ACTIONS.includes(word)) return null
   return { role: word, rest: rest.trim() }
+}
+
+/**
+ * Parse macro arguments into typed MacroArg objects.
+ *
+ * Supports:
+ * - `role <name>` — reference to an actor by role name
+ * - `team <name>` — reference to a team by name
+ * - `<literal>` — plain string value
+ *
+ * @example
+ * parseMacroArgs(['role', 'best-friend-1'])
+ * // => [{ type: 'role', name: 'best-friend-1' }]
+ *
+ * parseMacroArgs(['team', 'language-focus', 'role', 'admin'])
+ * // => [{ type: 'team', name: 'language-focus' }, { type: 'role', name: 'admin' }]
+ */
+function parseMacroArgs(words: string[]): MacroArg[] {
+  const args: MacroArg[] = []
+  let i = 0
+
+  while (i < words.length) {
+    const word = words[i]
+
+    if (word === 'role' && i + 1 < words.length) {
+      args.push({ type: 'role', name: words[i + 1] })
+      i += 2
+    } else if (word === 'team' && i + 1 < words.length) {
+      args.push({ type: 'team', name: words[i + 1] })
+      i += 2
+    } else {
+      args.push({ type: 'literal', value: word })
+      i++
+    }
+  }
+
+  return args
 }
 
 // ---------------------------------------------------------------------------
@@ -393,24 +440,42 @@ export function registerMarkdownScenes(
               const macro = getMacro(action.name)
               if (!macro) {
                 throw new Error(
-                  `Macro not found: ${action.name}() — define it with defineMacro('${action.name}', [...]) in a .ts file`
+                  `Macro not found: ${action.name} — define it with defineMacro('${action.name}', [...]) in a .ts file`
                 )
               }
 
-              // Build template vars from actor args
+              // Build template vars from typed args
               const vars: Record<string, string> = {}
+              let positionalIndex = 0
+
               for (const arg of action.args) {
-                const argActor = actors.get(arg)
-                if (argActor) {
-                  // Make all actor fields available as {{arg.field}} vars
-                  for (const [key, value] of Object.entries(argActor)) {
-                    if (typeof value === 'string') {
-                      vars[`${arg}.${key}`] = value
+                switch (arg.type) {
+                  case 'role': {
+                    // Look up actor by role name and make its fields available
+                    const argActor = actors.get(arg.name)
+                    if (argActor) {
+                      for (const [key, value] of Object.entries(argActor)) {
+                        if (typeof value === 'string') {
+                          vars[`${arg.name}.${key}`] = value
+                        }
+                      }
+                    } else {
+                      throw new Error(
+                        `Macro ${action.name}: unknown role "${arg.name}" — actors in this scene: ${[...actors.keys()].join(', ')}`
+                      )
                     }
+                    break
                   }
-                } else {
-                  // Non-actor arg — pass as positional
-                  vars[`arg${Object.keys(vars).length}`] = arg
+                  case 'team': {
+                    // Team reference — make the team name available
+                    vars[`team`] = arg.name
+                    break
+                  }
+                  case 'literal': {
+                    // Positional argument
+                    vars[`arg${positionalIndex++}`] = arg.value
+                    break
+                  }
                 }
               }
 
