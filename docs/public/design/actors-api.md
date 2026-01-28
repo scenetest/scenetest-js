@@ -184,7 +184,7 @@ scene('friend request flow', ({ actor }) => {
   friend.typeInto('email', friend.email!).typeInto('password', friend.password!).click('submit')
 
   learner.openTo('/users')
-  learner.click('add-friend-carlos')
+  learner.click(`add-friend ${friend.username}`)
 
   friend.see('friend-request')
   friend.click('accept')
@@ -205,7 +205,7 @@ test('friend request flow', async ({ actor }) => {
   await friend.typeInto('email', friend.email).typeInto('password', friend.password).click('submit')
 
   await learner.openTo('/users')
-  await learner.click('add-friend-carlos')
+  await learner.click(`add-friend ${friend.username}`)
 
   await friend.see('friend-request')
   await friend.click('accept')
