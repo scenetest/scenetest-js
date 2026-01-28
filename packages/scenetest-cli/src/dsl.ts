@@ -270,48 +270,6 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
 }
 
 /**
- * Execute a sequence of DSL actions against any actor (scene or flow model).
- *
- * For scene-model actors (`ActorHandle`), each call creates and awaits an
- * `ActionChain` — execution is sequential and immediate.
- *
- * For reactive actors (`ReactiveActor`), each call pushes to the actor's
- * queue — nothing executes until the flow runner drains.  The `await` on
- * the non-thenable return value is a harmless no-op.
- *
- * @example
- * ```ts
- * // scene() model — awaited
- * await runDsl(user, [
- *   'openTo /dashboard',
- *   'see main-content',
- *   'click settings-button',
- * ])
- *
- * // flow() model — queues, no actual awaiting
- * runDsl(user, [
- *   'openTo /dashboard',
- *   'see main-content',
- *   'click settings-button',
- * ])
- * ```
- */
-export async function runDsl(actor: DslTarget, actions: DslAction[]): Promise<void> {
-  for (const actionLine of actions) {
-    // Skip empty lines and comments
-    const trimmed = actionLine.trim()
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) {
-      continue
-    }
-
-    const parsed = parseAction(trimmed)
-    // await is needed for scene model (ActionChain is thenable);
-    // harmless no-op for reactive model (returns non-thenable actor)
-    await applyDslAction(actor, parsed)
-  }
-}
-
-/**
  * Define a macro as a named sequence of DSL actions
  */
 export type Macro = DslAction[]
@@ -322,16 +280,26 @@ export type Macro = DslAction[]
 const macroRegistry = new Map<string, Macro>()
 
 /**
- * Register a named macro
+ * Register a named macro.
+ *
+ * Macros use `[namespace.field]` interpolation:
+ * - `[self.field]` — current actor's fields
+ * - `[alias.field]` — aliased actor from macro call (e.g., `target=alice`)
+ * - `[team.field]` — team metadata
  *
  * @example
  * ```ts
  * defineMacro('login', [
  *   'see login-form',
- *   'typeInto username {{username}}',
- *   'typeInto password {{password}}',
+ *   'typeInto username [self.username]',
+ *   'typeInto password [self.password]',
  *   'click submit-button',
  *   'see dashboard',
+ * ])
+ *
+ * defineMacro('send-friend-request', [
+ *   'typeInto search [target.username]',
+ *   'click send-request-button',
  * ])
  * ```
  */
@@ -344,40 +312,6 @@ export function defineMacro(name: string, actions: Macro): void {
  */
 export function getMacro(name: string): Macro | undefined {
   return macroRegistry.get(name)
-}
-
-/**
- * Execute a macro with optional variable substitution.
- *
- * Works with both scene-model and reactive actors (see `runDsl`).
- *
- * @example
- * ```ts
- * await runMacro(user, 'login', { username: 'testuser', password: 'secret' })
- * ```
- */
-export async function runMacro(
-  actor: DslTarget,
-  name: string,
-  vars?: Record<string, string>
-): Promise<void> {
-  const macro = macroRegistry.get(name)
-  if (!macro) {
-    throw new Error(`Macro not found: ${name}`)
-  }
-
-  // Substitute variables
-  const actions = vars
-    ? macro.map((action) => {
-        let result = action
-        for (const [key, value] of Object.entries(vars)) {
-          result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value)
-        }
-        return result
-      })
-    : macro
-
-  await runDsl(actor, actions)
 }
 
 /**

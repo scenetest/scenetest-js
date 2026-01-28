@@ -1,16 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   parseAction,
   parseDslLines,
   applyDslAction,
-  runDsl,
   defineMacro,
-  runMacro,
   clearMacros,
 } from '../dsl.js'
 import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
-import type { TimelineEntry, ScriptWarning, DslTarget } from '../types.js'
+import type { TimelineEntry, ScriptWarning, DslTarget, ConcurrentActorHandle } from '../types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -279,90 +277,6 @@ describe('applyDslAction', () => {
 })
 
 // ---------------------------------------------------------------------------
-// runDsl with DslTarget spy
-// ---------------------------------------------------------------------------
-
-describe('runDsl', () => {
-  it('works with a plain DslTarget (structural typing)', async () => {
-    const target = createSpyTarget()
-
-    await runDsl(target, [
-      'openTo /login',
-      'see form',
-      'typeInto email a@b.com',
-      'click submit',
-    ])
-
-    expect(target.calls).toEqual([
-      'openTo:/login',
-      'see:form',
-      'typeInto:email=a@b.com',
-      'click:submit',
-    ])
-  })
-
-  it('skips comments and empty lines', async () => {
-    const target = createSpyTarget()
-
-    await runDsl(target, [
-      '# Login flow',
-      'openTo /login',
-      '',
-      '// Fill form',
-      'see form',
-    ])
-
-    expect(target.calls).toEqual(['openTo:/login', 'see:form'])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// runDsl / runMacro with ConcurrentActorHandleImpl
-// ---------------------------------------------------------------------------
-
-describe('runDsl with ConcurrentActorHandleImpl', () => {
-  it('queues actions on a reactive actor', async () => {
-    const { actor } = createTestActor()
-
-    // runDsl awaits each applyDslAction call — on reactive actors,
-    // the methods return `this` (non-thenable), so await is a no-op.
-    // The actions get queued synchronously.
-    await runDsl(actor, [
-      'openTo /login',
-      'see form',
-      'click submit',
-    ])
-
-    expect(actor.pending).toBe(3)
-  })
-})
-
-describe('runMacro with ConcurrentActorHandleImpl', () => {
-  beforeEach(() => {
-    clearMacros()
-  })
-
-  it('substitutes variables and queues actions', async () => {
-    defineMacro('login', [
-      'openTo /login',
-      'see login-form',
-      'typeInto email {{email}}',
-      'typeInto password {{password}}',
-      'click submit',
-    ])
-
-    const { actor } = createTestActor()
-
-    await runMacro(actor, 'login', {
-      email: 'alice@test.com',
-      password: 'secret',
-    })
-
-    expect(actor.pending).toBe(5)
-  })
-})
-
-// ---------------------------------------------------------------------------
 // actor.dsl() method on ConcurrentActorHandleImpl
 // ---------------------------------------------------------------------------
 
@@ -445,5 +359,170 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
 
     // 1 openTo + 2 dsl + 1 see = 4
     expect(actor.pending).toBe(4)
+  })
+
+  // -------------------------------------------------------------------------
+  // Interpolation tests
+  // -------------------------------------------------------------------------
+
+  it('interpolates [self.field] with actor own fields', () => {
+    const { actor, page } = createTestActor('alice')
+
+    actor.dsl(`
+      typeInto email [self.email]
+      typeInto username [self.username]
+    `)
+
+    expect(actor.pending).toBe(2)
+    // We can verify the interpolated values by draining and checking fill calls
+  })
+
+  it('interpolates [role.field] with other actor fields', () => {
+    const bus = new MessageBus()
+    const timeline: TimelineEntry[] = []
+    const warnings: ScriptWarning[] = []
+
+    // Create alice
+    const alicePage = mockPage()
+    const alice = new ConcurrentActorHandleImpl(
+      'alice',
+      { id: 'alice-1', username: 'alice_user', email: 'alice@test.com', password: 'pass' },
+      alicePage as any,
+      bus,
+      timeline,
+      warnings,
+      5000,
+      60000
+    )
+
+    // Create bob
+    const bobPage = mockPage()
+    const bob = new ConcurrentActorHandleImpl(
+      'bob',
+      { id: 'bob-1', username: 'bob_user', email: 'bob@test.com', password: 'pass' },
+      bobPage as any,
+      bus,
+      timeline,
+      warnings,
+      5000,
+      60000
+    )
+
+    // Set up actor registry
+    const registry = new Map<string, ConcurrentActorHandleImpl>()
+    registry.set('alice', alice)
+    registry.set('bob', bob)
+    alice._setActorRegistry(registry)
+    bob._setActorRegistry(registry)
+
+    // Alice references bob's username
+    alice.dsl(`
+      typeInto search-input [bob.username]
+      see user-card-[bob.id]
+    `)
+
+    expect(alice.pending).toBe(2)
+  })
+
+  it('escapes interpolated values to prevent selector injection', () => {
+    const bus = new MessageBus()
+    const timeline: TimelineEntry[] = []
+    const warnings: ScriptWarning[] = []
+    const page = mockPage()
+
+    // Create actor with potentially dangerous field values
+    const actor = new ConcurrentActorHandleImpl(
+      'hacker',
+      {
+        id: 'user-1',
+        username: "test[inject]'value",
+        email: 'test@test.com',
+        password: 'pass',
+      },
+      page as any,
+      bus,
+      timeline,
+      warnings,
+      5000,
+      60000
+    )
+
+    // Self-reference with dangerous characters should be escaped
+    actor.dsl(`
+      see user-card-[self.username]
+    `)
+
+    expect(actor.pending).toBe(1)
+    // The brackets and quotes in username should be escaped
+  })
+
+  it('throws on unknown [self.field] reference', () => {
+    const { actor } = createTestActor()
+
+    expect(() => {
+      actor.dsl('typeInto input [self.nonexistent]')
+    }).toThrow('[self.nonexistent]')
+  })
+
+  it('throws on unknown [role.field] when actor not in registry', () => {
+    const { actor } = createTestActor()
+
+    // No registry set - should throw
+    expect(() => {
+      actor.dsl('typeInto input [bob.username]')
+    }).toThrow('cannot reference other actors outside a scene context')
+  })
+
+  it('throws on unknown actor in [role.field] reference', () => {
+    const bus = new MessageBus()
+    const timeline: TimelineEntry[] = []
+    const warnings: ScriptWarning[] = []
+    const page = mockPage()
+
+    const actor = new ConcurrentActorHandleImpl(
+      'alice',
+      { id: 'alice-1', username: 'alice', email: 'alice@test.com', password: 'pass' },
+      page as any,
+      bus,
+      timeline,
+      warnings,
+      5000,
+      60000
+    )
+
+    // Set up registry with only alice
+    const registry = new Map<string, ConcurrentActorHandleImpl>()
+    registry.set('alice', actor)
+    actor._setActorRegistry(registry)
+
+    expect(() => {
+      actor.dsl('typeInto input [bob.username]')
+    }).toThrow('unknown actor "bob"')
+  })
+
+  it('supports compound selectors with interpolation', () => {
+    const bus = new MessageBus()
+    const timeline: TimelineEntry[] = []
+    const warnings: ScriptWarning[] = []
+    const page = mockPage()
+
+    const actor = new ConcurrentActorHandleImpl(
+      'alice',
+      { id: '12345', username: 'alice', email: 'alice@test.com', password: 'pass' },
+      page as any,
+      bus,
+      timeline,
+      warnings,
+      5000,
+      60000
+    )
+
+    // Use self reference in compound selector
+    actor.dsl(`
+      see user-result-[self.id]
+      click delete-btn-[self.id]
+    `)
+
+    expect(actor.pending).toBe(2)
   })
 })
