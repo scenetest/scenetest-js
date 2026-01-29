@@ -15,6 +15,8 @@ export interface AssertionResult {
     column?: number
   }
   _index?: number
+  /** Source assertion ID for multi-context assertions (indicates server-side execution) */
+  assertionId?: string
 }
 
 export interface AssertionGroup {

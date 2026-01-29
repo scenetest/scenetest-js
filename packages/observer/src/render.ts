@@ -22,15 +22,16 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
       ? escapeHtml(formatLocation(a.location))
       : ''
   const noteInfo = getNoteInfo(a.description)
+  const isServer = !!a.assertionId
 
   return `
-    <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
+    <div class="scenetest-item ${a.result ? 'pass' : 'fail'}${isServer ? ' server' : ''}"
          data-action="openFullscreenToGroup"
          data-group-id="${groupId}"
          title="${titleAttr}">
       <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="scenetest-content">
-        <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
+        <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${isServer ? '<span class="scenetest-server-badge">server</span>' : ''}${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
       </div>
       <span class="scenetest-note ${a.result ? 'pass' : 'fail'}" title="Musical note for this assertion">\u266A${noteInfo.noteName}</span>
@@ -100,12 +101,13 @@ export function renderFullscreenItem(a: AssertionResult): string {
   const histSummary = formatHistorySummary(histStats)
   const locJson = a.location ? escapeHtmlAttr(JSON.stringify(a.location)) : 'null'
   const noteInfo = getNoteInfo(a.description)
+  const isServer = !!a.assertionId
 
   return `
-    <div class="item ${a.result ? 'pass' : 'fail'}">
+    <div class="item ${a.result ? 'pass' : 'fail'}${isServer ? ' server' : ''}">
       <span class="icon">${a.result ? '\u2713' : '\u2717'}</span>
       <div class="content">
-        <div class="desc${a.type === 'fail' && a.result ? ' negated' : ''}" data-action="showSequence" data-key="${escapeHtmlAttr(JSON.stringify(a.description))}">${escapeHtml(a.description)}</div>
+        <div class="desc${a.type === 'fail' && a.result ? ' negated' : ''}" data-action="showSequence" data-key="${escapeHtmlAttr(JSON.stringify(a.description))}">${isServer ? '<span class="server-badge">server</span>' : ''}${escapeHtml(a.description)}</div>
         ${a.location ? `<div class="location" data-action="openInEditorFullscreen" data-location="${locJson}">${escapeHtml(formatLocation(a.location))}</div>` : ''}
         ${histSummary ? `<div class="history">${histSummary}</div>` : ''}
         ${a.context ? `<div class="context">${escapeHtml(formatContext(a.context))}</div>` : ''}

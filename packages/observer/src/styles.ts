@@ -384,6 +384,23 @@ export const panelStyles = `
   background: #3a1a1a;
   color: #f87171;
 }
+/* Server badge for multi-context assertions */
+.scenetest-server-badge {
+  display: inline-block;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #3a2a5a;
+  color: #c4b5fd;
+  margin-right: 6px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+.scenetest-item.server {
+  border-left: 2px solid #a78bfa;
+}
 `
 
 export const fullscreenStyles = `
@@ -1138,6 +1155,23 @@ body {
 .note-badge.warn {
   background: #3a2a0a;
   color: #f59e0b;
+}
+/* Server badge for multi-context assertions */
+.server-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #3a2a5a;
+  color: #c4b5fd;
+  margin-right: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+.item.server {
+  border-left: 3px solid #a78bfa;
 }
 .note-badge.clickable {
   cursor: pointer;

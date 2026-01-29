@@ -134,7 +134,8 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
   // Also log to console
   const icon = result.result ? '\u2713' : '\u2717'
   const style = result.result ? 'color: #4ade80' : 'color: #f87171'
-  console.log(`%c${icon} [scenetest] ${result.description}`, style)
+  const serverTag = result.assertionId ? ' [server]' : ''
+  console.log(`%c${icon} [scenetest]${serverTag} ${result.description}`, style)
 }
 
 /**
