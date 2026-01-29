@@ -1,0 +1,121 @@
+/**
+ * Message bus for inter-actor coordination.
+ *
+ * Key behavior: Messages are "sticky" - they persist on the bus.
+ * If you listen AFTER a message was emitted, you still receive it (once).
+ * This prevents race conditions when declaring causality early in scenes.
+ */
+export class MessageBus {
+  private emittedMessages = new Set<string>()
+  private listeners = new Map<string, Array<() => void>>()
+
+  /**
+   * Emit a message to the bus.
+   * All current and future listeners for this message will be triggered.
+   */
+  emit(message: string): void {
+    this.emittedMessages.add(message)
+
+    // Trigger any waiting listeners
+    const callbacks = this.listeners.get(message)
+    if (callbacks) {
+      for (const cb of callbacks) {
+        cb()
+      }
+      this.listeners.delete(message)
+    }
+  }
+
+  /**
+   * Wait for a message to be emitted.
+   * If the message was already emitted, resolves immediately.
+   */
+  waitFor(message: string, timeout = 30000): Promise<void> {
+    // If already emitted, resolve immediately (sticky behavior)
+    if (this.emittedMessages.has(message)) {
+      return Promise.resolve()
+    }
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        // Remove this listener on timeout
+        const callbacks = this.listeners.get(message)
+        if (callbacks) {
+          const index = callbacks.indexOf(callback)
+          if (index !== -1) {
+            callbacks.splice(index, 1)
+          }
+          if (callbacks.length === 0) {
+            this.listeners.delete(message)
+          }
+        }
+        reject(new Error(`Timeout waiting for message: "${message}"`))
+      }, timeout)
+
+      const callback = () => {
+        clearTimeout(timer)
+        resolve()
+      }
+
+      const callbacks = this.listeners.get(message) || []
+      callbacks.push(callback)
+      this.listeners.set(message, callbacks)
+    })
+  }
+
+  /**
+   * Check if a message has been emitted.
+   */
+  hasEmitted(message: string): boolean {
+    return this.emittedMessages.has(message)
+  }
+
+  /**
+   * Clear all messages and listeners.
+   * Call this between scene runs.
+   */
+  clear(): void {
+    this.emittedMessages.clear()
+    this.listeners.clear()
+  }
+}
+
+/**
+ * The when() function for coordinating between actors.
+ *
+ * @example
+ * ```ts
+ * // String trigger, function action
+ * when(bus, 'user2 accepts', async () => {
+ *   await user1.see('notification')
+ * })
+ *
+ * // Function trigger, string action
+ * when(bus, () => user2.see('toast'), 'user2 accepts')
+ * ```
+ */
+export function when(
+  bus: MessageBus,
+  trigger: string | (() => Promise<void>),
+  action: string | (() => Promise<void>)
+): void {
+  const executeAction = async () => {
+    if (typeof action === 'string') {
+      bus.emit(action)
+    } else {
+      await action()
+    }
+  }
+
+  if (typeof trigger === 'string') {
+    // Wait for message, then execute action
+    bus.waitFor(trigger).then(executeAction).catch((err) => {
+      console.error(`when() error waiting for "${trigger}":`, err.message)
+    })
+  } else {
+    // Execute trigger function, then execute action
+    trigger().then(executeAction).catch((err) => {
+      console.error('when() error executing trigger:', err.message)
+    })
+  }
+}
