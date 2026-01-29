@@ -3,7 +3,7 @@
  */
 
 export const recorderStyles = `
-#scenetest-recorder {
+#scenecheck-recorder {
   position: fixed;
   top: 0;
   left: 0;
@@ -19,24 +19,24 @@ export const recorderStyles = `
   flex-direction: column;
   box-shadow: 4px 0 24px rgba(0,0,0,0.4);
 }
-#scenetest-recorder.collapsed {
+#scenecheck-recorder.collapsed {
   width: 48px;
 }
-#scenetest-recorder.collapsed .recorder-header-title,
-#scenetest-recorder.collapsed .recorder-actions,
-#scenetest-recorder.collapsed .recorder-lines,
-#scenetest-recorder.collapsed .recorder-footer {
+#scenecheck-recorder.collapsed .recorder-header-title,
+#scenecheck-recorder.collapsed .recorder-actions,
+#scenecheck-recorder.collapsed .recorder-lines,
+#scenecheck-recorder.collapsed .recorder-footer {
   display: none;
 }
-#scenetest-recorder.collapsed .recorder-header {
+#scenecheck-recorder.collapsed .recorder-header {
   flex-direction: column;
   padding: 12px 8px;
   gap: 8px;
 }
 
 /* Push app content right when recorder is open */
-#scenetest-recorder:not(.collapsed) ~ *,
-#scenetest-recorder:not(.collapsed) ~ #scenetest-panel {
+#scenecheck-recorder:not(.collapsed) ~ *,
+#scenecheck-recorder:not(.collapsed) ~ #scenecheck-panel {
   /* Can't push siblings reliably; app should use the CSS var */
 }
 

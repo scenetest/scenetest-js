@@ -8,13 +8,13 @@ import { createEffect, on, type Accessor } from 'solid-js'
  *
  * @example
  * ```tsx
- * import { createTestEffect, assert, should } from '@scenetest/solid'
+ * import { createCheck, assert, should } from '@scenecheck/checks-solid'
  * import { createSignal } from 'solid-js'
  *
  * function Profile() {
  *   const [profile, setProfile] = createSignal(null)
  *
- *   createTestEffect(() => {
+ *   createCheck(() => {
  *     const p = profile()
  *     if (!p) return
  *
@@ -32,12 +32,12 @@ import { createEffect, on, type Accessor } from 'solid-js'
  * }
  * ```
  */
-export function createTestEffect(
+export function createCheck(
   effect: () => void,
   deps?: Accessor<unknown>[]
 ): void {
   // In dev mode, this just runs createEffect
-  // In production, vite-plugin-scenetest strips the entire call
+  // In production, vite-plugin-scenecheck strips the entire call
   if (deps) {
     createEffect(on(deps, effect))
   } else {

@@ -53,7 +53,7 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
       return `return ${code.slice(body.start!, body.end!)}`
     }
   } else {
-    console.warn(`[vite-plugin-scenetest] serverFn is not a function at ${filename}:${line}`)
+    console.warn(`[vite-plugin-scenecheck] serverFn is not a function at ${filename}:${line}`)
     return null
   }
 }
@@ -63,7 +63,7 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
  *
  * For assert(title, serverFn, withData?) calls:
  * 1. Extract the serverFn to be run on the server
- * 2. Replace the call with __scenetest_rpc({ id, title, withData })
+ * 2. Replace the call with __scenecheck_rpc({ id, title, withData })
  *
  * @param code Source code to transform
  * @param options Transform options
@@ -77,13 +77,13 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     return null
   }
 
-  // All scenetest packages
-  const SCENETEST_PACKAGES = [
-    '@scenetest/core',
-    '@scenetest/react',
-    '@scenetest/vue',
-    '@scenetest/solid',
-    '@scenetest/svelte',
+  // All scenecheck packages
+  const SCENECHECK_PACKAGES = [
+    '@scenecheck/checks',
+    '@scenecheck/checks-react',
+    '@scenecheck/checks-vue',
+    '@scenecheck/checks-solid',
+    '@scenecheck/checks-svelte',
   ]
 
   // Track imported assert name
@@ -109,7 +109,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   try {
     ast = parse(code, parserOptions)
   } catch (e) {
-    console.warn(`[vite-plugin-scenetest] Failed to parse ${filename}:`, e)
+    console.warn(`[vite-plugin-scenecheck] Failed to parse ${filename}:`, e)
     return null
   }
 
@@ -117,11 +117,11 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   const extractedAssertions: ExtractedAssertion[] = []
   let needsRpcImport = false
 
-  // First pass: find imports from scenetest packages
+  // First pass: find imports from scenecheck packages
   traverse(ast, {
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (!SCENETEST_PACKAGES.includes(source)) {
+      if (!SCENECHECK_PACKAGES.includes(source)) {
         return
       }
 
@@ -155,7 +155,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
       // Get the arguments: assert(title, serverFn, withData?)
       const args = path.node.arguments
       if (args.length < 2) {
-        console.warn(`[vite-plugin-scenetest] assert() requires at least (title, serverFn) at ${filename}:${path.node.loc?.start.line}`)
+        console.warn(`[vite-plugin-scenecheck] assert() requires at least (title, serverFn) at ${filename}:${path.node.loc?.start.line}`)
         return
       }
 
@@ -194,7 +194,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
       })
 
       // Build the replacement RPC call
-      let rpcCall = `__scenetest_rpc({ id: ${JSON.stringify(id)}, title: ${JSON.stringify(titleValue)}`
+      let rpcCall = `__scenecheck_rpc({ id: ${JSON.stringify(id)}, title: ${JSON.stringify(titleValue)}`
       if (withDataArg) {
         const withDataCode = code.slice(withDataArg.start!, withDataArg.end!)
         rpcCall += `, withData: ${withDataCode}`
@@ -222,7 +222,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     }
   }
 
-  const rpcImport = `\nimport { __scenetest_rpc } from '@scenetest/core/runtime'\n`
+  const rpcImport = `\nimport { __scenecheck_rpc } from '@scenecheck/checks/runtime'\n`
   s.appendLeft(importInsertPos, rpcImport)
 
   return {

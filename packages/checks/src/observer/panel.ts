@@ -39,29 +39,29 @@ import {
 function getPanelHTML(): string {
   return `
     <style>${panelStyles}</style>
-    <div id="scenetest-header">
-      <span id="scenetest-title"><span class="scenetest-icon"><span>\uD83C\uDFAC</span></span>scenetest</span>
-      <span id="scenetest-counts">
-        <span class="scenetest-count pass" id="scenetest-pass" title="Click to filter passes">\u2713 0</span>
-        <span class="scenetest-count fail" id="scenetest-fail" title="Click to filter failures">\u2717 0</span>
+    <div id="scenecheck-header">
+      <span id="scenecheck-title"><span class="scenecheck-icon"><span>\uD83C\uDFAC</span></span>scenecheck</span>
+      <span id="scenecheck-counts">
+        <span class="scenecheck-count pass" id="scenecheck-pass" title="Click to filter passes">\u2713 0</span>
+        <span class="scenecheck-count fail" id="scenecheck-fail" title="Click to filter failures">\u2717 0</span>
       </span>
     </div>
-    <div id="scenetest-actions">
-      <div class="scenetest-btn-group">
-        <button class="scenetest-btn active" id="scenetest-filter-all">all</button>
-        <button class="scenetest-btn" id="scenetest-filter-fails">errors</button>
+    <div id="scenecheck-actions">
+      <div class="scenecheck-btn-group">
+        <button class="scenecheck-btn active" id="scenecheck-filter-all">all</button>
+        <button class="scenecheck-btn" id="scenecheck-filter-fails">errors</button>
       </div>
-      <span class="scenetest-separator"></span>
-      <div class="scenetest-btn-group scenetest-audio-controls">
-        <button class="scenetest-btn scenetest-audio-btn" id="scenetest-mute" title="Toggle sound">\uD83D\uDD0A</button>
-        <button class="scenetest-btn scenetest-audio-btn" id="scenetest-play" title="Play symphony">\u25B6</button>
+      <span class="scenecheck-separator"></span>
+      <div class="scenecheck-btn-group scenecheck-audio-controls">
+        <button class="scenecheck-btn scenecheck-audio-btn" id="scenecheck-mute" title="Toggle sound">\uD83D\uDD0A</button>
+        <button class="scenecheck-btn scenecheck-audio-btn" id="scenecheck-play" title="Play symphony">\u25B6</button>
       </div>
-      <span class="scenetest-separator"></span>
-      <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
-      <button class="scenetest-btn" id="scenetest-clear">clear</button>
+      <span class="scenecheck-separator"></span>
+      <button class="scenecheck-btn" id="scenecheck-fullscreen">fullscreen</button>
+      <button class="scenecheck-btn" id="scenecheck-clear">clear</button>
     </div>
-    <div id="scenetest-list">
-      <div id="scenetest-empty">Click around to see inline assertions...</div>
+    <div id="scenecheck-list">
+      <div id="scenecheck-empty">Click around to see inline assertions...</div>
     </div>
   `
 }
@@ -72,10 +72,10 @@ function getPanelHTML(): string {
 function handleSetFilter(newFilter: FilterMode): void {
   setFilter(newFilter)
   // Update button states
-  panel?.querySelector('#scenetest-filter-all')?.classList.toggle('active', filter === 'all')
-  panel?.querySelector('#scenetest-filter-fails')?.classList.toggle('active', filter === 'fails')
-  panel?.querySelector('#scenetest-pass')?.classList.toggle('active', filter === 'passes')
-  panel?.querySelector('#scenetest-fail')?.classList.toggle('active', filter === 'fails')
+  panel?.querySelector('#scenecheck-filter-all')?.classList.toggle('active', filter === 'all')
+  panel?.querySelector('#scenecheck-filter-fails')?.classList.toggle('active', filter === 'fails')
+  panel?.querySelector('#scenecheck-pass')?.classList.toggle('active', filter === 'passes')
+  panel?.querySelector('#scenecheck-fail')?.classList.toggle('active', filter === 'fails')
   updatePanel()
   updateFullscreenWindow()
 }
@@ -176,7 +176,7 @@ function pickNonOriginalCorner(
  *     momentum as tiebreaker. The panel never returns to its starting corner.
  */
 function setupDrag(panelEl: HTMLDivElement): void {
-  const header = panelEl.querySelector('#scenetest-header') as HTMLElement
+  const header = panelEl.querySelector('#scenecheck-header') as HTMLElement
   if (!header) return
 
   let isDragging = false
@@ -334,7 +334,7 @@ function setupDrag(panelEl: HTMLDivElement): void {
   // Mouse events
   header.addEventListener('mousedown', (e: MouseEvent) => {
     const target = e.target as HTMLElement
-    if (target.classList.contains('scenetest-count')) return
+    if (target.classList.contains('scenecheck-count')) return
     if (isAnimating) return
 
     e.preventDefault()
@@ -360,7 +360,7 @@ function setupDrag(panelEl: HTMLDivElement): void {
   // Touch events
   header.addEventListener('touchstart', (e: TouchEvent) => {
     const target = e.target as HTMLElement
-    if (target.classList.contains('scenetest-count')) return
+    if (target.classList.contains('scenecheck-count')) return
     if (isAnimating) return
 
     const touch = e.touches[0]
@@ -389,15 +389,15 @@ function setupDrag(panelEl: HTMLDivElement): void {
  */
 export function createPanel(): void {
   const panelEl = document.createElement('div')
-  panelEl.id = 'scenetest-panel'
+  panelEl.id = 'scenecheck-panel'
   panelEl.innerHTML = getPanelHTML()
   document.body.appendChild(panelEl)
 
   setPanel(panelEl)
-  setListEl(panelEl.querySelector('#scenetest-list')!)
+  setListEl(panelEl.querySelector('#scenecheck-list')!)
 
   // Attach event listeners ONCE for the list content (uses event delegation)
-  attachEventListeners(panelEl.querySelector('#scenetest-list') as HTMLElement, {
+  attachEventListeners(panelEl.querySelector('#scenecheck-list') as HTMLElement, {
     openFullscreenToGroup: (groupId) => openFullscreen(groupId),
     openInEditor: (location) => openInEditor(location as any),
     toggleCollapsed: (groupId) => toggleGroupCollapsed(groupId),
@@ -408,29 +408,29 @@ export function createPanel(): void {
   setupDrag(panelEl)
 
   // Filter by clicking counts
-  panelEl.querySelector('#scenetest-pass')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-pass')?.addEventListener('click', (e) => {
     e.stopPropagation()
     handleSetFilter(filter === 'passes' ? 'all' : 'passes')
   })
 
-  panelEl.querySelector('#scenetest-fail')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-fail')?.addEventListener('click', (e) => {
     e.stopPropagation()
     handleSetFilter(filter === 'fails' ? 'all' : 'fails')
   })
 
   // Filter buttons
-  panelEl.querySelector('#scenetest-filter-all')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-filter-all')?.addEventListener('click', (e) => {
     e.stopPropagation()
     handleSetFilter('all')
   })
 
-  panelEl.querySelector('#scenetest-filter-fails')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-filter-fails')?.addEventListener('click', (e) => {
     e.stopPropagation()
     handleSetFilter('fails')
   })
 
   // Clear button
-  panelEl.querySelector('#scenetest-clear')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-clear')?.addEventListener('click', (e) => {
     e.stopPropagation()
     clearAll()
     clearSymphony()
@@ -439,18 +439,18 @@ export function createPanel(): void {
   })
 
   // Fullscreen button
-  panelEl.querySelector('#scenetest-fullscreen')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-fullscreen')?.addEventListener('click', (e) => {
     e.stopPropagation()
     openFullscreen()
   })
 
   // Audio: Mute toggle
-  panelEl.querySelector('#scenetest-mute')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-mute')?.addEventListener('click', (e) => {
     e.stopPropagation()
     // Initialize audio on first user interaction
     initAudio()
     const nowMuted = toggleMute()
-    const muteBtn = panelEl.querySelector('#scenetest-mute')
+    const muteBtn = panelEl.querySelector('#scenecheck-mute')
     if (muteBtn) {
       muteBtn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A'
       muteBtn.classList.toggle('muted', nowMuted)
@@ -458,12 +458,12 @@ export function createPanel(): void {
   })
 
   // Audio: Play symphony
-  panelEl.querySelector('#scenetest-play')?.addEventListener('click', (e) => {
+  panelEl.querySelector('#scenecheck-play')?.addEventListener('click', (e) => {
     e.stopPropagation()
     // Initialize audio on first user interaction
     initAudio()
 
-    const playBtn = panelEl.querySelector('#scenetest-play')
+    const playBtn = panelEl.querySelector('#scenecheck-play')
     if (isPlaying()) {
       stopSymphony()
       if (playBtn) {
@@ -483,8 +483,8 @@ export function createPanel(): void {
       }
 
       // Set up callback for when symphony completes
-      ;(window as any).__scenetest_symphonyComplete = () => {
-        const btn = panel?.querySelector('#scenetest-play')
+      ;(window as any).__scenecheck_symphonyComplete = () => {
+        const btn = panel?.querySelector('#scenecheck-play')
         if (btn) {
           btn.textContent = '\u25B6'
           btn.classList.remove('playing')
@@ -500,8 +500,8 @@ export function createPanel(): void {
 export function updatePanel(): void {
   if (!panel || !listEl) return
 
-  const passEl = panel.querySelector('#scenetest-pass')
-  const failEl = panel.querySelector('#scenetest-fail')
+  const passEl = panel.querySelector('#scenecheck-pass')
+  const failEl = panel.querySelector('#scenecheck-fail')
   if (passEl) passEl.textContent = `\u2713 ${passCount}`
   if (failEl) failEl.textContent = `\u2717 ${failCount}`
 
@@ -515,7 +515,7 @@ export function updatePanel(): void {
   if (filteredGroups.length === 0) {
     const message =
       filter === 'fails' ? 'No errors! All assertions passed.' : 'Click around to see inline assertions...'
-    listEl.innerHTML = `<div id="scenetest-empty">${message}</div>`
+    listEl.innerHTML = `<div id="scenecheck-empty">${message}</div>`
     return
   }
 

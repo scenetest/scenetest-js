@@ -79,8 +79,8 @@ function parseLocation(stack: string | undefined): AssertionResult['location'] {
  * Report an assertion result to the test runner (if available)
  */
 function report(result: AssertionResult): void {
-  if (typeof window !== 'undefined' && window.__scenetest_report) {
-    window.__scenetest_report(result)
+  if (typeof window !== 'undefined' && window.__scenecheck_report) {
+    window.__scenecheck_report(result)
   }
 }
 
@@ -151,10 +151,10 @@ export function failed(description: string, context?: Record<string, unknown>): 
 /**
  * Multi-context assertion that compares browser and server data.
  *
- * This function is a stub that gets transformed by vite-plugin-scenetest.
+ * This function is a stub that gets transformed by vite-plugin-scenecheck.
  * In dev mode, the Vite plugin:
  * 1. Extracts the serverFn to a server-side virtual module
- * 2. Replaces this call with __scenetest_rpc() from scenetest/runtime
+ * 2. Replaces this call with __scenecheck_rpc() from scenecheck/runtime
  *
  * @example
  * ```tsx
@@ -173,7 +173,7 @@ export function assert<TData>(
   _serverFn: AssertServerFn<TData>,
   _withData?: AssertDataFn<TData>
 ): void {
-  // This function is transformed by vite-plugin-scenetest
+  // This function is transformed by vite-plugin-scenecheck
   // If this runs, it means the plugin is not configured or we're in production
   // In production, this will be stripped out
 }

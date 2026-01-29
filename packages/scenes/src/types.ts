@@ -1,5 +1,5 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
-import type { ScenetestConfig as BaseConfig } from '@scenetest/core'
+import type { ScenecheckConfig as BaseConfig } from '@scenecheck/checks'
 import type { DeviceProfile } from './devices.js'
 
 /**
@@ -35,15 +35,15 @@ export interface ActorConfig {
 export type TeamConfig = Record<string, ActorConfig>
 
 /**
- * Scenetest CLI configuration.
+ * Scenecheck CLI configuration.
  *
- * Extends the base ScenetestConfig from @scenetest/core with runner-specific
+ * Extends the base ScenecheckConfig from @scenecheck/checks with runner-specific
  * fields (browser, headed, devices, hooks, etc.).
  *
  * Actor teams are not defined here — they are auto-discovered from
  * actor files: `actors.ts` (array of teams) or `actors/*.ts` (one team per file).
  */
-export interface ScenetestConfig extends BaseConfig {
+export interface ScenecheckConfig extends BaseConfig {
   /** Base URL for the application (required for CLI runner) */
   baseUrl: string
 

@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
 import path from 'path'
-import type { ScenetestConfig, TeamConfig, RunReport, SceneReport } from './types.js'
+import type { ScenecheckConfig, TeamConfig, RunReport, SceneReport } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
@@ -18,7 +18,7 @@ export class SceneRunner {
   private teamManager: TeamManager
   private swarmTrigger: SwarmTrigger | null = null
 
-  constructor(private config: ScenetestConfig, teams: TeamConfig[]) {
+  constructor(private config: ScenecheckConfig, teams: TeamConfig[]) {
     this.teamManager = new TeamManager(teams)
 
     // Apply aliases from config

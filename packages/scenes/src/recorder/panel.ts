@@ -81,7 +81,7 @@ function renderAnnotation(annotation: AssertionAnnotation): string {
  */
 export function createRecorderPanel(): HTMLDivElement {
   const el = document.createElement('div')
-  el.id = 'scenetest-recorder'
+  el.id = 'scenecheck-recorder'
   el.innerHTML = `
     <style>${recorderStyles}</style>
     <div class="recorder-header">
@@ -115,7 +115,7 @@ export function createRecorderPanel(): HTMLDivElement {
   footerCountEl = el.querySelector('#recorder-line-count')
 
   // Set CSS variable for app to adjust layout
-  document.documentElement.style.setProperty('--scenetest-recorder-width', '360px')
+  document.documentElement.style.setProperty('--scenecheck-recorder-width', '360px')
 
   return el
 }
@@ -144,7 +144,7 @@ export function attachPanelListeners(opts: {
       btn.setAttribute('title', isCollapsed ? 'Expand' : 'Collapse')
     }
     document.documentElement.style.setProperty(
-      '--scenetest-recorder-width',
+      '--scenecheck-recorder-width',
       isCollapsed ? '48px' : '360px'
     )
   })

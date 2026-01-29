@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import { execSync } from 'child_process'
-import { stripScenetest } from './strip.js'
+import { stripScenecheck } from './strip.js'
 import { transformAssertions } from './transform.js'
 import {
   registerAssertions,
@@ -11,7 +11,7 @@ import {
   generateVirtualModuleCode,
 } from './virtual-module.js'
 import { clearConfigCache, isConfigFile } from './config.js'
-import { createScenetestMiddleware } from './middleware.js'
+import { createScenecheckMiddleware } from './middleware.js'
 import type { Connect } from 'vite'
 
 /**
@@ -64,16 +64,16 @@ function getGitHash(): string {
 function getVersion(): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('@scenetest/observer/package.json')
+    const pkg = require('@scenecheck/checks/observer/package.json')
     return pkg.version || 'dev'
   } catch {
     return 'dev'
   }
 }
 
-export interface ScenetestPluginOptions {
+export interface ScenecheckPluginOptions {
   /**
-   * Whether to strip scenetest code in this build.
+   * Whether to strip scenecheck code in this build.
    * Defaults to true in production builds, false otherwise.
    */
   strip?: boolean
@@ -86,7 +86,7 @@ export interface ScenetestPluginOptions {
 
   /**
    * Demo mode - show dev panel even in production builds.
-   * When true, scenetest code is NOT stripped and the panel is shown.
+   * When true, scenecheck code is NOT stripped and the panel is shown.
    * Useful for demos and documentation sites.
    */
   demo?: boolean
@@ -94,7 +94,7 @@ export interface ScenetestPluginOptions {
   /**
    * Enable the scene recorder panel.
    * Shows a left sidebar that captures user interactions as DSL lines.
-   * Defaults to false — opt-in via scenetest({ recorder: true }).
+   * Defaults to false — opt-in via scenecheck({ recorder: true }).
    */
   recorder?: boolean
 
@@ -137,13 +137,13 @@ export interface CspDirectives {
 }
 
 /**
- * Vite plugin for Scenetest
+ * Vite plugin for Scenecheck
  *
  * In development/test mode: transforms assertion() calls and serves serverFn via middleware
- * In production mode: strips all scenetest imports and function calls via AST transform
- * In demo mode: keeps scenetest code and shows the panel even in production
+ * In production mode: strips all scenecheck imports and function calls via AST transform
+ * In demo mode: keeps scenecheck code and shows the panel even in production
  */
-export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
+export function scenecheck(options: ScenecheckPluginOptions = {}): Plugin {
   let shouldStrip = false
   let showDevPanel = false
   let showRecorder = false
@@ -154,7 +154,7 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let server: ViteDevServer | undefined
 
   return {
-    name: 'vite-plugin-scenetest',
+    name: 'vite-plugin-scenecheck',
 
     config(_config, env) {
       mode = env.mode
@@ -199,8 +199,8 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         server.middlewares.use(createCspMiddleware(cspDirectives))
       }
 
-      // Install the scenetest middleware for handling RPC requests
-      server.middlewares.use(createScenetestMiddleware(server, root))
+      // Install the scenecheck middleware for handling RPC requests
+      server.middlewares.use(createScenecheckMiddleware(server, root))
     },
 
     resolveId(id) {
@@ -228,14 +228,14 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return null
       }
 
-      // Quick check - skip if no scenetest
-      if (!code.includes('scenetest')) {
+      // Quick check - skip if no scenecheck
+      if (!code.includes('scenecheck')) {
         return null
       }
 
       if (shouldStrip) {
-        // Production mode: strip scenetest code via AST transform
-        const result = stripScenetest(code, {
+        // Production mode: strip scenecheck code via AST transform
+        const result = stripScenecheck(code, {
           filename: id,
           sourceMap: true,
         })
@@ -289,16 +289,16 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       if (showDevPanel) {
         // Inject observer via middleware route - serves bundled observer from local installation
         scripts += `<script type="module">
-window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
-window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
-import '/__scenetest/observer.js';
+window.__SCENECHECK_GIT_HASH__ = ${JSON.stringify(gitHash)};
+window.__SCENECHECK_VERSION__ = ${JSON.stringify(version)};
+import '/__scenecheck/observer.js';
 </script>`
       }
 
       if (showRecorder) {
         // Inject recorder sidebar
         scripts += `<script type="module">
-import '/__scenetest/recorder.js';
+import '/__scenecheck/recorder.js';
 </script>`
       }
 
@@ -311,19 +311,19 @@ import '/__scenetest/recorder.js';
       clearConfigCache()
 
       if (options.demo) {
-        console.log('[vite-plugin-scenetest] Demo mode - scenetest panel enabled in production')
+        console.log('[vite-plugin-scenecheck] Demo mode - scenecheck panel enabled in production')
       } else if (shouldStrip) {
-        console.log('[vite-plugin-scenetest] Production build - stripping scenetest code')
+        console.log('[vite-plugin-scenecheck] Production build - stripping scenecheck code')
       } else {
-        console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
+        console.log(`[vite-plugin-scenecheck] ${mode} mode - scenecheck assertions active`)
         if (showDevPanel) {
-          console.log('[vite-plugin-scenetest] Dev panel enabled - open your app to see assertions')
+          console.log('[vite-plugin-scenecheck] Dev panel enabled - open your app to see assertions')
         }
         if (showRecorder) {
-          console.log('[vite-plugin-scenetest] Scene recorder enabled - record interactions as DSL')
+          console.log('[vite-plugin-scenecheck] Scene recorder enabled - record interactions as DSL')
         }
         if (cspEnabled) {
-          console.log('[vite-plugin-scenetest] CSP headers enabled for dev server')
+          console.log('[vite-plugin-scenecheck] CSP headers enabled for dev server')
         }
       }
     },
@@ -332,7 +332,7 @@ import '/__scenetest/recorder.js';
       // Clear config cache if config file changed
       if (isConfigFile(file, root)) {
         clearConfigCache()
-        console.log('[vite-plugin-scenetest] Config file changed - reloading')
+        console.log('[vite-plugin-scenecheck] Config file changed - reloading')
       }
 
       // Remove assertions from the file being updated (they'll be re-registered on transform)
@@ -342,9 +342,9 @@ import '/__scenetest/recorder.js';
 }
 
 // Re-export strip function for testing
-export { stripScenetest } from './strip.js'
+export { stripScenecheck } from './strip.js'
 
-// Re-export server-side should/failed for use in scenetest.config.ts
+// Re-export server-side should/failed for use in scenecheck.config.ts
 export { should, failed } from './middleware.js'
 
-export default scenetest
+export default scenecheck

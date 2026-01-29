@@ -47,10 +47,10 @@ function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): voi
     openInEditorFullscreen: (location) => {
       // In fullscreen, we need to call the opener's function or our own
       const opener = window.opener as Window | null
-      if (opener && opener.__scenetest_openInEditor) {
-        opener.__scenetest_openInEditor(location as any)
-      } else if (window.__scenetest_openInEditor) {
-        window.__scenetest_openInEditor(location as any)
+      if (opener && opener.__scenecheck_openInEditor) {
+        opener.__scenecheck_openInEditor(location as any)
+      } else if (window.__scenecheck_openInEditor) {
+        window.__scenecheck_openInEditor(location as any)
       } else {
         openInEditor(location as any)
       }
@@ -58,10 +58,10 @@ function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): voi
     showSequence: (key) => {
       // Show sequence view - call opener's function or our own
       const opener = window.opener as Window | null
-      if (opener && opener.__scenetest_showSequence) {
-        opener.__scenetest_showSequence(key)
-      } else if (window.__scenetest_showSequence) {
-        window.__scenetest_showSequence(key)
+      if (opener && opener.__scenecheck_showSequence) {
+        opener.__scenecheck_showSequence(key)
+      } else if (window.__scenecheck_showSequence) {
+        window.__scenecheck_showSequence(key)
       } else {
         showSequence(key)
       }
@@ -83,12 +83,12 @@ function getFullscreenHTML(): string {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>scenetest - Inline Assertions</title>
+      <title>scenecheck - Inline Assertions</title>
       <style>${fullscreenStyles}</style>
     </head>
     <body>
       <div id="header">
-        <span id="title"><span class="icon"><span>\uD83C\uDFAC</span></span>scenetest</span>
+        <span id="title"><span class="icon"><span>\uD83C\uDFAC</span></span>scenecheck</span>
         <div id="controls">
           <div id="counts">
             <span class="count pass" id="pass-count">\u2713 0</span>
@@ -109,7 +109,7 @@ function getFullscreenHTML(): string {
             <button class="btn audio-btn" id="audio-play" title="Play symphony">\u25B6</button>
           </div>
           <span class="separator"></span>
-          <button class="btn" id="scenetest-clear-full">Clear</button>
+          <button class="btn" id="scenecheck-clear-full">Clear</button>
         </div>
       </div>
       <div id="list">
@@ -129,10 +129,10 @@ function getFullscreenHTML(): string {
 function setFullscreenFilter(newFilter: FilterMode): void {
   setFilter(newFilter)
   if (panel) {
-    panel.querySelector('#scenetest-filter-all')?.classList.toggle('active', filter === 'all')
-    panel.querySelector('#scenetest-filter-fails')?.classList.toggle('active', filter === 'fails')
-    panel.querySelector('#scenetest-pass')?.classList.toggle('active', filter === 'passes')
-    panel.querySelector('#scenetest-fail')?.classList.toggle('active', filter === 'fails')
+    panel.querySelector('#scenecheck-filter-all')?.classList.toggle('active', filter === 'all')
+    panel.querySelector('#scenecheck-filter-fails')?.classList.toggle('active', filter === 'fails')
+    panel.querySelector('#scenecheck-pass')?.classList.toggle('active', filter === 'passes')
+    panel.querySelector('#scenecheck-fail')?.classList.toggle('active', filter === 'fails')
   }
   updatePanel()
   updateFullscreenWindow()
@@ -179,7 +179,7 @@ export function openFullscreen(groupId?: number): void {
     return
   }
 
-  const win = window.open('', 'scenetest-fullscreen', 'width=900,height=700')
+  const win = window.open('', 'scenecheck-fullscreen', 'width=900,height=700')
   if (!win) {
     alert('Please allow popups for this site to use fullscreen mode.')
     return
@@ -192,7 +192,7 @@ export function openFullscreen(groupId?: number): void {
   // Set up event handlers
   const doc = win.document
 
-  doc.getElementById('scenetest-clear-full')?.addEventListener('click', () => {
+  doc.getElementById('scenecheck-clear-full')?.addEventListener('click', () => {
     clearAll()
     clearSymphony()
     updatePanel()
@@ -209,7 +209,7 @@ export function openFullscreen(groupId?: number): void {
       muteBtn.classList.toggle('muted', nowMuted)
     }
     // Sync with main panel
-    const panelMuteBtn = panel?.querySelector('#scenetest-mute')
+    const panelMuteBtn = panel?.querySelector('#scenecheck-mute')
     if (panelMuteBtn) {
       panelMuteBtn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A'
       panelMuteBtn.classList.toggle('muted', nowMuted)
@@ -235,14 +235,14 @@ export function openFullscreen(groupId?: number): void {
       }
 
       // Set up callback for when symphony completes
-      ;(window as any).__scenetest_symphonyComplete = () => {
+      ;(window as any).__scenecheck_symphonyComplete = () => {
         const btn = doc.getElementById('audio-play')
         if (btn) {
           btn.textContent = '\u25B6'
           btn.classList.remove('playing')
         }
         // Also update main panel button
-        const panelBtn = panel?.querySelector('#scenetest-play')
+        const panelBtn = panel?.querySelector('#scenecheck-play')
         if (panelBtn) {
           panelBtn.textContent = '\u25B6'
           panelBtn.classList.remove('playing')

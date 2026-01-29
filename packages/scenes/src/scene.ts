@@ -25,7 +25,7 @@ export function setCurrentFile(file: string): void {
  *
  * @example
  * ```ts
- * import { scene } from '@scenetest/cli'
+ * import { scene } from '@scenecheck/scenes'
  *
  * scene('user updates their profile', async ({ actor }) => {
  *   const user = await actor('primary-user')

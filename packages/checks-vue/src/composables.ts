@@ -9,12 +9,12 @@ import { watchEffect } from 'vue'
  * @example
  * ```vue
  * <script setup>
- * import { watchTestEffect, assert, should } from '@scenetest/vue'
+ * import { watchCheck, assert, should } from '@scenecheck/checks-vue'
  * import { ref } from 'vue'
  *
  * const profile = ref(null)
  *
- * watchTestEffect(() => {
+ * watchCheck(() => {
  *   if (!profile.value) return
  *
  *   assert(
@@ -29,8 +29,8 @@ import { watchEffect } from 'vue'
  * </script>
  * ```
  */
-export function watchTestEffect(effect: () => void): void {
+export function watchCheck(effect: () => void): void {
   // In dev mode, this just runs watchEffect
-  // In production, vite-plugin-scenetest strips the entire call
+  // In production, vite-plugin-scenecheck strips the entire call
   watchEffect(effect)
 }

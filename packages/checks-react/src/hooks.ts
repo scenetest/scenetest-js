@@ -8,7 +8,7 @@ import { useEffect } from 'react'
  *
  * @example
  * ```tsx
- * useTestEffect(() => {
+ * useCheck(() => {
  *   assert(
  *     'profile synced to db',
  *     async (server, data) => {
@@ -20,11 +20,11 @@ import { useEffect } from 'react'
  * }, [profile])
  * ```
  */
-export function useTestEffect(
+export function useCheck(
   effect: React.EffectCallback,
   deps?: React.DependencyList
 ): void {
   // In dev mode, this just runs useEffect
-  // In production, vite-plugin-scenetest strips the entire call
+  // In production, vite-plugin-scenecheck strips the entire call
   useEffect(effect, deps)
 }

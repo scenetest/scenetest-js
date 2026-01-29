@@ -1,12 +1,12 @@
 /**
- * Scenetest Observer
- * Real-time assertion panel for scenetest
+ * Scenecheck Observer
+ * Real-time assertion panel for scenecheck
  */
 
 // Version and git hash are injected by vite plugin onto window globals at runtime
 // This allows the observer to be a regular module without pre-bundling
-const VERSION = typeof window !== 'undefined' && (window as { __SCENETEST_VERSION__?: string }).__SCENETEST_VERSION__ || 'dev'
-const GIT_HASH = typeof window !== 'undefined' && (window as { __SCENETEST_GIT_HASH__?: string }).__SCENETEST_GIT_HASH__ || 'local'
+const VERSION = typeof window !== 'undefined' && (window as { __SCENECHECK_VERSION__?: string }).__SCENECHECK_VERSION__ || 'dev'
+const GIT_HASH = typeof window !== 'undefined' && (window as { __SCENECHECK_GIT_HASH__?: string }).__SCENECHECK_GIT_HASH__ || 'local'
 
 import type { AssertionResult, ViewMode } from './types.js'
 import {
@@ -42,20 +42,20 @@ export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
 
 declare global {
   interface Window {
-    __scenetest_panel?: boolean
-    __scenetest_report?: (result: AssertionResult) => void
-    __scenetest_openInEditor?: typeof openInEditor
-    __scenetest_openFullscreenToGroup?: typeof openFullscreenToGroup
-    __scenetest_showSequence?: typeof showSequence
-    __scenetest_setViewMode?: (mode: ViewMode) => void
+    __scenecheck_panel?: boolean
+    __scenecheck_report?: (result: AssertionResult) => void
+    __scenecheck_openInEditor?: typeof openInEditor
+    __scenecheck_openFullscreenToGroup?: typeof openFullscreenToGroup
+    __scenecheck_showSequence?: typeof showSequence
+    __scenecheck_setViewMode?: (mode: ViewMode) => void
     // Audio/symphony functions
-    __scenetest_toggleMute?: () => boolean
-    __scenetest_playSymphony?: () => void
-    __scenetest_stopSymphony?: () => void
-    __scenetest_setVolume?: (v: number) => void
-    __scenetest_initAudio?: () => void
-    __scenetest_symphonyProgress?: (current: number, total: number) => void
-    __scenetest_symphonyComplete?: () => void
+    __scenecheck_toggleMute?: () => boolean
+    __scenecheck_playSymphony?: () => void
+    __scenecheck_stopSymphony?: () => void
+    __scenecheck_setVolume?: (v: number) => void
+    __scenecheck_initAudio?: () => void
+    __scenecheck_symphonyProgress?: (current: number, total: number) => void
+    __scenecheck_symphonyComplete?: () => void
   }
 }
 
@@ -135,53 +135,53 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
   const icon = result.result ? '\u2713' : '\u2717'
   const style = result.result ? 'color: #4ade80' : 'color: #f87171'
   const serverTag = result.assertionId ? ' [server]' : ''
-  console.log(`%c${icon} [scenetest]${serverTag} ${result.description}`, style)
+  console.log(`%c${icon} [scenecheck]${serverTag} ${result.description}`, style)
 }
 
 /**
- * Initialize the scenetest observer panel.
- * Sets up window.__scenetest_report and creates the floating panel UI.
+ * Initialize the scenecheck observer panel.
+ * Sets up window.__scenecheck_report and creates the floating panel UI.
  * Safe to call multiple times - subsequent calls are no-ops.
  */
 export function initObserver(): void {
   // Don't initialize twice
-  if (typeof window !== 'undefined' && window.__scenetest_panel) {
+  if (typeof window !== 'undefined' && window.__scenecheck_panel) {
     return
   }
 
   if (typeof window === 'undefined') {
-    console.warn('[scenetest/observer] initObserver() called in non-browser environment')
+    console.warn('[scenecheck/observer] initObserver() called in non-browser environment')
     return
   }
 
-  window.__scenetest_panel = true
+  window.__scenecheck_panel = true
 
   // Log version info
   console.log(
-    `%c🎬 scenetest dev panel v${VERSION} (${GIT_HASH})`,
+    `%c🎬 scenecheck dev panel v${VERSION} (${GIT_HASH})`,
     'color: #a78bfa; font-weight: bold'
   )
 
   // Make functions available globally for onclick handlers
-  window.__scenetest_openInEditor = openInEditor
-  window.__scenetest_openFullscreenToGroup = openFullscreenToGroup
-  window.__scenetest_showSequence = showSequence
-  window.__scenetest_setViewMode = (mode: ViewMode) => {
+  window.__scenecheck_openInEditor = openInEditor
+  window.__scenecheck_openFullscreenToGroup = openFullscreenToGroup
+  window.__scenecheck_showSequence = showSequence
+  window.__scenecheck_setViewMode = (mode: ViewMode) => {
     setViewMode(mode)
     updateFullscreenWindow()
   }
 
   // Audio/symphony functions
-  window.__scenetest_toggleMute = toggleMute
-  window.__scenetest_playSymphony = playSymphony
-  window.__scenetest_stopSymphony = stopSymphony
-  window.__scenetest_setVolume = setVolume
-  window.__scenetest_initAudio = initAudio
+  window.__scenecheck_toggleMute = toggleMute
+  window.__scenecheck_playSymphony = playSymphony
+  window.__scenecheck_stopSymphony = stopSymphony
+  window.__scenecheck_setVolume = setVolume
+  window.__scenecheck_initAudio = initAudio
 
   // Set up the reporter - chain with existing function if present (e.g., Playwright's exposeFunction)
-  const existingReport = window.__scenetest_report
+  const existingReport = window.__scenecheck_report
 
-  window.__scenetest_report = function (result: AssertionResult): void {
+  window.__scenecheck_report = function (result: AssertionResult): void {
     handleAssertion(result, existingReport)
   }
 

@@ -1,9 +1,9 @@
 import type { ExtractedAssertion } from './transform.js'
 
 /**
- * Virtual module ID for scenetest assertions
+ * Virtual module ID for scenecheck assertions
  */
-export const VIRTUAL_MODULE_ID = 'virtual:scenetest-assertions'
+export const VIRTUAL_MODULE_ID = 'virtual:scenecheck-assertions'
 export const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID
 
 /**
@@ -63,7 +63,7 @@ export function removeAssertionsForFile(filename: string): void {
  * SECURITY NOTE: This function embeds user-provided assertion code directly
  * into the generated module. The code runs in the Vite dev server context
  * with full Node.js privileges. This is intentional for dev/test tooling,
- * but means you should only run Scenetest with trusted code. See README.md
+ * but means you should only run Scenecheck with trusted code. See README.md
  * "Security Considerations" section for details.
  */
 export function generateVirtualModuleCode(): string {

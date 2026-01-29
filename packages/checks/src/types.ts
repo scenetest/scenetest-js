@@ -35,7 +35,7 @@ export type AssertDataFn<TData = unknown> = () => TData
 
 /**
  * Server context available in serverFn.
- * Users augment this interface via module declaration in scenetest.config.ts
+ * Users augment this interface via module declaration in scenecheck.config.ts
  */
 export interface ServerContext {
   // Users extend this via module augmentation
@@ -72,17 +72,17 @@ export interface AssertionRpcResponse {
 // ---------------------------------------------------------------------------
 
 /**
- * Scenetest configuration.
+ * Scenecheck configuration.
  *
- * This is the base config shape used by scenetest.config.ts.
- * @scenetest/cli extends it with runner-specific fields (browser, headed, etc.)
- * via declaration merging — see `@scenetest/cli/types`.
+ * This is the base config shape used by scenecheck.config.ts.
+ * @scenecheck/scenes extends it with runner-specific fields (browser, headed, etc.)
+ * via declaration merging — see `@scenecheck/scenes/types`.
  *
  * The index signature lets CLI-specific fields pass through without error
  * when a user imports defineConfig from core (or a framework binding) but
  * adds fields that only the CLI knows about.
  */
-export interface ScenetestConfig {
+export interface ScenecheckConfig {
   /** Base URL for the application under test */
   baseUrl?: string
 
@@ -108,13 +108,13 @@ export interface ScenetestConfig {
 }
 
 /**
- * Type-checked helper for scenetest.config.ts.
+ * Type-checked helper for scenecheck.config.ts.
  *
- * Works with the base config shape. If using @scenetest/cli runner features,
- * import defineConfig from '@scenetest/cli' instead for full type coverage
+ * Works with the base config shape. If using @scenecheck/scenes runner features,
+ * import defineConfig from '@scenecheck/scenes' instead for full type coverage
  * of runner-specific fields (browser, headed, devices, hooks, etc.).
  */
-export function defineConfig(config: ScenetestConfig): ScenetestConfig {
+export function defineConfig(config: ScenecheckConfig): ScenecheckConfig {
   return config
 }
 
@@ -125,11 +125,11 @@ export function defineConfig(config: ScenetestConfig): ScenetestConfig {
 /**
  * The global reporter function exposed by Playwright fixtures
  */
-export type ScenetestReporter = (result: AssertionResult) => void
+export type ScenecheckReporter = (result: AssertionResult) => void
 
 declare global {
   interface Window {
-    __scenetest_report?: ScenetestReporter
-    __scenetest_pending?: () => number
+    __scenecheck_report?: ScenecheckReporter
+    __scenecheck_pending?: () => number
   }
 }

@@ -1,1 +1,1 @@
-export { test, expect, type ScenePage, type ScenetestFixtures } from './fixtures.js'
+export { test, expect, type ScenePage, type ScenecheckFixtures } from './fixtures.js'

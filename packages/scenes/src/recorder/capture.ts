@@ -257,7 +257,7 @@ function resolveTarget(element: Element): string | null {
 function isRecorderElement(element: Element): boolean {
   let current: Element | null = element
   while (current) {
-    if (current.id === 'scenetest-recorder' || current.id === 'scenetest-panel') {
+    if (current.id === 'scenecheck-recorder' || current.id === 'scenecheck-panel') {
       return true
     }
     current = current.parentElement

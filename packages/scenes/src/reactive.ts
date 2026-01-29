@@ -25,7 +25,7 @@
  *
  * @example
  * ```ts
- * import { flow } from '@scenetest/cli'
+ * import { flow } from '@scenecheck/scenes'
  *
  * flow('two users chat', ({ actor }) => {
  *   const alice = actor('alice')
@@ -837,7 +837,7 @@ export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<voi
  *
  * @example
  * ```ts
- * import { flow } from '@scenetest/cli'
+ * import { flow } from '@scenecheck/scenes'
  *
  * flow('user updates profile', ({ actor }) => {
  *   const user = actor('user')

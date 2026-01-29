@@ -7,12 +7,12 @@
  * @example
  * ```svelte
  * <script>
- * import { testEffect, assert, should } from '@scenetest/svelte'
+ * import { checkEffect, assert, should } from '@scenecheck/checks-svelte'
  *
  * let profile = $state(null)
  *
  * $effect(() => {
- *   testEffect(() => {
+ *   checkEffect(() => {
  *     if (!profile) return
  *
  *     assert(
@@ -31,7 +31,7 @@
  * For simple cases, you can use assert() directly in $effect:
  * ```svelte
  * <script>
- * import { should } from '@scenetest/svelte'
+ * import { should } from '@scenecheck/checks-svelte'
  *
  * let count = $state(0)
  *
@@ -41,8 +41,8 @@
  * </script>
  * ```
  */
-export function testEffect(effect: () => void): void {
+export function checkEffect(effect: () => void): void {
   // In dev mode, this just runs the effect immediately
-  // In production, vite-plugin-scenetest strips the entire call
+  // In production, vite-plugin-scenecheck strips the entire call
   effect()
 }

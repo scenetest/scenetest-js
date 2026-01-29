@@ -1,7 +1,7 @@
 /**
- * Reverse selector resolution: given a DOM element, produce a scenetest selector string.
+ * Reverse selector resolution: given a DOM element, produce a scenecheck selector string.
  *
- * This is the inverse of resolveSelector() in @scenetest/cli.
+ * This is the inverse of resolveSelector() in @scenecheck/scenes.
  * Instead of selector → element, it goes element → selector.
  *
  * Algorithm:
@@ -15,11 +15,11 @@ import { SELECTOR_ATTRIBUTES } from './types.js'
 /**
  * Elements that are part of the recorder UI and should be ignored
  */
-const RECORDER_PANEL_ID = 'scenetest-recorder'
-const OBSERVER_PANEL_ID = 'scenetest-panel'
+const RECORDER_PANEL_ID = 'scenecheck-recorder'
+const OBSERVER_PANEL_ID = 'scenecheck-panel'
 
 /**
- * Get the best scenetest selector token for a single element.
+ * Get the best scenecheck selector token for a single element.
  * Returns the attribute value from the highest-priority attribute found,
  * or null if the element has no addressable attributes.
  */
@@ -46,7 +46,7 @@ function isUniqueInScope(token: string, scope: Element | Document): boolean {
 }
 
 /**
- * Resolve a DOM element to a scenetest selector string.
+ * Resolve a DOM element to a scenecheck selector string.
  *
  * Walks up from the element collecting addressable tokens until
  * the path uniquely identifies the element.

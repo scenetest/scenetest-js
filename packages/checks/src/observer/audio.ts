@@ -58,7 +58,7 @@ export function initAudio(): AudioContext | null {
     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
     return audioContext
   } catch (e) {
-    console.warn('[scenetest] Web Audio API not available')
+    console.warn('[scenecheck] Web Audio API not available')
     return null
   }
 }
@@ -239,16 +239,16 @@ export function playSymphony(speedMultiplier = 4): void {
       playChord(event.notes)
 
       // Update UI to show current position
-      if (typeof window !== 'undefined' && (window as any).__scenetest_symphonyProgress) {
-        (window as any).__scenetest_symphonyProgress(i, symphonyEvents.length)
+      if (typeof window !== 'undefined' && (window as any).__scenecheck_symphonyProgress) {
+        (window as any).__scenecheck_symphonyProgress(i, symphonyEvents.length)
       }
 
       // Mark as done after last event
       if (i === symphonyEvents.length - 1) {
         setTimeout(() => {
           isPlayingSymphony = false
-          if (typeof window !== 'undefined' && (window as any).__scenetest_symphonyComplete) {
-            (window as any).__scenetest_symphonyComplete()
+          if (typeof window !== 'undefined' && (window as any).__scenecheck_symphonyComplete) {
+            (window as any).__scenecheck_symphonyComplete()
           }
         }, NOTE_DURATION * 1000)
       }

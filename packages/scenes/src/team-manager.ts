@@ -206,7 +206,7 @@ export class TeamSession {
     // Track device name for assertions
     const deviceName = device?.name
 
-    await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
+    await page.exposeFunction('__scenecheck_report', (result: AssertionResult) => {
       const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
       this.assertions.push(enriched)
     })
@@ -255,7 +255,7 @@ export class TeamSession {
     const deviceName = device?.name
 
     // Set up assertion collection
-    await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
+    await page.exposeFunction('__scenecheck_report', (result: AssertionResult) => {
       // Add actor and device info to assertion
       const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
       this.assertions.push(enriched)

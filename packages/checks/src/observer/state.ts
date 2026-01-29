@@ -33,7 +33,7 @@ export let groupingEnabled = true
 export let collapsedMode = true // Always start collapsed
 
 // Panel corner position
-const CORNER_STORAGE_KEY = 'scenetest-panel-corner'
+const CORNER_STORAGE_KEY = 'scenecheck-panel-corner'
 const VALID_CORNERS: CornerPosition[] = ['bottom-right', 'bottom-left', 'top-right', 'top-left']
 
 function loadCorner(): CornerPosition {

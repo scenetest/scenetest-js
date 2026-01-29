@@ -1,5 +1,5 @@
 import type { Connect, ViteDevServer } from 'vite'
-import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/core'
+import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenecheck/checks'
 import { AsyncLocalStorage } from 'async_hooks'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
@@ -42,20 +42,20 @@ export function failed(description: string, context?: Record<string, unknown>): 
 }
 
 /**
- * Create the scenetest middleware for handling RPC requests and serving the observer.
+ * Create the scenecheck middleware for handling RPC requests and serving the observer.
  *
  * SECURITY NOTE: This middleware executes user-provided assertion code
  * from the virtual module in the dev server context with full Node.js
  * privileges. This is dev-only tooling - never expose to untrusted code
  * or networks. See README.md "Security Considerations" for details.
  */
-export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
+export function createScenecheckMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   return async (req, res, next) => {
-    // Serve the observer module at /__scenetest/observer.js
-    if (req.method === 'GET' && req.url === '/__scenetest/observer.js') {
+    // Serve the observer module at /__scenecheck/observer.js
+    if (req.method === 'GET' && req.url === '/__scenecheck/observer.js') {
       try {
         // Resolve the observer's auto entry point
-        const resolved = await server.pluginContainer.resolveId('@scenetest/observer/auto')
+        const resolved = await server.pluginContainer.resolveId('@scenecheck/checks/observer/auto')
         if (!resolved) {
           res.statusCode = 404
           res.end('Observer module not found')
@@ -74,17 +74,17 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
         res.end(result.code)
         return
       } catch (err) {
-        console.error('[vite-plugin-scenetest] Error serving observer:', err)
+        console.error('[vite-plugin-scenecheck] Error serving observer:', err)
         res.statusCode = 500
         res.end('Error serving observer module')
         return
       }
     }
 
-    // Serve the recorder module at /__scenetest/recorder.js
-    if (req.method === 'GET' && req.url === '/__scenetest/recorder.js') {
+    // Serve the recorder module at /__scenecheck/recorder.js
+    if (req.method === 'GET' && req.url === '/__scenecheck/recorder.js') {
       try {
-        const resolved = await server.pluginContainer.resolveId('@scenetest/recorder/auto')
+        const resolved = await server.pluginContainer.resolveId('@scenecheck/checks/observer/auto')
         if (!resolved) {
           res.statusCode = 404
           res.end('Recorder module not found')
@@ -102,15 +102,15 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
         res.end(result.code)
         return
       } catch (err) {
-        console.error('[vite-plugin-scenetest] Error serving recorder:', err)
+        console.error('[vite-plugin-scenecheck] Error serving recorder:', err)
         res.statusCode = 500
         res.end('Error serving recorder module')
         return
       }
     }
 
-    // Only handle POST /__scenetest/run
-    if (req.method !== 'POST' || req.url !== '/__scenetest/run') {
+    // Only handle POST /__scenecheck/run
+    if (req.method !== 'POST' || req.url !== '/__scenecheck/run') {
       return next()
     }
 
@@ -187,7 +187,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(response))
     } catch (err) {
-      console.error('[vite-plugin-scenetest] Middleware error:', err)
+      console.error('[vite-plugin-scenecheck] Middleware error:', err)
       const response: AssertionRpcResponse = {
         success: false,
         results: [],

@@ -1,8 +1,8 @@
 import { test as base, type Page } from '@playwright/test'
-import type { AssertionResult } from '@scenetest/core'
+import type { AssertionResult } from '@scenecheck/checks'
 
 /**
- * Extended page with scenetest assertion collection
+ * Extended page with scenecheck assertion collection
  */
 export interface ScenePage extends Page {
   /** All assertions collected during this test */
@@ -19,26 +19,26 @@ export interface ScenePage extends Page {
 }
 
 /**
- * Scenetest fixtures for Playwright
+ * Scenecheck fixtures for Playwright
  */
-export interface ScenetestFixtures {
+export interface ScenecheckFixtures {
   /**
-   * A page with scenetest assertion collection enabled.
+   * A page with scenecheck assertion collection enabled.
    * All inline assertions (should/failed) called in the browser will be collected here.
    */
   scenePage: ScenePage
 }
 
 /**
- * Extended Playwright test with scenetest fixtures
+ * Extended Playwright test with scenecheck fixtures
  */
-export const test = base.extend<ScenetestFixtures>({
+export const test = base.extend<ScenecheckFixtures>({
   scenePage: async ({ page }, use) => {
     const assertions: AssertionResult[] = []
 
     // Expose the report function to the browser
     // This will be called by should() and failed() in the app
-    await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
+    await page.exposeFunction('__scenecheck_report', (result: AssertionResult) => {
       assertions.push(result)
     })
 
@@ -66,8 +66,8 @@ export const test = base.extend<ScenetestFixtures>({
 
       while (Date.now() - startTime < timeout) {
         const pending = await page.evaluate(() => {
-          return typeof window.__scenetest_pending === 'function'
-            ? window.__scenetest_pending()
+          return typeof window.__scenecheck_pending === 'function'
+            ? window.__scenecheck_pending()
             : 0
         })
 
@@ -80,8 +80,8 @@ export const test = base.extend<ScenetestFixtures>({
 
       // Check one more time after timeout
       const finalPending = await page.evaluate(() => {
-        return typeof window.__scenetest_pending === 'function'
-          ? window.__scenetest_pending()
+        return typeof window.__scenecheck_pending === 'function'
+          ? window.__scenecheck_pending()
           : 0
       })
 
@@ -95,7 +95,7 @@ export const test = base.extend<ScenetestFixtures>({
     // After the test, log any failed assertions
     const failures = assertions.filter((a) => a.result === false)
     if (failures.length > 0) {
-      console.log('\n--- Scenetest Inline Assertion Failures ---')
+      console.log('\n--- Scenecheck Inline Assertion Failures ---')
       for (const failure of failures) {
         console.log(`  [${failure.type}] ${failure.description}`)
         if (failure.stack) {

@@ -1,15 +1,15 @@
 /**
- * Scenetest Scene Recorder
+ * Scenecheck Scene Recorder
  *
  * Records user interactions as DSL lines in a live sidebar panel.
  * Captures clicks, typing, navigation, and annotates with inline assertions.
  *
  * Usage:
- *   import { initRecorder } from '@scenetest/recorder'
+ *   import { initRecorder } from '@scenecheck/scenes/recorder'
  *   initRecorder()
  *
  * Or auto-init:
- *   import '@scenetest/recorder/auto'
+ *   import '@scenecheck/scenes/recorder/auto'
  */
 
 import type { RecorderState, DslLine, AssertionAnnotation } from './types.js'
@@ -30,8 +30,8 @@ export type { DslLine, AssertionAnnotation, RecorderState } from './types.js'
 
 declare global {
   interface Window {
-    __scenetest_recorder?: boolean
-    __scenetest_report?: (result: AssertionResult) => void
+    __scenecheck_recorder?: boolean
+    __scenecheck_report?: (result: AssertionResult) => void
   }
 }
 
@@ -65,18 +65,18 @@ let stopCapture: (() => void) | null = null
  */
 export function initRecorder(): void {
   if (typeof window === 'undefined') {
-    console.warn('[scenetest/recorder] initRecorder() called in non-browser environment')
+    console.warn('[scenecheck/recorder] initRecorder() called in non-browser environment')
     return
   }
 
-  if (window.__scenetest_recorder) {
+  if (window.__scenecheck_recorder) {
     return
   }
 
-  window.__scenetest_recorder = true
+  window.__scenecheck_recorder = true
 
   console.log(
-    '%c\u23FA scenetest recorder',
+    '%c\u23FA scenecheck recorder',
     'color: #c792ea; font-weight: bold'
   )
 
@@ -136,13 +136,13 @@ function setup(): void {
 }
 
 /**
- * Hook into window.__scenetest_report to capture assertions
+ * Hook into window.__scenecheck_report to capture assertions
  * and display them as inline annotations in the recorder.
  */
 function hookAssertions(): void {
-  const existingReport = window.__scenetest_report
+  const existingReport = window.__scenecheck_report
 
-  window.__scenetest_report = function (result: AssertionResult): void {
+  window.__scenecheck_report = function (result: AssertionResult): void {
     // Forward to existing reporter (observer panel, Playwright, etc.)
     if (existingReport) {
       try {
@@ -192,7 +192,7 @@ function resumeRecording(): void {
  */
 function exportDsl(): void {
   if (state.lines.length === 0) {
-    console.warn('[scenetest/recorder] Nothing to export')
+    console.warn('[scenecheck/recorder] Nothing to export')
     return
   }
 
@@ -263,11 +263,11 @@ export function destroyRecorder(): void {
     stopCapture = null
   }
 
-  const el = document.getElementById('scenetest-recorder')
+  const el = document.getElementById('scenecheck-recorder')
   if (el) {
     el.remove()
   }
 
-  window.__scenetest_recorder = false
-  document.documentElement.style.removeProperty('--scenetest-recorder-width')
+  window.__scenecheck_recorder = false
+  document.documentElement.style.removeProperty('--scenecheck-recorder-width')
 }

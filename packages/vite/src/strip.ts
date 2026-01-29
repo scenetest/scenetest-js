@@ -18,28 +18,28 @@ export interface StripOptions {
   filename?: string
 }
 
-// All scenetest packages that should be stripped
-const SCENETEST_PACKAGES = [
-  '@scenetest/core',
-  '@scenetest/react',
-  '@scenetest/vue',
-  '@scenetest/solid',
-  '@scenetest/svelte',
+// All scenecheck packages that should be stripped
+const SCENECHECK_PACKAGES = [
+  '@scenecheck/checks',
+  '@scenecheck/checks-react',
+  '@scenecheck/checks-vue',
+  '@scenecheck/checks-solid',
+  '@scenecheck/checks-svelte',
 ]
 
 /**
- * Check if a module source is a scenetest package
+ * Check if a module source is a scenecheck package
  */
-function isScenetestPackage(source: string): boolean {
-  return SCENETEST_PACKAGES.includes(source)
+function isScenecheckPackage(source: string): boolean {
+  return SCENECHECK_PACKAGES.includes(source)
 }
 
 /**
- * Strip all scenetest imports and function calls from source code.
+ * Strip all scenecheck imports and function calls from source code.
  *
  * This function:
  * 1. Parses the code with Babel (handles JS, TS, JSX)
- * 2. Finds and tracks all imports from scenetest packages
+ * 2. Finds and tracks all imports from scenecheck packages
  * 3. Removes those import statements
  * 4. Removes all calls to the imported functions
  *
@@ -47,17 +47,17 @@ function isScenetestPackage(source: string): boolean {
  * @param options Transform options
  * @returns Transformed code and optional source map
  */
-export function stripScenetest(code: string, options: StripOptions = {}): StripResult | null {
+export function stripScenecheck(code: string, options: StripOptions = {}): StripResult | null {
   const { sourceMap = true, filename = 'unknown.js' } = options
 
-  // Quick check - if no scenetest import, skip parsing
-  if (!code.includes('scenetest')) {
-    return null // This catches all scenetest-* packages too
+  // Quick check - if no scenecheck import, skip parsing
+  if (!code.includes('scenecheck')) {
+    return null // This catches all scenecheck-* packages too
   }
 
-  // Track imported names from scenetest
-  // Map from local name → imported name (handles aliases)
-  const scenetestImports = new Map<string, string>()
+  // Track imported names from scenecheck
+  // Map from local name -> imported name (handles aliases)
+  const scenecheckImports = new Map<string, string>()
 
   // Parse with Babel
   const parserOptions: ParserOptions = {
@@ -81,7 +81,7 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
     ast = parse(code, parserOptions)
   } catch (e) {
     // If parsing fails, return null (don't transform)
-    console.warn(`[vite-plugin-scenetest] Failed to parse ${filename}:`, e)
+    console.warn(`[vite-plugin-scenecheck] Failed to parse ${filename}:`, e)
     return null
   }
 
@@ -92,10 +92,10 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
   const rangesToRemove: Array<{ start: number; end: number; type: string }> = []
 
   traverse(ast, {
-    // Collect scenetest package imports and mark for removal
+    // Collect scenecheck package imports and mark for removal
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (!isScenetestPackage(source)) {
+      if (!isScenecheckPackage(source)) {
         return
       }
 
@@ -106,13 +106,13 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
             ? specifier.imported.name
             : specifier.imported.value
           const local = specifier.local.name
-          scenetestImports.set(local, imported)
+          scenecheckImports.set(local, imported)
         } else if (t.isImportDefaultSpecifier(specifier)) {
-          // import scenetest from 'scenetest' - unlikely but handle it
-          scenetestImports.set(specifier.local.name, 'default')
+          // import scenecheck from 'scenecheck' - unlikely but handle it
+          scenecheckImports.set(specifier.local.name, 'default')
         } else if (t.isImportNamespaceSpecifier(specifier)) {
-          // import * as scenetest from 'scenetest' - track namespace
-          scenetestImports.set(specifier.local.name, '*')
+          // import * as scenecheck from 'scenecheck' - track namespace
+          scenecheckImports.set(specifier.local.name, '*')
         }
       }
 
@@ -123,11 +123,11 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
       hasChanges = true
     },
 
-    // Remove function calls to imported scenetest functions
+    // Remove function calls to imported scenecheck functions
     CallExpression(path: NodePath<t.CallExpression>) {
       const callee = path.node.callee
 
-      let isScenetestCall = false
+      let isScenecheckCall = false
 
       // Functions to strip (from all framework packages)
       const strippableFunctions = [
@@ -143,27 +143,27 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
 
       // Direct call: should(...), failed(...), assert(...), useTestEffect(...), etc.
       if (t.isIdentifier(callee)) {
-        if (scenetestImports.has(callee.name)) {
-          const imported = scenetestImports.get(callee.name)
+        if (scenecheckImports.has(callee.name)) {
+          const imported = scenecheckImports.get(callee.name)
           if (imported && strippableFunctions.includes(imported)) {
-            isScenetestCall = true
+            isScenecheckCall = true
           }
         }
       }
-      // Member call: scenetest.should(...) (namespace import)
+      // Member call: scenecheck.should(...) (namespace import)
       else if (t.isMemberExpression(callee) && t.isIdentifier(callee.object)) {
         const objectName = callee.object.name
-        if (scenetestImports.get(objectName) === '*') {
+        if (scenecheckImports.get(objectName) === '*') {
           if (t.isIdentifier(callee.property)) {
             const propName = callee.property.name
             if (strippableFunctions.includes(propName)) {
-              isScenetestCall = true
+              isScenecheckCall = true
             }
           }
         }
       }
 
-      if (!isScenetestCall) {
+      if (!isScenecheckCall) {
         return
       }
 

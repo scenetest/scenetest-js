@@ -3,7 +3,7 @@
  */
 
 export const panelStyles = `
-#scenetest-panel {
+#scenecheck-panel {
   position: fixed;
   bottom: 16px;
   right: 16px;
@@ -20,56 +20,56 @@ export const panelStyles = `
   display: flex;
   flex-direction: column;
 }
-#scenetest-panel.dragging {
+#scenecheck-panel.dragging {
   opacity: 0.92;
 }
-#scenetest-panel.unsnapping {
+#scenecheck-panel.unsnapping {
   transition: top 0.12s cubic-bezier(0.2, 0, 0, 1),
               left 0.12s cubic-bezier(0.2, 0, 0, 1),
               box-shadow 0.12s ease;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
-#scenetest-panel.snapping {
+#scenecheck-panel.snapping {
   transition: top 0.3s cubic-bezier(0.2, 0, 0.2, 1),
               left 0.3s cubic-bezier(0.2, 0, 0.2, 1);
 }
-#scenetest-panel.flicking {
+#scenecheck-panel.flicking {
   transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1),
               left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
-#scenetest-panel.corner-bottom-right {
+#scenecheck-panel.corner-bottom-right {
   bottom: 16px;
   right: 16px;
   top: auto;
   left: auto;
 }
-#scenetest-panel.corner-bottom-left {
+#scenecheck-panel.corner-bottom-left {
   bottom: 16px;
   left: 16px;
   top: auto;
   right: auto;
 }
-#scenetest-panel.corner-top-right {
+#scenecheck-panel.corner-top-right {
   top: 16px;
   right: 16px;
   bottom: auto;
   left: auto;
 }
-#scenetest-panel.corner-top-left {
+#scenecheck-panel.corner-top-left {
   top: 16px;
   left: 16px;
   bottom: auto;
   right: auto;
 }
-#scenetest-panel.collapsed {
+#scenecheck-panel.collapsed {
   max-height: none;
   width: auto;
 }
-#scenetest-panel.collapsed #scenetest-list,
-#scenetest-panel.collapsed #scenetest-actions {
+#scenecheck-panel.collapsed #scenecheck-list,
+#scenecheck-panel.collapsed #scenecheck-actions {
   display: none;
 }
-#scenetest-header {
+#scenecheck-header {
   padding: 10px 12px;
   background: #252542;
   border-radius: 8px 8px 0 0;
@@ -80,20 +80,20 @@ export const panelStyles = `
   user-select: none;
   border-bottom: 1px solid #4a4a6a;
 }
-#scenetest-panel.dragging #scenetest-header {
+#scenecheck-panel.dragging #scenecheck-header {
   cursor: grabbing;
 }
-#scenetest-header:hover {
+#scenecheck-header:hover {
   background: #2a2a4a;
 }
-#scenetest-title {
+#scenecheck-title {
   font-weight: 600;
   color: #a0a0ff;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.scenetest-icon {
+.scenecheck-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -104,37 +104,37 @@ export const panelStyles = `
   font-size: 12px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
-.scenetest-icon span {
+.scenecheck-icon span {
   filter: drop-shadow(0px 0px 4px #ffffff);
 }
-#scenetest-counts {
+#scenecheck-counts {
   display: flex;
   gap: 8px;
   align-items: center;
 }
-.scenetest-count {
+.scenecheck-count {
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.scenetest-count:hover {
+.scenecheck-count:hover {
   opacity: 0.8;
 }
-.scenetest-count.pass {
+.scenecheck-count.pass {
   background: #1a3a1a;
   color: #4ade80;
 }
-.scenetest-count.fail {
+.scenecheck-count.fail {
   background: #3a1a1a;
   color: #f87171;
 }
-.scenetest-count.active {
+.scenecheck-count.active {
   outline: 2px solid currentColor;
   outline-offset: 1px;
 }
-#scenetest-actions {
+#scenecheck-actions {
   display: flex;
   gap: 8px;
   padding: 6px 12px;
@@ -143,21 +143,21 @@ export const panelStyles = `
   flex-wrap: wrap;
   align-items: center;
 }
-.scenetest-btn-group {
+.scenecheck-btn-group {
   display: flex;
   border: 1px solid #4a4a6a;
   border-radius: 4px;
   overflow: hidden;
 }
-.scenetest-btn-group .scenetest-btn {
+.scenecheck-btn-group .scenecheck-btn {
   border: none;
   border-radius: 0;
   border-right: 1px solid #4a4a6a;
 }
-.scenetest-btn-group .scenetest-btn:last-child {
+.scenecheck-btn-group .scenecheck-btn:last-child {
   border-right: none;
 }
-.scenetest-btn {
+.scenecheck-btn {
   background: none;
   border: 1px solid #4a4a6a;
   color: #a0a0a0;
@@ -168,31 +168,31 @@ export const panelStyles = `
   font-family: inherit;
   transition: all 0.15s;
 }
-.scenetest-btn:hover {
+.scenecheck-btn:hover {
   background: #3a3a5a;
   color: #e0e0e0;
 }
-.scenetest-btn.active {
+.scenecheck-btn.active {
   background: #4a4a6a;
   color: #fff;
 }
-.scenetest-separator {
+.scenecheck-separator {
   width: 1px;
   height: 16px;
   background: #3a3a5a;
 }
-#scenetest-list {
+#scenecheck-list {
   overflow-y: auto;
   max-height: 340px;
   padding: 8px 0;
 }
-.scenetest-group {
+.scenecheck-group {
   margin: 4px 8px;
   border: 1px solid #3a3a5a;
   border-radius: 6px;
   overflow: hidden;
 }
-.scenetest-group-header {
+.scenecheck-group-header {
   padding: 6px 10px;
   background: #252542;
   display: flex;
@@ -201,49 +201,49 @@ export const panelStyles = `
   cursor: pointer;
   font-size: 11px;
 }
-.scenetest-group-header:hover {
+.scenecheck-group-header:hover {
   background: #2a2a4a;
 }
-.scenetest-group-summary {
+.scenecheck-group-summary {
   display: flex;
   gap: 8px;
   align-items: center;
 }
-.scenetest-group-time {
+.scenecheck-group-time {
   color: #6a6a8a;
 }
-.scenetest-group-stats {
+.scenecheck-group-stats {
   display: flex;
   gap: 6px;
 }
-.scenetest-group-stat {
+.scenecheck-group-stat {
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
 }
-.scenetest-group-stat.pass {
+.scenecheck-group-stat.pass {
   background: #1a3a1a;
   color: #4ade80;
 }
-.scenetest-group-stat.fail {
+.scenecheck-group-stat.fail {
   background: #3a1a1a;
   color: #f87171;
 }
-.scenetest-group-stat.zero {
+.scenecheck-group-stat.zero {
   background: #2a2a3a;
   color: #6a6a8a;
 }
-.scenetest-group-items {
+.scenecheck-group-items {
   border-top: 1px solid #3a3a5a;
 }
-.scenetest-group.collapsed .scenetest-group-items {
+.scenecheck-group.collapsed .scenecheck-group-items {
   display: none;
 }
-.scenetest-group-toggle {
+.scenecheck-group-toggle {
   color: #6a6a8a;
   font-size: 10px;
 }
-.scenetest-item {
+.scenecheck-item {
   padding: 6px 10px;
   border-bottom: 1px solid #2a2a4a;
   display: flex;
@@ -252,13 +252,13 @@ export const panelStyles = `
   cursor: pointer;
   position: relative;
 }
-.scenetest-item:hover {
+.scenecheck-item:hover {
   background: #252545;
 }
-.scenetest-item:last-child {
+.scenecheck-item:last-child {
   border-bottom: none;
 }
-.scenetest-item .scenetest-icon {
+.scenecheck-item .scenecheck-icon {
   flex-shrink: 0;
   width: 22px;
   height: 22px;
@@ -269,32 +269,32 @@ export const panelStyles = `
   font-weight: bold;
   text-align: center;
 }
-.scenetest-item.pass .scenetest-icon {
+.scenecheck-item.pass .scenecheck-icon {
   background: #22c55e;
   color: white;
   font-size: 14px;
 }
-.scenetest-item.fail .scenetest-icon {
+.scenecheck-item.fail .scenecheck-icon {
   background: #f87171;
   color: white;
   font-size: 20px;
   box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3);
 }
-.scenetest-content {
+.scenecheck-content {
   flex: 1;
   min-width: 0;
 }
-.scenetest-desc {
+.scenecheck-desc {
   word-break: break-word;
 }
-.scenetest-item.fail .scenetest-desc {
+.scenecheck-item.fail .scenecheck-desc {
   color: #f87171;
 }
-.scenetest-desc.negated {
+.scenecheck-desc.negated {
   text-decoration: line-through;
   opacity: 0.7;
 }
-.scenetest-location {
+.scenecheck-location {
   font-size: 9px;
   color: #6a6a8a;
   margin-top: 2px;
@@ -302,11 +302,11 @@ export const panelStyles = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.scenetest-location:hover {
+.scenecheck-location:hover {
   color: #a0a0ff;
   text-decoration: underline;
 }
-.scenetest-context {
+.scenecheck-context {
   font-size: 10px;
   color: #8a8aaa;
   margin-top: 3px;
@@ -319,52 +319,52 @@ export const panelStyles = `
   white-space: pre-wrap;
   word-break: break-all;
 }
-.scenetest-time {
+.scenecheck-time {
   color: #6a6a8a;
   flex-shrink: 0;
   font-size: 10px;
 }
-#scenetest-empty {
+#scenecheck-empty {
   padding: 20px;
   text-align: center;
   color: #6a6a8a;
 }
-.scenetest-ungrouped {
+.scenecheck-ungrouped {
   padding: 4px 8px;
 }
-.scenetest-history {
+.scenecheck-history {
   font-size: 9px;
   color: #8a8aaa;
   margin-top: 2px;
   font-style: italic;
 }
 /* Audio controls */
-.scenetest-audio-controls {
+.scenecheck-audio-controls {
   display: flex;
 }
-.scenetest-audio-btn {
+.scenecheck-audio-btn {
   min-width: 32px;
   padding: 4px 8px;
   font-size: 14px;
   transition: all 0.15s;
 }
-.scenetest-audio-btn:hover {
+.scenecheck-audio-btn:hover {
   background: #3a3a5a;
 }
-.scenetest-audio-btn.muted {
+.scenecheck-audio-btn.muted {
   opacity: 0.5;
 }
-.scenetest-audio-btn.playing {
+.scenecheck-audio-btn.playing {
   background: #2a4a2a;
   color: #4ade80;
-  animation: scenetest-pulse 1s ease-in-out infinite;
+  animation: scenecheck-pulse 1s ease-in-out infinite;
 }
-@keyframes scenetest-pulse {
+@keyframes scenecheck-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
 /* Note badge for musical indicators */
-.scenetest-note {
+.scenecheck-note {
   font-size: 9px;
   padding: 2px 5px;
   border-radius: 3px;
@@ -373,19 +373,19 @@ export const panelStyles = `
   opacity: 0.7;
   transition: opacity 0.15s;
 }
-.scenetest-note:hover {
+.scenecheck-note:hover {
   opacity: 1;
 }
-.scenetest-note.pass {
+.scenecheck-note.pass {
   background: #1a3a1a;
   color: #4ade80;
 }
-.scenetest-note.fail {
+.scenecheck-note.fail {
   background: #3a1a1a;
   color: #f87171;
 }
 /* Server badge for multi-context assertions */
-.scenetest-server-badge {
+.scenecheck-server-badge {
   display: inline-block;
   font-size: 9px;
   padding: 1px 4px;
@@ -398,7 +398,7 @@ export const panelStyles = `
   letter-spacing: 0.3px;
   vertical-align: middle;
 }
-.scenetest-item.server {
+.scenecheck-item.server {
   border-left: 2px solid #a78bfa;
 }
 `

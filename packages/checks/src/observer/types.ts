@@ -104,12 +104,12 @@ export interface LocationEntry {
 
 declare global {
   interface Window {
-    __scenetest_panel?: boolean
-    // Note: __scenetest_report is declared in scenetest/types.ts
+    __scenecheck_panel?: boolean
+    // Note: __scenecheck_report is declared in scenecheck/types.ts
     // We extend it here with dev-panel specific functions
-    __scenetest_openInEditor?: (loc: AssertionResult['location']) => void
-    __scenetest_openFullscreenToGroup?: (groupId: number) => void
-    __scenetest_showSequence?: (locationKey: string) => void
-    __scenetest_setViewMode?: (mode: ViewMode) => void
+    __scenecheck_openInEditor?: (loc: AssertionResult['location']) => void
+    __scenecheck_openFullscreenToGroup?: (groupId: number) => void
+    __scenecheck_showSequence?: (locationKey: string) => void
+    __scenecheck_setViewMode?: (mode: ViewMode) => void
   }
 }

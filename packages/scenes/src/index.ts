@@ -25,7 +25,7 @@ export { SwarmTrigger } from './swarm.js'
 
 // Types
 export type {
-  ScenetestConfig,
+  ScenecheckConfig,
   TeamConfig,
   ActorConfig,
   SceneContext,

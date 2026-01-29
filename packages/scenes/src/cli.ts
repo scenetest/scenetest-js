@@ -11,8 +11,8 @@ import type { CLIOptions, RunReport } from './types.js'
 const program = new Command()
 
 program
-  .name('scenetest')
-  .description('Run scenetest scene specs')
+  .name('scenecheck')
+  .description('Run scenecheck scene specs')
   .version('0.0.1')
   .argument('[scenes...]', 'Scene files or directories to run')
   .option('--ui', 'Run in interactive UI mode')
@@ -44,7 +44,7 @@ program
       // Interactive UI mode
       if (options.ui) {
         config.headed = true
-        console.log('\n🎬 Scenetest UI Mode\n')
+        console.log('\n🎬 Scenecheck UI Mode\n')
         console.log('Press Ctrl+C to exit\n')
       }
 
@@ -230,7 +230,7 @@ function generateHtmlReport(report: RunReport): string {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Scenetest Report</title>
+  <title>Scenecheck Report</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; }
     h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -251,7 +251,7 @@ function generateHtmlReport(report: RunReport): string {
   </style>
 </head>
 <body>
-  <h1><span class="logo">🎬</span> Scenetest Report</h1>
+  <h1><span class="logo">🎬</span> Scenecheck Report</h1>
   <p>Generated: ${report.timestamp}</p>
 
   <div class="summary">
@@ -288,7 +288,7 @@ function escapeHtml(str: string): string {
 
 program
   .command('init')
-  .description('Initialize scenetest folder structure')
+  .description('Initialize scenecheck folder structure')
   .option('--force', 'Overwrite existing files')
   .action(async (options: { force?: boolean }) => {
     try {

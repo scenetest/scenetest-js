@@ -14,15 +14,15 @@ export function getPendingCount(): number {
 
 // Expose pending count to window for Playwright
 if (typeof window !== 'undefined') {
-  window.__scenetest_pending = getPendingCount
+  window.__scenecheck_pending = getPendingCount
 }
 
 /**
  * Report an assertion result to the test runner (if available)
  */
 function report(result: AssertionResult): void {
-  if (typeof window !== 'undefined' && window.__scenetest_report) {
-    window.__scenetest_report(result)
+  if (typeof window !== 'undefined' && window.__scenecheck_report) {
+    window.__scenecheck_report(result)
   }
 }
 
@@ -50,7 +50,7 @@ function getStack(): string | undefined {
   const stack = err.stack
   if (!stack) return undefined
 
-  // Skip the first 3 lines (Error, getStack, __scenetest_rpc)
+  // Skip the first 3 lines (Error, getStack, __scenecheck_rpc)
   const lines = stack.split('\n').slice(3)
   return lines.join('\n')
 }
@@ -73,7 +73,7 @@ export interface RpcConfig {
  * Execute an assertion RPC call to the server.
  * This is called by transformed assertion() calls in dev mode.
  */
-export async function __scenetest_rpc(config: RpcConfig): Promise<void> {
+export async function __scenecheck_rpc(config: RpcConfig): Promise<void> {
   const { id, title, key, withData } = config
   const stack = getStack()
   const location = parseLocation(stack)
@@ -110,7 +110,7 @@ export async function __scenetest_rpc(config: RpcConfig): Promise<void> {
     }
 
     // POST to the server
-    const response = await fetch('/__scenetest/run', {
+    const response = await fetch('/__scenecheck/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

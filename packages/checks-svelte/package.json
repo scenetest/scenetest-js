@@ -1,0 +1,39 @@
+{
+  "name": "@scenecheck/checks-svelte",
+  "version": "0.1.0",
+  "description": "Svelte bindings for scenecheck inline assertions",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/checks-svelte"
+  },
+  "keywords": ["testing", "e2e", "playwright", "svelte", "assertions", "inline-assertions"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@scenecheck/checks": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "svelte": "^5.0.0"
+  }
+}

@@ -25,16 +25,16 @@ export function renderPanelItem(a: AssertionResult, groupId: number): string {
   const isServer = !!a.assertionId
 
   return `
-    <div class="scenetest-item ${a.result ? 'pass' : 'fail'}${isServer ? ' server' : ''}"
+    <div class="scenecheck-item ${a.result ? 'pass' : 'fail'}${isServer ? ' server' : ''}"
          data-action="openFullscreenToGroup"
          data-group-id="${groupId}"
          title="${titleAttr}">
-      <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
-      <div class="scenetest-content">
-        <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${isServer ? '<span class="scenetest-server-badge">server</span>' : ''}${escapeHtml(a.description)}</div>
-        ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
+      <span class="scenecheck-icon">${a.result ? '\u2713' : '\u2717'}</span>
+      <div class="scenecheck-content">
+        <div class="scenecheck-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${isServer ? '<span class="scenecheck-server-badge">server</span>' : ''}${escapeHtml(a.description)}</div>
+        ${a.location ? `<div class="scenecheck-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
       </div>
-      <span class="scenetest-note ${a.result ? 'pass' : 'fail'}" title="Musical note for this assertion">\u266A${noteInfo.noteName}</span>
+      <span class="scenecheck-note ${a.result ? 'pass' : 'fail'}" title="Musical note for this assertion">\u266A${noteInfo.noteName}</span>
     </div>
   `
 }
@@ -53,17 +53,17 @@ export function renderPanelItemWithTime(a: AssertionResult): string {
       : ''
 
   return `
-    <div class="scenetest-item ${a.result ? 'pass' : 'fail'}"
+    <div class="scenecheck-item ${a.result ? 'pass' : 'fail'}"
          data-action="openInEditor"
          data-location="${locJson}"
          title="${titleAttr}">
-      <span class="scenetest-icon">${a.result ? '\u2713' : '\u2717'}</span>
-      <div class="scenetest-content">
-        <div class="scenetest-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
-        ${a.location ? `<div class="scenetest-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
-        ${histSummary ? `<div class="scenetest-history">${histSummary}</div>` : ''}
+      <span class="scenecheck-icon">${a.result ? '\u2713' : '\u2717'}</span>
+      <div class="scenecheck-content">
+        <div class="scenecheck-desc${a.type === 'fail' && a.result ? ' negated' : ''}">${escapeHtml(a.description)}</div>
+        ${a.location ? `<div class="scenecheck-location">${escapeHtml(formatLocation(a.location))}</div>` : ''}
+        ${histSummary ? `<div class="scenecheck-history">${histSummary}</div>` : ''}
       </div>
-      <span class="scenetest-time">${formatTime(a.timestamp)}</span>
+      <span class="scenecheck-time">${formatTime(a.timestamp)}</span>
     </div>
   `
 }
@@ -75,18 +75,18 @@ export function renderPanelGroup(g: AssertionGroup): string {
   const stats = getGroupStats(g.items)
 
   return `
-    <div class="scenetest-group${g.collapsed ? ' collapsed' : ''}" data-group-id="${g.id}">
-      <div class="scenetest-group-header" data-action="toggleCollapsed">
-        <div class="scenetest-group-summary">
-          <span class="scenetest-group-time">${formatTime(g.timestamp)}</span>
-          <div class="scenetest-group-stats">
-            <span class="scenetest-group-stat pass">\u2713${stats.passCount}</span>
-            <span class="scenetest-group-stat ${stats.failCount > 0 ? 'fail' : 'zero'}">\u2717${stats.failCount}</span>
+    <div class="scenecheck-group${g.collapsed ? ' collapsed' : ''}" data-group-id="${g.id}">
+      <div class="scenecheck-group-header" data-action="toggleCollapsed">
+        <div class="scenecheck-group-summary">
+          <span class="scenecheck-group-time">${formatTime(g.timestamp)}</span>
+          <div class="scenecheck-group-stats">
+            <span class="scenecheck-group-stat pass">\u2713${stats.passCount}</span>
+            <span class="scenecheck-group-stat ${stats.failCount > 0 ? 'fail' : 'zero'}">\u2717${stats.failCount}</span>
           </div>
         </div>
-        <span class="scenetest-group-toggle">\u25BC</span>
+        <span class="scenecheck-group-toggle">\u25BC</span>
       </div>
-      <div class="scenetest-group-items">
+      <div class="scenecheck-group-items">
         ${g.items.map(a => renderPanelItem(a, g.id)).join('')}
       </div>
     </div>

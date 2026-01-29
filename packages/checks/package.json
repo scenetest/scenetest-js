@@ -1,0 +1,60 @@
+{
+  "name": "@scenecheck/checks",
+  "version": "0.1.0",
+  "description": "Inline assertions, observer panel, and Playwright fixtures for scenecheck",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/checks"
+  },
+  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions", "observability"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
+    "./observer": {
+      "types": "./dist/observer/index.d.ts",
+      "import": "./dist/observer/index.js"
+    },
+    "./observer/auto": {
+      "types": "./dist/observer/auto.d.ts",
+      "import": "./dist/observer/auto.js"
+    },
+    "./playwright": {
+      "types": "./dist/playwright/index.d.ts",
+      "import": "./dist/playwright/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "typescript": "^5.3.3",
+    "vitest": "^2.0.0"
+  }
+}

@@ -2,7 +2,7 @@
  * Auto-initializing recorder import
  *
  * Usage:
- *   import '@scenetest/recorder/auto'
+ *   import '@scenecheck/scenes/recorder/auto'
  *
  * This will automatically initialize the recorder panel when imported.
  */

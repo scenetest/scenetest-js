@@ -1,0 +1,52 @@
+{
+  "name": "@scenecheck/vite",
+  "version": "0.1.0",
+  "description": "Vite plugin for scenecheck - dev panel injection, prod stripping, config",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/vite"
+  },
+  "keywords": ["testing", "e2e", "playwright", "vite", "vite-plugin", "assertions"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "magic-string": "^0.30.10",
+    "@scenecheck/checks": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.5",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

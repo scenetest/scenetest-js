@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 
-const CONFIG_TEMPLATE = `import { defineConfig } from '@scenetest/cli'
+const CONFIG_TEMPLATE = `import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   // Base URL for your application
@@ -19,14 +19,14 @@ export default defineConfig({
 })
 `
 
-const README_TEMPLATE = `# Scenetest
+const README_TEMPLATE = `# Scenecheck
 
-This folder contains your scenetest configuration and specs.
+This folder contains your scenecheck configuration and specs.
 
 ## Structure
 
 \`\`\`
-scenetest/
+scenecheck/
 ├── config.ts       # Configuration (aliases, baseUrl, etc.)
 ├── actors/         # Actor definitions (optional)
 ├── specs/          # Your .spec.ts and .spec.md files
@@ -37,23 +37,23 @@ scenetest/
 
 \`\`\`bash
 # Run all specs
-npx scenetest
+npx scenecheck
 
 # Run specific spec
-npx scenetest scenetest/specs/login.spec.md
+npx scenecheck scenecheck/specs/login.spec.md
 
 # Run with visible browser
-npx scenetest --headed
+npx scenecheck --headed
 \`\`\`
 
 ## Documentation
 
-See https://scenetest.dev for full documentation.
+See https://scenecheck.dev for full documentation.
 `
 
-const README_LLM_TEMPLATE = `# Scenetest (for LLMs)
+const README_LLM_TEMPLATE = `# Scenecheck (for LLMs)
 
-Scenetest is an E2E testing framework with a text-based DSL for writing scene specs.
+Scenecheck is an E2E testing framework with a text-based DSL for writing scene specs.
 
 ## Key concepts
 
@@ -124,22 +124,22 @@ export interface InitOptions {
 }
 
 export async function init(cwd: string, options: InitOptions = {}): Promise<void> {
-  const scenetestDir = path.join(cwd, 'scenetest')
+  const scenecheckDir = path.join(cwd, 'scenecheck')
 
   // Check if already exists
-  if (fs.existsSync(scenetestDir) && !options.force) {
-    const configExists = fs.existsSync(path.join(scenetestDir, 'config.ts'))
+  if (fs.existsSync(scenecheckDir) && !options.force) {
+    const configExists = fs.existsSync(path.join(scenecheckDir, 'config.ts'))
     if (configExists) {
-      console.log('scenetest/ folder already exists. Use --force to overwrite.')
+      console.log('scenecheck/ folder already exists. Use --force to overwrite.')
       return
     }
   }
 
   // Create directories
   const dirs = [
-    scenetestDir,
-    path.join(scenetestDir, 'specs'),
-    path.join(scenetestDir, '.cache'),
+    scenecheckDir,
+    path.join(scenecheckDir, 'specs'),
+    path.join(scenecheckDir, '.cache'),
   ]
 
   for (const dir of dirs) {
@@ -150,10 +150,10 @@ export async function init(cwd: string, options: InitOptions = {}): Promise<void
 
   // Write files
   const files = [
-    { path: path.join(scenetestDir, 'config.ts'), content: CONFIG_TEMPLATE },
-    { path: path.join(scenetestDir, 'README.md'), content: README_TEMPLATE },
-    { path: path.join(scenetestDir, 'README-LLM.md'), content: README_LLM_TEMPLATE },
-    { path: path.join(scenetestDir, '.cache', '.gitkeep'), content: '' },
+    { path: path.join(scenecheckDir, 'config.ts'), content: CONFIG_TEMPLATE },
+    { path: path.join(scenecheckDir, 'README.md'), content: README_TEMPLATE },
+    { path: path.join(scenecheckDir, 'README-LLM.md'), content: README_LLM_TEMPLATE },
+    { path: path.join(scenecheckDir, '.cache', '.gitkeep'), content: '' },
   ]
 
   for (const file of files) {
@@ -166,15 +166,15 @@ export async function init(cwd: string, options: InitOptions = {}): Promise<void
   const gitignorePath = path.join(cwd, '.gitignore')
   if (fs.existsSync(gitignorePath)) {
     const gitignore = fs.readFileSync(gitignorePath, 'utf-8')
-    if (!gitignore.includes('scenetest/.cache')) {
-      fs.appendFileSync(gitignorePath, '\n# Scenetest generated files\nscenetest/.cache/\n')
-      console.log('Added scenetest/.cache/ to .gitignore')
+    if (!gitignore.includes('scenecheck/.cache')) {
+      fs.appendFileSync(gitignorePath, '\n# Scenecheck generated files\nscenecheck/.cache/\n')
+      console.log('Added scenecheck/.cache/ to .gitignore')
     }
   }
 
   console.log(`
-Created scenetest/ folder:
-  scenetest/
+Created scenecheck/ folder:
+  scenecheck/
   ├── config.ts        # Configuration
   ├── README.md        # Documentation
   ├── README-LLM.md    # LLM instructions
@@ -182,8 +182,8 @@ Created scenetest/ folder:
   └── .cache/          # Generated files (gitignored)
 
 Next steps:
-  1. Edit scenetest/config.ts to set your baseUrl
-  2. Create a spec in scenetest/specs/
-  3. Run: npx scenetest
+  1. Edit scenecheck/config.ts to set your baseUrl
+  2. Create a spec in scenecheck/specs/
+  3. Run: npx scenecheck
 `)
 }

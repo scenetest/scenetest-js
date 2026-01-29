@@ -1,13 +1,13 @@
 import path from 'path'
 import fs from 'fs'
 import { glob } from 'glob'
-import type { ScenetestConfig, TeamConfig } from './types.js'
+import type { ScenecheckConfig, TeamConfig } from './types.js'
 import { importFile } from './loader.js'
 
 /**
  * Default config values
  */
-const defaults: Partial<ScenetestConfig> = {
+const defaults: Partial<ScenecheckConfig> = {
   scenes: './scenes',
   browser: 'chromium',
   headed: false,
@@ -15,7 +15,7 @@ const defaults: Partial<ScenetestConfig> = {
   timeout: 30000,
   actionTimeout: 5000,
   warnAfter: 500,
-  reportDir: './scenetest-reports',
+  reportDir: './scenecheck-reports',
   reportFormat: 'html',
 }
 
@@ -23,12 +23,12 @@ const defaults: Partial<ScenetestConfig> = {
  * Config file names to search for (in order of preference)
  */
 const CONFIG_FILES = [
-  'scenetest.config.ts',
-  'scenetest.config.js',
-  'scenetest.config.mjs',
-  'scenetest/config.ts',
-  'scenetest/config.js',
-  'scenetest/config.mjs',
+  'scenecheck.config.ts',
+  'scenecheck.config.js',
+  'scenecheck.config.mjs',
+  'scenecheck/config.ts',
+  'scenecheck/config.js',
+  'scenecheck/config.mjs',
 ]
 
 /**
@@ -96,7 +96,7 @@ async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
  * Loaded config with resolved teams
  */
 export interface LoadedConfig {
-  config: ScenetestConfig
+  config: ScenecheckConfig
   teams: TeamConfig[]
 }
 
@@ -118,7 +118,7 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
 
   // Dynamic import
   const module = await importFile(filepath)
-  const config = module.default as ScenetestConfig
+  const config = module.default as ScenecheckConfig
 
   // Validate required fields
   if (!config.baseUrl) {
@@ -129,7 +129,7 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
   const resolved = {
     ...defaults,
     ...config,
-  } as ScenetestConfig
+  } as ScenecheckConfig
 
   // Discover actor teams relative to config file
   const configDir = path.dirname(path.resolve(filepath))
@@ -145,6 +145,6 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
 /**
  * Helper to define config with type checking
  */
-export function defineConfig(config: ScenetestConfig): ScenetestConfig {
+export function defineConfig(config: ScenecheckConfig): ScenecheckConfig {
   return config
 }
