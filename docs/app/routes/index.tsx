@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { CodeBlock } from '../components/CodeBlock'
 import { Footer } from '../components/Footer'
-import { useTestAssertions } from '../useTestAssertions'
+import { useCheckAssertions } from '../useCheckAssertions'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -9,12 +9,12 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   // Enable interactive test assertions for the demo
-  useTestAssertions()
+  useCheckAssertions()
 
   return (
     <article>
       <div className="hero-logo">🎬</div>
-      <h1>Scenetest</h1>
+      <h1>Scenecheck</h1>
       <p className="subtitle">
         Local-First testing framework for Vite apps that helps you evaluate your
         product and your mental model &ndash; not your tests.
@@ -42,7 +42,7 @@ function Home() {
       <p className="divider">* * *</p>
 
       <p>
-        This is how <em>Scenetest</em> came about. We were looking for tests that would:
+        This is how <em>Scenecheck</em> came about. We were looking for tests that would:
       </p>
       <ol>
         <li>Evaluate data we take from inside the React component lifecycle: in onSettled callbacks, in effects, hooks.</li>
@@ -65,8 +65,8 @@ function Home() {
       <CodeBlock>{`// in your UI component
 const post = usePost(id)
 const form = usePostForm(post)
-// useTestEffect wraps test code that gets stripped in production
-useTestEffect(() => {
+// useCheck wraps test code that gets stripped in production
+useCheck(() => {
   // skip when submitting, run when only finished
   if (form.isSubmitting) return
 
@@ -94,7 +94,7 @@ useTestEffect(() => {
       </p>
 
       <CodeBlock>{`// scenes/profile-update.spec.ts
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('user updates their profile', ({ actor }) => {
   const user = actor('user')
@@ -155,10 +155,10 @@ main-user-1: seeToast friend-request-accepted`}</CodeBlock>
         code &ndash; in your components, hooks, and callbacks. They validate your mental model: "at this point in the code / React lifecycle,
         this data should be in this state." Engineers write them to encode their understanding of how and why this works, and to alert
         future generations if they are ever running afoul of their ancient wisdom.
-        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useTestEffect</code>.
+        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useCheck</code>.
       </p>
 
-      <CodeBlock>{`import { should, failed, assert, useTestEffect } from '@scenetest/react'
+      <CodeBlock>{`import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -167,7 +167,7 @@ export function ProfileForm({ userId }) {
   should('Profile available without loading state', profile !== undefined)
 
   // For special cases, an extra check
-  useTestEffect(() => {
+  useCheck(() => {
     if (profile) return // only check when no profile
 
     assert(
@@ -195,7 +195,7 @@ export function ProfileForm({ userId }) {
       </p>
 
       <figure className="screenshot">
-        <img src="/images/screenshot-4.png" alt="Scenetest dev panel showing inline assertions from React components" />
+        <img src="/images/screenshot-4.png" alt="Scenecheck dev panel showing inline assertions from React components" />
         <figcaption>The dev panel collects should/failed assertions from your inline assertions in your components, effects, and callbacks whenever they execute.</figcaption>
       </figure>
 
@@ -295,14 +295,14 @@ onSettled: (data) => {
         imperfectly, opportunities to miss the true nature of whether your app has broken.
       </p>
       <p>
-        Scenetest avoids this repetitiveness without the abstraction &ndash; by putting the assertions in with
+        Scenecheck avoids this repetitiveness without the abstraction &ndash; by putting the assertions in with
         the component or hook code in the React app, exactly where it always should have been.
       </p>
 
       <p>
         <em>
-          Scenetest is in early sideproject dev. Please{' '}
-          <a href="https://github.com/scenetest/scenetest-js">check it out on GH</a> or{' '}
+          Scenecheck is in early sideproject dev. Please{' '}
+          <a href="https://github.com/scenecheck/scenecheck-js">check it out on GH</a> or{' '}
           <a href="https://bsky.app/profile/msnook.xyz">find me on bsky</a>
           {' '}(<a href="https://twitter.com/mhsnook">or tw</a>) and let me know what you think. &mdash; M
         </em>

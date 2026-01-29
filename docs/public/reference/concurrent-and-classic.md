@@ -1,6 +1,6 @@
 # Concurrent and Classic Mode
 
-Scenetest has two TypeScript execution models and a plain-text format. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
+Scenecheck has two TypeScript execution models and a plain-text format. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
 
 | Style | File | Function | Execution model | Best for |
 |-------|------|----------|----------------|----------|
@@ -15,7 +15,7 @@ Scenetest has two TypeScript execution models and a plain-text format. All three
 ## Concurrent — scene()
 
 ```typescript
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('user updates their profile', ({ actor }) => {
   const user = actor('user')
@@ -47,7 +47,7 @@ scene('user updates their profile', ({ actor }) => {
 ## Classic Driver — test()
 
 ```typescript
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('user updates their profile', async ({ actor }) => {
   const user = await actor('user')
@@ -80,7 +80,7 @@ test('user updates their profile', async ({ actor }) => {
 
 | | Concurrent — `scene()` | Classic Driver — `test()` |
 |---|---------|--------|
-| **Import** | `import { scene } from '@scenetest/cli'` | `import { test } from '@scenetest/cli'` |
+| **Import** | `import { scene } from '@scenecheck/scenes'` | `import { test } from '@scenecheck/scenes'` |
 | **`actor()` call** | `const user = actor('user')` (sync) | `const user = await actor('user')` |
 | **Function signature** | `({ actor }) => { ... }` (no async needed) | `async ({ actor }) => { ... }` |
 | **DSL calls need `await`?** | No — calls just queue, execution is automatic | Yes — `await` triggers execution |
@@ -174,7 +174,7 @@ scene('sender and receiver', ({ actor }) => {
 ### Classic Driver uses `when()` and `emit()`
 
 ```typescript
-import { test, when } from '@scenetest/cli'
+import { test, when } from '@scenecheck/scenes'
 
 test('sender and receiver', async ({ actor }) => {
   const sender = await actor('sender')

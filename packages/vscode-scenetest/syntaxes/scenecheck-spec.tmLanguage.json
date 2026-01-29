@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Scenetest Spec",
-  "scopeName": "source.scenetest-spec",
+  "name": "Scenecheck Spec",
+  "scopeName": "source.scenecheck-spec",
   "patterns": [
     { "include": "#heading" },
     { "include": "#comment" },
@@ -12,20 +12,20 @@
     "heading": {
       "patterns": [
         {
-          "name": "markup.heading.1.scenetest",
+          "name": "markup.heading.1.scenecheck",
           "match": "^(#{1,2})\\s+(.*)$",
           "captures": {
-            "1": { "name": "punctuation.definition.heading.scenetest" },
-            "2": { "name": "entity.name.section.scenetest" }
+            "1": { "name": "punctuation.definition.heading.scenecheck" },
+            "2": { "name": "entity.name.section.scenecheck" }
           }
         }
       ]
     },
     "comment": {
-      "name": "comment.line.double-slash.scenetest",
+      "name": "comment.line.double-slash.scenecheck",
       "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?//\\s*(.*)$",
       "captures": {
-        "1": { "name": "comment.line.double-slash.scenetest" }
+        "1": { "name": "comment.line.double-slash.scenecheck" }
       }
     },
     "actor-declaration": {
@@ -34,17 +34,17 @@
           "comment": "Actor cue with inline action: user: openTo /login",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?([a-zA-Z][a-zA-Z0-9_-]*):\\s+(openTo|see|seeInView|notSee|seeText|seeToast|click|typeInto|check|select|wait|emit|waitFor|warnIf|up|prev|scrollToBottom|if)(?:\\s+(.*))?$",
           "captures": {
-            "1": { "name": "variable.other.actor.scenetest" },
-            "2": { "name": "entity.name.function.action.scenetest" },
+            "1": { "name": "variable.other.actor.scenecheck" },
+            "2": { "name": "entity.name.function.action.scenecheck" },
             "3": { "patterns": [{ "include": "#action-arguments" }] }
           }
         },
         {
           "comment": "Actor cue standalone: user:",
-          "name": "variable.other.actor.scenetest",
+          "name": "variable.other.actor.scenecheck",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?([a-zA-Z][a-zA-Z0-9_-]*):\\s*$",
           "captures": {
-            "1": { "name": "variable.other.actor.scenetest" }
+            "1": { "name": "variable.other.actor.scenecheck" }
           }
         }
       ]
@@ -55,7 +55,7 @@
           "comment": "Macro invocation: login() or login() args — args are plain values, not selectors",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?([a-zA-Z][a-zA-Z0-9_-]*)\\(\\)(?:\\s+(.*))?$",
           "captures": {
-            "1": { "name": "entity.name.function.macro.scenetest" },
+            "1": { "name": "entity.name.function.macro.scenecheck" },
             "2": { "patterns": [{ "include": "#value-with-interpolation" }] }
           }
         },
@@ -63,7 +63,7 @@
           "comment": "Conditional if",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(if)\\s+(.*)$",
           "captures": {
-            "1": { "name": "keyword.control.conditional.scenetest" },
+            "1": { "name": "keyword.control.conditional.scenecheck" },
             "2": { "patterns": [{ "include": "#selector-chain" }] }
           }
         },
@@ -71,7 +71,7 @@
           "comment": "Coordination actions: emit, waitFor — message names are symbolic like selectors",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(emit|waitFor)\\s+(.*)$",
           "captures": {
-            "1": { "name": "keyword.other.coordination.scenetest" },
+            "1": { "name": "keyword.other.coordination.scenecheck" },
             "2": { "patterns": [{ "include": "#selector-chain" }] }
           }
         },
@@ -79,23 +79,23 @@
           "comment": "Navigation action: openTo",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(openTo)\\s+(.*)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
-            "2": { "name": "string.other.link.scenetest" }
+            "1": { "name": "entity.name.function.action.scenecheck" },
+            "2": { "name": "string.other.link.scenecheck" }
           }
         },
         {
           "comment": "Wait action with number",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(wait)\\s+(\\d+)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
-            "2": { "name": "constant.numeric.scenetest" }
+            "1": { "name": "entity.name.function.action.scenecheck" },
+            "2": { "name": "constant.numeric.scenecheck" }
           }
         },
         {
           "comment": "Input actions: typeInto, select (selector + value)",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(typeInto|select)\\s+(\\S+)\\s+(.*)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
+            "1": { "name": "entity.name.function.action.scenecheck" },
             "2": { "patterns": [{ "include": "#selector-token" }] },
             "3": { "patterns": [{ "include": "#value-with-interpolation" }] }
           }
@@ -104,7 +104,7 @@
           "comment": "Warning action: warnIf (selector + message)",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(warnIf)\\s+(\\S+)\\s+(.*)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
+            "1": { "name": "entity.name.function.action.scenecheck" },
             "2": { "patterns": [{ "include": "#selector-token" }] },
             "3": { "patterns": [{ "include": "#value-with-interpolation" }] }
           }
@@ -113,7 +113,7 @@
           "comment": "Text assertion: seeText",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(seeText)\\s+(.*)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
+            "1": { "name": "entity.name.function.action.scenecheck" },
             "2": { "patterns": [{ "include": "#value-with-interpolation" }] }
           }
         },
@@ -121,14 +121,14 @@
           "comment": "Bare scope actions: click, up, prev, scrollToBottom (no arguments)",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(click|up|prev|scrollToBottom)\\s*$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" }
+            "1": { "name": "entity.name.function.action.scenecheck" }
           }
         },
         {
           "comment": "Selector actions: see, seeInView, notSee, seeToast, click, check, up",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(see|seeInView|notSee|seeToast|click|check|up)\\s+(.*)$",
           "captures": {
-            "1": { "name": "entity.name.function.action.scenetest" },
+            "1": { "name": "entity.name.function.action.scenecheck" },
             "2": { "patterns": [{ "include": "#selector-chain" }] }
           }
         }
@@ -154,22 +154,22 @@
       "patterns": [
         {
           "comment": "Alias sigil: ~modal — same color as selectors, sigil provides distinction",
-          "name": "string.unquoted.selector.scenetest",
+          "name": "string.unquoted.selector.scenecheck",
           "match": "~[a-zA-Z][a-zA-Z0-9_-]*"
         },
         {
           "comment": "Aria-label sigil: @Close — same color as selectors, sigil provides distinction",
-          "name": "string.unquoted.selector.scenetest",
+          "name": "string.unquoted.selector.scenecheck",
           "match": "@[a-zA-Z][a-zA-Z0-9_-]*"
         },
         {
           "comment": "Interpolation: [actor.field]",
-          "name": "variable.interpolation.scenetest",
+          "name": "variable.interpolation.scenecheck",
           "match": "\\[[a-zA-Z][a-zA-Z0-9_-]*\\.[a-zA-Z][a-zA-Z0-9_-]*\\]"
         },
         {
           "comment": "Plain selector token",
-          "name": "string.unquoted.selector.scenetest",
+          "name": "string.unquoted.selector.scenecheck",
           "match": "[a-zA-Z0-9_-]+"
         }
       ]
@@ -179,37 +179,37 @@
       "patterns": [
         {
           "comment": "Interpolation in value: [actor.field]",
-          "name": "variable.interpolation.scenetest",
+          "name": "variable.interpolation.scenecheck",
           "match": "\\[[a-zA-Z][a-zA-Z0-9_-]*\\.[a-zA-Z][a-zA-Z0-9_-]*\\]"
         }
       ]
     },
     "interpolation": {
-      "name": "variable.interpolation.scenetest",
+      "name": "variable.interpolation.scenecheck",
       "match": "\\[[a-zA-Z][a-zA-Z0-9_-]*\\.[a-zA-Z][a-zA-Z0-9_-]*\\]"
     },
     "sigil": {
       "patterns": [
         {
-          "name": "string.unquoted.selector.scenetest",
+          "name": "string.unquoted.selector.scenecheck",
           "match": "~[a-zA-Z][a-zA-Z0-9_-]*"
         },
         {
-          "name": "string.unquoted.selector.scenetest",
+          "name": "string.unquoted.selector.scenecheck",
           "match": "@[a-zA-Z][a-zA-Z0-9_-]*"
         }
       ]
     },
     "number": {
-      "name": "constant.numeric.scenetest",
+      "name": "constant.numeric.scenecheck",
       "match": "\\b\\d+\\b"
     },
     "url": {
-      "name": "string.other.link.scenetest",
+      "name": "string.other.link.scenecheck",
       "match": "(?:https?://[^\\s]+|/[^\\s]*)"
     },
     "plain-text": {
-      "name": "string.unquoted.scenetest",
+      "name": "string.unquoted.scenecheck",
       "match": "[^\\[\\]~@\\s]+"
     }
   }

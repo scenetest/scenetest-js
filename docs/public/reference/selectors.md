@@ -1,6 +1,6 @@
 # Selectors
 
-All actor methods that accept a `selector` parameter (`see`, `click`, `typeInto`, etc.) use Scenetest's selector resolution. Selectors are **space-separated tokens** that resolve to DOM elements.
+All actor methods that accept a `selector` parameter (`see`, `click`, `typeInto`, etc.) use Scenecheck's selector resolution. Selectors are **space-separated tokens** that resolve to DOM elements.
 
 ## Attribute Matching
 
@@ -67,8 +67,8 @@ Key selectors are useful for lists where each row has a unique key.
 Configure shorthand selectors in your config file with the `~` prefix:
 
 ```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   aliases: {
@@ -93,7 +93,7 @@ await user.up('~container')            // navigate up to alias-matched ancestor
 When a selector fails to match, use `explainSelector()` to debug:
 
 ```typescript
-import { explainSelector } from '@scenetest/cli'
+import { explainSelector } from '@scenecheck/scenes'
 
 const result = await explainSelector(page, 'my-selector')
 // {

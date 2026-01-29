@@ -1,6 +1,6 @@
 # Actors API Design
 
-**STATUS: Implemented** in `packages/scenetest-cli/src/` — actor.ts, team-manager.ts, config.ts.
+**STATUS: Implemented** in `packages/scenes/src/` — actor.ts, team-manager.ts, config.ts.
 
 ---
 
@@ -52,7 +52,7 @@ The actor should discover everything they need **through the app**. If a test ne
 
 ## Example: Language Learning App
 
-Actor teams live in files next to your config, not inside it. Scenetest auto-discovers them from `actors.ts` or `actors/*.ts`.
+Actor teams live in files next to your config, not inside it. Scenecheck auto-discovers them from `actors.ts` or `actors/*.ts`.
 
 ```typescript
 // actors/team-maria.ts
@@ -138,7 +138,7 @@ If you need an admin for a test, the role should reflect their purpose in the st
 Use the `actor()` function to get an actor by role:
 
 ```ts [Concurrent (ts)]
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('learner completes first lesson', ({ actor }) => {
   const learner = actor('primary-learner')
@@ -154,7 +154,7 @@ scene('learner completes first lesson', ({ actor }) => {
 ```
 
 ```ts [Classic Driver (ts)]
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('learner completes first lesson', async ({ actor }) => {
   const learner = await actor('primary-learner')

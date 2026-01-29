@@ -13,10 +13,10 @@ it('shows items', () => {
 })
 ```
 
-Scenetest takes a different approach - assertions live inside your components and run in your actual app:
+Scenecheck takes a different approach - assertions live inside your components and run in your actual app:
 
 ```tsx
-// Scenetest
+// Scenecheck
 function Cart({ items }) {
   should('cart has items', items.length > 0)
   should('all prices valid', items.every(i => i.price > 0))
@@ -33,4 +33,4 @@ function Cart({ items }) {
 - **See assertions during development** in the observer panel, not just in CI
 - **Scene specs** orchestrate full user journeys, not isolated interactions
 
-Cypress is excellent for isolated component testing. Scenetest is for testing components as they actually run in your application, with all their real dependencies.
+Cypress is excellent for isolated component testing. Scenecheck is for testing components as they actually run in your application, with all their real dependencies.

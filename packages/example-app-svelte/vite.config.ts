@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import scenetest from '@scenetest/vite-plugin'
+import scenecheck from '@scenecheck/vite'
 
 export default defineConfig({
   plugins: [
     svelte(),
-    scenetest(),
+    scenecheck(),
   ],
 })

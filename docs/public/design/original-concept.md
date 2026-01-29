@@ -9,7 +9,7 @@
 
 ## Concept
 
-Scenetest began from picking at the idea that end-to-end testing kind of seems to be confusing two very different and important things:
+Scenecheck began from picking at the idea that end-to-end testing kind of seems to be confusing two very different and important things:
 
 1. **Scenes**: Test a set of user interactions from beginning to end so we can codify key user journeys and flows, edge cases and strange user inputs, and make sure they still work as code changes.
 2. **Inline Assertions**: Compare data across different contexts to ensure that what you find in your database matches what shows up on screen, as well as in your browser cache, localStorage, or any other context.
@@ -128,7 +128,7 @@ Fine! Here.
 
 ```javascript
 import { useProfile } from '~lib/hooks'
-import { pass } from 'scenetest'
+import { pass } from '@scenecheck/checks'
 
 export function ProfileForm() {
   const { data: profile } = useProfile()
@@ -172,7 +172,7 @@ The `pass` function is stripped out by our Vite plugin so it never runs in produ
 Your PM or a QA manager can freestyle clicking through the app, inputting whatever garbage edge-case user inputs they want, and all your assertions will run in the background and report to the test suite. Writing test scenes doesn't require understanding the intermediate steps, side effects and implementation details of how the app functions under the hood.
 </div>
 
-This speaks to one of our biggest concerns with modern test tooling: Test your product, not your tests. Too often tests pass or fail because of implementation details _of the test_. In many cases, confidence in the test suite degrades over time because you have passing tests but a broken product, or failing tests but a working product, and minimising this specific pitfall is one of the primary goals of Scenetest.
+This speaks to one of our biggest concerns with modern test tooling: Test your product, not your tests. Too often tests pass or fail because of implementation details _of the test_. In many cases, confidence in the test suite degrades over time because you have passing tests but a broken product, or failing tests but a working product, and minimising this specific pitfall is one of the primary goals of Scenecheck.
 
 ### Writing Scenes
 
@@ -180,7 +180,7 @@ So far we've discussed Inline Assertions, but not the Scene orchestration that i
 
 ```javascript
 // ~tests/scenes/edit-profile.spec.ts
-import { scene, pass, warn } from 'scenetest'
+import { scene, pass, warn } from '@scenecheck/checks'
 import { actor1 } from '~tests/actors'
 import { setupProfile, getProfile, teardownProfile } from '~tests/utils'
 import { loginUser, navigateToOwnProfile, successToast } from '~tests/navigations'
@@ -228,7 +228,7 @@ Now that we've seen how Scenes work, here's our profile form, with Inline Assert
 
 ```javascript
 // ~components/profile-form.ts
-import { assert, pass, fail } from 'scenetest'
+import { assert, pass, fail } from '@scenecheck/checks'
 import { useForm } from '@your-fave/form'
 import { useStore } from 'zustand'
 import { toast } from 'your-fave-toast'
@@ -286,7 +286,7 @@ This is where we are getting back to the initial concept of `page.evaluate` from
 A couple of key things to note here:
 
 1. This assertion will also run when a tester is improvising their own test scenes or clicking randomly throughout the app trying to break things. Updated the profile? The test runner will evaluate `withData`, ship it to the test server, and run the `serverFn` to make sure everything went as planned.
-2. Now that we are fully separating Scenes from Inline Assertions, anything that doesn't break the flow of the Scene doesn't have to end the test. If the flow succeeds but the assertions fail, this tells us "Your product is probably working but your mental model is off". I think this is where people will really love the developer-experience benefits of behind Scenetest; it should actually make your job easier.
+2. Now that we are fully separating Scenes from Inline Assertions, anything that doesn't break the flow of the Scene doesn't have to end the test. If the flow succeeds but the assertions fail, this tells us "Your product is probably working but your mental model is off". I think this is where people will really love the developer-experience benefits of behind Scenecheck; it should actually make your job easier.
 3. As promised: our Inline Assertions don't have to wire up special infrastructure to access props or state of the React component, and we can access the form's inputs directly, rather than hard-coding them into our spec file as `PROFILE_1_UPDATE_PROFILE_OLD_USERNAME` and `PROFILE_1_UPDATE_PROFILE_NEW_USERNAME`.
 
 ### Friendly Little Scene Scripts
@@ -325,7 +325,7 @@ When you first saw this, you might have thought it looks really simple because i
 
 And further, your orchestration code is going to be intermingled with a thousand different decisions you have to make about whether you should include assertions for this side effect or that one -- "did we already test this side effect in a different spec, or is this different enough that we should test it again?" It's dealer's choice with every one of these tiny decisions along the way, leading to a kind of core conceptual inconsistency that keeps you constantly consulting your senior or delaying PRs while discussions about test coverage run their course.
 
-Our example above works without these awaits and expect-to-be-visibles, and without skimping on any assertion logic, because the vast majority of the awaiting and expecting has already been handled in the Inline Assertions. Now, when our user actor in our scene does `await form.submit()`, we know this triggers network requests, promises, and assertions which also trigger round-trips to the test server and back again, and Scenetest knows to await all of that activity before resolving the promise from `form.submit()` and attempting to proceed. In our case, the `assertion` triggers when the form is settled, after the database and the local collection have been updated. And, crucially, the person in charge of the form component was the one who wrote that in that way; the person who wrote the scene didn't have to know any of it.
+Our example above works without these awaits and expect-to-be-visibles, and without skimping on any assertion logic, because the vast majority of the awaiting and expecting has already been handled in the Inline Assertions. Now, when our user actor in our scene does `await form.submit()`, we know this triggers network requests, promises, and assertions which also trigger round-trips to the test server and back again, and Scenecheck knows to await all of that activity before resolving the promise from `form.submit()` and attempting to proceed. In our case, the `assertion` triggers when the form is settled, after the database and the local collection have been updated. And, crucially, the person in charge of the form component was the one who wrote that in that way; the person who wrote the scene didn't have to know any of it.
 
 ## Missing From This Doc
 

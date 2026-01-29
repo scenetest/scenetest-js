@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { should, failed, assert, useTestEffect } from '@scenetest/react'
+import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -33,7 +33,7 @@ function ProfileForm() {
 
   // Multi-context assertion: verify email is valid on server
   // Runs when profile.email changes, skips when no profile
-  useTestEffect(() => {
+  useCheck(() => {
     if (!profile) return
 
     assert(

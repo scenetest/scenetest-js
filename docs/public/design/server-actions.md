@@ -57,15 +57,15 @@ The `withData` function runs in the browser (has access to React state, cache, e
 │                         VITE DEV SERVER                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│   User's App                         Scenetest Middleware            │
+│   User's App                         Scenecheck Middleware           │
 │  ┌──────────────────┐               ┌──────────────────────────┐    │
 │  │                  │               │                          │    │
-│  │  mutation        │               │  POST /__scenetest/run   │    │
+│  │  mutation        │               │  POST /__scenecheck/run  │    │
 │  │    onSuccess:    │               │    ↓                     │    │
 │  │      assertion() │ ────POST────► │  Load serverFn by ID     │    │
 │  │        │         │               │    ↓                     │    │
 │  │        ↓         │               │  Create server context   │    │
-│  │  withData() runs  │               │  (from scenetest.config) │    │
+│  │  withData() runs  │               │  (from scenecheck.config)│    │
 │  │  serialize       │               │    ↓                     │    │
 │  │  POST to server  │ ◄───JSON───── │  Run serverFn(server,    │    │
 │  │        ↓         │               │              data)    │    │
@@ -87,7 +87,7 @@ The Vite plugin transforms `assertion()` calls at build time.
 
 ```typescript
 // src/components/ProfileForm.tsx
-import { assertion, should } from 'scenetest'
+import { assertion, should } from '@scenecheck/checks'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
@@ -112,11 +112,11 @@ const mutation = useUpdateProfile({
 
 ```typescript
 // src/components/ProfileForm.tsx (transformed)
-import { __scenetest_rpc } from 'scenetest/runtime'
+import { __scenecheck_rpc } from '@scenecheck/checks/runtime'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
-    __scenetest_rpc({
+    __scenecheck_rpc({
       id: 'src/components/ProfileForm.tsx:12:4',
       title: 'Profile update persisted',
       withData: () => ({
@@ -134,8 +134,8 @@ const mutation = useUpdateProfile({
 The plugin extracts all `serverFn` functions into a virtual module served by the middleware:
 
 ```typescript
-// Virtual: /__scenetest/assertions.js
-import { should, failed } from 'scenetest'
+// Virtual: /__scenecheck/assertions.js
+import { should, failed } from '@scenecheck/checks'
 
 export const assertions = {
   'src/components/ProfileForm.tsx:12:4': async (server, data) => {
@@ -156,8 +156,8 @@ In production, the entire `assertion()` call is stripped (same as current `shoul
 ### 1. Browser: Collect and Send
 
 ```typescript
-// scenetest/runtime (browser)
-export async function __scenetest_rpc(config: {
+// @scenecheck/checks/runtime (browser)
+export async function __scenecheck_rpc(config: {
   id: string
   title: string
   withData: () => unknown
@@ -169,7 +169,7 @@ export async function __scenetest_rpc(config: {
     serializedData = JSON.stringify(data)
   } catch (error) {
     // Report collection failure
-    window.__scenetest_report?.({
+    window.__scenecheck_report?.({
       type: 'fail',
       description: `[${config.title}] withData error: ${error.message}`,
       result: false,
@@ -180,7 +180,7 @@ export async function __scenetest_rpc(config: {
 
   // Send to server
   try {
-    const response = await fetch('/__scenetest/run', {
+    const response = await fetch('/__scenecheck/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -194,10 +194,10 @@ export async function __scenetest_rpc(config: {
 
     // Report each result to dev panel / Playwright
     for (const result of results) {
-      window.__scenetest_report?.(result)
+      window.__scenecheck_report?.(result)
     }
   } catch (error) {
-    window.__scenetest_report?.({
+    window.__scenecheck_report?.({
       type: 'fail',
       description: `[${config.title}] Server error: ${error.message}`,
       result: false,
@@ -215,7 +215,7 @@ async function handleAssertionRun(req, res) {
   const { id, title, withData } = req.body
 
   // Load extracted assertions
-  const { assertions } = await import('/__scenetest/assertions.js')
+  const { assertions } = await import('/__scenecheck/assertions.js')
   const serverFn = assertions[id]
 
   if (!serverFn) {
@@ -258,11 +258,11 @@ async function handleAssertionRun(req, res) {
 Users configure server functions in a config file:
 
 ```typescript
-// scenetest.config.ts
-import { defineScenetestConfig } from '@scenetest/vite-plugin'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/vite'
 import { db } from './src/db'
 
-export default defineScenetestConfig({
+export default defineConfig({
   serverFunctions: {
     // These become available as server.getProfile(), etc.
     getProfile: async (userId: string) => {
@@ -326,8 +326,8 @@ function assertion<TwithData>(config: AssertionConfig<TwithData>): void
 For `ServerContext`, users can extend the type:
 
 ```typescript
-// scenetest.config.ts
-declare module 'scenetest' {
+// scenecheck.config.ts
+declare module '@scenecheck/checks' {
   interface ServerContext {
     getProfile: (id: string) => Promise<Profile>
     getOrder: (id: string) => Promise<Order>
@@ -348,7 +348,7 @@ Results returned as JSON
     ↓
 Browser receives results
     ↓
-window.__scenetest_report(result)
+window.__scenecheck_report(result)
     ↓
 ┌─────────────────────────────────────┐
 │                                     │
@@ -387,7 +387,7 @@ The `[server]` badge indicates this assertion ran on the server.
 
 ## Playwright Integration
 
-No changes needed to the Playwright fixture. It already collects results via `window.__scenetest_report`. Multi-context assertion results flow through the same channel.
+No changes needed to the checks package Playwright fixture. It already collects results via `window.__scenecheck_report`. Multi-context assertion results flow through the same channel.
 
 For coordinating timing (waiting for assertions to complete):
 
@@ -411,7 +411,7 @@ Implementation of `waitForAssertions`:
 let pending = 0
 
 // In browser runtime
-async function __scenetest_rpc(...) {
+async function __scenecheck_rpc(...) {
   pending++
   try {
     // ... fetch and report
@@ -421,7 +421,7 @@ async function __scenetest_rpc(...) {
 }
 
 // Expose to Playwright
-window.__scenetest_pending = () => pending
+window.__scenecheck_pending = () => pending
 
 // In fixture
 async waitForAssertions(options = {}) {
@@ -430,7 +430,7 @@ async waitForAssertions(options = {}) {
 
   while (Date.now() - start < timeout) {
     const pending = await this.page.evaluate(() =>
-      window.__scenetest_pending?.() ?? 0
+      window.__scenecheck_pending?.() ?? 0
     )
     if (pending === 0) return
     await new Promise(r => setTimeout(r, 50))
@@ -446,25 +446,25 @@ async waitForAssertions(options = {}) {
 
 1. Extend Vite plugin to detect `assertion()` calls
 2. Extract `serverFn` to virtual module
-3. Transform call site to `__scenetest_rpc`
+3. Transform call site to `__scenecheck_rpc`
 4. Generate assertion IDs from file location
 
 ### Phase 2: Middleware
 
-1. Add `/__scenetest/run` endpoint to Vite plugin
+1. Add `/__scenecheck/run` endpoint to Vite plugin
 2. Load and execute extracted serverFns
 3. Collect and return results
 4. Load server context from config
 
 ### Phase 3: Browser Runtime
 
-1. Implement `__scenetest_rpc` function
+1. Implement `__scenecheck_rpc` function
 2. Handle serialization errors
-3. Report results to `__scenetest_report`
+3. Report results to `__scenecheck_report`
 
 ### Phase 4: Configuration
 
-1. Define `scenetest.config.ts` format
+1. Define `scenecheck.config.ts` format
 2. Load config in Vite plugin
 3. Create server context from config
 4. TypeScript types for server functions
@@ -528,21 +528,21 @@ If `withData()` throws, catch and report as a failed assertion. Assertions shoul
 
 ```
 packages/
-├── scenetest/
+├── checks/
 │   └── src/
 │       ├── assertions.ts      # Add assertion() signature (stripped in prod)
-│       ├── runtime.ts         # New: __scenetest_rpc for browser
+│       ├── runtime.ts         # New: __scenecheck_rpc for browser
 │       └── types.ts           # Add AssertionConfig, ServerContext
 │
-├── vite-plugin/
+├── vite/
 │   └── src/
 │       ├── index.ts           # Add middleware setup
 │       ├── transform.ts       # Extend to handle assertion()
 │       ├── extract.ts         # New: Extract serverFn to virtual module
-│       ├── middleware.ts      # New: /__scenetest/run handler
-│       └── config.ts          # New: Load scenetest.config.ts
+│       ├── middleware.ts      # New: /__scenecheck/run handler
+│       └── config.ts          # New: Load scenecheck.config.ts
 │
-└── playwright-scenetest/
+└── checks/
     └── src/
         └── fixtures.ts        # Add waitForAssertions()
 ```

@@ -8,12 +8,12 @@ Scene specs describe **user journeys** — the flows a person takes through your
 
 - **Text DSL (md)** — the simplest way to write a concurrent spec with as many actors as you want. Human-readable `.spec.md` files that compile to concurrent actor scripts.
 - **Concurrent (ts)** — the native model: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`. Actions queue up per actor and drain concurrently.
-- **Classic Driver (ts)** — the async/await model you know from Cypress/Playwright, with access to the Scenetest message bus and our document selectors.
+- **Classic Driver (ts)** — the async/await model you know from Cypress/Playwright, with access to the Scenecheck message bus and our document selectors.
 
 Click the tabs to compare:
 
 ```ts [concurrent.spec.ts]
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
@@ -42,7 +42,7 @@ best-friend:
 ```
 
 ```ts [classic.spec.ts]
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
@@ -214,7 +214,7 @@ If a test ID can't be added easily, that might indicate a UX problem worth solvi
 
 ## The Collaboration Loop
 
-Scenetest creates a natural workflow between test writers and engineers:
+Scenecheck creates a natural workflow between test writers and engineers:
 
 1. **Test Writer**: Writes scene specs describing user journeys in plain language
 2. **Test Writer**: Generates a report listing needed test IDs

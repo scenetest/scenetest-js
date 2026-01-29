@@ -1,10 +1,10 @@
-# Scenetest CLI v2 Design Document
+# Scenecheck CLI v2 Design Document
 
 **STATUS: Partial Implementation** - Core features implemented, future sections in design.
 
 ---
 
-This document captures the design for the next evolution of the scenetest CLI, including implemented features and future considerations.
+This document captures the design for the next evolution of the scenecheck CLI, including implemented features and future considerations.
 
 ## 1. Philosophy
 
@@ -15,7 +15,7 @@ This document captures the design for the next evolution of the scenetest CLI, i
 - **Concurrent scenes as data** - Scenes can be expressed as text arrays, inline DSL strings, or plain markdown files
 - **Observable but non-blocking warnings** - Script-level warnings (`warnIf`) don't fail tests but surface unexpected paths
 
-### What Scenetest Is NOT
+### What Scenecheck Is NOT
 
 - Not a unit testing framework
 - Not for testing API implementations directly
@@ -147,7 +147,7 @@ defineConfig({
 When a selector fails to match, use `explainSelector()` to debug:
 
 ```typescript
-import { explainSelector } from '@scenetest/cli'
+import { explainSelector } from '@scenecheck/scenes'
 
 const result = await explainSelector(page, 'my-selector')
 // {
@@ -284,7 +284,7 @@ defineConfig({
   warnAfter: 500,       // Console warning threshold
 
   // Reporting
-  reportDir: './scenetest-reports',
+  reportDir: './scenecheck-reports',
   reportFormat: 'html', // 'html' | 'json' | 'both'
 
   // Actor teams are auto-discovered from actors.ts or actors/*.ts
@@ -315,4 +315,4 @@ This would be a separate tool that:
 3. Shows warning hotspots
 4. Plays back scenes as "music" - each actor as an instrument
 
-Implementation would be a separate package (`@scenetest/visualizer`) consuming the JSON reports.
+Implementation would be a separate package (`@scenecheck/visualizer`) consuming the JSON reports.

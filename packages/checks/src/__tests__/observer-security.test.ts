@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { escapeHtml, formatContext, formatLocation } from '../utils.js'
+import { escapeHtml, formatContext, formatLocation } from '../observer/utils.js'
 import {
   renderPanelItem,
   renderPanelItemWithTime,
@@ -20,8 +20,8 @@ import {
   renderPianoRoll,
   renderSequenceEntry,
   renderSequenceHeader
-} from '../render.js'
-import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from '../types.js'
+} from '../observer/render.js'
+import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from '../observer/types.js'
 
 // Common XSS attack vectors to test
 const XSS_PAYLOADS = [
@@ -440,7 +440,7 @@ describe('edge cases', () => {
     const assertion = createAssertion({ description: '' })
     const html = renderPanelItem(assertion, 1)
     expect(html).toBeDefined()
-    expect(html).toContain('scenetest-desc')
+    expect(html).toContain('scenecheck-desc')
   })
 
   it('handles very long malicious strings', () => {

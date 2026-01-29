@@ -2,7 +2,7 @@
 
 **STATUS: Both implemented.** One of them should be removed before 1.0.
 
-Scenetest currently has two TypeScript execution models — **Concurrent** (`scene()`) and **Classic Driver** (`test()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the concurrent model.
+Scenecheck currently has two TypeScript execution models — **Concurrent** (`scene()`) and **Classic Driver** (`test()`). A third authoring style, **Text DSL** (`.spec.md` markdown files), compiles to the concurrent model.
 
 This document exists so that future-us can make an informed decision about
 which model to keep.  We are NOT shipping two ways to write scenes.  We're

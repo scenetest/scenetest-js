@@ -135,10 +135,10 @@ export function stripScenecheck(code: string, options: StripOptions = {}): Strip
         'failed',
         'assert',
         'match',
-        'useTestEffect',     // React
-        'watchTestEffect',   // Vue
-        'createTestEffect',  // Solid
-        'testEffect',        // Svelte
+        'useCheck',          // React
+        'watchCheck',        // Vue
+        'createCheck',       // Solid
+        'checkEffect',       // Svelte
       ]
 
       // Direct call: should(...), failed(...), assert(...), useTestEffect(...), etc.

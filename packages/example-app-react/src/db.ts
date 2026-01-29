@@ -10,7 +10,7 @@ export interface Profile {
   updatedAt: number
 }
 
-const STORAGE_KEY = 'scenetest-profile'
+const STORAGE_KEY = 'scenecheck-profile'
 
 // Default profile for demo
 const DEFAULT_PROFILE: Profile = {

@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "vue": "^3.5.0",
-    "@scenetest/vue": "workspace:*"
+    "@scenecheck/checks-vue": "workspace:*"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.4.0",
-    "@scenetest/vite-plugin": "workspace:*",
+    "@scenecheck/vite": "workspace:*",
     "vue-tsc": "^2.2.0"
   }
 }

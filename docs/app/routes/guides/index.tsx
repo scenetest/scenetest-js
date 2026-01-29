@@ -12,16 +12,16 @@ function GuidesIndex() {
   return (
     <article>
       <Link to="/" className="back">&larr; Back</Link>
-      <h1>Writing Tests with Scenetest</h1>
+      <h1>Writing Tests with Scenecheck</h1>
 
       <p className="subtitle">
-        For humans and language models writing scenetest specs in application repos.
+        For humans and language models writing scenecheck specs in application repos.
       </p>
 
-      <h2>How Scenetest Works</h2>
+      <h2>How Scenecheck Works</h2>
 
       <p>
-        Scenetest separates two concerns that traditional E2E frameworks conflate:
+        Scenecheck separates two concerns that traditional E2E frameworks conflate:
       </p>
 
       <ol>
@@ -89,7 +89,7 @@ function GuidesIndex() {
           {
             label: 'concurrent.spec.ts',
             language: 'typescript',
-            code: `import { scene } from '@scenetest/cli'
+            code: `import { scene } from '@scenecheck/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
@@ -112,7 +112,7 @@ new-user:
           {
             label: 'classic.spec.ts',
             language: 'typescript',
-            code: `import { test } from '@scenetest/cli'
+            code: `import { test } from '@scenecheck/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
@@ -147,7 +147,7 @@ test('user completes onboarding', async ({ actor }) => {
       </p>
 
       <CodeBlock language="tsx">{`// components/ProfileForm.tsx
-import { should, failed } from '@scenetest/react'
+import { should, failed } from '@scenecheck/checks-react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -188,12 +188,12 @@ function ProfileForm({ user }) {
       <h2>Configuration &amp; Teams</h2>
 
       <p>
-        Configure Scenetest in <code>scenetest.config.ts</code> and define actor teams
+        Configure Scenecheck in <code>scenecheck.config.ts</code> and define actor teams
         in <code>actors.ts</code> or <code>actors/*.ts</code> files.
       </p>
 
-      <CodeBlock language="typescript">{`// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+      <CodeBlock language="typescript">{`// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',

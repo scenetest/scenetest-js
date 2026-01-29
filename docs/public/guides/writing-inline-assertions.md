@@ -1,6 +1,6 @@
 # Writing Inline Assertions
 
-Inline assertions live **inside your components** and verify internal state that external tests can't easily observe. They run during normal component execution and report to the Scenetest observer.
+Inline assertions live **inside your components** and verify internal state that external tests can't easily observe. They run during normal component execution and report to the Scenecheck observer.
 
 ## When to Use Inline Assertions
 
@@ -13,7 +13,7 @@ Use inline assertions when you want to verify:
 
 ```tsx
 // src/components/Cart.tsx
-import { should, failed } from 'scenetest-react'
+import { should, failed } from '@scenecheck/checks-react'
 
 function Cart({ items }) {
   should('cart has items', items.length > 0)
@@ -32,19 +32,19 @@ Import from your framework's package:
 
 ```typescript
 // React
-import { should, failed, assert, useTestEffect } from 'scenetest-react'
+import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
 
 // Vue
-import { should, failed, assert, watchTestEffect } from 'scenetest-vue'
+import { should, failed, assert, watchCheck } from '@scenecheck/checks-vue'
 
 // Solid
-import { should, failed, assert, createTestEffect } from 'scenetest-solid'
+import { should, failed, assert, createCheck } from '@scenecheck/checks-solid'
 
 // Svelte (use inside $effect)
-import { should, failed, assert, testEffect } from 'scenetest-svelte'
+import { should, failed, assert, checkEffect } from '@scenecheck/checks-svelte'
 
 // Framework-agnostic (just assertions)
-import { should, failed, assert } from 'scenetest'
+import { should, failed, assert } from '@scenecheck/checks'
 ```
 
 ## Using `should()`
@@ -60,7 +60,7 @@ should(description, condition, context?)
 - `context`: Optional object with debugging info
 
 ```typescript
-import { should } from 'scenetest-react'
+import { should } from '@scenecheck/checks-react'
 
 function UserProfile({ user }) {
   should('user has a display name', !!user.displayName)
@@ -86,7 +86,7 @@ failed(description, context?)
 - `context`: Optional object with debugging info
 
 ```typescript
-import { failed } from 'scenetest-react'
+import { failed } from '@scenecheck/checks-react'
 
 function ErrorBoundary({ error }) {
   if (error) {
@@ -106,13 +106,13 @@ function ErrorBoundary({ error }) {
 For comparing browser data with server data, use `assert()` with your framework's test effect hook:
 
 ```tsx
-import { should, assert, useTestEffect } from 'scenetest-react'
+import { should, assert, useCheck } from '@scenecheck/checks-react'
 
 function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
 
   // Run assertions when profile changes
-  useTestEffect(() => {
+  useCheck(() => {
     if (isLoading || !profile) return
 
     assert(
@@ -136,11 +136,11 @@ The `assert()` function:
 
 ### Configuring Server Functions
 
-Define server functions in your scenetest config:
+Define server functions in your scenecheck config:
 
 ```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
@@ -225,4 +225,4 @@ function handleResponse(response) {
 - `assert()` with test effects - compare browser and server data
 - Assertions are grouped by timing (50ms threshold)
 - Include context to make debugging easier
-- Use your framework's test effect hook for reactive assertions
+- Use your framework's check hook for reactive assertions

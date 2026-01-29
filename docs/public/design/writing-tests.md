@@ -1,13 +1,13 @@
-# Writing Tests with Scenetest
+# Writing Tests with Scenecheck
 
-> **For humans and language models writing scenetest specs in application repos.**
-> This is the test-authoring reference. For contributing to scenetest itself, see the repo's CLAUDE.md.
+> **For humans and language models writing scenecheck specs in application repos.**
+> This is the test-authoring reference. For contributing to scenecheck itself, see the repo's CLAUDE.md.
 
 ---
 
-## How Scenetest Works
+## How Scenecheck Works
 
-Scenetest separates two concerns that traditional E2E frameworks conflate:
+Scenecheck separates two concerns that traditional E2E frameworks conflate:
 
 1. **Scenes** — Orchestration scripts that simulate user journeys (login, fill form, click submit). Written in spec files. The person writing scenes doesn't need to know implementation details.
 2. **Inline Assertions** — `should()` and `failed()` calls placed directly in application code (components, hooks, callbacks). They run every time that code executes, whether triggered by a scene, the dev panel, or a human clicking around.
@@ -38,7 +38,7 @@ There are three ways to write spec files. All use the same [actor DSL methods](/
 Click the tabs to compare:
 
 ```ts [Concurrent (ts)]
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
@@ -59,7 +59,7 @@ new-user:
 ```
 
 ```ts [Classic Driver (ts)]
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
@@ -82,7 +82,7 @@ For the complete `.spec.md` format rules, interpolation, macros, and `dsl()` met
 
 ```tsx
 // components/ProfileForm.tsx
-import { should, failed } from '@scenetest/react'
+import { should, failed } from '@scenecheck/checks-react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -108,8 +108,8 @@ For the full selector syntax — attribute matching, nested selectors, key selec
 ## Configuration
 
 ```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
@@ -123,7 +123,7 @@ export default defineConfig({
     modal: '[role=dialog]',
     nav: '[role=navigation]',
   },
-  reportDir: './scenetest-reports',
+  reportDir: './scenecheck-reports',
   reportFormat: 'html',
 })
 ```

@@ -135,7 +135,7 @@ describe('should() with malicious paths', () => {
     reportedResults = []
     // Mock the global window object
     vi.stubGlobal('window', {
-      __scenetest_report: (result: unknown) => {
+      __scenecheck_report: (result: unknown) => {
         reportedResults.push(result)
       }
     })

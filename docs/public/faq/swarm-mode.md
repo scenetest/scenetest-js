@@ -4,7 +4,7 @@ Swarm mode is a diagnostic escalation that runs when failures persist beyond nor
 
 ### When does it trigger?
 
-**Automatically:** When a scene fails N consecutive times (default: 5), Scenetest detects that something is persistently broken and triggers swarm mode for that scene.
+**Automatically:** When a scene fails N consecutive times (default: 5), Scenecheck detects that something is persistently broken and triggers swarm mode for that scene.
 
 ```
 Run 1: checkout → FAIL
@@ -27,7 +27,7 @@ swarm: {
 **Manually:** Force swarm mode with the `--swarm` flag:
 
 ```bash
-scenetest --swarm
+scenecheck --swarm
 ```
 
 This runs all scenes against all teams immediately, regardless of failure history.

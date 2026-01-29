@@ -1,14 +1,14 @@
 # CLI Reference
 
-The `scenetest` CLI discovers and runs scene specs, manages browser lifecycle, coordinates teams, and generates reports.
+The `scenecheck` CLI discovers and runs scene specs, manages browser lifecycle, coordinates teams, and generates reports.
 
 ## Basic Usage
 
 ```bash
-scenetest                      # Run all scenes in ./scenes
-scenetest scenes/auth.spec.ts  # Run a specific file
-scenetest --headed             # Run with visible browser
-scenetest --swarm              # Run swarm mode (all teams, all scenes)
+scenecheck                      # Run all scenes in ./scenes
+scenecheck scenes/auth.spec.ts  # Run a specific file
+scenecheck --headed             # Run with visible browser
+scenecheck --swarm              # Run swarm mode (all teams, all scenes)
 ```
 
 ## Command-Line Options
@@ -18,25 +18,25 @@ scenetest --swarm              # Run swarm mode (all teams, all scenes)
 | `--headed` | Run with visible browser (default: headless) |
 | `--ui` | Interactive UI mode — keeps browser open after run |
 | `--config <path>` | Path to config file (default: auto-discovered) |
-| `--report <dir>` | Report output directory (default: `./scenetest-reports`) |
+| `--report <dir>` | Report output directory (default: `./scenecheck-reports`) |
 | `--format <fmt>` | Report format: `html`, `json`, or `both` (default: `html`) |
 | `--devices` | Enable device rotation (assign rotating mobile/tablet/desktop devices to actors) |
 | `--swarm` | Force swarm mode — run all teams against all scenes to classify failures |
 
 ## Configuration File
 
-Scenetest looks for config in this order:
+Scenecheck looks for config in this order:
 
-1. `scenetest.config.ts`
-2. `scenetest.config.js`
-3. `scenetest.config.mjs`
-4. `scenetest/config.ts`
-5. `scenetest/config.js`
-6. `scenetest/config.mjs`
+1. `scenecheck.config.ts`
+2. `scenecheck.config.js`
+3. `scenecheck.config.mjs`
+4. `scenecheck/config.ts`
+5. `scenecheck/config.js`
+6. `scenecheck/config.mjs`
 
 ```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   // Required
@@ -63,7 +63,7 @@ export default defineConfig({
   },
 
   // Reports
-  reportDir: './scenetest-reports',
+  reportDir: './scenecheck-reports',
   reportFormat: 'html',         // 'html' | 'json' | 'both'
 
   // Device rotation
@@ -98,7 +98,7 @@ Teams are auto-discovered from actor files relative to your config:
 
 ```typescript
 // actors.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenecheck/scenes'
 
 const teams: TeamConfig[] = [
   {
@@ -169,17 +169,17 @@ See [What is "swarm mode"?](/faq/swarm-mode) for a detailed explanation.
 **Manual trigger:**
 
 ```bash
-scenetest --swarm
+scenecheck --swarm
 ```
 
 **Auto-trigger:** When a scene fails N consecutive times (default: 5), swarm mode activates automatically to diagnose whether failures are broken, flaky, or seed-data edge cases.
 
 ## Reports
 
-Reports are written to `./scenetest-reports/` by default with timestamped filenames:
+Reports are written to `./scenecheck-reports/` by default with timestamped filenames:
 
 ```
-scenetest-reports/
+scenecheck-reports/
 ├── report-2024-01-15T10-30-45-123Z.html
 └── report-2024-01-15T10-30-45-123Z.json
 ```

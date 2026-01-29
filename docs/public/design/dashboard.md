@@ -1,4 +1,4 @@
-# Scenetest Dashboard & Reports
+# Scenecheck Dashboard & Reports
 
 **STATUS: Design Stage**
 
@@ -15,13 +15,13 @@ A local-first report viewer that scales from "drop a file" to "org-wide dashboar
 ## File Structure
 
 ```
-scenetest/
+scenecheck/
 ├── .reports/
 │   ├── 2026-01-25T103000-a762c2b-main.jsonl
 │   ├── 2026-01-25T104512-f69279b-feat-checkout.jsonl
 │   └── ...
 ├── scenes/
-└── scenetest.config.ts
+└── scenecheck.config.ts
 ```
 
 Report naming: `{timestamp}-{commit}-{branch}.jsonl`
@@ -80,7 +80,7 @@ Drag a JSONL file onto the page, instantly explore. Works offline, zero setup.
 
 ### Connected Mode
 
-Scans `scenetest/.reports/` directory, lists all reports with metadata, click to explore.
+Scans `scenecheck/.reports/` directory, lists all reports with metadata, click to explore.
 
 ## Comparison View
 
@@ -106,17 +106,17 @@ Side-by-side diff showing:
 
 ```yaml
 # .github/workflows/test.yml
-- name: Run scenetest
-  run: pnpm scenetest run --report
+- name: Run scenecheck
+  run: pnpm scenecheck run --report
 
 - name: Upload report
-  uses: scenetest/upload-report@v1
+  uses: scenecheck/upload-report@v1
   with:
-    path: scenetest/.reports/
+    path: scenecheck/.reports/
 ```
 
 PR comment:
-> **Scenetest Report** for `feat/checkout` @ f69279b
+> **Scenecheck Report** for `feat/checkout` @ f69279b
 >
 > 23 assertions (22 passed, 1 failed)
 >
@@ -125,7 +125,7 @@ PR comment:
 > | Regression | checkout.validates | was 8ms/pass, now 92ms/fail |
 > | New | checkout.applyCoupon | 5ms pass |
 >
-> [View full comparison →](https://scenetest.dev/compare/...)
+> [View full comparison →](https://scenecheck.dev/compare/...)
 
 ## Live DSL Playground (Future)
 
@@ -137,7 +137,7 @@ For the hosted solution:
 
 ## MVP Scope
 
-1. JSONL writer (in playwright-scenetest)
+1. JSONL writer (in checks package)
 2. Report viewer page (fullscreen panel with sidebar)
 3. Directory scanner
 4. Basic comparison view

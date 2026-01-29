@@ -1,6 +1,6 @@
-# Scenetest VS Code Extension
+# Scenecheck VS Code Extension
 
-Syntax highlighting for Scenetest scene specs (`.spec.md` files).
+Syntax highlighting for Scenecheck scene specs (`.spec.md` files).
 
 ## Features
 
@@ -32,16 +32,16 @@ Syntax highlighting for Scenetest scene specs (`.spec.md` files).
 
 ```bash
 # Build the VSIX
-cd packages/vscode-scenetest
+cd packages/vscode-scenecheck
 npx @vscode/vsce package
 
 # Install
-code --install-extension vscode-scenetest-0.1.0.vsix
+code --install-extension vscode-scenecheck-0.1.0.vsix
 ```
 
 ### From source (development)
 
-1. Open the `packages/vscode-scenetest` folder in VS Code
+1. Open the `packages/vscode-scenecheck` folder in VS Code
 2. Press F5 to launch Extension Development Host
 3. Open a `.spec.md` file to see highlighting
 

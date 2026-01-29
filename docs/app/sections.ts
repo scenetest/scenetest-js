@@ -89,18 +89,18 @@ export const faqs: SectionItem[] = [
 	  slug: 'vs-playwright',
 	  title: "Compare to page.evaluate()",
 	  description:
-		 "Playwright lets you run code inside the browser from your test file. Scenetest flips this around — assertions live in your app code and fire automatically.",
+		 "Playwright lets you run code inside the browser from your test file. Scenecheck flips this around — assertions live in your app code and fire automatically.",
 	},
 	{
 	  slug: 'vs-vitest',
 	  title: "Compare to Vitest's in-source",
 	  description:
-		 'Vitest in-source tests run in Node with mocked dependencies. Scenetest assertions run inside a real browser with real state, real hooks, and real network calls.',
+		 'Vitest in-source tests run in Node with mocked dependencies. Scenecheck assertions run inside a real browser with real state, real hooks, and real network calls.',
 	},
 	{
 	  slug: 'vs-cypress',
 	  title: 'Compare to Cypress component testing',
 	  description:
-		 'Cypress mounts components in isolation. Scenetest runs assertions inside your full application, testing components in context with real data and routing.',
+		 'Cypress mounts components in isolation. Scenecheck runs assertions inside your full application, testing components in context with real data and routing.',
 	},
 ]

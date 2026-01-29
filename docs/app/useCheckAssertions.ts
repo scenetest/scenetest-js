@@ -1,17 +1,17 @@
 import { useEffect, useRef } from 'react'
-import { should, useTestEffect } from '@scenetest/react'
+import { should, useCheck } from '@scenecheck/checks-react'
 
 /**
  * Hook that adds interactive test assertions to the docs page.
- * Demonstrates scenetest inline assertions on hover, click, and page load.
+ * Demonstrates scenecheck inline assertions on hover, click, and page load.
  */
-export function useTestAssertions() {
+export function useCheckAssertions() {
   const interactionCountRef = useRef(0)
   const codeBlockRenderCountsRef = useRef(new WeakMap<Element, number>())
   const clickTimesRef = useRef<number[]>([])
 
   // Initial page load assertions
-  useTestEffect(() => {
+  useCheck(() => {
     const timer = setTimeout(() => {
       should('Document should be fully loaded', document.readyState === 'complete')
       should('DOM should be ready for interaction', document.body !== null)
@@ -67,7 +67,7 @@ export function useTestAssertions() {
 
     // Main title (h1)
     function handleH1Enter(el: HTMLElement) {
-      should('Page title should be rendered', el.textContent?.includes('Scenetest') || el.textContent?.includes('scenetest'))
+      should('Page title should be rendered', el.textContent?.includes('Scenecheck') || el.textContent?.includes('scenecheck'))
     }
 
     function handleH1Click() {
@@ -134,7 +134,7 @@ export function useTestAssertions() {
     // Panel meta-assertions
     function handlePanelEnter(el: HTMLElement) {
       should('Assertion panel should be interactive', true)
-      should('Panel state should be consistent', el.querySelector('#scenetest-list') !== null)
+      should('Panel state should be consistent', el.querySelector('#scenecheck-list') !== null)
     }
 
     // Set up event listeners
@@ -190,7 +190,7 @@ export function useTestAssertions() {
 
     // Panel (with delay since it's dynamically created)
     const panelTimeout = setTimeout(() => {
-      const panel = document.getElementById('scenetest-panel')
+      const panel = document.getElementById('scenecheck-panel')
       if (panel) {
         panel.addEventListener('mouseenter', () => handlePanelEnter(panel))
       }

@@ -1,13 +1,13 @@
 {
-  "name": "vscode-scenetest",
-  "displayName": "Scenetest",
-  "description": "Syntax highlighting for Scenetest scene specs (.spec.md)",
+  "name": "vscode-scenecheck",
+  "displayName": "Scenecheck",
+  "description": "Syntax highlighting for Scenecheck scene specs (.spec.md)",
   "version": "0.1.0",
-  "publisher": "scenetest",
+  "publisher": "scenecheck",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/scenetest/scenetest-js"
+    "url": "https://github.com/scenecheck/scenecheck-js"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -16,7 +16,7 @@
     "Programming Languages"
   ],
   "keywords": [
-    "scenetest",
+    "scenecheck",
     "e2e",
     "testing",
     "spec"
@@ -24,10 +24,10 @@
   "contributes": {
     "languages": [
       {
-        "id": "scenetest-spec",
+        "id": "scenecheck-spec",
         "aliases": [
-          "Scenetest Spec",
-          "scenetest"
+          "Scenecheck Spec",
+          "scenecheck"
         ],
         "extensions": [
           ".spec.md"
@@ -37,9 +37,9 @@
     ],
     "grammars": [
       {
-        "language": "scenetest-spec",
-        "scopeName": "source.scenetest-spec",
-        "path": "./syntaxes/scenetest-spec.tmLanguage.json"
+        "language": "scenecheck-spec",
+        "scopeName": "source.scenecheck-spec",
+        "path": "./syntaxes/scenecheck-spec.tmLanguage.json"
       }
     ]
   }

@@ -13,7 +13,7 @@ function FAQ() {
       <h1>Frequently Asked Questions</h1>
 
       <p>
-        Common questions about how Scenetest works and how it compares to
+        Common questions about how Scenecheck works and how it compares to
         other testing tools.
       </p>
 

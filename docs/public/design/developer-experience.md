@@ -1,12 +1,12 @@
 # Developer Experience Add-ons
 
-> **Status:** Design document for optional tooling that improves the authoring experience for scenetest specs. None of these are required for scenetest to function.
+> **Status:** Design document for optional tooling that improves the authoring experience for scenecheck specs. None of these are required for scenecheck to function.
 
 ---
 
 ## Overview
 
-Scenetest's text DSL (`.spec.md` files) is designed to be human-readable and GitHub-renderable. However, raw text lacks the ergonomics that developers expect from modern tooling:
+Scenecheck's text DSL (`.spec.md` files) is designed to be human-readable and GitHub-renderable. However, raw text lacks the ergonomics that developers expect from modern tooling:
 
 - No syntax highlighting
 - No autocomplete for selectors or actors
@@ -44,7 +44,7 @@ This document outlines a phased approach to improving the developer experience.
 ### Grammar Structure
 
 ```
-scenetest-spec.tmLanguage.json
+scenecheck-spec.tmLanguage.json
 ├── patterns
 │   ├── heading (# or ##)
 │   ├── actor-declaration (role-name:)
@@ -62,13 +62,13 @@ scenetest-spec.tmLanguage.json
 
 ### File Association
 
-VS Code will associate `*.spec.md` files with the `scenetest-spec` language ID. This overrides the default markdown association for these specific files.
+VS Code will associate `*.spec.md` files with the `scenecheck-spec` language ID. This overrides the default markdown association for these specific files.
 
 ### Deliverable
 
-A `packages/vscode-scenetest/` directory containing:
+A `packages/vscode-scenecheck/` directory containing:
 - `package.json` with extension metadata
-- `syntaxes/scenetest-spec.tmLanguage.json`
+- `syntaxes/scenecheck-spec.tmLanguage.json`
 - `language-configuration.json` (brackets, comments)
 - README with screenshots
 
@@ -110,7 +110,7 @@ The LSP would need to:
 3. Resolve actor configs from the project's actors files
 4. Resolve macros from `defineMacro()` calls in `.spec.ts` files
 
-This is moderate complexity — the DSL parser already exists in `packages/scenetest-cli/src/dsl.ts` and could be adapted.
+This is moderate complexity — the DSL parser already exists in `packages/scenes/src/dsl.ts` and could be adapted.
 
 ---
 
@@ -179,11 +179,11 @@ With the manifest, the language server can provide:
 
 ### Rules
 
-- `scenetest/valid-action` — Action name is recognized
-- `scenetest/known-actor` — Actor is defined in actors.ts
-- `scenetest/known-macro` — Macro is defined via defineMacro()
-- `scenetest/valid-selector` — Selector matches manifest (if available)
-- `scenetest/no-empty-scene` — Scene has at least one action
+- `scenecheck/valid-action` — Action name is recognized
+- `scenecheck/known-actor` — Actor is defined in actors.ts
+- `scenecheck/known-macro` — Macro is defined via defineMacro()
+- `scenecheck/valid-selector` — Selector matches manifest (if available)
+- `scenecheck/no-empty-scene` — Scene has at least one action
 
 ### Implementation
 
@@ -206,7 +206,7 @@ See `docs/public/design/dashboard.md`. Aggregate test results, track flaky tests
 
 ### Interactive UI Mode
 
-`scenetest --ui` for a visual test runner. Design-only, stub exists.
+`scenecheck --ui` for a visual test runner. Design-only, stub exists.
 
 ### Timeline Visualization
 
@@ -231,6 +231,6 @@ In-browser widget for reporting issues with automatic context capture. See `docs
 
 1. **Embedded vs standalone language**: Should `.spec.md` be a "markdown with embedded DSL" or a standalone language? Current design: standalone language ID that takes over `*.spec.md` files.
 
-2. **Monorepo vs separate repo**: Should the VS Code extension live in the scenetest monorepo or a separate repo? Current design: `packages/vscode-scenetest/` in monorepo.
+2. **Monorepo vs separate repo**: Should the VS Code extension live in the scenecheck monorepo or a separate repo? Current design: `packages/vscode-scenecheck/` in monorepo.
 
 3. **Marketplace publishing**: Publish to VS Code marketplace or recommend local installation? TBD based on adoption.

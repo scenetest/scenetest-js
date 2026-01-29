@@ -1,4 +1,4 @@
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenecheck/scenes'
 
 /**
  * Actor teams for scene tests.

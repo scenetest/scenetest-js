@@ -43,7 +43,7 @@ export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
 declare global {
   interface Window {
     __scenecheck_panel?: boolean
-    __scenecheck_report?: (result: AssertionResult) => void
+    // __scenecheck_report is declared in ../types.ts
     __scenecheck_openInEditor?: typeof openInEditor
     __scenecheck_openFullscreenToGroup?: typeof openFullscreenToGroup
     __scenecheck_showSequence?: typeof showSequence

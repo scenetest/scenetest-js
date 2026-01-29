@@ -13,7 +13,7 @@ function Reference() {
       <h1>API Reference</h1>
 
       <p>
-        Complete reference for Scenetest's scene orchestration and actor APIs.
+        Complete reference for Scenecheck's scene orchestration and actor APIs.
       </p>
 
       <ul className="guides-list">

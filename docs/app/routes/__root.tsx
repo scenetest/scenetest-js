@@ -13,7 +13,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Scenetest JS | Local first testing for Vite apps' },
+      { title: 'Scenecheck JS | Local first testing for Vite apps' },
     ],
     links: [
       { rel: 'icon', type: 'image/png', href: '/images/favicon.png' },
@@ -28,7 +28,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   useEffect(() => {
     // Initialize observer panel for demo
-    import('@scenetest/observer').then(({ initObserver }) => {
+    import('@scenecheck/checks').then(({ initObserver }) => {
       initObserver()
     })
   }, [])
@@ -47,7 +47,7 @@ function RootComponent() {
           <Link to="/guides">Guides</Link>
           <Link to="/reference">API Ref</Link>
           <Link to="/faq">FAQ</Link>
-          <a href="https://github.com/scenetest/scenetest-js">GitHub</a>
+          <a href="https://github.com/scenecheck/scenecheck-js">GitHub</a>
         </nav>
         <Scripts />
       </body>

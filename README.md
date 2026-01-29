@@ -1,6 +1,6 @@
 <div align="center">
 
-# Scenetest
+# Scenecheck
 
 </div>
 
@@ -12,16 +12,16 @@ _Evaluate your product, not your tests. A Javascript testing framework with inli
 
 ```bash
 # For React apps
-pnpm add @scenetest/react @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenecheck/checks-react @scenecheck/vite @scenecheck/scenes
 
 # For Vue apps
-pnpm add @scenetest/vue @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenecheck/checks-vue @scenecheck/vite @scenecheck/scenes
 
 # For Solid apps
-pnpm add @scenetest/solid @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenecheck/checks-solid @scenecheck/vite @scenecheck/scenes
 
 # For Svelte apps
-pnpm add @scenetest/svelte @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenecheck/checks-svelte @scenecheck/vite @scenecheck/scenes
 ```
 
 ## Quick Start
@@ -30,17 +30,17 @@ pnpm add @scenetest/svelte @scenetest/vite-plugin @scenetest/cli
 
 ```typescript
 // vite.config.ts
-import scenetest from '@scenetest/vite-plugin'
+import scenecheck from '@scenecheck/vite'
 
 export default defineConfig({
-  plugins: [react(), scenetest()],
+  plugins: [react(), scenecheck()],
 })
 ```
 
 **2. Write inline assertions in components:**
 
 ```tsx
-import { should, failed } from '@scenetest/react'
+import { should, failed } from '@scenecheck/checks-react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -55,7 +55,7 @@ Choose your style — TypeScript or plain markdown:
 
 ```typescript
 // scenes/profile.spec.ts
-import { flow } from '@scenetest/cli'
+import { flow } from '@scenecheck/scenes'
 
 flow('user can update their name', ({ actor }) => {
   const user = actor('user')
@@ -85,7 +85,7 @@ user:
 **4. Run tests:**
 
 ```bash
-pnpm scenetest
+pnpm scenecheck
 ```
 
 ## Documentation
@@ -116,25 +116,25 @@ pnpm scenetest
 
 | Package | Description |
 |---------|-------------|
-| `@scenetest/vite-plugin` | Vite plugin for production stripping and dev panel |
-| `@scenetest/cli` | CLI runner for scene specs |
-| `@scenetest/core` | Core `should()`, `failed()`, `assert()` functions |
-| `@scenetest/react` | React bindings with `useTestEffect` hook |
-| `@scenetest/vue` | Vue bindings with `watchTestEffect` composable |
-| `@scenetest/solid` | Solid bindings with `createTestEffect` primitive |
-| `@scenetest/svelte` | Svelte bindings with `testEffect` helper |
+| `@scenecheck/vite` | Vite plugin for production stripping and dev panel |
+| `@scenecheck/scenes` | CLI runner for scene specs |
+| `@scenecheck/checks` | Core `should()`, `failed()`, `assert()` functions |
+| `@scenecheck/checks-react` | React bindings with `useCheck` hook |
+| `@scenecheck/checks-vue` | Vue bindings with `watchCheck` composable |
+| `@scenecheck/checks-solid` | Solid bindings with `createCheck` primitive |
+| `@scenecheck/checks-svelte` | Svelte bindings with `checkEffect` helper |
 
 ## FAQ
 
-### Is it safe to run scenetest in production?
+### Is it safe to run scenecheck in production?
 
-Mmmm, the short answer is "No." Scenetest's Vite plugin strips all the server
+Mmmm, the short answer is "No." Scenecheck's Vite plugin strips all the server
 assertions from the production bundle without deploying them to the server, and it doesn't inject the observer or serve the middleware that powers the collector -- and we do have (some) tests in place for this. And server assertions never have a return value anyway so data access is less of a concern.
 
 So the attack surface is pretty small, but a security audit has not been done. Further the data collection doesn't proactively filter out
 things like personal data and passwords so it is best used on sample or seed data rather than in production systems.
 
-In the future it might be nice to evolve Scenetest into a production tool for event analytics, observalibility, etc., but for now: it only runs on the dev server 😇
+In the future it might be nice to evolve Scenecheck into a production tool for event analytics, observalibility, etc., but for now: it only runs on the dev server 😇
 
 ## License
 

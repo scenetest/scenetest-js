@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { should, failed } from '@scenetest/vue'
+import { should, failed } from '@scenecheck/checks-vue'
 
 // Reactive state
 const name = ref('')
@@ -66,7 +66,7 @@ function reset() {
 
 <template>
   <div class="container">
-    <h1>Vue + Scenetest Example</h1>
+    <h1>Vue + Scenecheck Example</h1>
 
     <div v-if="submitted" class="success">
       <p>Thanks, {{ name }}! We'll contact you at {{ email }}.</p>

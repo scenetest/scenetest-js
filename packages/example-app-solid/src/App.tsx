@@ -1,5 +1,5 @@
 import { createSignal, createMemo, createEffect, Show } from 'solid-js'
-import { should, failed } from '@scenetest/solid'
+import { should, failed } from '@scenecheck/checks-solid'
 
 function App() {
   // Reactive state
@@ -68,7 +68,7 @@ function App() {
 
   return (
     <div class="container">
-      <h1>Solid + Scenetest Example</h1>
+      <h1>Solid + Scenecheck Example</h1>
 
       <Show
         when={!submitted()}

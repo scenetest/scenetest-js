@@ -1,6 +1,6 @@
 # Building Good Teams of Actors
 
-Teams are the foundation of Scenetest's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
+Teams are the foundation of Scenecheck's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
 
 This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams. For the full actor method reference, see the [Actor API Reference](/reference/actor-api).
 
@@ -56,7 +56,7 @@ Then write seed data that creates all of this for each team.
 
 ## Step 3: Define Actor Teams in Files
 
-Actor teams live in files next to your config, not inside the config itself. Scenetest auto-discovers them.
+Actor teams live in files next to your config, not inside the config itself. Scenecheck auto-discovers them.
 
 ### Option A: Single `actors.ts` file
 
@@ -64,7 +64,7 @@ Export an array of teams. Each team maps role names to actor credentials:
 
 ```typescript
 // actors.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenecheck/scenes'
 
 export default [
   // Team 0
@@ -101,7 +101,7 @@ Each file exports a single team. Use this when you have many teams or want to ke
 
 ```typescript
 // actors/team-maria.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenecheck/scenes'
 
 export default {
   'primary-learner': {
@@ -123,7 +123,7 @@ export default {
 
 ```typescript
 // actors/team-john.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenecheck/scenes'
 
 export default {
   'primary-learner': {
@@ -145,7 +145,7 @@ export default {
 
 ### Discovery rules
 
-Scenetest looks for actor files relative to your config file:
+Scenecheck looks for actor files relative to your config file:
 
 1. `actors.ts` (or `.js`/`.mjs`) -- single file exporting an array of teams
 2. `actors/*.ts` -- directory with one file per team
@@ -153,8 +153,8 @@ Scenetest looks for actor files relative to your config file:
 The config file itself has no actor definitions:
 
 ```typescript
-// scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+// scenecheck.config.ts
+import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
@@ -166,7 +166,7 @@ export default defineConfig({
 
 ```
 your-project/
-├── scenetest.config.ts          # or scenetest/config.ts
+├── scenecheck.config.ts          # or scenecheck/config.ts
 ├── actors.ts                    # or actors/*.ts
 ├── scenes/
 │   ├── onboarding.spec.ts
@@ -176,11 +176,11 @@ your-project/
     └── ...
 ```
 
-Or using the `scenetest/` directory convention:
+Or using the `scenecheck/` directory convention:
 
 ```
 your-project/
-├── scenetest/
+├── scenecheck/
 │   ├── config.ts
 │   ├── actors/
 │   │   ├── team-maria.ts
@@ -216,7 +216,7 @@ For logged-out or signup flows, actors can have empty or partial credentials:
 
 ## Step 4: Scale Concurrency With More Teams
 
-Scenetest's concurrency model: **N teams = N scenes running in parallel**. Each scene gets exclusive use of one team. No shared state, no race conditions.
+Scenecheck's concurrency model: **N teams = N scenes running in parallel**. Each scene gets exclusive use of one team. No shared state, no race conditions.
 
 To add concurrency, add more actor files (or array entries) with different actors who have the same relationships:
 
@@ -327,11 +327,11 @@ Before running scenes, verify:
 Copy the following instruction block and paste it into an LLM conversation along with your project's seed data, scene specs, and actor files. The LLM will analyze alignment between the three and recommend changes.
 
 ````
-You are a Scenetest team auditor. Your job is to analyze a project's seed data, scene specs, and actor team definitions to find mismatches and recommend improvements.
+You are a Scenecheck team auditor. Your job is to analyze a project's seed data, scene specs, and actor team definitions to find mismatches and recommend improvements.
 
 ## Background
 
-Scenetest uses three connected concepts:
+Scenecheck uses three connected concepts:
 - **Seeds**: Database seed files that create test users with specific relationships (friendships, permissions, org membership, content, etc.)
 - **Actor teams**: Files (`actors.ts` or `actors/*.ts`) that define sets of actor credentials mapped to role names. Each team is a self-contained world -- all relationships between actors must hold within that team's seed data.
 - **Scenes**: Test specs that call `actor('role-name')` to get actors and orchestrate user journeys.

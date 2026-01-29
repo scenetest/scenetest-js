@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { should, failed } from '@scenetest/svelte'
+  import { should, failed } from '@scenecheck/checks-svelte'
 
   // Reactive state using Svelte 5 runes
   let name = $state('')
@@ -59,7 +59,7 @@
 </script>
 
 <div class="container">
-  <h1>Svelte + Scenetest Example</h1>
+  <h1>Svelte + Scenecheck Example</h1>
 
   {#if submitted}
     <div class="success">

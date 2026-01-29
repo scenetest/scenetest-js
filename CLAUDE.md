@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-Scenetest is a **working implementation** with a complete CLI runner, inline assertion system, actor-based scene DSL, Vite plugin, dev panel (observer), and Playwright integration. The `assert()` multi-context feature (server-side assertions) is stubbed but not yet wired end-to-end; everything else is functional.
+Scenecheck is a **working implementation** with a complete CLI runner, inline assertion system, actor-based scene DSL, Vite plugin, dev panel (observer), and Playwright integration. The `assert()` multi-context feature (server-side assertions) is stubbed but not yet wired end-to-end; everything else is functional.
 
 Design docs live in `docs/public/design/`. The README.md has the public-facing overview.
 
@@ -23,15 +23,15 @@ pnpm -r test          # Run all unit tests across packages
 
 ```
 packages/
-├── scenetest/              # Core library - should(), failed(), assert(), match()
-├── scenetest-react/        # React bindings - useTestEffect hook (re-exports core)
-├── scenetest-vue/          # Vue bindings - watchTestEffect composable (re-exports core)
-├── scenetest-solid/        # Solid bindings - createTestEffect primitive (re-exports core)
-├── scenetest-svelte/       # Svelte bindings - testEffect helper (re-exports core)
-├── scenetest-cli/          # CLI runner - scene(), test(), actor DSL, selectors, teams, config
-├── vite-plugin/            # Vite plugin - dev panel injection, prod stripping, RPC middleware
-├── observer/               # Dev panel UI - floating panel, fullscreen, history, audio
-├── playwright-scenetest/   # Playwright fixtures (scenePage, assertions)
+├── checks/                 # Core library — should(), failed(), assert(), match(), observer, playwright fixtures
+├── checks-react/           # React bindings — useCheck hook (re-exports checks)
+├── checks-vue/             # Vue bindings — watchCheck composable (re-exports checks)
+├── checks-solid/           # Solid bindings — createCheck primitive (re-exports checks)
+├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
+├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
+├── vite/                   # Vite plugin — dev panel injection, prod stripping, RPC middleware
+├── eslint-plugin/          # ESLint plugin — prefer-aria-label rule
+├── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
 ├── example-app-react/      # React demo app with working Scene tests
 ├── example-app-vue/        # Vue demo app
 ├── example-app-solid/      # Solid demo app
@@ -40,7 +40,7 @@ packages/
 
 ---
 
-## Writing Tests with Scenetest
+## Writing Tests with Scenecheck
 
 **For writing scene specs and inline assertions, see [`docs/public/design/writing-tests.md`](docs/public/design/writing-tests.md).** That guide covers both authoring models (`scene()` concurrent and `test()` classic driver), the actor DSL, and links to canonical references for selectors, text DSL format, and execution models. It is designed to be self-contained — copy it into your application repo's CLAUDE.md or reference it directly.
 
@@ -59,12 +59,21 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 
 ## Key Source Files
 
-### Core (`packages/scenetest/src/`)
+### Checks (`packages/checks/src/`)
 - `assertions.ts` — `should()`, `failed()`, `assert()` (stub), `match()`
-- `runtime.ts` — `__scenetest_rpc()` client for multi-context assertions
+- `runtime.ts` — `__scenecheck_rpc()` client for multi-context assertions
 - `types.ts` — `AssertionResult`, `ServerContext`, RPC types
+- `index.ts` — `initObserver()`, assertion handler
+- `panel.ts` — Floating panel UI
+- `fullscreen.ts` — Fullscreen viewer with grouped/location/sequence views
+- `state.ts` — Global state (groups, history, stats)
+- `history.ts` — Assertion history tracking, flaky detection
+- `render.ts` — HTML rendering
+- `audio.ts` — Audio feedback (chords per group)
+- `styles.ts` — Injected CSS
+- `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
 
-### CLI (`packages/scenetest-cli/src/`)
+### Scenes (`packages/scenes/src/`)
 - `scene.ts` — `scene()` and `test()` registration, `when()` coordination, `runScene()`
 - `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (classic driver model)
 - `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (declarative model)
@@ -75,39 +84,35 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks
 - `cli.ts` — CLI entry point, report generation (HTML/JSON)
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
-- `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
+- `types.ts` — All type definitions (`ScenecheckConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
 
-### Vite Plugin (`packages/vite-plugin/src/`)
+### Vite Plugin (`packages/vite/src/`)
 - `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)
-- `strip.ts` — AST-based removal of scenetest imports and calls
+- `strip.ts` — AST-based removal of scenecheck imports and calls
 - `transform.ts` — Extract `assert()` serverFn bodies for RPC
-- `middleware.ts` — `/__scenetest/run` endpoint, AsyncLocalStorage for result collection
+- `middleware.ts` — `/__scenecheck/run` endpoint, AsyncLocalStorage for result collection
 - `virtual-module.ts` — Virtual module system for extracted assertions
 - `config.ts` — Plugin config loading
 
-### Observer (`packages/observer/src/`)
-- `index.ts` — `initObserver()`, assertion handler
-- `panel.ts` — Floating panel UI
-- `fullscreen.ts` — Fullscreen viewer with grouped/location/sequence views
-- `state.ts` — Global state (groups, history, stats)
-- `history.ts` — Assertion history tracking, flaky detection
-- `render.ts` — HTML rendering
-- `audio.ts` — Audio feedback (chords per group)
-- `styles.ts` — Injected CSS
+### ESLint Plugin (`packages/eslint-plugin/src/`)
+- `index.ts` — Plugin entry, `recommended` flat config preset
+- `rules/prefer-aria-label.ts` — Rule: prefer `aria-label` over `data-testid` for selectors
 
-### Playwright (`packages/playwright-scenetest/src/`)
-- `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
+### VS Code Extension (`packages/vscode-scenetest/`)
+- `package.json` — Extension manifest (language ID `scenecheck-spec`, grammar registration)
+- `syntaxes/scenecheck-spec.tmLanguage.json` — TextMate grammar for `.spec.md` scene specs
+- `language-configuration.json` — Comment toggling, folding, bracket config
 
 ### Example App (`packages/example-app-react/src/`)
-- `App.tsx` — Working example with `should()`, `failed()`, `useTestEffect`, multi-context comparisons
+- `App.tsx` — Working example with `should()`, `failed()`, `useCheck`, multi-context comparisons
 
 ---
 
 ## Vite Plugin
 
 - **Dev mode**: Injects observer script via `transformIndexHtml`, registers RPC middleware
-- **Production**: Strips all scenetest-* package imports and calls via Babel AST transform
-- **Packages stripped**: scenetest, scenetest-react, scenetest-vue, scenetest-solid, scenetest-svelte
+- **Production**: Strips all @scenecheck/* package imports and calls via Babel AST transform
+- **Packages stripped**: checks, checks-react, checks-vue, checks-solid, checks-svelte
 - **Plugin options**: `strip` (force), `devPanel` (show observer), `demo` (keep code + panel in prod), `csp` (Content-Security-Policy config)
 - **CSP**: Configurable middleware, default directives with 'unsafe-inline' for dev panel
 
@@ -124,7 +129,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 
 ## Playwright Fixtures
 
-- Custom `scenePage` fixture with `page.exposeFunction('__scenetest_report')`
+- Custom `scenePage` fixture with `page.exposeFunction('__scenecheck_report')`
 - Provides `.assertions`, `.passed`, `.failed` arrays
 - `waitForAssertions(timeout)` polls for pending RPC calls
 - Logs failures at end of test

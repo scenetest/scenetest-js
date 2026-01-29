@@ -12,10 +12,10 @@ if (import.meta.vitest) {
 }
 ```
 
-Scenetest is different - it runs assertions in the real browser during app execution:
+Scenecheck is different - it runs assertions in the real browser during app execution:
 
 ```tsx
-// Scenetest
+// Scenecheck
 function Cart({ items }) {
   should('cart has valid items', items.every(i => i.price > 0))
   return <div>...</div>
@@ -27,6 +27,6 @@ function Cart({ items }) {
 - **Runs in the real browser**, not Node.js or jsdom
 - **Tests components in their actual context** with real state, real routing, real data
 - **Assertions fire during normal usage**, not in a separate test runner
-- **Production builds strip all Scenetest code** - zero bundle impact
+- **Production builds strip all Scenecheck code** - zero bundle impact
 
-Think of it this way: Vitest in-source testing is for unit tests of pure functions. Scenetest is for integration assertions that need the full browser environment and real app state.
+Think of it this way: Vitest in-source testing is for unit tests of pure functions. Scenecheck is for integration assertions that need the full browser environment and real app state.

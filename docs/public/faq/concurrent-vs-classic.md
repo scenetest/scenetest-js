@@ -1,10 +1,10 @@
 ## What's the difference between Concurrent and Classic?
 
-Scenetest offers two ways to write scene specs: the **Concurrent** model (`scene()`) and the **Classic Driver** model (`test()`). They both orchestrate browser interactions through actors, but they work quite differently under the hood.
+Scenecheck offers two ways to write scene specs: the **Concurrent** model (`scene()`) and the **Classic Driver** model (`test()`). They both orchestrate browser interactions through actors, but they work quite differently under the hood.
 
 ### The Classic Driver came first
 
-When we started building Scenetest, we began with what everyone knows: the async/await pattern from Playwright and Cypress. You `await` each action, control the timeline yourself, and chain operations sequentially.
+When we started building Scenecheck, we began with what everyone knows: the async/await pattern from Playwright and Cypress. You `await` each action, control the timeline yourself, and chain operations sequentially.
 
 ```ts
 test('user completes checkout', async ({ actor }) => {
@@ -76,14 +76,14 @@ bob:
 
 ### Why keep both?
 
-We wanted to make it easier for people to try Scenetest's other benefits — the selector logic, team creation, the observation panel — without having to adopt a new mental model all at once. The Classic Driver lets you use familiar async patterns while still getting access to:
+We wanted to make it easier for people to try Scenecheck's other benefits — the selector logic, team creation, the observation panel — without having to adopt a new mental model all at once. The Classic Driver lets you use familiar async patterns while still getting access to:
 
 - **Smart selectors** with space-separated test IDs and ancestor navigation
 - **Actor teams** with role-based configuration
 - **The message bus** for coordination when you need it
 - **The dev panel** showing assertions in real-time
 
-Meanwhile, we're putting the Concurrent model into production to see how it holds up. Before 1.0, we'll decide: is Scenetest going to be a more ergonomic harness for running async specs, or a more complete philosophical rethink based on the concurrent drain model?
+Meanwhile, we're putting the Concurrent model into production to see how it holds up. Before 1.0, we'll decide: is Scenecheck going to be a more ergonomic harness for running async specs, or a more complete philosophical rethink based on the concurrent drain model?
 
 ### Which should I use?
 

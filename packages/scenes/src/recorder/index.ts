@@ -28,21 +28,12 @@ import {
 // Re-export types
 export type { DslLine, AssertionAnnotation, RecorderState } from './types.js'
 
+import type { AssertionResult } from '@scenecheck/checks'
+
 declare global {
   interface Window {
     __scenecheck_recorder?: boolean
-    __scenecheck_report?: (result: AssertionResult) => void
   }
-}
-
-interface AssertionResult {
-  type: 'pass' | 'fail'
-  description: string
-  result: boolean
-  timestamp: number
-  stack?: string
-  context?: Record<string, unknown>
-  location?: { file: string; line: number; column: number }
 }
 
 /**

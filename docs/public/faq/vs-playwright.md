@@ -1,7 +1,7 @@
 ## How is `assert()` different from Playwright's `page.evaluate()`?
 
 We should start by saying Playwright is fantastic technology and its browser drivers and headless
-context management power Scenetest-JS at the very last mile!
+context management power Scenecheck-JS at the very last mile!
 
 Second, our `assert` was inspired
 directly by the usefulness of Playwright's `page.evaluate()`, which lets you run your tests on your
@@ -15,11 +15,11 @@ const dbCount = await orm.get('items').count()
 expect(count).toBe(dbCount)
 ```
 
-Scenetest flips this relationship. Instead of reaching into the browser from the tests outside,
+Scenecheck flips this relationship. Instead of reaching into the browser from the tests outside,
 you write assertions directly in your components, including these `assert`:
 
 ```tsx
-// Scenetest - inline assertion "should", and server action "assert"
+// Scenecheck - inline assertion "should", and server action "assert"
 function ItemList({ items }) {
   should('should have items', items.length > 0)
   // In react you would wrap this in an effect
@@ -72,4 +72,4 @@ user-main-1:
 - **Scene specs** use actors (`actor()`) instead of raw Playwright APIs — write `test()` for familiar async style or `scene()` for concurrent draining
 - **Real-time observer** shows assertions as you develop
 
-Scenetest is inspired by `page.evaluate` but takes the "code in browser" idea further.
+Scenecheck is inspired by `page.evaluate` but takes the "code in browser" idea further.

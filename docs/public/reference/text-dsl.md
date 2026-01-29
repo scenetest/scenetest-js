@@ -166,7 +166,7 @@ receiver:
 Both concurrent and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
 
 ```ts [Concurrent (ts)]
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('onboarding flow', ({ actor }) => {
   const user = actor('user')
@@ -185,7 +185,7 @@ scene('onboarding flow', ({ actor }) => {
 ```
 
 ```ts [Classic Driver (ts)]
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('onboarding flow', async ({ actor }) => {
   const user = await actor('user')
@@ -260,7 +260,7 @@ Macros are named, reusable action sequences. Define them in TypeScript and call 
 ### Defining macros
 
 ```typescript
-import { defineMacro } from '@scenetest/cli'
+import { defineMacro } from '@scenecheck/scenes'
 
 // Simple macro using [self.field] for current actor
 defineMacro('login', [

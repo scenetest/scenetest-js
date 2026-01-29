@@ -2,7 +2,7 @@
 
 Complete reference for the `scene()`, `test()`, `actor()`, and action chain APIs used to write scene specs.
 
-Scenetest has three authoring styles — **Concurrent (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
+Scenecheck has three authoring styles — **Concurrent (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
 
 ## scene (Concurrent)
 
@@ -10,10 +10,10 @@ Scenetest has three authoring styles — **Concurrent (ts)** using `scene()`, **
 scene(name: string, fn: (context: SceneContext) => void): void
 ```
 
-Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns. This is the **native model** for Scenetest.
+Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns. This is the **native model** for Scenecheck.
 
 ```typescript
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenecheck/scenes'
 
 scene('user can update their profile', ({ actor }) => {
   const user = actor('primary-learner')
@@ -31,7 +31,7 @@ test(name: string, fn: (context: SceneContext) => Promise<void>): void
 Registers a scene with await-driven sequential orchestration. The callback receives a `SceneContext` with an `actor` function and the assigned `teamIndex`. This is the **compatibility model** for those coming from Playwright or Cypress.
 
 ```typescript
-import { test } from '@scenetest/cli'
+import { test } from '@scenecheck/scenes'
 
 test('user can update their profile', async ({ actor }) => {
   const user = await actor('primary-learner')
@@ -196,7 +196,7 @@ Clears and types text into the input matching the selector within the current sc
 
 ```typescript
 await user.typeInto('email-input', 'alice@example.com')
-await user.typeInto('search-form query', 'scenetest')   // nested selector
+await user.typeInto('search-form query', 'scenecheck')   // nested selector
 ```
 
 ### check
@@ -397,7 +397,7 @@ Warnings appear in the scene report and indicate unexpected paths that aren't fa
 ### when
 
 ```typescript
-import { when } from '@scenetest/cli'
+import { when } from '@scenecheck/scenes'
 
 // When message is received, do action
 when(message: string, callback: () => ActionChain | Promise<void>): void

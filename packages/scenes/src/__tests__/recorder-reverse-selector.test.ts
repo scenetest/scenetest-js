@@ -5,7 +5,7 @@ describe('reverse-selector', () => {
   // These tests verify the module structure and non-DOM helpers.
 
   it('exports SELECTOR_ATTRIBUTES in the correct priority order', async () => {
-    const { SELECTOR_ATTRIBUTES } = await import('../types.js')
+    const { SELECTOR_ATTRIBUTES } = await import('../recorder/types.js')
 
     expect(SELECTOR_ATTRIBUTES).toEqual([
       'aria-label',
@@ -18,7 +18,7 @@ describe('reverse-selector', () => {
   })
 
   it('exports reverseSelector function', async () => {
-    const mod = await import('../reverse-selector.js')
+    const mod = await import('../recorder/reverse-selector.js')
     expect(typeof mod.reverseSelector).toBe('function')
     expect(typeof mod.nearestAddressable).toBe('function')
     expect(typeof mod.explainUnaddressable).toBe('function')
@@ -27,21 +27,21 @@ describe('reverse-selector', () => {
 
 describe('types', () => {
   it('DslLine shape is correct', async () => {
-    const { SELECTOR_ATTRIBUTES } = await import('../types.js')
+    const { SELECTOR_ATTRIBUTES } = await import('../recorder/types.js')
     expect(SELECTOR_ATTRIBUTES.length).toBe(6)
   })
 })
 
 describe('capture', () => {
   it('exports startCapture function', async () => {
-    const mod = await import('../capture.js')
+    const mod = await import('../recorder/capture.js')
     expect(typeof mod.startCapture).toBe('function')
   })
 })
 
 describe('panel', () => {
   it('exports panel functions', async () => {
-    const mod = await import('../panel.js')
+    const mod = await import('../recorder/panel.js')
     expect(typeof mod.createRecorderPanel).toBe('function')
     expect(typeof mod.attachPanelListeners).toBe('function')
     expect(typeof mod.appendLine).toBe('function')
@@ -56,7 +56,7 @@ describe('panel', () => {
 
 describe('index', () => {
   it('exports recorder functions', async () => {
-    const mod = await import('../index.js')
+    const mod = await import('../recorder/index.js')
     expect(typeof mod.initRecorder).toBe('function')
     expect(typeof mod.getDslLines).toBe('function')
     expect(typeof mod.getRecorderState).toBe('function')

@@ -17,15 +17,12 @@ importers:
 
   docs:
     dependencies:
-      '@scenetest/core':
+      '@scenecheck/checks':
         specifier: workspace:*
-        version: link:../packages/scenetest
-      '@scenetest/observer':
+        version: link:../packages/checks
+      '@scenecheck/checks-react':
         specifier: workspace:*
-        version: link:../packages/observer
-      '@scenetest/react':
-        specifier: workspace:*
-        version: link:../packages/scenetest-react
+        version: link:../packages/checks-react
       '@tanstack/react-router':
         specifier: ^1.156.0
         version: 1.156.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -67,6 +64,73 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.9.3)(vite@7.3.1(@types/node@20.19.30)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0))
 
+  packages/checks:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.40.0
+        version: 1.57.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
+
+  packages/checks-react:
+    dependencies:
+      '@scenecheck/checks':
+        specifier: workspace:*
+        version: link:../checks
+      react:
+        specifier: ^18.0.0 || ^19.0.0
+        version: 19.2.3
+    devDependencies:
+      '@types/react':
+        specifier: ^18.0.0
+        version: 18.3.27
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/checks-solid:
+    dependencies:
+      '@scenecheck/checks':
+        specifier: workspace:*
+        version: link:../checks
+    devDependencies:
+      solid-js:
+        specifier: ^1.9.11
+        version: 1.9.11
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/checks-svelte:
+    dependencies:
+      '@scenecheck/checks':
+        specifier: workspace:*
+        version: link:../checks
+    devDependencies:
+      svelte:
+        specifier: ^5.0.0
+        version: 5.47.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/checks-vue:
+    dependencies:
+      '@scenecheck/checks':
+        specifier: workspace:*
+        version: link:../checks
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+      vue:
+        specifier: ^3.5.0
+        version: 3.5.27(typescript@5.9.3)
+
   packages/eslint-plugin:
     devDependencies:
       '@types/eslint':
@@ -84,9 +148,9 @@ importers:
 
   packages/example-app-react:
     dependencies:
-      '@scenetest/react':
+      '@scenecheck/checks-react':
         specifier: workspace:*
-        version: link:../scenetest-react
+        version: link:../checks-react
       '@tanstack/react-query':
         specifier: ^5.90.19
         version: 5.90.19(react@18.3.1)
@@ -97,12 +161,12 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
-      '@scenetest/cli':
+      '@scenecheck/scenes':
         specifier: workspace:*
-        version: link:../scenetest-cli
-      '@scenetest/vite-plugin':
+        version: link:../scenes
+      '@scenecheck/vite':
         specifier: workspace:*
-        version: link:../vite-plugin
+        version: link:../vite
       '@types/react':
         specifier: ^18.3.0
         version: 18.3.27
@@ -121,16 +185,16 @@ importers:
 
   packages/example-app-solid:
     dependencies:
-      '@scenetest/solid':
+      '@scenecheck/checks-solid':
         specifier: workspace:*
-        version: link:../scenetest-solid
+        version: link:../checks-solid
       solid-js:
         specifier: ^1.9.11
         version: 1.9.11
     devDependencies:
-      '@scenetest/vite-plugin':
+      '@scenecheck/vite':
         specifier: workspace:*
-        version: link:../vite-plugin
+        version: link:../vite
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -143,13 +207,13 @@ importers:
 
   packages/example-app-svelte:
     dependencies:
-      '@scenetest/svelte':
+      '@scenecheck/checks-svelte':
         specifier: workspace:*
-        version: link:../scenetest-svelte
+        version: link:../checks-svelte
     devDependencies:
-      '@scenetest/vite-plugin':
+      '@scenecheck/vite':
         specifier: workspace:*
-        version: link:../vite-plugin
+        version: link:../vite
       '@sveltejs/vite-plugin-svelte':
         specifier: ^4.0.0
         version: 4.0.4(svelte@5.47.1)(vite@5.4.21(@types/node@20.19.30)(terser@5.46.0))
@@ -168,16 +232,16 @@ importers:
 
   packages/example-app-vue:
     dependencies:
-      '@scenetest/vue':
+      '@scenecheck/checks-vue':
         specifier: workspace:*
-        version: link:../scenetest-vue
+        version: link:../checks-vue
       vue:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.9.3)
     devDependencies:
-      '@scenetest/vite-plugin':
+      '@scenecheck/vite':
         specifier: workspace:*
-        version: link:../vite-plugin
+        version: link:../vite
       '@vitejs/plugin-vue':
         specifier: ^5.2.0
         version: 5.2.4(vite@5.4.21(@types/node@20.19.30)(terser@5.46.0))(vue@3.5.27(typescript@5.9.3))
@@ -191,51 +255,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
 
-  packages/observer:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
-
-  packages/playwright-scenetest:
+  packages/scenes:
     dependencies:
-      '@scenetest/core':
+      '@scenecheck/checks':
         specifier: workspace:*
-        version: link:../scenetest
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.40.0
-        version: 1.57.0
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/recorder:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
-
-  packages/scenetest:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
-
-  packages/scenetest-cli:
-    dependencies:
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
+        version: link:../checks
       commander:
         specifier: ^12.0.0
         version: 12.1.0
@@ -262,62 +286,7 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@20.19.30)(terser@5.46.0)
 
-  packages/scenetest-react:
-    dependencies:
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
-      react:
-        specifier: ^18.0.0 || ^19.0.0
-        version: 18.3.1
-    devDependencies:
-      '@types/react':
-        specifier: ^18.0.0
-        version: 18.3.27
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/scenetest-solid:
-    dependencies:
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
-    devDependencies:
-      solid-js:
-        specifier: ^1.9.11
-        version: 1.9.11
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/scenetest-svelte:
-    dependencies:
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
-    devDependencies:
-      svelte:
-        specifier: ^5.0.0
-        version: 5.47.1
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/scenetest-vue:
-    dependencies:
-      '@scenetest/core':
-        specifier: workspace:*
-        version: link:../scenetest
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vue:
-        specifier: ^3.5.0
-        version: 3.5.27(typescript@5.9.3)
-
-  packages/vite-plugin:
+  packages/vite:
     dependencies:
       '@babel/parser':
         specifier: ^7.24.0
@@ -328,15 +297,9 @@ importers:
       '@babel/types':
         specifier: ^7.24.0
         version: 7.28.6
-      '@scenetest/core':
+      '@scenecheck/checks':
         specifier: workspace:*
-        version: link:../scenetest
-      '@scenetest/observer':
-        specifier: workspace:*
-        version: link:../observer
-      '@scenetest/recorder':
-        specifier: workspace:*
-        version: link:../recorder
+        version: link:../checks
       magic-string:
         specifier: ^0.30.10
         version: 0.30.21

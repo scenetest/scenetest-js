@@ -11,9 +11,9 @@ import {
   computeResolutionStats,
   formatResolutionSummary,
   formatFlakyStatus,
-} from '../history.js'
-import { assertionHistory } from '../state.js'
-import type { AssertionResult } from '../types.js'
+} from '../observer/history.js'
+import { assertionHistory } from '../observer/state.js'
+import type { AssertionResult } from '../observer/types.js'
 
 // Helper to create assertion results
 function createAssertion(description: string, result: boolean, timestamp: number): AssertionResult {

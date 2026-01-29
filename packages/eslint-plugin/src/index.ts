@@ -2,7 +2,7 @@ import preferAriaLabel from './rules/prefer-aria-label.js'
 
 const plugin = {
   meta: {
-    name: '@scenetest/eslint-plugin',
+    name: '@scenecheck/eslint-plugin',
     version: '0.0.3',
   },
   rules: {
@@ -14,10 +14,10 @@ const plugin = {
 // Flat config (ESLint 9+) - recommended preset
 plugin.configs['recommended'] = {
   plugins: {
-    scenetest: plugin,
+    scenecheck: plugin,
   },
   rules: {
-    'scenetest/prefer-aria-label': 'warn',
+    'scenecheck/prefer-aria-label': 'warn',
   },
 }
 
