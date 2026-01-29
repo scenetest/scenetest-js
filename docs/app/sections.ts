@@ -60,40 +60,47 @@ export const reference: SectionItem[] = [
 ]
 
 export const faqs: SectionItem[] = [
-  {
-    slug: 'swarm-mode',
-    title: 'What is "swarm mode"?',
-    description:
-      'A diagnostic escalation that runs all teams against failing scenes to classify failures as broken, flaky, or seed-data edge cases.',
-  },
+
   {
     slug: 'concurrent-vs-classic',
     title: "What's the difference between Concurrent and Classic?",
     description:
-      'How the concurrent drain model evolved from the classic async driver, and why we kept both.',
+      'How the concurrent drain model is built on the classic async driver, and why support both (for now).',
   },
   {
-    slug: 'vs-playwright',
-    title: "vs Playwright's page.evaluate()",
-    description:
-      "Playwright lets you run code inside the browser from your test file. Scenetest flips this around — assertions live in your app code and fire automatically.",
-  },
-  {
-    slug: 'vs-vitest',
-    title: "vs Vitest's in-source testing",
-    description:
-      'Vitest in-source tests run in Node with mocked dependencies. Scenetest assertions run inside a real browser with real state, real hooks, and real network calls.',
-  },
-  {
-    slug: 'vs-cypress',
-    title: 'vs Cypress component testing',
-    description:
-      'Cypress mounts components in isolation. Scenetest runs assertions inside your full application, testing components in context with real data and routing.',
-  },
-  {
-    slug: 'security',
-    title: 'Is it safe in development?',
-    description:
-      'Yes. Server functions are declared at build time and stripped in production. No runtime code injection is possible.',
-  },
+	  slug: 'security',
+	  title: 'Is it safe?',
+	  description:
+	  `Yes, we make very sure that none of your tests or server fns ever make it into your production bundle! Read up.`,
+	},
+	{
+		slug: 'swarm-mode',
+		title: 'What is "swarm mode"?',
+		description:
+      'A diagnostic escalation that runs all teams against failing scenes to classify failures as broken, flaky, or seed-data edge cases.',
+	},
+	{
+		slug: 'vscode-extension',
+		title: 'Syntax Highlighting?',
+		description:
+		 "Yes, we made a VSCode extension to make the markdown DSL feel more like writing Javascript.",
+	},
+	{
+	  slug: 'vs-playwright',
+	  title: "Compare to page.evaluate()",
+	  description:
+		 "Playwright lets you run code inside the browser from your test file. Scenetest flips this around — assertions live in your app code and fire automatically.",
+	},
+	{
+	  slug: 'vs-vitest',
+	  title: "Compare to Vitest's in-source",
+	  description:
+		 'Vitest in-source tests run in Node with mocked dependencies. Scenetest assertions run inside a real browser with real state, real hooks, and real network calls.',
+	},
+	{
+	  slug: 'vs-cypress',
+	  title: 'Compare to Cypress component testing',
+	  description:
+		 'Cypress mounts components in isolation. Scenetest runs assertions inside your full application, testing components in context with real data and routing.',
+	},
 ]

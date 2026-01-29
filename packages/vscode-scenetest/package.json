@@ -1,0 +1,46 @@
+{
+  "name": "vscode-scenetest",
+  "displayName": "Scenetest",
+  "description": "Syntax highlighting for Scenetest scene specs (.spec.md)",
+  "version": "0.1.0",
+  "publisher": "scenetest",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "scenetest",
+    "e2e",
+    "testing",
+    "spec"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "scenetest-spec",
+        "aliases": [
+          "Scenetest Spec",
+          "scenetest"
+        ],
+        "extensions": [
+          ".spec.md"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "scenetest-spec",
+        "scopeName": "source.scenetest-spec",
+        "path": "./syntaxes/scenetest-spec.tmLanguage.json"
+      }
+    ]
+  }
+}
