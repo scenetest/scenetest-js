@@ -5,6 +5,7 @@ import path from 'path'
 import fs from 'fs'
 import { loadConfig } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
+import { init } from './init.js'
 import type { CLIOptions, RunReport } from './types.js'
 
 const program = new Command()
@@ -284,5 +285,18 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 }
+
+program
+  .command('init')
+  .description('Initialize scenetest folder structure')
+  .option('--force', 'Overwrite existing files')
+  .action(async (options: { force?: boolean }) => {
+    try {
+      await init(process.cwd(), { force: options.force })
+    } catch (err) {
+      console.error('Error:', err instanceof Error ? err.message : err)
+      process.exit(1)
+    }
+  })
 
 program.parse()

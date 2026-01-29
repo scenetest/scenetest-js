@@ -2,10 +2,11 @@
 export { createTestEffect } from './primitives.js'
 
 // Re-export everything from core scenetest for convenience
-export { should, failed, assert, match } from '@scenetest/core'
+export { should, failed, assert, match, defineConfig } from '@scenetest/core'
 export type {
   AssertionResult,
   ScenetestReporter,
+  ScenetestConfig,
   AssertServerFn,
   AssertDataFn,
   ServerContext,

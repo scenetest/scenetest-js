@@ -67,6 +67,61 @@ export interface AssertionRpcResponse {
   error?: string
 }
 
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+
+/**
+ * Scenetest configuration.
+ *
+ * This is the base config shape used by scenetest.config.ts.
+ * @scenetest/cli extends it with runner-specific fields (browser, headed, etc.)
+ * via declaration merging — see `@scenetest/cli/types`.
+ *
+ * The index signature lets CLI-specific fields pass through without error
+ * when a user imports defineConfig from core (or a framework binding) but
+ * adds fields that only the CLI knows about.
+ */
+export interface ScenetestConfig {
+  /** Base URL for the application under test */
+  baseUrl?: string
+
+  /** Directory or glob for scene specs */
+  scenes?: string
+
+  /**
+   * Server functions for multi-context assertions.
+   * These become the `server` parameter inside assert() serverFn callbacks.
+   *
+   * @example
+   * ```ts
+   * serverFunctions: {
+   *   getProfile: async (id) => db.query('SELECT * FROM profiles WHERE id = $1', [id]),
+   *   validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+   * }
+   * ```
+   */
+  serverFunctions?: Record<string, (...args: any[]) => any>
+
+  /** Allow additional fields from CLI or other extensions */
+  [key: string]: unknown
+}
+
+/**
+ * Type-checked helper for scenetest.config.ts.
+ *
+ * Works with the base config shape. If using @scenetest/cli runner features,
+ * import defineConfig from '@scenetest/cli' instead for full type coverage
+ * of runner-specific fields (browser, headed, devices, hooks, etc.).
+ */
+export function defineConfig(config: ScenetestConfig): ScenetestConfig {
+  return config
+}
+
+// ---------------------------------------------------------------------------
+// Runtime
+// ---------------------------------------------------------------------------
+
 /**
  * The global reporter function exposed by Playwright fixtures
  */
