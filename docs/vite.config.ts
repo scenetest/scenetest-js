@@ -7,7 +7,7 @@ import { execSync } from 'child_process'
 
 const gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __GIT_COMMIT__: JSON.stringify(gitCommit),
   },
@@ -22,6 +22,9 @@ export default defineConfig({
       srcDirectory: 'app',
     }),
     viteReact(),
-    nitro(),
+    // Nitro is only needed at build time (Vercel SSR deployment).
+    // In dev, Vite's built-in SPA fallback serves index.html for all
+    // routes so client-side routing works on direct navigation.
+    command === 'build' ? nitro() : null,
   ],
-})
+}))
