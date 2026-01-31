@@ -84,7 +84,7 @@ export function createScenecheckMiddleware(server: ViteDevServer, root: string):
     // Serve the recorder module at /__scenecheck/recorder.js
     if (req.method === 'GET' && req.url === '/__scenecheck/recorder.js') {
       try {
-        const resolved = await server.pluginContainer.resolveId('@scenecheck/checks/observer/auto')
+        const resolved = await server.pluginContainer.resolveId('@scenecheck/scenes/recorder/auto')
         if (!resolved) {
           res.statusCode = 404
           res.end('Recorder module not found')

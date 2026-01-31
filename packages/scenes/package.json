@@ -17,6 +17,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./recorder": {
+      "types": "./dist/recorder/index.d.ts",
+      "import": "./dist/recorder/index.js"
+    },
+    "./recorder/auto": {
+      "types": "./dist/recorder/auto.d.ts",
+      "import": "./dist/recorder/auto.js"
     }
   },
   "files": ["dist"],

@@ -59,7 +59,6 @@ function Home() {
         giving the app control over when to call the server function and what data to pass it,
         but actually running these checks in a protected/privileged environment.
       </p>
-      <p>Here's some sample code you might find near the top of a React Components, that includes </p>
 		<p>
         Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
         about nearly every layer of an application in one place.
@@ -110,6 +109,7 @@ function BlogPostForm({ id }) {
 				different actions and observations synchronously and run scenes naturally without ever having to type <code>await Promise.all()</code>.</li>
 			<li>Finally, we took this new, simplified, synchronous, declarative scene instruction set and simply converted it to human-readable markdown.</li>
 		</ul>
+
 		<p>The result is a scene format so simple you can read and write it like natural language, with very little understanding
 			of application implementation details or the mechanics of promises or async Javascript.
 			</p>
