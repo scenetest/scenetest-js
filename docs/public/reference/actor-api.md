@@ -1,74 +1,64 @@
 # Actor API Reference
 
-Complete reference for the `scene()`, `test()`, `actor()`, and action chain APIs used to write scene specs.
+Complete reference for the `actor()` the action-chain object, with code examples for both concurrent flow and classic driver. Unless otherwise specified, the two APIs function the same way. [Read here for more information about the two driver modes](/reference/concurrent-and-classic).
 
-Scenecheck has three authoring styles — **Concurrent (ts)** using `scene()`, **Text DSL (md)** using `.spec.md` files, and **Classic Driver (ts)** using `test()`. This reference covers the TypeScript APIs. For the text DSL format, see [Writing Scene Specs](/guides/writing-scene-specs).
+## The Driver: `scene()` (or `test()`)
 
-## scene (Concurrent)
+Registers a scene script or test. The callback receives a context object with `actors` provider.
 
-```typescript
-scene(name: string, fn: (context: SceneContext) => void): void
-```
-
-Registers a scene with reactive concurrent draining. The callback is **synchronous** — all DSL calls queue actions that drain concurrently after the function returns. This is the **native model** for Scenecheck.
-
-```typescript
+```ts [declarative scene]
+// scene-file.spec.ts
 import { scene } from '@scenecheck/scenes'
 
 scene('user can update their profile', ({ actor }) => {
-  const user = actor('primary-learner')
-  user.openTo('/profile')
-  user.see('profile-form')
+  const user1 = actor('primary-learner')
+  user1.openTo('/profile')
+  user1.see('profile-form')
 })
 ```
-
-## test (Classic Driver)
-
-```typescript
-test(name: string, fn: (context: SceneContext) => Promise<void>): void
-```
-
-Registers a scene with await-driven sequential orchestration. The callback receives a `SceneContext` with an `actor` function and the assigned `teamIndex`. This is the **compatibility model** for those coming from Playwright or Cypress.
-
-```typescript
+```ts [imperative test]
+// test-file.spec.ts
 import { test } from '@scenecheck/scenes'
 
-test('user can update their profile', async ({ actor }) => {
-  const user = await actor('primary-learner')
-  await user.openTo('/profile')
-  await user.see('profile-form')
+test('user can update their profile', ({ actor }) => {
+  const user1 = await actor('primary-learner')
+  await user1.openTo('/profile')
+  await user1.see('profile-form')
 })
+
 ```
 
-## actor
+## Actor Registry: `actor()`
 
-```typescript
+Returns an actor handle for the given role from the current team. The role must match a key in your [actor team files](/guides/building-teams). In the concurrent mode you get a `ConcurrentActorHandle`; in sequential mode you get a promise returning a `SequentialActorHandle`.
+
+```typescript [concurrent]
 // In scene() (concurrent) — sync, returns ConcurrentActorHandle
 actor(role: string): ConcurrentActorHandle
 
+// concurrent model
+const user1 = actor('primary-learner')
+const friend1 = actor('existing-friend')
+
+
+
+```
+```typescript [classic]
 // In test() (classic driver) — async, returns SequentialActorHandle
 actor(role: string): Promise<SequentialActorHandle>
-```
-
-Returns an actor handle for the given role from the current team. The role must match a key in your [actor team files](/guides/building-teams).
-
-```typescript
-// concurrent model
-const user = actor('primary-learner')
-const friend = actor('existing-friend')
 
 // classic driver model
-const user = await actor('primary-learner')
-const friend = await actor('existing-friend')
+const user1 = await actor('primary-learner')
+const friend1 = await actor('existing-friend')
 ```
 
 The returned handle extends `ActorConfig`, so you can access the actor's config properties directly:
 
-```typescript
-const user = await actor('primary-learner')
-console.log(user.role)     // 'primary-learner'
-console.log(user.email)    // from actor config
-console.log(user.page)     // Playwright Page instance
+```typescript [concurrent]
+const user = actor('primary-learner')
+console.log(user1.role)     // 'primary-learner'
+console.log(user1.email)    // from actor config
+console.log(user1.page)     // Playwright Page instance
 ```
 
 ---
@@ -77,15 +67,16 @@ console.log(user.page)     // Playwright Page instance
 
 ### openTo
 
-```typescript
-user.openTo(url: string): ActionChain
-```
+Navigates the actor's browser to the given URL. This performs a full page load (not SPA client-side routing).
+The URL is resolved relative to the `baseUrl` in your config.
 
-Navigates the actor's browser to the given URL. This performs a full page load (not SPA client-side routing). The URL is resolved relative to the `baseUrl` in your config.
+```typescript [concurrent]
+// definition
+user1.openTo(url: string): ConcurrentActorHandle
 
-```typescript
-await user.openTo('/')
-await user.openTo('/settings/profile')
+// in-your.spec.ts
+user1.openTo('/')
+user1.openTo('/settings/profile')
 ```
 
 ---
@@ -94,21 +85,21 @@ await user.openTo('/settings/profile')
 
 ### see
 
-```typescript
-user.see(selector: Selector): ActionChain
-```
-
 Waits for an element matching the [selector](/reference/selectors) to become visible, then sets it as the **current scope**. Subsequent actions like `click` and `typeInto` look within this scope.
 
-```typescript
-await user.see('profile-form')
-await user.see('sidebar nav-menu')          // nested: nav-menu inside sidebar
+```typescript [concurrent]
+// definition
+user1.see(selector: Selector): ConcurrentActorHandle
+
+// in your scene function
+user1.see('profile-form')
+user1.see('sidebar nav-menu')          // nested: nav-menu inside sidebar
 ```
 
 Scope is cumulative in a chain:
 
-```typescript
-await user
+```typescript [concurrent]
+user1
   .see('settings-panel')         // scope: settings-panel
   .see('notification-section')   // scope: notification-section inside settings-panel
   .click('toggle')               // clicks toggle inside notification-section
@@ -116,54 +107,54 @@ await user
 
 ### notSee
 
-```typescript
-user.notSee(selector: Selector): ActionChain
-```
-
 Waits for an element matching the selector to **not** be visible (hidden or detached from the DOM). Useful for asserting that something has disappeared.
 
-```typescript
-await user.click('close-button')
-await user.notSee('modal')
+```typescript [concurrent]
+// fn definition
+user1.notSee(selector: Selector): ConcurrentActorHandle
+
+// in your spec
+user1.click('close-button')
+user1.notSee('modal')
 ```
 
 ### seeText
 
-```typescript
-user.seeText(text: string): ActionChain
-```
-
 Waits for the given text to be visible anywhere on the page.
 
-```typescript
-await user.click('submit-button')
-await user.seeText('Changes saved')
+```typescript [concurrent]
+// definition
+user1.seeText(text: string): ConcurrentActorHandle
+
+// in your scene
+user1.click('submit-button')
+user1.seeText('Changes saved')
 ```
 
 ### seeInView
 
-```typescript
-user.seeInView(selector: Selector): ActionChain
-```
-
 Waits for an element matching the selector to be visible **within the viewport** — the element must be rendered and within the visible scroll area without needing to scroll. Uses `getBoundingClientRect` to check that the element's bounds intersect the viewport.
 
 ```typescript
-await user.seeInView('hero-banner')        // visible without scrolling
-await user.seeInView('call-to-action')     // check it's above the fold
+// fn signature
+user1.seeInView(selector: Selector): ConcurrentActorHandle
+
+// in your scene
+user1.seeInView('hero-banner')        // visible without scrolling
+user1.seeInView('call-to-action')     // check it's above the fold
 ```
 
 ### seeToast
 
-```typescript
-user.seeToast(selector: Selector): ActionChain
-```
-
 Waits for an element to **appear and then disappear**. Designed for transient UI like toasts, snackbars, and flash notifications.
 
 ```typescript
-await user.click('save-button')
-await user.seeToast('success-notification')
+// fn signature
+user1.seeToast(selector: Selector): ActionChain
+
+// in your spec
+user.click('save-button')
+user.seeToast('success-notification')
 ```
 
 ---
@@ -172,29 +163,57 @@ await user.seeToast('success-notification')
 
 ### click
 
-```typescript
-user.click(selector?: Selector): ActionChain
-```
-
 Clicks the element matching the selector within the current scope. When called with **no selector** (bare `click`), clicks the current scope element itself.
 
-```typescript
-await user.click('submit-button')
-await user.click('user-card action-menu')   // nested selector
+
+```typescript [concurrent]
+// definition
+user1.click(selector?: Selector): ConcurrentActorHandle
+
+// in your scene
+user1.click('submit-button')
+user1.click('user-card action-menu')   // nested selector
 
 // Bare click — clicks the current scope element
-await user.see('notification-item').click() // click the notification itself
+user1.see('notification-item').click() // click the notification itself
 ```
+
+```markdown [markdown]
+// definition
+- click selector
+
+// in your scene
+user1:
+click submit-button
+click user-card action-menu   // nested selector
+
+// Bare click — clicks the current scope element
+see notification-item
+click                         // click the notification itself
+```
+
+```typescript [classic]
+// definiction
+await user1.click(selector?: Selector): ActionChain
+
+// in your scene
+await user1.click('submit-button')
+await user1.click('user-card action-menu')   // nested selector
+
+// Bare click — clicks the current scope element
+await user1.see('notification-item').click() // click the notification itself
+```
+
 
 ### typeInto
 
-```typescript
-user.typeInto(selector: Selector, value: string): ActionChain
-```
-
 Clears and types text into the input matching the selector within the current scope.
 
-```typescript
+```typescript [classic]
+// fn signature
+await user.typeInto(selector: Selector, value: string): ConcurrentActorHandle
+
+// in your test callback
 await user.typeInto('email-input', 'alice@example.com')
 await user.typeInto('search-form query', 'scenecheck')   // nested selector
 ```
@@ -249,7 +268,7 @@ await user.see('animation-result')
 user.emit(message: string): ActionChain
 ```
 
-Emits a named message to the [message bus](#when) for coordinating between actors.
+Emits a named message to the [message bus](#waitfor) for coordinating between actors.
 
 ```typescript
 await user.click('send-friend-request')
@@ -270,19 +289,25 @@ await user.do(async (page) => {
 })
 ```
 
-### waitFor (concurrent model only)
+### waitFor
 
-```typescript
+Blocks the actor's queue until the named message arrives on the message bus. Available in both modes and the markdown DSL.
+
+```ts [concurrent]
+// definition
 user.waitFor(message: string): ConcurrentActorHandle
-```
-
-Blocks the actor's queue until the named message arrives on the message bus. Only available in `scene()` (concurrent model) — in `test()` (classic driver), use `when()` instead.
-
-```typescript
-// concurrent model
+// in your spec
 receiver.waitFor('data-ready')
 receiver.openTo('/inbox')
 receiver.seeText('New message')
+```
+```ts [classic]
+// definition
+void user.waitFor(message: string): ActionChain
+// in your spec
+await receiver.waitFor('data-ready')
+await receiver.openTo('/inbox')
+await receiver.seeText('New message')
 ```
 
 ### dsl
@@ -394,33 +419,36 @@ Warnings appear in the scene report and indicate unexpected paths that aren't fa
 
 ## Multi-Actor Coordination
 
-### when
+Actors can coordinate via `emit()` and `waitFor()` on the sticky message bus. Both methods are available in both concurrent and classic driver modes.
 
-```typescript
-import { when } from '@scenecheck/scenes'
+```typescript [concurrent]
+scene('friend request flow', ({ actor }) => {
+  const sender = actor('primary-learner')
+  const receiver = actor('existing-friend')
 
-// When message is received, do action
-when(message: string, callback: () => ActionChain | Promise<void>): void
+  sender.openTo('/friends')
+  sender.click('add-friend-button')
+  sender.typeInto('friend-search', 'carlos')
+  sender.click('send-request')
+  sender.emit('request-sent')
 
-// When action completes, emit message
-when(callback: () => ActionChain | Promise<void>, message: string): void
+  receiver.waitFor('request-sent')
+  receiver.see('friend-request-notification')
+})
 ```
-
-Coordinates between actors via a message bus. Combine with `emit` for multi-actor scenes:
-
-```typescript
+```ts [classic]
 test('friend request flow', async ({ actor }) => {
   const sender = await actor('primary-learner')
   const receiver = await actor('existing-friend')
-
-  // When the request is sent, receiver checks for it
-  when('request-sent', () => receiver.see('friend-request-notification'))
 
   await sender.openTo('/friends')
   await sender.click('add-friend-button')
   await sender.typeInto('friend-search', 'carlos')
   await sender.click('send-request')
   await sender.emit('request-sent')
+
+  await receiver.waitFor('request-sent')
+  await receiver.see('friend-request-notification')
 })
 ```
 

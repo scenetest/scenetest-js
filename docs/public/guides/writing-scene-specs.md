@@ -6,11 +6,29 @@ Scene specs describe **user journeys** — the flows a person takes through your
 
 ## Three Ways to Write Scenes
 
-- **Text DSL (md)** — the simplest way to write a concurrent spec with as many actors as you want. Human-readable `.spec.md` files that compile to concurrent actor scripts.
-- **Concurrent (ts)** — the native model: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`. Actions queue up per actor and drain concurrently.
-- **Classic Driver (ts)** — the async/await model you know from Cypress/Playwright, with access to the Scenecheck message bus and our document selectors.
+- **Markdown DSL** — the simplest way to write a concurrent spec with as many actors as you want. Human-readable `.spec.md` files that compile to concurrent actor scripts.
+- **Concurrent Flow (TS)** — the native model: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`. Actions queue up per actor and drain concurrently.
+- **Classic Driver (TS)** — the async/await model you know from Cypress/Playwright, with access to the Scenecheck message bus and our document selectors.
 
 Click the tabs to compare:
+
+
+```markdown [concurrent.spec.md]
+# user completes onboarding
+
+new-user:
+- openTo /
+- see welcome-box
+- click continue-button
+
+best-friend:
+- openTo /friends/search
+- typeInto search-input [new-user.username]
+- see results-box [new-user.id]
+
+
+
+```
 
 ```ts [concurrent.spec.ts]
 import { scene } from '@scenecheck/scenes'
@@ -24,21 +42,8 @@ scene('user completes onboarding', ({ actor }) => {
       .click('continue-button')
   friend.openTo('/friends/search')
       .typeInto('search-input', user.username)
-		.see(`results-box ${user.id}`)
+      .see(`results-box ${user.id}`)
 })
-```
-
-```markdown [dsl.spec.md]
-# user completes onboarding
-new-user:
-- openTo /
-- see welcome-box
-- click continue-button
-
-best-friend:
-- openTo /friends/search
-- typeInto search-input [new-user.username]
-- see results-box [new-user.id]
 ```
 
 ```ts [classic.spec.ts]

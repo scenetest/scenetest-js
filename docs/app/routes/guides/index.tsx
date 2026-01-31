@@ -12,29 +12,29 @@ function GuidesIndex() {
   return (
     <article>
       <Link to="/" className="back">&larr; Back</Link>
-      <h1>Writing Tests with Scenecheck</h1>
+      <h1>Guides for Writing Scenes and Checks</h1>
 
       <p className="subtitle">
-        For humans and language models writing scenecheck specs in application repos.
+        For humans and language models writing scenes and inline checks.
       </p>
 
       <h2>How Scenecheck Works</h2>
 
       <p>
-        Scenecheck separates two concerns that traditional E2E frameworks conflate:
+        We've split the test into its two main parts: `scenes` and `checks`
       </p>
 
       <ol>
         <li>
-          <strong>Scenes</strong> — Orchestration scripts that simulate user journeys
-          (login, fill form, click submit). Written in spec files. The person writing
-          scenes doesn't need to know implementation details.
+          <strong>Scene Orchestration</strong> — scripts that simulate user journeys
+          (login, fill form, click submit). Written in spec files. Not concerned with
+			 implementation details.
         </li>
         <li>
-          <strong>Inline Assertions</strong> — <code>should()</code> and <code>failed()</code> calls
-          placed directly in application code (components, hooks, callbacks). They run every
-          time that code executes, whether triggered by a scene, the dev panel, or a human
-          clicking around.
+          <strong>Integrity Checks</strong> — assertion functions like <code>should()</code>
+			 and <code>failed()</code> and <code>serverCheck()</code>, that can run and should pass every time your component
+			 or mutation or effect runs. Not concerned with the reason the actor is using the page,
+			 just runs every time the page gets used (when deployed in test mode).
         </li>
       </ol>
 

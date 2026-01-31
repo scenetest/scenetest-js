@@ -16,7 +16,7 @@ Each token matches against these attributes simultaneously:
 If multiple elements match (each via a different attribute), the first one in **DOM order** wins. In practice, `data-testid` is the primary convention for scene specs.
 
 ```typescript
-await user.see('login-form')
+testUser.see('login-form')
 // Finds the first element with any of:
 //   aria-label="login-form"
 //   id="login-form"
@@ -31,7 +31,7 @@ await user.see('login-form')
 Space-separated tokens drill into the DOM. Each token finds a descendant of the previous match:
 
 ```typescript
-await user.see('sidebar nav-menu settings-link')
+testUser.see('sidebar nav-menu settings-link')
 // Finds: [sidebar] > ... > [nav-menu] > ... > [settings-link]
 ```
 
@@ -40,7 +40,7 @@ await user.see('sidebar nav-menu settings-link')
 If an element has a `data-key` attribute, the next token can match against it **without descending** into a child:
 
 ```typescript
-await user.click('playlist-row 12345 like-button')
+testUser.click('playlist-row 12345 like-button')
 // 1. Find element matching 'playlist-row'
 // 2. Check if it has data-key="12345" — if yes, stay on same element
 // 3. If no, look for child matching '12345'
@@ -72,9 +72,9 @@ import { defineConfig } from '@scenecheck/scenes'
 
 export default defineConfig({
   aliases: {
-    modal: '[role=dialog]',
+    modal: 'div[role=dialog]',
     nav: '[role=navigation]',
-    container: '[data-container]',
+    container: '.@container, [data-container]',
     'btn-p': 'button[type=submit], button.primary',
   },
 })
@@ -83,9 +83,9 @@ export default defineConfig({
 Use them in any selector:
 
 ```typescript
-await user.see('~modal')               // matches [role=dialog]
-await user.click('~modal ~btn-p')      // matches submit button inside dialog
-await user.up('~container')            // navigate up to alias-matched ancestor
+testUser.see('~modal')               // matches [role=dialog]
+testUser.click('~modal ~btn-p')      // matches submit button inside dialog
+testUser.up('~container')            // navigate up to alias-matched ancestor
 ```
 
 ## Debugging with explainSelector
