@@ -70,7 +70,6 @@ function BlogPostForm({ id }) {
   // spot 'serverCheck', 'failed', and 'should' in the block
   const post = usePost(id)
   const form = usePostForm(post)
-  should()
   const handleSubmit = (data) => form.submit(data, {
     onSettled: () => serverCheck(
       'Server item should match local',
@@ -95,8 +94,6 @@ function BlogPostForm({ id }) {
 }
 `}</CodeBlock>
 
-<h2>Scenes and Inline Assertions</h2>
-
 		<h2>Separating Scene Orchestration from Integrity Checks</h2>
 
 		<p>Imagine using the above pattern to move all your integrity-checking logic into your application code.
@@ -107,14 +104,12 @@ function BlogPostForm({ id }) {
 		<p>Without all the checks mixed, you could imagine simplifying scenes down to the point that anyone could write them!
 			And that's exactly what we've tried to do:
 		</p>
-		<p>
-			<ul>
-				<li>First we simplified the page <code>locator</code> and <code>getByTestId</code> type logic, <em>big-time</em>.</li>
-				<li>Then, in order to make it easier to write multi-actor scenes, we added a sticky message bus to queue up the
-					different actions and observations synchronously and run scenes naturally without ever having to type <code>await Promise.all()</code>.</li>
-				<li>Finally, we took this new, simplified, synchronous, declarative scene instruction set and simply converted it to human-readable markdown.</li>
-			</ul>
-      </p>
+		<ul>
+			<li>First we simplified the page <code>locator</code> and <code>getByTestId</code> type logic, <em>big-time</em>.</li>
+			<li>Then, in order to make it easier to write multi-actor scenes, we added a sticky message bus to queue up the
+				different actions and observations synchronously and run scenes naturally without ever having to type <code>await Promise.all()</code>.</li>
+			<li>Finally, we took this new, simplified, synchronous, declarative scene instruction set and simply converted it to human-readable markdown.</li>
+		</ul>
 		<p>The result is a scene format so simple you can read and write it like natural language, with very little understanding
 			of application implementation details or the mechanics of promises or async Javascript.
 			</p>
