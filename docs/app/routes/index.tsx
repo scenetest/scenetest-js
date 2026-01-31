@@ -24,8 +24,9 @@ function Home() {
       <p>
         It's 2026; we build apps differently now. Component state, Query cache, Zustand store,
         Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>{' '}
-        possibilities are endless, and they're helping us build buttery smooth, responsive UIs.
-		  <strong>Test tooling should keep up, don't you think?</strong></p>
+        possibilities are endless, and they're helping us build buttery smooth, responsive
+		  UIs. <strong>Test tooling should keep up, don't you think?</strong>
+		</p>
 
       <p>
         Most frameworks rely on a headless browser clicking around our app, inputting
@@ -33,6 +34,7 @@ function Home() {
         being <em>very thorough</em> we might check the database directly to be sure something updated
         (for realsies).
       </p>
+
       <p>
         The DOM and the Database are good book-ends to compare, but if the main data store in your app is
         a local DB or cache, it feels like you're not really testing your app until you're able to make
@@ -64,26 +66,36 @@ function Home() {
       </p>
 
       <CodeBlock>{`// in your UI component
-const post = usePost(id)
-const form = usePostForm(post)
-// useCheck wraps test code that gets stripped in production
-useCheck(() => {
-  // skip when submitting, run when only finished
-  if (form.isSubmitting) return
+function BlogPostForm({ id }) {
+  // spot 'serverCheck', 'failed', and 'should' in the block
+  const post = usePost(id)
+  const form = usePostForm(post)
+  should()
+  const handleSubmit = (data) => form.submit(data, {
+    onSettled: () => serverCheck(
+      'Server item should match local',
+      async (server, { id, localPost }) => {
+        const dbPost = await server.getPosts(id)
 
-  assert(
-    'Server item should match local',
-    async (server, data) => {
-      const post = await server.getPosts(app.id)
-      if (!post) failed('title is empty')
-      should('titles match', post.title === app.title)
-    },
-    // passing data from react-land to the server fn
-    () => postsCollection.get(id)
-  )
-}, [form.isSubmitting, post.title])`}</CodeBlock>
+		  if (!dbPost) failed('title is empty')
 
-      <h2>Scenes and Inline Assertions</h2>
+		  should(
+          'Title & timestamp should match',
+          match([
+		      [localPost.title, dbPost.title],
+			   [localPost.updated_at, dbPost.updated_at],
+		    ]))
+      },
+      // passing data from react-land to the server fn
+      { id, localPost: postsCollection.get(id) }
+    )
+  })
+
+  return <.../>
+}
+`}</CodeBlock>
+
+<h2>Scenes and Inline Assertions</h2>
 
 		<h2>Separating Scene Orchestration from Integrity Checks</h2>
 
@@ -174,10 +186,11 @@ main-user-1: seeToast friend-request-accepted`}</CodeBlock>
         this data should be in this state." Engineers write them to encode their understanding of how and
 		  why this works, and to alert
         future generations if they are ever running afoul of their ancient wisdom.
-        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useCheck</code>.
+        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>serverCheck</code> inside
+		  <code>useCheck</code>.
       </p>
 
-      <CodeBlock>{`import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
+      <CodeBlock>{`import { should, failed, serverCheck, useCheck } from '@scenecheck/checks-react'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -189,7 +202,7 @@ export function ProfileForm({ userId }) {
   useCheck(() => {
     if (profile) return // only check when no profile
 
-    assert(
+    serverCheck(
       'no profile returned means no profile exists',
       async (server) => {
         if (await server.getProfile(userId)) failed('profile DOES exist!')
@@ -265,13 +278,13 @@ expect({
         I love the multi-context assertion capabilities here, but this approach to getting data
         from the client feels like we are breaking into its home in the middle of the night and
         stuffing it in a bag. Let's see if it gets a little nicer when
-        we write it using the <em>assert</em> function in the <code>onSettled</code> callback
+        we write it using the <em>serverCheck</em> function in the <code>onSettled</code> callback
         after the mutation we're trying to test.
       </p>
 
       <CodeBlock>{`// ✅ server assertion triggered after a mutation
 onSettled: (data) => {
-  assert(
+  serverCheck(
     'New deck should initialise the same',
     async (server, clientData) => {
       const newDeck = await server.getDeck(clientData.data.userId, clientData.data.lang)

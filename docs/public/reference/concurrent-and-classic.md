@@ -88,7 +88,7 @@ test('user updates their profile', async ({ actor }) => {
 | **Where scope lives** | On the actor (persists through the entire queue) | On the chain (resets at each `await`) |
 | **Multi-actor concurrency** | Automatic — all actors drain concurrently | Explicit `Promise.all()` |
 | **`if(selector, cb)`** | Persistent one-shot monitor, polls for **all subsequent actions** | Watcher that polls during actions, **cleared after each `await`** |
-| **`waitFor(message)`** | Available — blocks actor's queue until bus message arrives | Not available (use `when()`) |
+| **`waitFor(message)`** | Available — blocks actor's queue until bus message arrives | Available — blocks until bus message arrives |
 
 ### Critical: DO NOT mix the two models
 
@@ -150,7 +150,7 @@ test('two users can chat', async ({ actor }) => {
 
 ## Multi-Actor Coordination
 
-### Concurrent uses `emit()` and `waitFor()`
+### Both modes use `emit()` and `waitFor()`
 
 ```typescript
 scene('sender and receiver', ({ actor }) => {
@@ -171,24 +171,25 @@ scene('sender and receiver', ({ actor }) => {
 })
 ```
 
-### Classic Driver uses `when()` and `emit()`
+### Classic Driver uses `emit()` and `waitFor()`
 
 ```typescript
-import { test, when } from '@scenecheck/scenes'
+import { test } from '@scenecheck/scenes'
 
 test('sender and receiver', async ({ actor }) => {
   const sender = await actor('sender')
   const receiver = await actor('receiver')
 
-  when('sender-ready', async () => {
-    await receiver.openTo('/inbox')
-    await receiver.seeText('New message')
-  })
-
   await sender.openTo('/login')
   // ... login flow ...
   await sender.emit('sender-ready')
   await sender.see('compose').typeInto('body', 'Hello!').click('send')
+
+  // waitFor is available in classic mode too — it returns a promise
+  // that resolves when the named message arrives on the bus.
+  await receiver.waitFor('sender-ready')
+  await receiver.openTo('/inbox')
+  await receiver.seeText('New message')
 })
 ```
 
@@ -248,7 +249,7 @@ user
   .click('submit')
   .see('dashboard')
 
-// waitFor is only available in the concurrent model
+// waitFor is available in both models
 user.waitFor('data-ready')
 user.see('loaded-content')
 ```

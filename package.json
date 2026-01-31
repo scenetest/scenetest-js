@@ -1,7 +1,7 @@
 {
   "name": "scenecheck-monorepo",
-  "version": "0.0.3",
-  "description": "A local-first testing framework for the Vite ecosystem",
+  "version": "0.1.0",
+  "description": "Local-first testing framework for Vite, with scenes, actors and checks",
   "license": "MIT",
   "private": true,
   "type": "module",

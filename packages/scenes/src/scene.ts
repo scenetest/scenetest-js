@@ -1,6 +1,5 @@
 import type { SceneFn, RegisteredScene, SceneContext, SceneReport } from './types.js'
 import { TeamSession } from './team-manager.js'
-import { when as whenImpl } from './message-bus.js'
 
 /**
  * Global registry of scenes.
@@ -43,12 +42,12 @@ export function scene(name: string, fn: SceneFn): void {
 }
 
 /**
- * Current session for when() calls
+ * Current session for scene execution
  */
 let currentSession: TeamSession | null = null
 
 /**
- * Set the current session for when() calls
+ * Set the current session for scene execution
  */
 export function setCurrentSession(session: TeamSession | null): void {
   currentSession = session
@@ -60,28 +59,6 @@ export function setCurrentSession(session: TeamSession | null): void {
  */
 export function getCurrentSession(): TeamSession | null {
   return currentSession
-}
-
-/**
- * Coordinate between actors using the message bus.
- *
- * @example
- * ```ts
- * // When message is received, execute action
- * when('user2 accepts', () => user1.see('notification'))
- *
- * // When action completes, emit message
- * when(() => user2.see('toast'), 'user2 accepts')
- * ```
- */
-export function when(
-  trigger: string | (() => Promise<void>),
-  action: string | (() => Promise<void>)
-): void {
-  if (!currentSession) {
-    throw new Error('when() can only be called inside a scene')
-  }
-  whenImpl(currentSession.getMessageBus(), trigger, action)
 }
 
 /**
@@ -102,7 +79,7 @@ export async function runScene(
     teamIndex: session.teamIndex,
   }
 
-  // Set current session for when() calls
+  // Set current session for flow() access
   setCurrentSession(session)
 
   let status: SceneReport['status'] = 'completed'

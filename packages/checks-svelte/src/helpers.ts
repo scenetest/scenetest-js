@@ -7,7 +7,7 @@
  * @example
  * ```svelte
  * <script>
- * import { checkEffect, assert, should } from '@scenecheck/checks-svelte'
+ * import { checkEffect, serverCheck, should } from '@scenecheck/checks-svelte'
  *
  * let profile = $state(null)
  *
@@ -15,7 +15,7 @@
  *   checkEffect(() => {
  *     if (!profile) return
  *
- *     assert(
+ *     serverCheck(
  *       'profile synced to db',
  *       async (server, data) => {
  *         const dbUser = await server.getUser(data.id)
@@ -28,7 +28,7 @@
  * </script>
  * ```
  *
- * For simple cases, you can use assert() directly in $effect:
+ * For simple cases, you can use serverCheck() directly in $effect:
  * ```svelte
  * <script>
  * import { should } from '@scenecheck/checks-svelte'

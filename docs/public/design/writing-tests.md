@@ -21,7 +21,7 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 | "User can log in and update their profile" | Scene spec file (`scenes/*.spec.ts` or `scenes/*.spec.md`) | QA, PM, or developer | `user.openTo('/login')` ... `user.click('submit')` |
 | "Profile data should be loaded before render" | Inline assertion in component | Component author | `should('profile loaded', profile !== undefined)` |
 | "Form should not submit with empty name" | Inline assertion in submit handler | Feature developer | `failed('empty name submitted', { name })` |
-| "After mutation, cache matches server" | Multi-context assertion (future) | Feature developer | `assert({ title: '...', serverFn, withData })` |
+| "After mutation, cache matches server" | Multi-context assertion (future) | Feature developer | `serverCheck({ title: '...', serverFn, withData })` |
 
 ---
 
@@ -91,7 +91,7 @@ function ProfileForm({ user }) {
 }
 ```
 
-For the full guide on `should()`, `failed()`, multi-context `assert()`, framework imports, and best practices, see [Writing Inline Assertions](/guides/writing-inline-assertions).
+For the full guide on `should()`, `failed()`, multi-context `serverCheck()`, framework imports, and best practices, see [Writing Inline Assertions](/guides/writing-inline-assertions).
 
 ---
 

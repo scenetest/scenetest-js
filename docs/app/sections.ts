@@ -15,7 +15,7 @@ export const guides: SectionItem[] = [
     slug: 'writing-inline-assertions',
     title: 'Inline Assertions',
     description:
-      'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
+      'Use serverCheck(), should() and failed() in application code to check state across the server-client boundary.',
   },
 
   {

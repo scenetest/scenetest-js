@@ -118,7 +118,7 @@ pnpm scenecheck
 |---------|-------------|
 | `@scenecheck/vite` | Vite plugin for production stripping and dev panel |
 | `@scenecheck/scenes` | CLI runner for scene specs |
-| `@scenecheck/checks` | Core `should()`, `failed()`, `assert()` functions |
+| `@scenecheck/checks` | Core `should()`, `failed()`, `serverCheck()` functions |
 | `@scenecheck/checks-react` | React bindings with `useCheck` hook |
 | `@scenecheck/checks-vue` | Vue bindings with `watchCheck` composable |
 | `@scenecheck/checks-solid` | Solid bindings with `createCheck` primitive |

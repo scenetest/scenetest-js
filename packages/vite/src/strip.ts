@@ -133,7 +133,7 @@ export function stripScenecheck(code: string, options: StripOptions = {}): Strip
       const strippableFunctions = [
         'should',
         'failed',
-        'assert',
+        'serverCheck',
         'match',
         'useCheck',          // React
         'watchCheck',        // Vue
@@ -141,7 +141,7 @@ export function stripScenecheck(code: string, options: StripOptions = {}): Strip
         'checkEffect',       // Svelte
       ]
 
-      // Direct call: should(...), failed(...), assert(...), useTestEffect(...), etc.
+      // Direct call: should(...), failed(...), serverCheck(...), useTestEffect(...), etc.
       if (t.isIdentifier(callee)) {
         if (scenecheckImports.has(callee.name)) {
           const imported = scenecheckImports.get(callee.name)

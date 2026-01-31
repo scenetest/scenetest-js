@@ -2,7 +2,7 @@
 export { useCheck } from './hooks.js'
 
 // Re-export everything from core scenecheck for convenience
-export { should, failed, assert, match, defineConfig } from '@scenecheck/checks'
+export { should, failed, serverCheck, match, defineConfig } from '@scenecheck/checks'
 export type {
   AssertionResult,
   ScenecheckReporter,

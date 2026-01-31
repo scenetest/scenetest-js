@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-Scenecheck is a **working implementation** with a complete CLI runner, inline assertion system, actor-based scene DSL, Vite plugin, dev panel (observer), and Playwright integration. The `assert()` multi-context feature (server-side assertions) is stubbed but not yet wired end-to-end; everything else is functional.
+Scenecheck is a **working implementation** with a complete CLI runner, inline assertion system, actor-based scene DSL, Vite plugin, dev panel (observer), and Playwright integration. The `serverCheck()` multi-context feature (server-side assertions) is stubbed but not yet wired end-to-end; everything else is functional.
 
 Design docs live in `docs/public/design/`. The README.md has the public-facing overview.
 
@@ -23,7 +23,7 @@ pnpm -r test          # Run all unit tests across packages
 
 ```
 packages/
-├── checks/                 # Core library — should(), failed(), assert(), match(), observer, playwright fixtures
+├── checks/                 # Core library — should(), failed(), serverCheck(), match(), observer, playwright fixtures
 ├── checks-react/           # React bindings — useCheck hook (re-exports checks)
 ├── checks-vue/             # Vue bindings — watchCheck composable (re-exports checks)
 ├── checks-solid/           # Solid bindings — createCheck primitive (re-exports checks)
@@ -60,7 +60,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 ## Key Source Files
 
 ### Checks (`packages/checks/src/`)
-- `assertions.ts` — `should()`, `failed()`, `assert()` (stub), `match()`
+- `assertions.ts` — `should()`, `failed()`, `serverCheck()` (stub), `match()`
 - `runtime.ts` — `__scenecheck_rpc()` client for multi-context assertions
 - `types.ts` — `AssertionResult`, `ServerContext`, RPC types
 - `index.ts` — `initObserver()`, assertion handler
@@ -74,7 +74,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
 
 ### Scenes (`packages/scenes/src/`)
-- `scene.ts` — `scene()` and `test()` registration, `when()` coordination, `runScene()`
+- `scene.ts` — `scene()` and `test()` registration, `runScene()`
 - `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (classic driver model)
 - `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (declarative model)
 - `selectors.ts` — `resolveSelector()`, `explainSelector()`, alias registry
@@ -89,7 +89,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 ### Vite Plugin (`packages/vite/src/`)
 - `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)
 - `strip.ts` — AST-based removal of scenecheck imports and calls
-- `transform.ts` — Extract `assert()` serverFn bodies for RPC
+- `transform.ts` — Extract `serverCheck()` serverFn bodies for RPC
 - `middleware.ts` — `/__scenecheck/run` endpoint, AsyncLocalStorage for result collection
 - `virtual-module.ts` — Virtual module system for extracted assertions
 - `config.ts` — Plugin config loading
@@ -140,7 +140,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 
 | Feature | Status | Design doc |
 |---------|--------|-----------|
-| `assert()` multi-context (server-side assertions) | Stubbed, infrastructure scaffolded, not wired E2E | `server-actions.md` |
+| `serverCheck()` multi-context (server-side assertions) | Stubbed, infrastructure scaffolded, not wired E2E | `server-actions.md` |
 | Network layer (`network.fail()`, `network.mock()`) | Design only | `cli-v2.md` section 7 |
 | Snapshots (`snapshot()`, `expectSnapshot()`) | Design only | `cli-v2.md` section 8 |
 | Dashboard & JSONL reports | Design only | `dashboard.md` |

@@ -3,12 +3,12 @@ import { createEffect, on, type Accessor } from 'solid-js'
 /**
  * A createEffect wrapper for test code that gets stripped in production.
  *
- * Use this to wrap effects containing assertions (should, failed, assert).
+ * Use this to wrap effects containing assertions (should, failed, serverCheck).
  * The entire effect is removed during production builds.
  *
  * @example
  * ```tsx
- * import { createCheck, assert, should } from '@scenecheck/checks-solid'
+ * import { createCheck, serverCheck, should } from '@scenecheck/checks-solid'
  * import { createSignal } from 'solid-js'
  *
  * function Profile() {
@@ -18,7 +18,7 @@ import { createEffect, on, type Accessor } from 'solid-js'
  *     const p = profile()
  *     if (!p) return
  *
- *     assert(
+ *     serverCheck(
  *       'profile synced to db',
  *       async (server, data) => {
  *         const dbUser = await server.getUser(data.id)

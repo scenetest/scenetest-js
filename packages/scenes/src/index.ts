@@ -1,5 +1,5 @@
 // Public API for scene specs
-export { scene, when } from './scene.js'
+export { scene } from './scene.js'
 export { defineConfig } from './config.js'
 
 // Reactive flow API

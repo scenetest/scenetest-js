@@ -158,7 +158,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
  *
  * @example
  * ```tsx
- * assert(
+ * serverCheck(
  *   'User profile matches database',
  *   async (server, data) => {
  *     const dbUser = await server.db.getUser(data.userId)
@@ -168,7 +168,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
  * )
  * ```
  */
-export function assert<TData>(
+export function serverCheck<TData>(
   _title: string,
   _serverFn: AssertServerFn<TData>,
   _withData?: AssertDataFn<TData>

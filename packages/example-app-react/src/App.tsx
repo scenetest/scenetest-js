@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
+import { should, failed, serverCheck, useCheck } from '@scenecheck/checks-react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 
@@ -36,7 +36,7 @@ function ProfileForm() {
   useCheck(() => {
     if (!profile) return
 
-    assert(
+    serverCheck(
       'Email validation on server',
       (server, data) => {
         const isValid = server.validateEmail(data.email)

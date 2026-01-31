@@ -228,7 +228,7 @@ Now that we've seen how Scenes work, here's our profile form, with Inline Assert
 
 ```javascript
 // ~components/profile-form.ts
-import { assert, pass, fail } from '@scenecheck/checks'
+import { serverCheck, pass, fail } from '@scenecheck/checks'
 import { useForm } from '@your-fave/form'
 import { useStore } from 'zustand'
 import { toast } from 'your-fave-toast'
@@ -246,8 +246,8 @@ export function UpdateProfileForm() {
 			store.updateProfile(newProfile)
 			toast.show('Updated successfully!')
 
-			// Multi-context assertion in a callback - use assert() directly
-			assert({
+			// Multi-context assertion in a callback - use serverCheck() directly
+			serverCheck({
 				title: 'Updating profile',
 				withData: () => ({
 					userId: profile.id,

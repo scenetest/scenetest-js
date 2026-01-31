@@ -32,19 +32,19 @@ Import from your framework's package:
 
 ```typescript
 // React
-import { should, failed, assert, useCheck } from '@scenecheck/checks-react'
+import { should, failed, serverCheck, useCheck } from '@scenecheck/checks-react'
 
 // Vue
-import { should, failed, assert, watchCheck } from '@scenecheck/checks-vue'
+import { should, failed, serverCheck, watchCheck } from '@scenecheck/checks-vue'
 
 // Solid
-import { should, failed, assert, createCheck } from '@scenecheck/checks-solid'
+import { should, failed, serverCheck, createCheck } from '@scenecheck/checks-solid'
 
 // Svelte (use inside $effect)
-import { should, failed, assert, checkEffect } from '@scenecheck/checks-svelte'
+import { should, failed, serverCheck, checkEffect } from '@scenecheck/checks-svelte'
 
 // Framework-agnostic (just assertions)
-import { should, failed, assert } from '@scenecheck/checks'
+import { should, failed, serverCheck } from '@scenecheck/checks'
 ```
 
 ## Using `should()`
@@ -101,12 +101,12 @@ function ErrorBoundary({ error }) {
 
 > **Tip**: The `context` parameter is optional but highly valuable. Include relevant state that helps debug failures.
 
-## Multi-Context Assertions with `assert()`
+## Multi-Context Assertions with `serverCheck()`
 
-For comparing browser data with server data, use `assert()` with your framework's test effect hook:
+For comparing browser data with server data, use `serverCheck()` with your framework's test effect hook:
 
 ```tsx
-import { should, assert, useCheck } from '@scenecheck/checks-react'
+import { should, serverCheck, useCheck } from '@scenecheck/checks-react'
 
 function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
@@ -115,7 +115,7 @@ function ProfileForm({ userId }) {
   useCheck(() => {
     if (isLoading || !profile) return
 
-    assert(
+    serverCheck(
       'Profile matches database',
       async (server, data) => {
         const dbProfile = await server.getUser(data.userId)
@@ -129,7 +129,7 @@ function ProfileForm({ userId }) {
 }
 ```
 
-The `assert()` function:
+The `serverCheck()` function:
 1. Captures data from the browser context
 2. Runs a callback in the test runner context with access to server functions
 3. Allows you to use `should()` inside to make assertions
@@ -222,7 +222,7 @@ function handleResponse(response) {
 
 - `should(description, condition, context?)` - assert something is true
 - `failed(description, context?)` - mark code paths that should never run
-- `assert()` with test effects - compare browser and server data
+- `serverCheck()` with test effects - compare browser and server data
 - Assertions are grouped by timing (50ms threshold)
 - Include context to make debugging easier
 - Use your framework's check hook for reactive assertions

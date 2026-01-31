@@ -91,7 +91,7 @@ export interface ScenecheckConfig {
 
   /**
    * Server functions for multi-context assertions.
-   * These become the `server` parameter inside assert() serverFn callbacks.
+   * These become the `server` parameter inside serverCheck() serverFn callbacks.
    *
    * @example
    * ```ts

@@ -487,6 +487,9 @@ export interface SequentialActorHandle extends ActorConfig {
    * ```
    */
   warnIf(selector: Selector, message: string): void
+
+  /** Block until message arrives on the message bus */
+  waitFor(message: string): ActionChain
 }
 
 /**
@@ -534,6 +537,9 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Emit message to the message bus */
   emit(message: string): ActionChain
+
+  /** Block until message arrives on the message bus */
+  waitFor(message: string): ActionChain
 
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
@@ -616,8 +622,8 @@ export interface DslTarget {
   up(selector?: Selector): unknown
   prev(): unknown
   scrollToBottom(): unknown
-  /** Block until message arrives on the bus (reactive/flow model only) */
-  waitFor?(message: string): unknown
+  /** Block until message arrives on the bus */
+  waitFor(message: string): unknown
 }
 
 // ---------------------------------------------------------------------------

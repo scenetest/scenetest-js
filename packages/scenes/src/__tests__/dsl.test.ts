@@ -74,6 +74,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     select(s: string, v: string) { calls.push(`select:${s}=${v}`); return this },
     wait(ms: number) { calls.push(`wait:${ms}`); return this },
     emit(m: string) { calls.push(`emit:${m}`); return this },
+    waitFor(m: string) { calls.push(`waitFor:${m}`); return this },
     warnIf(s: string, m: string) { calls.push(`warnIf:${s}=${m}`) },
     up(s?: string) { calls.push(`up:${s ?? '(root)'}`); return this },
     prev() { calls.push('prev'); return this },
@@ -249,18 +250,10 @@ describe('applyDslAction', () => {
     expect(target.calls).toEqual(['up:~container'])
   })
 
-  it('dispatches waitFor on targets that support it', () => {
+  it('dispatches waitFor', () => {
     const target = createSpyTarget()
-    ;(target as any).waitFor = (m: string) => { target.calls.push(`waitFor:${m}`) }
     applyDslAction(target, { action: 'waitFor', value: 'setup-done' })
     expect(target.calls).toEqual(['waitFor:setup-done'])
-  })
-
-  it('throws waitFor on targets without waitFor method', () => {
-    const target = createSpyTarget()
-    expect(() => applyDslAction(target, { action: 'waitFor', value: 'x' })).toThrow(
-      'waitFor is only available in flow()'
-    )
   })
 
   it('throws on unknown action', () => {
