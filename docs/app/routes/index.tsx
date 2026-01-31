@@ -64,8 +64,7 @@ function Home() {
         about nearly every layer of an application in one place.
       </p>
 
-      <CodeBlock>{`// in your UI component
-function BlogPostForm({ id }) {
+      <CodeBlock>{`function BlogPostForm({ id }) {
   // spot 'serverCheck', 'failed', and 'should' in the block
   const post = usePost(id)
   const form = usePostForm(post)
@@ -74,15 +73,14 @@ function BlogPostForm({ id }) {
       'Server item should match local',
       async (server, { id, localPost }) => {
         const dbPost = await server.getPosts(id)
+        if (!dbPost) failed('title is empty')
 
-		  if (!dbPost) failed('title is empty')
-
-		  should(
+        should(
           'Title & timestamp should match',
           match([
-		      [localPost.title, dbPost.title],
-			   [localPost.updated_at, dbPost.updated_at],
-		    ]))
+            [localPost.title, dbPost.title],
+            [localPost.updated_at, dbPost.updated_at],
+          ]))
       },
       // passing data from react-land to the server fn
       { id, localPost: postsCollection.get(id) }
@@ -109,7 +107,6 @@ function BlogPostForm({ id }) {
 				different actions and observations synchronously and run scenes naturally without ever having to type <code>await Promise.all()</code>.</li>
 			<li>Finally, we took this new, simplified, synchronous, declarative scene instruction set and simply converted it to human-readable markdown.</li>
 		</ul>
-
 		<p>The result is a scene format so simple you can read and write it like natural language, with very little understanding
 			of application implementation details or the mechanics of promises or async Javascript.
 			</p>

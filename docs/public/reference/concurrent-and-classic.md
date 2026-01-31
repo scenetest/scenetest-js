@@ -1,14 +1,6 @@
 # Concurrent and Classic Mode
 
-Scenecheck has two TypeScript execution models and a plain-text format. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
-
-| Style | File | Function | Execution model | Best for |
-|-------|------|----------|----------------|----------|
-| **Text DSL** | `.spec.md` | Compiles to `scene()` | Concurrent | Simplest way to write a spec with as many actors as you want |
-| **Concurrent** | `.spec.ts` | `scene()` | Reactive concurrent draining | Full TypeScript control with automatic concurrency |
-| **Classic Driver** | `.spec.ts` | `test()` | Sequential await-driven | Familiar Cypress/Playwright model with explicit control |
-
-> **STATUS:** Both models are implemented. Before 1.0, one will be removed. See the [decision document](/design/scene-vs-flow) for the trade-off analysis. Text DSL `.spec.md` files compile to `scene()`.
+Scenecheck has two TypeScript execution models and three ways to author specs. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
 
 ---
 
@@ -40,7 +32,7 @@ scene('user updates their profile', ({ actor }) => {
 
 **How it works:** The entire function body is **synchronous declaration**. `actor()` returns a handle immediately (config is resolved, browser launches later). DSL calls push to a persistent queue on the actor and return the actor itself. Nothing executes during the function body. After it returns, browsers launch in parallel, then all actors drain their queues concurrently. Each actor advances through its own queue as fast as the DOM allows.
 
-**When to use:** Multi-actor scenes (concurrency is automatic), or when you want to write specs without thinking about timing. `see`/`seeText` naturally poll for DOM state, so cross-actor sync happens through the application, not through `await` ordering.
+**When to use:** Any time. Particularly for multi-actor scenes (concurrency is automatic), or when you want to write specs without thinking about timing. `see`/`seeText` naturally poll for DOM state, so cross-actor sync happens through the application, not through `await` ordering.
 
 ---
 

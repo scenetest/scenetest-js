@@ -4,16 +4,61 @@
 
 Scene specs describe **user journeys** — the flows a person takes through your application. They live in separate spec files (`.spec.ts` or `.spec.md`) and orchestrate browser interactions without touching component internals.
 
-## Three Ways to Write Scenes
+## The Markdown DSL
 
-- **Markdown DSL** — the simplest way to write a concurrent spec with as many actors as you want. Human-readable `.spec.md` files that compile to concurrent actor scripts.
-- **Concurrent Flow (TS)** — the native model: full TypeScript control over your scene spec. No async/await, no race conditions, no `Promise.all`. Actions queue up per actor and drain concurrently.
+The primary and most-advised way to write scenes is with the Markdown DSL, which is basically Javascript without the punctuation. The following Markdown and Typescript produce the same scene output:
+
+```markdown [markdown]
+// scenes/user-onboarding.spec.md
+# user completes onboarding
+
+new-user:
+- openTo /
+- see welcome-box
+- click continue-button
+
+best-friend:
+- openTo /friends/search
+- typeInto search-input [new-user.username]
+- see results-box [new-user.id]
+
+
+
+```
+```ts [javascript]
+// scenes/user-onboarding.spec.ts
+import { scene } from '@scenecheck/scenes'
+
+scene('user completes onboarding', ({ actor }) => {
+  const user = actor('new-user')
+  const friend = actor('best-friend')
+
+  user.openTo('/')
+      .see('welcome-box')
+      .click('continue-button')
+  friend.openTo('/friends/search')
+      .typeInto('search-input', user.username)
+      .see(`results-box ${user.id}`)
+})
+```
+
+We recommend you start off just writing in markdown specs, and see how far you get with it. We think you'll love it (and it will look _so_ nice in your GitHub repo). But you always have the typescript approach available to you, if you need it.
+
+## A Secret Third Thing (Classic Mode)
+
+There is a secret third way to author specs, using the same classic `await actor.action()` driver model that you
+might be used to from Playwright/Cypress world. In single-actor scenes, there is functionally no difference between
+classic mode and the native "concurrent" mode, but if for some reason you
+really want to write async/await style specs, see the docs on [Concurrent Flow & Classic Driver](/faq/concurrent-vs-classic).
+
+- **Markdown DSL** — human-readable `.spec.md` files that compile to concurrent actor scripts.
+- **Concurrent Flow (TS)** — full TypeScript control over your scene spec. Actions queue up per actor and drain concurrently. No promises, no race conditions flaking your tests.
 - **Classic Driver (TS)** — the async/await model you know from Cypress/Playwright, with access to the Scenecheck message bus and our document selectors.
 
 Click the tabs to compare:
 
 
-```markdown [concurrent.spec.md]
+```markdown [concurrent md]
 # user completes onboarding
 
 new-user:
@@ -30,7 +75,7 @@ best-friend:
 
 ```
 
-```ts [concurrent.spec.ts]
+```ts [concurrent ts]
 import { scene } from '@scenecheck/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
@@ -46,7 +91,7 @@ scene('user completes onboarding', ({ actor }) => {
 })
 ```
 
-```ts [classic.spec.ts]
+```ts [classic driver ts]
 import { test } from '@scenecheck/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
@@ -209,11 +254,9 @@ To make these tests pass, please add the following:
 
 1. Add `data-testid="welcome-box"` to the main welcome container
 2. Add `data-testid="continue-button"` to the Continue button
-3. Add `data-testid="onboarding-step"` with a `data-step` attribute to each step
+3. Add `data-name="onboarding-step"` with a `data-key` attribute to each step
 
-Once these are added, the scene will pass automatically.
-
----
+Once these are added, the scene should start to pass.
 
 If a test ID can't be added easily, that might indicate a UX problem worth solving!
 
@@ -242,7 +285,7 @@ For configuration, see the [guides overview](/guides).
 - Scene specs describe **user journeys** — write them as concurrent TypeScript, text DSL markdown, or classic driver-style TypeScript
 - Write specs in **plain language** from the user's perspective
 - Choose your format: concurrent `scene()` for simplicity, `.spec.md` for maximum readability, classic `test()` for async/await compatibility
-- Use stable `data-testid` attributes as the contract with engineers
+- Use stable `data-testid` attributes, or `data-name` with `data-key`, as the contract with engineers
 - Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
 - Use `seeInView()` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
