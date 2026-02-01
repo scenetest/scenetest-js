@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@scenetest/solid": "workspace:*",
+    "@scenetest/checks-solid": "workspace:*",
     "solid-js": "^1.9.11"
   },
   "devDependencies": {

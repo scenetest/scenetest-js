@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@scenetest/core": "workspace:*"
+    "@scenetest/checks": "workspace:*"
   },
   "peerDependencies": {
     "@playwright/test": "^1.40.0"

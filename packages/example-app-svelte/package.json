@@ -9,7 +9,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "@scenetest/svelte": "workspace:*"
+    "@scenetest/checks-svelte": "workspace:*"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
