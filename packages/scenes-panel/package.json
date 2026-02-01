@@ -1,5 +1,5 @@
 {
-  "name": "@scenetest/recorder",
+  "name": "@scenetest/scenes-panel",
   "version": "0.0.1",
   "description": "Scene recorder for scenetest - records user interactions as DSL",
   "type": "module",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/scenetest/scenetest-js",
-    "directory": "packages/recorder"
+    "directory": "packages/scenes-panel"
   },
   "keywords": ["testing", "e2e", "recorder", "dsl", "dev-tools"],
   "main": "./dist/index.js",

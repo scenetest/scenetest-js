@@ -1,5 +1,5 @@
 {
-  "name": "@scenetest/vue",
+  "name": "@scenetest/checks-vue",
   "version": "0.0.3",
   "description": "Vue bindings for scenetest inline assertions",
   "type": "module",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/scenetest/scenetest-js",
-    "directory": "packages/scenetest-vue"
+    "directory": "packages/checks-vue"
   },
   "keywords": ["testing", "e2e", "playwright", "vue", "assertions", "inline-assertions"],
   "main": "./dist/index.js",
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@scenetest/core": "workspace:*"
+    "@scenetest/checks": "workspace:*"
   },
   "peerDependencies": {
     "vue": "^3.3.0"
