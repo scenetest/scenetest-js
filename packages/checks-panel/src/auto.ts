@@ -2,7 +2,7 @@
  * Auto-initializing observer import
  *
  * Usage:
- *   import '@scenetest/observer/auto'
+ *   import '@scenetest/checks-panel/auto'
  *
  * This will automatically initialize the observer panel when imported.
  */

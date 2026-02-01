@@ -64,7 +64,7 @@ function getGitHash(): string {
 function getVersion(): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('@scenetest/observer/package.json')
+    const pkg = require('@scenetest/checks-panel/package.json')
     return pkg.version || 'dev'
   } catch {
     return 'dev'

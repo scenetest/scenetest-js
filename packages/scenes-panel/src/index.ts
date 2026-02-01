@@ -5,11 +5,11 @@
  * Captures clicks, typing, navigation, and annotates with inline assertions.
  *
  * Usage:
- *   import { initRecorder } from '@scenetest/recorder'
+ *   import { initRecorder } from '@scenetest/scenes-panel'
  *   initRecorder()
  *
  * Or auto-init:
- *   import '@scenetest/recorder/auto'
+ *   import '@scenetest/scenes-panel/auto'
  */
 
 import type { RecorderState, DslLine, AssertionAnnotation } from './types.js'

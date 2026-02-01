@@ -1,7 +1,7 @@
-import { defineConfig } from '@scenetest/cli'
+import { defineConfig } from '@scenetest/scenes'
 
-// Type augmentation — provides type safety in assert() serverFn
-declare module '@scenetest/core' {
+// Type augmentation — provides type safety in serverCheck() serverFn
+declare module '@scenetest/checks' {
   interface ServerContext {
     validateEmail: (email: string) => boolean
     getProfile: (userId: string) => Promise<{

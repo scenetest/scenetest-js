@@ -1,8 +1,8 @@
 // Svelte-specific helpers
-export { testEffect } from './helpers.js'
+export { checkEffect } from './helpers.js'
 
 // Re-export everything from core scenetest for convenience
-export { should, failed, assert, match, defineConfig } from '@scenetest/core'
+export { should, failed, serverCheck, match, defineConfig } from '@scenetest/checks'
 export type {
   AssertionResult,
   ScenetestReporter,
@@ -12,4 +12,4 @@ export type {
   ServerContext,
   AssertionRpcPayload,
   AssertionRpcResponse,
-} from '@scenetest/core'
+} from '@scenetest/checks'

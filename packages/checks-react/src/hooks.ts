@@ -3,13 +3,13 @@ import { useEffect } from 'react'
 /**
  * A useEffect wrapper for test code that gets stripped in production.
  *
- * Use this to wrap effects containing assertions (should, failed, assert).
+ * Use this to wrap effects containing assertions (should, failed, serverCheck).
  * The entire effect is removed during production builds.
  *
  * @example
  * ```tsx
- * useTestEffect(() => {
- *   assert(
+ * useCheck(() => {
+ *   serverCheck(
  *     'profile synced to db',
  *     async (server, data) => {
  *       const dbUser = await server.getUser(data.id)
@@ -20,7 +20,7 @@ import { useEffect } from 'react'
  * }, [profile])
  * ```
  */
-export function useTestEffect(
+export function useCheck(
   effect: React.EffectCallback,
   deps?: React.DependencyList
 ): void {

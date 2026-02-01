@@ -3,7 +3,7 @@
 
 export {}
 
-declare module '@scenetest/react' {
+declare module '@scenetest/checks-react' {
   interface ServerContext {
     getServerTime: () => number
     validateEmail: (email: string) => boolean

@@ -7,15 +7,15 @@
  * @example
  * ```svelte
  * <script>
- * import { testEffect, assert, should } from '@scenetest/svelte'
+ * import { checkEffect, serverCheck, should } from '@scenetest/checks-svelte'
  *
  * let profile = $state(null)
  *
  * $effect(() => {
- *   testEffect(() => {
+ *   checkEffect(() => {
  *     if (!profile) return
  *
- *     assert(
+ *     serverCheck(
  *       'profile synced to db',
  *       async (server, data) => {
  *         const dbUser = await server.getUser(data.id)
@@ -28,10 +28,10 @@
  * </script>
  * ```
  *
- * For simple cases, you can use assert() directly in $effect:
+ * For simple cases, you can use serverCheck() directly in $effect:
  * ```svelte
  * <script>
- * import { should } from '@scenetest/svelte'
+ * import { should } from '@scenetest/checks-svelte'
  *
  * let count = $state(0)
  *
@@ -41,7 +41,7 @@
  * </script>
  * ```
  */
-export function testEffect(effect: () => void): void {
+export function checkEffect(effect: () => void): void {
   // In dev mode, this just runs the effect immediately
   // In production, vite-plugin-scenetest strips the entire call
   effect()

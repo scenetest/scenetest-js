@@ -3,21 +3,21 @@ import { watchEffect } from 'vue'
 /**
  * A watchEffect wrapper for test code that gets stripped in production.
  *
- * Use this to wrap effects containing assertions (should, failed, assert).
+ * Use this to wrap effects containing assertions (should, failed, serverCheck).
  * The entire effect is removed during production builds.
  *
  * @example
  * ```vue
  * <script setup>
- * import { watchTestEffect, assert, should } from '@scenetest/vue'
+ * import { watchCheck, serverCheck, should } from '@scenetest/checks-vue'
  * import { ref } from 'vue'
  *
  * const profile = ref(null)
  *
- * watchTestEffect(() => {
+ * watchCheck(() => {
  *   if (!profile.value) return
  *
- *   assert(
+ *   serverCheck(
  *     'profile synced to db',
  *     async (server, data) => {
  *       const dbUser = await server.getUser(data.id)
@@ -29,7 +29,7 @@ import { watchEffect } from 'vue'
  * </script>
  * ```
  */
-export function watchTestEffect(effect: () => void): void {
+export function watchCheck(effect: () => void): void {
   // In dev mode, this just runs watchEffect
   // In production, vite-plugin-scenetest strips the entire call
   watchEffect(effect)
