@@ -7,7 +7,7 @@ import { execSync } from 'child_process'
 
 const gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __GIT_COMMIT__: JSON.stringify(gitCommit),
   },
@@ -22,6 +22,6 @@ export default defineConfig({
       srcDirectory: 'app',
     }),
     viteReact(),
-    nitro(),
+    command === 'build' ? nitro() : null,
   ],
-})
+}))

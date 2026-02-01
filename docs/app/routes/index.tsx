@@ -16,9 +16,10 @@ function Home() {
       <div className="hero-logo">🎬</div>
       <h1>Scenetest</h1>
       <p className="subtitle">
-        A Local-First testing framework for Vite apps that handles testing by orchestrating lovely
-		  little scenes, and running integrity checks whenever your app runs in dev.
-		  Intuitive, predictable, precision optional. Test your app and your mental model, not your tests.
+        Scenetest is a scene-driven, concurrent-actor end-to-end testing framework for Javascript apps,
+		  with checks inlined in your component or effect, and simpler specs that
+		  anyone can read or write. Intuitive, predictable, precision optional. Test your app and your
+		  mental model, not your tests.
       </p>
 
       <p>
