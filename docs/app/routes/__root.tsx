@@ -28,7 +28,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   useEffect(() => {
     // Initialize observer panel for demo
-    import('@scenetest/observer').then(({ initObserver }) => {
+    import('@scenetest/checks-panel').then(({ initObserver }) => {
       initObserver()
     })
   }, [])

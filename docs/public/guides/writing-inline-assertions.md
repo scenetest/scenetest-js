@@ -13,7 +13,7 @@ Use inline assertions when you want to verify:
 
 ```tsx
 // src/components/Cart.tsx
-import { should, failed } from 'scenetest-react'
+import { should, failed } from '@scenetest/checks-react'
 
 function Cart({ items }) {
   should('cart has items', items.length > 0)
@@ -32,19 +32,19 @@ Import from your framework's package:
 
 ```typescript
 // React
-import { should, failed, assert, useTestEffect } from 'scenetest-react'
+import { should, failed, serverCheck, useCheck } from '@scenetest/checks-react'
 
 // Vue
-import { should, failed, assert, watchTestEffect } from 'scenetest-vue'
+import { should, failed, serverCheck, watchCheck } from '@scenetest/checks-vue'
 
 // Solid
-import { should, failed, assert, createTestEffect } from 'scenetest-solid'
+import { should, failed, serverCheck, createCheck } from '@scenetest/checks-solid'
 
 // Svelte (use inside $effect)
-import { should, failed, assert, testEffect } from 'scenetest-svelte'
+import { should, failed, serverCheck, checkEffect } from '@scenetest/checks-svelte'
 
 // Framework-agnostic (just assertions)
-import { should, failed, assert } from 'scenetest'
+import { should, failed, serverCheck } from '@scenetest/checks'
 ```
 
 ## Using `should()`
@@ -60,7 +60,7 @@ should(description, condition, context?)
 - `context`: Optional object with debugging info
 
 ```typescript
-import { should } from 'scenetest-react'
+import { should } from '@scenetest/checks-react'
 
 function UserProfile({ user }) {
   should('user has a display name', !!user.displayName)
@@ -86,7 +86,7 @@ failed(description, context?)
 - `context`: Optional object with debugging info
 
 ```typescript
-import { failed } from 'scenetest-react'
+import { failed } from '@scenetest/checks-react'
 
 function ErrorBoundary({ error }) {
   if (error) {
@@ -101,21 +101,21 @@ function ErrorBoundary({ error }) {
 
 > **Tip**: The `context` parameter is optional but highly valuable. Include relevant state that helps debug failures.
 
-## Multi-Context Assertions with `assert()`
+## Multi-Context Assertions with `serverCheck()`
 
-For comparing browser data with server data, use `assert()` with your framework's test effect hook:
+For comparing browser data with server data, use `serverCheck()` with your framework's test effect hook:
 
 ```tsx
-import { should, assert, useTestEffect } from 'scenetest-react'
+import { should, serverCheck, useCheck } from '@scenetest/checks-react'
 
 function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)
 
   // Run assertions when profile changes
-  useTestEffect(() => {
+  useCheck(() => {
     if (isLoading || !profile) return
 
-    assert(
+    serverCheck(
       'Profile matches database',
       async (server, data) => {
         const dbProfile = await server.getUser(data.userId)
@@ -129,7 +129,7 @@ function ProfileForm({ userId }) {
 }
 ```
 
-The `assert()` function:
+The `serverCheck()` function:
 1. Captures data from the browser context
 2. Runs a callback in the test runner context with access to server functions
 3. Allows you to use `should()` inside to make assertions
@@ -140,7 +140,7 @@ Define server functions in your scenetest config:
 
 ```typescript
 // scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
@@ -222,7 +222,7 @@ function handleResponse(response) {
 
 - `should(description, condition, context?)` - assert something is true
 - `failed(description, context?)` - mark code paths that should never run
-- `assert()` with test effects - compare browser and server data
+- `serverCheck()` with test effects - compare browser and server data
 - Assertions are grouped by timing (50ms threshold)
 - Include context to make debugging easier
-- Use your framework's test effect hook for reactive assertions
+- Use your framework's check hook for reactive assertions

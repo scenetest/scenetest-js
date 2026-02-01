@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document describes the design for the `assertion()` API - inline assertions that compare data across browser and server contexts. The pattern is inspired by React Server Actions: code is written colocated and type-aware, but compiled to run on the server.
+This document describes the design for the `serverCheck()` API - inline assertions that compare data across browser and server contexts. The pattern is inspired by React Server Actions: code is written colocated and type-aware, but compiled to run on the server.
 
 ## Problem Statement
 
@@ -23,7 +23,7 @@ const mutation = useUpdateProfile({
   onSuccess: (data) => {
     queryClient.setQueryData(['profile', userId], data)
     console.log('Yay we updated the profile! hope the tests pass')
-	 assert(
+	 serverCheck(
       'Profile update persisted',
       async (server, data) => {
         const dbRecord = await server.getProfile(data.userId)
@@ -57,15 +57,15 @@ The `withData` function runs in the browser (has access to React state, cache, e
 │                         VITE DEV SERVER                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│   User's App                         Scenetest Middleware            │
+│   User's App                         Scenetest Middleware           │
 │  ┌──────────────────┐               ┌──────────────────────────┐    │
 │  │                  │               │                          │    │
-│  │  mutation        │               │  POST /__scenetest/run   │    │
+│  │  mutation        │               │  POST /__scenetest/run  │    │
 │  │    onSuccess:    │               │    ↓                     │    │
-│  │      assertion() │ ────POST────► │  Load serverFn by ID     │    │
+│  │   serverCheck() │ ────POST────► │  Load serverFn by ID     │    │
 │  │        │         │               │    ↓                     │    │
 │  │        ↓         │               │  Create server context   │    │
-│  │  withData() runs  │               │  (from scenetest.config) │    │
+│  │  withData() runs  │               │  (from scenetest.config)│    │
 │  │  serialize       │               │    ↓                     │    │
 │  │  POST to server  │ ◄───JSON───── │  Run serverFn(server,    │    │
 │  │        ↓         │               │              data)    │    │
@@ -81,17 +81,17 @@ The `withData` function runs in the browser (has access to React state, cache, e
 
 ## Build-Time Transform
 
-The Vite plugin transforms `assertion()` calls at build time.
+The Vite plugin transforms `serverCheck()` calls at build time.
 
 ### Input (what the developer writes)
 
 ```typescript
 // src/components/ProfileForm.tsx
-import { assertion, should } from 'scenetest'
+import { serverCheck, should } from '@scenetest/checks'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
-    assert(
+    serverCheck(
       'Profile update persisted'
       async (server, data) => {
         const db = await server.getProfile(data.userId)
@@ -112,7 +112,7 @@ const mutation = useUpdateProfile({
 
 ```typescript
 // src/components/ProfileForm.tsx (transformed)
-import { __scenetest_rpc } from 'scenetest/runtime'
+import { __scenetest_rpc } from '@scenetest/checks/runtime'
 
 const mutation = useUpdateProfile({
   onSuccess: (data) => {
@@ -135,7 +135,7 @@ The plugin extracts all `serverFn` functions into a virtual module served by the
 
 ```typescript
 // Virtual: /__scenetest/assertions.js
-import { should, failed } from 'scenetest'
+import { should, failed } from '@scenetest/checks'
 
 export const assertions = {
   'src/components/ProfileForm.tsx:12:4': async (server, data) => {
@@ -149,14 +149,14 @@ export const assertions = {
 
 ### Production Build
 
-In production, the entire `assertion()` call is stripped (same as current `should()`/`failed()` behavior).
+In production, the entire `serverCheck()` call is stripped (same as current `should()`/`failed()` behavior).
 
 ## Runtime Flow
 
 ### 1. Browser: Collect and Send
 
 ```typescript
-// scenetest/runtime (browser)
+// @scenetest/checks/runtime (browser)
 export async function __scenetest_rpc(config: {
   id: string
   title: string
@@ -259,10 +259,10 @@ Users configure server functions in a config file:
 
 ```typescript
 // scenetest.config.ts
-import { defineScenetestConfig } from '@scenetest/vite-plugin'
+import { defineConfig } from '@scenetest/vite-plugin'
 import { db } from './src/db'
 
-export default defineScenetestConfig({
+export default defineConfig({
   serverFunctions: {
     // These become available as server.getProfile(), etc.
     getProfile: async (userId: string) => {
@@ -292,7 +292,7 @@ The Vite plugin:
 TypeScript should infer `data` type from `withData` return type:
 
 ```typescript
-assertion({
+serverCheck({
   title: 'Type-safe assertion',
 
   // Return type is inferred: { userId: string, name: string }
@@ -313,21 +313,21 @@ assertion({
 Type definition:
 
 ```typescript
-interface AssertionConfig<TwithData> {
+interface ServerCheckConfig<TwithData> {
   title: string
   key?: string  // Optional: for uniqueness in loops/conditionals
   withData: () => TwithData
   serverFn: (server: ServerContext, data: TwithData) => Promise<void> | void
 }
 
-function assertion<TwithData>(config: AssertionConfig<TwithData>): void
+function serverCheck<TwithData>(config: ServerCheckConfig<TwithData>): void
 ```
 
 For `ServerContext`, users can extend the type:
 
 ```typescript
 // scenetest.config.ts
-declare module 'scenetest' {
+declare module '@scenetest/checks' {
   interface ServerContext {
     getProfile: (id: string) => Promise<Profile>
     getOrder: (id: string) => Promise<Order>
@@ -387,7 +387,7 @@ The `[server]` badge indicates this assertion ran on the server.
 
 ## Playwright Integration
 
-No changes needed to the Playwright fixture. It already collects results via `window.__scenetest_report`. Multi-context assertion results flow through the same channel.
+No changes needed to the checks package Playwright fixture. It already collects results via `window.__scenetest_report`. Multi-context assertion results flow through the same channel.
 
 For coordinating timing (waiting for assertions to complete):
 
@@ -444,7 +444,7 @@ async waitForAssertions(options = {}) {
 
 ### Phase 1: Core Transform
 
-1. Extend Vite plugin to detect `assertion()` calls
+1. Extend Vite plugin to detect `serverCheck()` calls
 2. Extract `serverFn` to virtual module
 3. Transform call site to `__scenetest_rpc`
 4. Generate assertion IDs from file location
@@ -491,7 +491,7 @@ For assertions in loops or conditionals, use an optional `key` to ensure unique 
 
 ```typescript
 items.forEach(item => {
-  assertion({
+  serverCheck({
     title: 'Item validation',  // Clean title for display
     key: item.id,              // Combined with file location for unique ID
     withData: () => ({ itemId: item.id, value: item.value }),
@@ -522,27 +522,27 @@ serverFn: (server, data) => {
 
 ### 4. Catch withData errors
 
-If `withData()` throws, catch and report as a failed assertion. Assertions should never crash the app.
+If `withData()` throws, catch and report as a failed assertion. Server checks should never crash the app.
 
 ## File Changes
 
 ```
 packages/
-├── scenetest/
+├── checks/
 │   └── src/
-│       ├── assertions.ts      # Add assertion() signature (stripped in prod)
+│       ├── assertions.ts      # Add serverCheck() signature (stripped in prod)
 │       ├── runtime.ts         # New: __scenetest_rpc for browser
-│       └── types.ts           # Add AssertionConfig, ServerContext
+│       └── types.ts           # Add ServerCheckConfig, ServerContext
 │
-├── vite-plugin/
+├── vite/
 │   └── src/
 │       ├── index.ts           # Add middleware setup
-│       ├── transform.ts       # Extend to handle assertion()
+│       ├── transform.ts       # Extend to handle serverCheck()
 │       ├── extract.ts         # New: Extract serverFn to virtual module
 │       ├── middleware.ts      # New: /__scenetest/run handler
 │       └── config.ts          # New: Load scenetest.config.ts
 │
-└── playwright-scenetest/
+└── checks/
     └── src/
         └── fixtures.ts        # Add waitForAssertions()
 ```

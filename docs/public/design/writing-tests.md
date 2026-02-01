@@ -21,7 +21,7 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 | "User can log in and update their profile" | Scene spec file (`scenes/*.spec.ts` or `scenes/*.spec.md`) | QA, PM, or developer | `user.openTo('/login')` ... `user.click('submit')` |
 | "Profile data should be loaded before render" | Inline assertion in component | Component author | `should('profile loaded', profile !== undefined)` |
 | "Form should not submit with empty name" | Inline assertion in submit handler | Feature developer | `failed('empty name submitted', { name })` |
-| "After mutation, cache matches server" | Multi-context assertion (future) | Feature developer | `assert({ title: '...', serverFn, withData })` |
+| "After mutation, cache matches server" | Multi-context assertion (future) | Feature developer | `serverCheck({ title: '...', serverFn, withData })` |
 
 ---
 
@@ -38,7 +38,7 @@ There are three ways to write spec files. All use the same [actor DSL methods](/
 Click the tabs to compare:
 
 ```ts [Concurrent (ts)]
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenetest/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
   const user = actor('new-user')
@@ -59,7 +59,7 @@ new-user:
 ```
 
 ```ts [Classic Driver (ts)]
-import { test } from '@scenetest/cli'
+import { test } from '@scenetest/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
   const user = await actor('new-user')
@@ -82,7 +82,7 @@ For the complete `.spec.md` format rules, interpolation, macros, and `dsl()` met
 
 ```tsx
 // components/ProfileForm.tsx
-import { should, failed } from '@scenetest/react'
+import { should, failed } from '@scenetest/checks-react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -91,7 +91,7 @@ function ProfileForm({ user }) {
 }
 ```
 
-For the full guide on `should()`, `failed()`, multi-context `assert()`, framework imports, and best practices, see [Writing Inline Assertions](/guides/writing-inline-assertions).
+For the full guide on `should()`, `failed()`, multi-context `serverCheck()`, framework imports, and best practices, see [Writing Inline Assertions](/guides/writing-inline-assertions).
 
 ---
 
@@ -109,7 +109,7 @@ For the full selector syntax — attribute matching, nested selectors, key selec
 
 ```typescript
 // scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',

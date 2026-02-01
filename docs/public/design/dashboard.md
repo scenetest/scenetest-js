@@ -137,7 +137,7 @@ For the hosted solution:
 
 ## MVP Scope
 
-1. JSONL writer (in playwright-scenetest)
+1. JSONL writer (in checks package)
 2. Report viewer page (fullscreen panel with sidebar)
 3. Directory scanner
 4. Basic comparison view

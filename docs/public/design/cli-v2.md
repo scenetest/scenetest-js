@@ -147,7 +147,7 @@ defineConfig({
 When a selector fails to match, use `explainSelector()` to debug:
 
 ```typescript
-import { explainSelector } from '@scenetest/cli'
+import { explainSelector } from '@scenetest/scenes'
 
 const result = await explainSelector(page, 'my-selector')
 // {

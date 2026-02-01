@@ -64,7 +64,7 @@ Export an array of teams. Each team maps role names to actor credentials:
 
 ```typescript
 // actors.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenetest/scenes'
 
 export default [
   // Team 0
@@ -101,7 +101,7 @@ Each file exports a single team. Use this when you have many teams or want to ke
 
 ```typescript
 // actors/team-maria.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenetest/scenes'
 
 export default {
   'primary-learner': {
@@ -123,7 +123,7 @@ export default {
 
 ```typescript
 // actors/team-john.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenetest/scenes'
 
 export default {
   'primary-learner': {
@@ -154,7 +154,7 @@ The config file itself has no actor definitions:
 
 ```typescript
 // scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
