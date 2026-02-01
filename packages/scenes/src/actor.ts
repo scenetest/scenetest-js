@@ -200,6 +200,12 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
+  waitFor(message: string): ActionChain {
+    return this.addAction('waitFor', message, async () => {
+      await this.bus.waitFor(message)
+    })
+  }
+
   do(fn: (page: Page) => Promise<void>): ActionChain {
     return this.addAction('do', 'custom', async () => {
       await fn(this.page)
@@ -544,6 +550,10 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
 
   emit(message: string): ActionChain {
     return this.createChain().emit(message)
+  }
+
+  waitFor(message: string): ActionChain {
+    return this.createChain().waitFor(message)
   }
 
   do(fn: (page: Page) => Promise<void>): ActionChain {

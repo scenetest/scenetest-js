@@ -75,8 +75,8 @@ export interface AssertionRpcResponse {
  * Scenetest configuration.
  *
  * This is the base config shape used by scenetest.config.ts.
- * @scenetest/cli extends it with runner-specific fields (browser, headed, etc.)
- * via declaration merging — see `@scenetest/cli/types`.
+ * @scenetest/scenes extends it with runner-specific fields (browser, headed, etc.)
+ * via declaration merging — see `@scenetest/scenes/types`.
  *
  * The index signature lets CLI-specific fields pass through without error
  * when a user imports defineConfig from core (or a framework binding) but
@@ -91,7 +91,7 @@ export interface ScenetestConfig {
 
   /**
    * Server functions for multi-context assertions.
-   * These become the `server` parameter inside assert() serverFn callbacks.
+   * These become the `server` parameter inside serverCheck() serverFn callbacks.
    *
    * @example
    * ```ts
@@ -110,8 +110,8 @@ export interface ScenetestConfig {
 /**
  * Type-checked helper for scenetest.config.ts.
  *
- * Works with the base config shape. If using @scenetest/cli runner features,
- * import defineConfig from '@scenetest/cli' instead for full type coverage
+ * Works with the base config shape. If using @scenetest/scenes runner features,
+ * import defineConfig from '@scenetest/scenes' instead for full type coverage
  * of runner-specific fields (browser, headed, devices, hooks, etc.).
  */
 export function defineConfig(config: ScenetestConfig): ScenetestConfig {

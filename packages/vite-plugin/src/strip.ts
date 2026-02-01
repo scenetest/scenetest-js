@@ -20,11 +20,11 @@ export interface StripOptions {
 
 // All scenetest packages that should be stripped
 const SCENETEST_PACKAGES = [
-  '@scenetest/core',
-  '@scenetest/react',
-  '@scenetest/vue',
-  '@scenetest/solid',
-  '@scenetest/svelte',
+  '@scenetest/checks',
+  '@scenetest/checks-react',
+  '@scenetest/checks-vue',
+  '@scenetest/checks-solid',
+  '@scenetest/checks-svelte',
 ]
 
 /**
@@ -133,12 +133,12 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
       const strippableFunctions = [
         'should',
         'failed',
-        'assert',
+        'serverCheck',
         'match',
-        'useTestEffect',     // React
-        'watchTestEffect',   // Vue
-        'createTestEffect',  // Solid
-        'testEffect',        // Svelte
+        'useCheck',          // React
+        'watchCheck',        // Vue
+        'createCheck',       // Solid
+        'checkEffect',       // Svelte
       ]
 
       // Direct call: should(...), failed(...), assert(...), useTestEffect(...), etc.

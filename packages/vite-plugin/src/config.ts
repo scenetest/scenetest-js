@@ -1,4 +1,4 @@
-import type { ScenetestConfig } from '@scenetest/core'
+import type { ScenetestConfig } from '@scenetest/checks'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 

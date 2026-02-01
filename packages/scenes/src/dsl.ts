@@ -17,7 +17,7 @@ import type { DslTarget, Selector } from './types.js'
  *   select <selector> <value>       - Select dropdown option
  *   wait <ms>                       - Wait milliseconds
  *   emit <message>                  - Emit to message bus
- *   waitFor <message>               - Block until message arrives (flow/reactive only)
+ *   waitFor <message>               - Block until message arrives on the bus
  *   warnIf <selector> <message>     - Register script warning
  *   up [<selector>]                 - Navigate scope to ancestor (or page root if no selector)
  *   prev                            - Return to previous scope
@@ -260,7 +260,6 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
 
     case 'waitFor':
       if (!value) throw new Error('waitFor requires a message')
-      if (!target.waitFor) throw new Error('waitFor is only available in flow() / .spec.md scenes')
       target.waitFor(value)
       break
 

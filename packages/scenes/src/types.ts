@@ -1,5 +1,5 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
-import type { ScenetestConfig as BaseConfig } from '@scenetest/core'
+import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { DeviceProfile } from './devices.js'
 
 /**
@@ -37,7 +37,7 @@ export type TeamConfig = Record<string, ActorConfig>
 /**
  * Scenetest CLI configuration.
  *
- * Extends the base ScenetestConfig from @scenetest/core with runner-specific
+ * Extends the base ScenetestConfig from @scenetest/checks with runner-specific
  * fields (browser, headed, devices, hooks, etc.).
  *
  * Actor teams are not defined here — they are auto-discovered from
@@ -422,6 +422,9 @@ export interface SequentialActorHandle extends ActorConfig {
   /** Emit message to the message bus */
   emit(message: string): ActionChain
 
+  /** Block until message arrives on the message bus */
+  waitFor(message: string): ActionChain
+
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
 
@@ -535,6 +538,9 @@ export interface ActionChain extends PromiseLike<void> {
   /** Emit message to the message bus */
   emit(message: string): ActionChain
 
+  /** Block until message arrives on the message bus */
+  waitFor(message: string): ActionChain
+
   /** Execute custom action */
   do(fn: (page: Page) => Promise<void>): ActionChain
 
@@ -616,8 +622,8 @@ export interface DslTarget {
   up(selector?: Selector): unknown
   prev(): unknown
   scrollToBottom(): unknown
-  /** Block until message arrives on the bus (reactive/flow model only) */
-  waitFor?(message: string): unknown
+  /** Block until message arrives on the bus */
+  waitFor(message: string): unknown
 }
 
 // ---------------------------------------------------------------------------
