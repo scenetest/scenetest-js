@@ -15,7 +15,7 @@ export const guides: SectionItem[] = [
     slug: 'writing-inline-assertions',
     title: 'Inline Assertions',
     description:
-      'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
+      'Use serverCheck(), should() and failed() in application code to check state across the server-client boundary.',
   },
 
   {
@@ -63,15 +63,15 @@ export const faqs: SectionItem[] = [
 
   {
     slug: 'concurrent-vs-classic',
-    title: "What's the difference between Concurrent and Classic?",
+    title: "Concurrent Flow and Classic Driver",
     description:
       'How the concurrent drain model is built on the classic async driver, and why support both (for now).',
   },
   {
 	  slug: 'security',
-	  title: 'Is it safe?',
+	  title: 'Is Scenetest Safe?',
 	  description:
-	  `Yes, we make very sure that none of your tests or server fns ever make it into your production bundle! Read up.`,
+	  `Yes, the serverCheck bridge only runs in dev, and all your inline checks are stripped from your production bundle! Read up.`,
 	},
 	{
 		slug: 'swarm-mode',
@@ -81,7 +81,7 @@ export const faqs: SectionItem[] = [
 	},
 	{
 		slug: 'vscode-extension',
-		title: 'Syntax Highlighting?',
+		title: 'Did You Say "spec.md syntax highlighting"?',
 		description:
 		 "Yes, we made a VSCode extension to make the markdown DSL feel more like writing Javascript.",
 	},

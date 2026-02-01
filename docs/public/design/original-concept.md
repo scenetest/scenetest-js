@@ -128,7 +128,7 @@ Fine! Here.
 
 ```javascript
 import { useProfile } from '~lib/hooks'
-import { pass } from 'scenetest'
+import { pass } from '@scenetest/checks'
 
 export function ProfileForm() {
   const { data: profile } = useProfile()
@@ -180,7 +180,7 @@ So far we've discussed Inline Assertions, but not the Scene orchestration that i
 
 ```javascript
 // ~tests/scenes/edit-profile.spec.ts
-import { scene, pass, warn } from 'scenetest'
+import { scene, pass, warn } from '@scenetest/checks'
 import { actor1 } from '~tests/actors'
 import { setupProfile, getProfile, teardownProfile } from '~tests/utils'
 import { loginUser, navigateToOwnProfile, successToast } from '~tests/navigations'
@@ -228,7 +228,7 @@ Now that we've seen how Scenes work, here's our profile form, with Inline Assert
 
 ```javascript
 // ~components/profile-form.ts
-import { assert, pass, fail } from 'scenetest'
+import { serverCheck, pass, fail } from '@scenetest/checks'
 import { useForm } from '@your-fave/form'
 import { useStore } from 'zustand'
 import { toast } from 'your-fave-toast'
@@ -246,8 +246,8 @@ export function UpdateProfileForm() {
 			store.updateProfile(newProfile)
 			toast.show('Updated successfully!')
 
-			// Multi-context assertion in a callback - use assert() directly
-			assert({
+			// Multi-context assertion in a callback - use serverCheck() directly
+			serverCheck({
 				title: 'Updating profile',
 				withData: () => ({
 					userId: profile.id,

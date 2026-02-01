@@ -36,7 +36,7 @@ Scenetest looks for config in this order:
 
 ```typescript
 // scenetest.config.ts
-import { defineConfig } from '@scenetest/cli'
+import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   // Required
@@ -98,7 +98,7 @@ Teams are auto-discovered from actor files relative to your config:
 
 ```typescript
 // actors.ts
-import type { TeamConfig } from '@scenetest/cli'
+import type { TeamConfig } from '@scenetest/scenes'
 
 const teams: TeamConfig[] = [
   {

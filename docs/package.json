@@ -10,9 +10,9 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
-    "@scenetest/core": "workspace:*",
-    "@scenetest/observer": "workspace:*",
-    "@scenetest/react": "workspace:*",
+    "@scenetest/checks": "workspace:*",
+    "@scenetest/checks-panel": "workspace:*",
+    "@scenetest/checks-react": "workspace:*",
     "@tanstack/react-router": "^1.156.0",
     "@tanstack/react-start": "^1.156.0",
     "highlight.js": "^11.11.1",

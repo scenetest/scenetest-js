@@ -12,16 +12,16 @@ _Evaluate your product, not your tests. A Javascript testing framework with inli
 
 ```bash
 # For React apps
-pnpm add @scenetest/react @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenetest/checks-react @scenetest/vite-plugin @scenetest/scenes
 
 # For Vue apps
-pnpm add @scenetest/vue @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenetest/checks-vue @scenetest/vite-plugin @scenetest/scenes
 
 # For Solid apps
-pnpm add @scenetest/solid @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenetest/checks-solid @scenetest/vite-plugin @scenetest/scenes
 
 # For Svelte apps
-pnpm add @scenetest/svelte @scenetest/vite-plugin @scenetest/cli
+pnpm add @scenetest/checks-svelte @scenetest/vite-plugin @scenetest/scenes
 ```
 
 ## Quick Start
@@ -40,7 +40,7 @@ export default defineConfig({
 **2. Write inline assertions in components:**
 
 ```tsx
-import { should, failed } from '@scenetest/react'
+import { should, failed } from '@scenetest/checks-react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -55,7 +55,7 @@ Choose your style — TypeScript or plain markdown:
 
 ```typescript
 // scenes/profile.spec.ts
-import { flow } from '@scenetest/cli'
+import { flow } from '@scenetest/scenes'
 
 flow('user can update their name', ({ actor }) => {
   const user = actor('user')
@@ -117,12 +117,12 @@ pnpm scenetest
 | Package | Description |
 |---------|-------------|
 | `@scenetest/vite-plugin` | Vite plugin for production stripping and dev panel |
-| `@scenetest/cli` | CLI runner for scene specs |
-| `@scenetest/core` | Core `should()`, `failed()`, `assert()` functions |
-| `@scenetest/react` | React bindings with `useTestEffect` hook |
-| `@scenetest/vue` | Vue bindings with `watchTestEffect` composable |
-| `@scenetest/solid` | Solid bindings with `createTestEffect` primitive |
-| `@scenetest/svelte` | Svelte bindings with `testEffect` helper |
+| `@scenetest/scenes` | CLI runner for scene specs |
+| `@scenetest/checks` | Core `should()`, `failed()`, `serverCheck()` functions |
+| `@scenetest/checks-react` | React bindings with `useCheck` hook |
+| `@scenetest/checks-vue` | Vue bindings with `watchCheck` composable |
+| `@scenetest/checks-solid` | Solid bindings with `createCheck` primitive |
+| `@scenetest/checks-svelte` | Svelte bindings with `checkEffect` helper |
 
 ## FAQ
 

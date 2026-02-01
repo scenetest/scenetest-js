@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { CodeBlock } from '../components/CodeBlock'
 import { Footer } from '../components/Footer'
-import { useTestAssertions } from '../useTestAssertions'
+import { useCheckAssertions } from '../useCheckAssertions'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -9,23 +9,24 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   // Enable interactive test assertions for the demo
-  useTestAssertions()
+  useCheckAssertions()
 
   return (
     <article>
       <div className="hero-logo">🎬</div>
       <h1>Scenetest</h1>
       <p className="subtitle">
-        Local-First testing framework for Vite apps that helps you evaluate your
-        product and your mental model &ndash; not your tests.
+        A Local-First testing framework for Vite apps that handles testing by orchestrating lovely
+		  little scenes, and running integrity checks whenever your app runs in dev.
+		  Intuitive, predictable, precision optional. Test your app and your mental model, not your tests.
       </p>
 
       <p>
         It's 2026; we build apps differently now. Component state, Query cache, Zustand store,
         Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>{' '}
-        possibilities are endless, and they're helping us build buttery smooth, responsive UIs.
-      </p>
-      <p><strong>Test tooling should keep up.</strong></p>
+        possibilities are endless, and they're helping us build buttery smooth, responsive
+		  UIs. <strong>Test tooling should keep up, don't you think?</strong>
+		</p>
 
       <p>
         Most frameworks rely on a headless browser clicking around our app, inputting
@@ -33,6 +34,7 @@ function Home() {
         being <em>very thorough</em> we might check the database directly to be sure something updated
         (for realsies).
       </p>
+
       <p>
         The DOM and the Database are good book-ends to compare, but if the main data store in your app is
         a local DB or cache, it feels like you're not really testing your app until you're able to make
@@ -45,87 +47,106 @@ function Home() {
         This is how <em>Scenetest</em> came about. We were looking for tests that would:
       </p>
       <ol>
-        <li>Evaluate data we take from inside the React component lifecycle: in onSettled callbacks, in effects, hooks.</li>
-        <li>Compare it to what we expect to find in the database or other privileged resources.</li>
+        <li>Evaluate data we take from inside the React/app component lifecycle: in onSettled callbacks, in effects, hooks.</li>
+        <li>Compare this local state with what we expect to find in the database or other privileged resources.</li>
         <li>Write both with full type safety, intellisense, etc., so your tests work <em>with</em> your types.</li>
       </ol>
       <p>
         Thankfully, in 2026 React world, we have a primitive that matches this pattern
         neatly: <strong>Server Actions</strong>, which are written in the app, stripped by the
-        bundler, deployed on the server as an RPC function, and called remotely from the client.
+        bundler, deployed on the server as RPC APIs, and called remotely from the client.
         This inversion of control solves the multi-context app⇔server problem,
         giving the app control over when to call the server function and what data to pass it,
-        but actually running it in a protected/privileged environment.
+        but actually running these checks in a protected/privileged environment.
       </p>
-      <p>
+		<p>
         Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
         about nearly every layer of an application in one place.
       </p>
 
-      <CodeBlock>{`// in your UI component
-const post = usePost(id)
-const form = usePostForm(post)
-// useTestEffect wraps test code that gets stripped in production
-useTestEffect(() => {
-  // skip when submitting, run when only finished
-  if (form.isSubmitting) return
+      <CodeBlock>{`function BlogPostForm({ id }) {
+  // spot 'serverCheck', 'failed', and 'should' in the block
+  const post = usePost(id)
+  const form = usePostForm(post)
+  const handleSubmit = (data) => form.submit(data, {
+    onSettled: () => serverCheck(
+      'Server item should match local',
+      async (server, { id, localPost }) => {
+        const dbPost = await server.getPosts(id)
+        if (!dbPost) failed('title is empty')
 
-  assert(
-    'Server item should match local',
-    async (server, data) => {
-      const post = await server.getPosts(app.id)
-      if (!post) failed('title is empty')
-      should('titles match', post.title === app.title)
-    },
-    // passing data from react-land to the server fn
-    () => postsCollection.get(id)
-  )
-}, [form.isSubmitting, post.title])`}</CodeBlock>
+        should(
+          'Title & timestamp should match',
+          match([
+            [localPost.title, dbPost.title],
+            [localPost.updated_at, dbPost.updated_at],
+          ]))
+      },
+      // passing data from react-land to the server fn
+      { id, localPost: postsCollection.get(id) }
+    )
+  })
 
-      <h2>Scenes and Inline Assertions</h2>
+  return <.../>
+}
+`}</CodeBlock>
 
-      <p>
-        <strong>Scenes</strong> are small user journeys, the atomic units of a user flow you want to test.
-        <em>e.g.</em> <code>scenes/profile-update.spec.ts</code> or <code>scenes/profile-update.spec.md</code>: <em>Log in, navigate to settings, change your username,
-        submit the form, see the success message.</em> Scenes are about orchestration &ndash; driving the
-        browser through a sequence of interactions. You can write them in TypeScript or
-        in <strong>plain markdown</strong> that reads like documentation &ndash; writing a scene shouldn't
-        require technical knowledge for how the features are implemented.
-      </p>
+		<h2>Separating Scene Orchestration from Integrity Checks</h2>
 
+		<p>Imagine using the above pattern to move all your integrity-checking logic into your application code.
+			Then what's left of your `*.spec.ts` file will be pretty sparce – you'll still need something like Playwright
+			there to manage different browser contexts and send instructions from your spec to your virtual browser, but
+			the act of writing a scene spec will be very simple: log in as some user; see some content; click some link, etc.
+		</p>
+		<p>Without all the checks mixed, you could imagine simplifying scenes down to the point that anyone could write them!
+			And that's exactly what we've tried to do:
+		</p>
+		<ul>
+			<li>First we simplified the page <code>locator</code> and <code>getByTestId</code> type logic, <em>big-time</em>.</li>
+			<li>Then, in order to make it easier to write multi-actor scenes, we added a sticky message bus to queue up the
+				different actions and observations synchronously and run scenes naturally without ever having to type <code>await Promise.all()</code>.</li>
+			<li>Finally, we took this new, simplified, synchronous, declarative scene instruction set and simply converted it to human-readable markdown.</li>
+		</ul>
+		<p>The result is a scene format so simple you can read and write it like natural language, with very little understanding
+			of application implementation details or the mechanics of promises or async Javascript.
+			</p>
+
+			<CodeBlock>{`<!-- scenes/profile-update.spec.md -->
+# user updates their profile
+main-test-user:
+- openTo /profile
+- see profile-form
+- typeInto name-input 'New Name'
+- click save-button
+- seeText 'New Name'
+`}</CodeBlock>
+
+      <p>Don't worry, you can still write scenes in JS – the markdown spec above compiles to the same instructions as this:</p>
       <CodeBlock>{`// scenes/profile-update.spec.ts
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenetest/scenes'
 
 scene('user updates their profile', ({ actor }) => {
-  const user = actor('user')
-
+  const user = actor('main-test-user')
   user.openTo('/profile')
   user
     .see('profile-form')
     .typeInto('name-input', 'New Name')
     .click('save-button')
   user.seeText('New Name')
-  // That's it. All the inline assertions fired automatically.
 })`}</CodeBlock>
 
-      <p>
-        Or write it as plain <strong>markdown</strong> — human-readable, GitHub-renderable, and executable:
-      </p>
+<p>And for those of you who want to take advantage of this scene/check and its conveniences (simpler specs, the nice
+	<Link to="/reference/selectors">selector API</Link>, the <Link to="reference/actor-api">actor management system</Link>), but you still want your
+	traditional async drivers: that's fine. The scene CLI is mostly a Playwright wrapper, so <Link to="/guides/writing-scene-specs">it's all possible</Link>.
+</p>
 
-      <CodeBlock>{`<!-- scenes/profile-update.spec.md -->
-# user updates their profile
-user:
-- openTo /profile
-- see profile-form
-- typeInto name-input New Name
-- click save-button
-- seeText New Name`}</CodeBlock>
+		<h2>Multi-Actor Scene Management</h2>
 
-      <p>
-        The markdown format really shines for <strong>multi-actor scenarios</strong> — coordinating
-        multiple users interacting with your app simultaneously. Actor cues switch context,
-        and variables like <code>[new-friend.username]</code> are interpolated from actor data:
-      </p>
+<p>
+    The markdown format really shines for <strong>multi-actor scenarios</strong> — coordinating
+    multiple users interacting with your app simultaneously. Actor cues switch context,
+    and variables like <code>[new-friend.username]</code> are interpolated from actor data:
+</p>
 
       <CodeBlock>{`<!-- scenes/friend-request.spec.md -->
 # User sends and receives a friend request
@@ -152,13 +173,16 @@ main-user-1: seeToast friend-request-accepted`}</CodeBlock>
 
       <p>
         <strong>Inline Assertions</strong> are test statements that live inside your application
-        code &ndash; in your components, hooks, and callbacks. They validate your mental model: "at this point in the code / React lifecycle,
-        this data should be in this state." Engineers write them to encode their understanding of how and why this works, and to alert
+        code &ndash; in your components, hooks, and callbacks. They validate your mental model: "at this
+		  point in the code / React lifecycle,
+        this data should be in this state." Engineers write them to encode their understanding of how and
+		  why this works, and to alert
         future generations if they are ever running afoul of their ancient wisdom.
-        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>assert</code> inside <code>useTestEffect</code>.
+        Use <code>should</code> or <code>failed</code>, or multi-context assertions with <code>serverCheck</code> inside
+		  <code>useCheck</code>.
       </p>
 
-      <CodeBlock>{`import { should, failed, assert, useTestEffect } from '@scenetest/react'
+      <CodeBlock>{`import { should, failed, serverCheck, useCheck } from '@scenetest/checks-react'
 
 export function ProfileForm({ userId }) {
   const { data: profile } = useProfile(userId)
@@ -167,10 +191,10 @@ export function ProfileForm({ userId }) {
   should('Profile available without loading state', profile !== undefined)
 
   // For special cases, an extra check
-  useTestEffect(() => {
+  useCheck(() => {
     if (profile) return // only check when no profile
 
-    assert(
+    serverCheck(
       'no profile returned means no profile exists',
       async (server) => {
         if (await server.getProfile(userId)) failed('profile DOES exist!')
@@ -246,13 +270,13 @@ expect({
         I love the multi-context assertion capabilities here, but this approach to getting data
         from the client feels like we are breaking into its home in the middle of the night and
         stuffing it in a bag. Let's see if it gets a little nicer when
-        we write it using the <em>assert</em> function in the <code>onSettled</code> callback
+        we write it using the <em>serverCheck</em> function in the <code>onSettled</code> callback
         after the mutation we're trying to test.
       </p>
 
       <CodeBlock>{`// ✅ server assertion triggered after a mutation
 onSettled: (data) => {
-  assert(
+  serverCheck(
     'New deck should initialise the same',
     async (server, clientData) => {
       const newDeck = await server.getDeck(clientData.data.userId, clientData.data.lang)
