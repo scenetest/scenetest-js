@@ -24,23 +24,21 @@ function Home() {
 
       <p>
         It's 2026; we build apps differently now. Component state, Query cache, Zustand store,
-        Tanstack/DB, Electric SQL, DuckDB in WASM with React bindings... the <em>Local First</em>{' '}
-        possibilities are endless, and they're helping us build buttery smooth, responsive
-		  UIs. <strong>Test tooling should keep up, don't you think?</strong>
+        Tanstack/DB, Electric SQL, DuckDB in browser via WASM... we are moving more and more of the crucial
+		  business logic to our client apps, relying on server checks for validation and authorisation,
+		  but placing full trust in the decision-making logic of the client app and its local data stores/caches/DBs.
+        And there's a reason why: the local-first approach is helping us build build buttery smooth, responsive
+		  UIs. Test tooling should keep up, don't you think?
 		</p>
 
       <p>
-        Most frameworks rely on a headless browser clicking around our app, inputting
-        inputs into inputs and clicking clickers and expecting to see certain expectations. If we're
-        being <em>very thorough</em> we might check the database directly to be sure something updated
-        (for realsies).
-      </p>
-
-      <p>
-        The DOM and the Database are good book-ends to compare, but if the main data store in your app is
-        a local DB or cache, it feels like you're not really testing your app until you're able to make
-        assertions about how your local state compares.
-      </p>
+        The Database and the browser Document are good references for comparison ("end to end"),
+			but most of the logic in my apps isn't at either end; it's <em>in this growing middle</em> –
+		  cache updates, local DB, live queries, reactive store. Sure, sometimes I want to make sure that
+		  there are X items in the list on my screen, but mostly I want to know that after the mutation's onSuccess function is done,
+		  my local store and my database have the same number of items. That's the real key for me, and something that feels like,
+		  in 2026, could be fun to do with server actions!
+		</p>
 
       <p className="divider">* * *</p>
 
@@ -53,38 +51,34 @@ function Home() {
         <li>Write both with full type safety, intellisense, etc., so your tests work <em>with</em> your types.</li>
       </ol>
       <p>
-        Thankfully, in 2026 React world, we have a primitive that matches this pattern
-        neatly: <strong>Server Actions</strong>, which are written in the app, stripped by the
-        bundler, deployed on the server as RPC APIs, and called remotely from the client.
-        This inversion of control solves the multi-context app⇔server problem,
-        giving the app control over when to call the server function and what data to pass it,
-        but actually running these checks in a protected/privileged environment.
-      </p>
-		<p>
-        Apply this pattern to a testing framework, and we get a powerful tool for testing our expectations
-        about nearly every layer of an application in one place.
-      </p>
+        Thankfully, in Vite-and/or-React world, we have a couple primitives that match this pattern quite nicely:
+		  <strong>Tanstack Server Functions and/or React Server Actions</strong>.
+		</p>
 
-      <CodeBlock>{`function BlogPostForm({ id }) {
-  // spot 'serverCheck', 'failed', and 'should' in the block
-  const post = usePost(id)
+      <CodeBlock language="tsx">{`function BlogPostForm({ id }) {
+  const post = usePost(id, { throwOn404: true })
+  should(
+    'Edit page should 404 when post is null',
+    (post.isLoading || !!post.data)
+  )
+
   const form = usePostForm(post)
   const handleSubmit = (data) => form.submit(data, {
     onSettled: () => serverCheck(
-      'Server item should match local',
-      async (server, { id, localPost }) => {
+      'Check with server item after form settles',
+      async (server, { id, localPost, inputData }) => {
         const dbPost = await server.getPosts(id)
-        if (!dbPost) failed('title is empty')
 
+		  if (!dbPost) failed('DB entry not found')
         should(
-          'Title & timestamp should match',
+          'Local object should match DB and input',
           match([
-            [localPost.title, dbPost.title],
-            [localPost.updated_at, dbPost.updated_at],
+            [dbPost.title, localPost.title, inputData.title],
+            [dbPost.status, localPost.status, inputData.status],
+            [dbPost.updated_at, localPost.updated_at],
           ]))
       },
-      // passing data from react-land to the server fn
-      { id, localPost: postsCollection.get(id) }
+      { id, localPost: postsCollection.get(id), inputData: data }
     )
   })
 
