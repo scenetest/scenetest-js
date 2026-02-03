@@ -6,7 +6,7 @@
  * attachEventListeners() after rendering.
  */
 
-import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } from './types.js'
+import type { AssertionResult, AssertionGroup, CLSEvent, LocationGroup, LocationEntry } from './types.js'
 import { getHistoryStats, formatHistorySummary, computeFlakyStats, computeResolutionStats, formatResolutionSummary, formatFlakyStatus } from './history.js'
 import { escapeHtml, escapeHtmlAttr, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
 import { getNoteInfo } from './audio.js'
@@ -447,6 +447,104 @@ export function renderSequenceHeader(group: LocationGroup): string {
 export function renderBackButton(fromView: 'grouped' | 'byLocation' = 'byLocation'): string {
   const label = fromView === 'grouped' ? 'Back to timeline' : 'Back to all locations'
   return `<div class="back-btn" data-action="backToLocationView">\u2190 ${label}</div>`
+}
+
+// ───────────────── CLS rendering ─────────────────
+
+/**
+ * Render a single CLS event item for the main panel
+ */
+export function renderCLSPanelItem(event: CLSEvent): string {
+  const icon = event.type === 'flash' ? '\u26A1' : '\u21C4'
+  const detail = event.type === 'flash'
+    ? `gone ${event.gapMs}ms`
+    : `score ${event.shiftValue?.toFixed(4) ?? '?'}`
+
+  return `
+    <div class="scenetest-item cls-event cls-${event.type}">
+      <span class="scenetest-icon cls">${icon}</span>
+      <div class="scenetest-content">
+        <div class="scenetest-desc cls">${escapeHtml(event.label)}</div>
+        <div class="scenetest-cls-detail">${event.type === 'flash' ? 'flashed off/on' : 'layout shift'} &mdash; ${escapeHtml(detail)}</div>
+      </div>
+      <span class="scenetest-cls-badge">${event.type}</span>
+    </div>
+  `
+}
+
+/**
+ * Render CLS events as a collapsible section for the panel
+ */
+export function renderCLSPanelSection(events: CLSEvent[]): string {
+  if (events.length === 0) return ''
+
+  const flashCount = events.filter(e => e.type === 'flash').length
+  const shiftCount = events.filter(e => e.type === 'shift').length
+
+  return `
+    <div class="scenetest-cls-section">
+      <div class="scenetest-cls-header" data-action="toggleCLSSection">
+        <div class="scenetest-cls-summary">
+          <span class="scenetest-cls-title">\u26A0 Stability</span>
+          <div class="scenetest-cls-stats">
+            ${flashCount > 0 ? `<span class="scenetest-cls-stat flash">\u26A1${flashCount}</span>` : ''}
+            ${shiftCount > 0 ? `<span class="scenetest-cls-stat shift">\u21C4${shiftCount}</span>` : ''}
+          </div>
+        </div>
+        <span class="scenetest-group-toggle">\u25BC</span>
+      </div>
+      <div class="scenetest-cls-items">
+        ${events.slice().reverse().map(e => renderCLSPanelItem(e)).join('')}
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Render a single CLS event for the fullscreen view
+ */
+export function renderCLSFullscreenItem(event: CLSEvent): string {
+  const icon = event.type === 'flash' ? '\u26A1' : '\u21C4'
+  const detail = event.type === 'flash'
+    ? `Element was removed from DOM for ${event.gapMs}ms then reappeared`
+    : `Layout shift score: ${event.shiftValue?.toFixed(4) ?? '?'}`
+
+  return `
+    <div class="item cls-event cls-${event.type}">
+      <span class="icon cls">${icon}</span>
+      <div class="content">
+        <div class="desc cls">${escapeHtml(event.label)}</div>
+        <div class="cls-detail">${escapeHtml(detail)}</div>
+        <div class="cls-time">${formatTime(event.timestamp)}</div>
+      </div>
+      <span class="cls-badge">${event.type}</span>
+    </div>
+  `
+}
+
+/**
+ * Render CLS events grouped by label for the fullscreen "by location" view
+ */
+export function renderCLSLocationRow(label: string, events: CLSEvent[]): string {
+  const flashCount = events.filter(e => e.type === 'flash').length
+  const shiftCount = events.filter(e => e.type === 'shift').length
+  const lastEvent = events[events.length - 1]
+  const icon = lastEvent.type === 'flash' ? '\u26A1' : '\u21C4'
+
+  return `
+    <div class="location-row cls-location">
+      <span class="state-icon warn">${icon}</span>
+      <div class="location-main">
+        <div class="location-info">
+          <span class="location-desc cls">${escapeHtml(label)}</span>
+          <span class="flaky-info cls-info">${flashCount > 0 ? `${flashCount} flash${flashCount === 1 ? '' : 'es'}` : ''}${flashCount > 0 && shiftCount > 0 ? ', ' : ''}${shiftCount > 0 ? `${shiftCount} shift${shiftCount === 1 ? '' : 's'}` : ''}</span>
+        </div>
+        <div class="location-stats">
+          <span class="location-count">${events.length} event${events.length === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+    </div>
+  `
 }
 
 /**

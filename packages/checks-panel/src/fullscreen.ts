@@ -22,7 +22,7 @@ import {
   toggleGroupCollapsed,
 } from './state.js'
 import { filterItems, openInEditor } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners } from './render.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, renderCLSFullscreenItem, renderCLSLocationRow, attachEventListeners } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -36,7 +36,7 @@ import {
   playGroupChord,
   playAssertionSound,
 } from './audio.js'
-import { assertions, GROUP_THRESHOLD_MS } from './state.js'
+import { assertions, clsCount, clsEvents, GROUP_THRESHOLD_MS } from './state.js'
 
 /**
  * Set up event listeners for fullscreen view rendered content.
@@ -93,6 +93,7 @@ function getFullscreenHTML(): string {
           <div id="counts">
             <span class="count pass" id="pass-count">\u2713 0</span>
             <span class="count fail" id="fail-count">\u2717 0</span>
+            <span class="count cls" id="cls-count" style="display:none">\u26A0 0</span>
           </div>
           <div id="view-modes" class="btn-group">
             <button class="btn active" id="view-grouped" title="Group by time">Timeline</button>
@@ -322,9 +323,14 @@ export function updateFullscreenWindow(): void {
   const doc = fullscreenWindow.document
   const passCountEl = doc.getElementById('pass-count')
   const failCountEl = doc.getElementById('fail-count')
+  const clsCountEl = doc.getElementById('cls-count') as HTMLElement | null
 
   if (passCountEl) passCountEl.textContent = `\u2713 ${passCount}`
   if (failCountEl) failCountEl.textContent = `\u2717 ${failCount}`
+  if (clsCountEl) {
+    clsCountEl.textContent = `\u26A0 ${clsCount}`
+    clsCountEl.style.display = clsCount > 0 ? '' : 'none'
+  }
 
   // Update filter button states
   doc.getElementById('filter-all')?.classList.toggle('active', filter === 'all')
@@ -398,7 +404,13 @@ function renderGroupedView(doc: Document, listEl: HTMLElement): void {
     return
   }
 
-  listEl.innerHTML = filteredGroups
+  // Render CLS events at the top if present
+  const clsHtml = clsEvents.length > 0
+    ? `<div class="cls-section-header">\u26A0 Stability (${clsEvents.length} event${clsEvents.length === 1 ? '' : 's'})</div>` +
+      clsEvents.slice().reverse().map(e => renderCLSFullscreenItem(e)).join('')
+    : ''
+
+  listEl.innerHTML = clsHtml + filteredGroups
     .map(g => renderFullscreenGroup(g))
     .reverse()
     .join('')
@@ -446,11 +458,26 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
     return
   }
 
+  // Group CLS events by label for location view
+  const clsLabels = new Map<string, typeof clsEvents>()
+  for (const event of clsEvents) {
+    const list = clsLabels.get(event.label) ?? []
+    list.push(event)
+    clsLabels.set(event.label, list)
+  }
+  const clsLocationHtml = clsLabels.size > 0
+    ? `<div class="cls-section-header">\u26A0 Stability</div>` +
+      Array.from(clsLabels.entries())
+        .map(([label, events]) => renderCLSLocationRow(label, events))
+        .join('')
+    : ''
+
   listEl.innerHTML = `
     ${renderPianoRoll(filteredLocations, assertions)}
     <div class="location-list">
       ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
     </div>
+    ${clsLocationHtml}
   `
 
   // Set up click handlers for piano roll columns and note badges

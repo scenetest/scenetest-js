@@ -102,6 +102,21 @@ export interface LocationEntry {
   context?: Record<string, unknown>
 }
 
+/**
+ * CLS tracking event — recorded when a labeled element flashes off/on
+ * or experiences a layout shift
+ */
+export interface CLSEvent {
+  type: 'flash' | 'shift'
+  /** The aria-label value identifying this element */
+  label: string
+  timestamp: number
+  /** For flash events: how long the element was absent from the DOM (ms) */
+  gapMs?: number
+  /** For shift events: the LayoutShift entry score for this element */
+  shiftValue?: number
+}
+
 declare global {
   interface Window {
     __scenetest_panel?: boolean

@@ -7,6 +7,8 @@ import {
   groups,
   passCount,
   failCount,
+  clsCount,
+  clsEvents,
   panel,
   listEl,
   filter,
@@ -19,7 +21,7 @@ import {
   setPanelCorner,
 } from './state.js'
 import { filterItems } from './utils.js'
-import { renderPanelGroup, attachEventListeners } from './render.js'
+import { renderPanelGroup, renderCLSPanelSection, attachEventListeners } from './render.js'
 import { openInEditor } from './utils.js'
 import { panelStyles } from './styles.js'
 import { openFullscreen, updateFullscreenWindow } from './fullscreen.js'
@@ -44,6 +46,7 @@ function getPanelHTML(): string {
       <span id="scenetest-counts">
         <span class="scenetest-count pass" id="scenetest-pass" title="Click to filter passes">\u2713 0</span>
         <span class="scenetest-count fail" id="scenetest-fail" title="Click to filter failures">\u2717 0</span>
+        <span class="scenetest-count cls" id="scenetest-cls" title="CLS events (flashes and layout shifts)" style="display:none">\u26A0 0</span>
       </span>
     </div>
     <div id="scenetest-actions">
@@ -502,8 +505,13 @@ export function updatePanel(): void {
 
   const passEl = panel.querySelector('#scenetest-pass')
   const failEl = panel.querySelector('#scenetest-fail')
+  const clsEl = panel.querySelector('#scenetest-cls') as HTMLElement | null
   if (passEl) passEl.textContent = `\u2713 ${passCount}`
   if (failEl) failEl.textContent = `\u2717 ${failCount}`
+  if (clsEl) {
+    clsEl.textContent = `\u26A0 ${clsCount}`
+    clsEl.style.display = clsCount > 0 ? '' : 'none'
+  }
 
   const filteredGroups = groups
     .map(g => ({
@@ -512,16 +520,29 @@ export function updatePanel(): void {
     }))
     .filter(g => g.items.length > 0)
 
-  if (filteredGroups.length === 0) {
+  if (filteredGroups.length === 0 && clsEvents.length === 0) {
     const message =
       filter === 'fails' ? 'No errors! All assertions passed.' : 'Click around to see inline assertions...'
     listEl.innerHTML = `<div id="scenetest-empty">${message}</div>`
     return
   }
 
-  // Always show grouped view
-  listEl.innerHTML = filteredGroups
+  // CLS section at the top, then assertion groups
+  const clsSection = renderCLSPanelSection(clsEvents)
+
+  const groupsHtml = filteredGroups
     .map(g => renderPanelGroup(g))
     .reverse()
     .join('')
+
+  listEl.innerHTML = clsSection + groupsHtml
+
+  // Wire up CLS section collapse toggle
+  const clsHeader = listEl.querySelector('.scenetest-cls-header')
+  if (clsHeader) {
+    clsHeader.addEventListener('click', () => {
+      const section = clsHeader.parentElement
+      if (section) section.classList.toggle('collapsed')
+    })
+  }
 }

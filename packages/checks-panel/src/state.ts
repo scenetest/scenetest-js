@@ -2,7 +2,7 @@
  * Shared state for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup, CornerPosition } from './types.js'
+import type { AssertionResult, AssertionGroup, CLSEvent, FilterMode, HistoryEntry, ViewMode, LocationGroup, CornerPosition } from './types.js'
 
 // Assertion storage
 export const assertions: AssertionResult[] = []
@@ -11,6 +11,10 @@ export const assertionHistory = new Map<string, HistoryEntry[]>()
 
 // Location-based grouping (keyed by description)
 export const locationGroups = new Map<string, LocationGroup>()
+
+// CLS tracking storage
+export const clsEvents: CLSEvent[] = []
+export let clsCount = 0
 
 // Counts
 export let passCount = 0
@@ -22,6 +26,11 @@ export function incrementPassCount(): void {
 
 export function incrementFailCount(): void {
   failCount++
+}
+
+export function addCLSEvent(event: CLSEvent): void {
+  clsEvents.push(event)
+  clsCount++
 }
 
 // UI state
@@ -187,6 +196,8 @@ export function clearAll(): void {
   groups.length = 0
   assertionHistory.clear()
   locationGroups.clear()
+  clsEvents.length = 0
+  clsCount = 0
   passCount = 0
   failCount = 0
   pendingGroup = null

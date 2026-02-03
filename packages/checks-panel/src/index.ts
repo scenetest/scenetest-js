@@ -36,6 +36,7 @@ import {
   setVolume,
   initAudio,
 } from './audio.js'
+import { startCLSTracker } from './cls.js'
 
 // Re-export types for consumers
 export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
@@ -187,8 +188,18 @@ export function initObserver(): void {
 
   // Create panel when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createPanel)
+    document.addEventListener('DOMContentLoaded', () => {
+      createPanel()
+      startCLSTracker(() => {
+        updatePanel()
+        updateFullscreenWindow()
+      })
+    })
   } else {
     createPanel()
+    startCLSTracker(() => {
+      updatePanel()
+      updateFullscreenWindow()
+    })
   }
 }
