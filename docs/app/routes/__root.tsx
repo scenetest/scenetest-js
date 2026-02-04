@@ -234,7 +234,7 @@ pre {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.82rem;
   line-height: 1.6;
-  background: var(--code-bg);
+  background: #fff;
   border: 1px solid var(--border);
   border-radius: 4px;
   overflow-x: auto;
@@ -243,8 +243,10 @@ pre {
 }
 
 pre code {
+	display: block;
+	overflow: auto;
   background: none;
-  padding: 0;
+  padding: 1em;
 }
 
 blockquote {

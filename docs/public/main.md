@@ -115,6 +115,7 @@ main-user-1: seeToast friend-request-accepted
 
 
 
+
 ```
 ```ts [Typescript Concurrent]
 // scenes/friend-request.spec.ts
@@ -137,6 +138,7 @@ scene(
     user1.seeToast('friend-request-accepted')
   }
 )
+
 
 ```
 ```ts [Typescript Sequential]
