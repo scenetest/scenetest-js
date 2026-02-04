@@ -131,8 +131,8 @@ article {
 /* Side nav */
 .side-nav {
   position: fixed;
-  right: 105px;
-  top: 80px;
+  right: calc(15vw - 60px);
+  top: 120px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -282,6 +282,17 @@ footer {
   border-top: 1px solid var(--border);
   font-size: 0.95rem;
   color: var(--text-light);
+}
+
+footer a {
+  color: var(--text-light);
+  text-decoration: none;
+  text-decoration: underline;
+}
+
+footer a.active {
+	opacity: 70%;
+	cursor: default;
 }
 
 .footer-logo {
