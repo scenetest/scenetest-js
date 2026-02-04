@@ -243,8 +243,10 @@ pre {
 }
 
 pre code {
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
   background: #fff;
-  padding: 16px;
 }
 
 blockquote {
