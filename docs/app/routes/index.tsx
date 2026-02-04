@@ -2,7 +2,6 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Footer } from '../components/Footer'
 import { useCheckAssertions } from '../useCheckAssertions'
 import { MarkdownSection } from '../components/MarkdownSection'
-import { LinkCard } from '../components/LinkCard'
 import { guides, reference, faqs } from '../sections'
 
 
@@ -18,7 +17,7 @@ function Home() {
     <article>
       <div className="hero-logo">🎬</div>
 
-      <MarkdownSection src='/index.md' />
+      <MarkdownSection src='/main.md' />
 
 		<h2>Guides</h2>
       <ul>
