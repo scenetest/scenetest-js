@@ -65,7 +65,7 @@ Write specs as **human-readable markdown** — GitHub-renderable, readable by no
 
 ### Example
 
-```markdown
+```scenetest
 # User friend requests
 
 ## new user signs up and gets a friend request
@@ -124,7 +124,7 @@ Use `[namespace.field]` to interpolate values into action lines:
 ```
 
 **Examples:**
-```markdown
+```scenetest
 alice:
 - typeInto email [self.email]           # alice's own email
 - see user-card-[bob.id]                # bob's id embedded in selector
@@ -139,7 +139,7 @@ click language-card-[team.language]     # becomes "click language-card-spanish"
 
 ### Multi-actor coordination in markdown
 
-```markdown
+```scenetest
 # sender and receiver exchange messages
 sender:
 - openTo /login
@@ -287,7 +287,7 @@ defineMacro('send-friend-request', [
 
 Invoke macros by name — any word that isn't a known DSL action is treated as a macro:
 
-```markdown
+```scenetest
 user:
 - login
 - see dashboard
@@ -295,14 +295,14 @@ user:
 
 Pass actor mappings with `alias=role` syntax — the alias becomes available in the macro:
 
-```markdown
+```scenetest
 primary-user:
 - send-friend-request target=new-user
 ```
 
 Multiple mappings work too:
 
-```markdown
+```scenetest
 admin:
 - setup-friendship user1=alice user2=bob
 ```

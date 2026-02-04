@@ -58,7 +58,7 @@ scene('user sees items', ({ actor }) => {
       .see('item-list')
 })
 ```
-```markdown [Markdown style]
+```scenetest [Markdown style]
 # user sees items
 user-main-1:
 - openTo /items

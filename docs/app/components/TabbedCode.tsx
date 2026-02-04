@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import hljs from 'highlight.js/lib/core'
 import typescript from 'highlight.js/lib/languages/typescript'
+import scenetestSpec from '../lib/hljs-scenetest'
 import 'highlight.js/styles/github.css'
 
 hljs.registerLanguage('typescript', typescript)
 hljs.registerLanguage('ts', typescript)
+hljs.registerLanguage('scenetest', scenetestSpec)
 
 interface Tab {
   label: string

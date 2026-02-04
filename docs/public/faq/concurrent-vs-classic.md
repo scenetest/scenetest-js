@@ -98,7 +98,7 @@ Nice, right? And very forgiving, and hopefully quite easy to reason about, to re
 This forgiving syntax and grammar made concurrent model specs so simple that practically speaking, **anyone could write them**. And though we do have primitives for more direct manipulation and coordination between the queues,
 most operations are simple enough that you can write them using this minimal markdown DSL:
 
-```markdown [1. direct translation to md]
+```scenetest [1. direct translation to md]
 # friend request flow
 alice:
 - openTo /search
@@ -118,7 +118,7 @@ alice:
 
 
 ```
-```markdown [2. functionally identical to 1]
+```scenetest [2. functionally identical to 1]
 # friend request flow
 bob:
 - openTo /notifications

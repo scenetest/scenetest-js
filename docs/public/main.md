@@ -93,7 +93,7 @@ With the precision and confidence we get from these inline checks, we can turn o
 When the spec doesn't have to count and evaluate and compare, you can focus on the basics: which seed-user are we using, what do they see, what do they click, what do they expect. We started working on ways to manage multi-actor scene scripts and found that the vast majority of our spec coverage to date could be expressed using a very simple,
 declarative DSL, with no async/await, simple enough you can write your spec in markdown:
 
-```md [Markdown Concurrent]
+```scenetest [Markdown Concurrent]
 <!-- scenes/friend-request.spec.md -->
 ## User sends and receives a friend request
 
@@ -168,7 +168,7 @@ Both declare a sequence of actions,
 spin up a virtual browser context for each user, and then run through their respective action queues concurrently.
 In this mode, there's no difference between the roughly-ordered markdown you see above and this fully sorted version here:
 
-```md [Markdown Concurrent]
+```scenetest [Markdown Concurrent]
 ## User sends and receives a friend request
 
 main-user-1:
