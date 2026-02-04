@@ -1,4 +1,4 @@
-## How is `serverCheck()` different from Playwright's `page.evaluate()`?
+# How is `serverCheck()` different from Playwright's `page.evaluate()`?
 
 We should start by saying Playwright is fantastic technology and its browser drivers and headless
 context management power Scenetest-JS at the very last mile!

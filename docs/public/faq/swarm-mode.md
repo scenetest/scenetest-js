@@ -1,4 +1,4 @@
-## What is "swarm mode"?
+# What is "swarm mode"?
 
 Swarm mode is a diagnostic escalation that runs when failures persist beyond normal thresholds. Instead of running scenes with one team at a time, swarm mode runs **all teams concurrently** against the failing scenes — multiple times each — to classify what's actually wrong.
 

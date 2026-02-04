@@ -16,9 +16,10 @@
     "@tanstack/react-router": "^1.156.0",
     "@tanstack/react-start": "^1.156.0",
     "highlight.js": "^11.11.1",
-    "marked": "^15.0.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

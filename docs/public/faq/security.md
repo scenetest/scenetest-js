@@ -1,4 +1,4 @@
-## Is it safe to run Scenetest in development?
+# Is it safe to run Scenetest in development?
 
 Yes. Scenetest is designed with security in mind, even for dev tooling:
 

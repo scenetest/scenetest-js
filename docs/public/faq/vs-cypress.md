@@ -1,4 +1,4 @@
-## How is this different from Cypress component testing?
+# How is this different from Cypress component testing?
 
 Cypress component testing mounts components in isolation with mocked dependencies:
 
