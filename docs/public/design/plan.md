@@ -6,7 +6,14 @@
 
 ## Current state
 
-Scenetest has a working end-to-end system: inline assertions (`should`, `failed`, `match`), two scene authoring models (`scene()` concurrent and `test()` classic driver), a text DSL with `.spec.md` support, a Vite plugin (dev panel injection + production stripping), the observer dev panel, Playwright fixtures, framework bindings for React/Vue/Solid/Svelte, and a VSCode extension.
+Scenetest has a working end-to-end system:
+
+- Inline assertions: `should()`, `failed()`, `match()`
+- Multi-context assertions: `serverCheck()` — browser collects data, server executes checks, results flow back to dev panel and Playwright
+- Two scene authoring models: `scene()` (concurrent) and `test()` (classic driver), with unified `waitFor`/`emit` coordination across both
+- Text DSL with `.spec.md` support
+- Vite plugin: dev panel injection, `serverCheck` transform + middleware, production stripping
+- Observer dev panel, Playwright fixtures, framework bindings (React/Vue/Solid/Svelte), VSCode extension
 
 The project is pre-v1.0. Real-world evaluation is happening on [sunlo.app](https://sunlo.app).
 
@@ -40,57 +47,7 @@ We ship one execution model, not two. Both `scene()` (concurrent) and `test()` (
 
 ---
 
-## Phase 1: Multi-context assertions (`assert()`)
-
-**Priority: High — core differentiator, infrastructure already scaffolded.**
-
-Design: [`server-actions.md`](server-actions.md)
-
-`assert()` lets developers write browser+server assertions colocated in component code. The serverFn runs on the Vite dev server with database/API access. Results flow through the existing `__scenetest_report` channel to the dev panel and Playwright.
-
-### Implementation steps
-
-Each step is independently shippable and testable.
-
-#### Step 1: Core transform
-- Extend Vite plugin to detect `assert()` calls in source
-- Extract `serverFn` bodies to a virtual module (`/__scenetest/assertions.js`)
-- Transform call sites to `__scenetest_rpc({ id, title, withData })`
-- Generate stable assertion IDs from file location + optional `key`
-
-#### Step 2: Server middleware
-- Add `POST /__scenetest/run` endpoint to Vite plugin middleware
-- Load and execute extracted serverFns with `AsyncLocalStorage`-based result collection
-- Return collected `should()`/`failed()` results as JSON
-- Load `serverContext` from `scenetest.config.ts`
-
-#### Step 3: Browser runtime
-- Implement `__scenetest_rpc()` in `packages/scenetest/src/runtime.ts`
-- Serialize `withData()` result, POST to server, report results via `__scenetest_report`
-- Handle serialization errors and network errors gracefully (report as failed assertions, never crash the app)
-
-#### Step 4: Configuration
-- Define `serverFunctions` shape in `scenetest.config.ts`
-- Load config in Vite plugin at dev server startup
-- Create typed `ServerContext` from config
-- Provide `declare module` pattern for TypeScript users
-
-#### Step 5: Integration
-- Update dev panel to show `[server]` badge on multi-context assertions
-- Add pending assertion tracking (`window.__scenetest_pending`)
-- Wire `waitForAssertions()` in Playwright fixture to poll pending count
-- Production build strips `assert()` calls (same as `should()`/`failed()`)
-
-### Artifacts
-
-- [ ] `assert()` works end-to-end: browser collects data, server executes, results appear in dev panel
-- [ ] Playwright fixture collects multi-context results without modification
-- [ ] `waitForAssertions()` handles async server round-trips
-- [ ] Production build strips all `assert()` calls cleanly
-
----
-
-## Phase 2: JSONL reports & viewer
+## Phase 1: JSONL reports & viewer
 
 **Priority: High — enables CI integration, historical comparison, regression detection.**
 
@@ -128,7 +85,7 @@ Design: [`dashboard.md`](dashboard.md)
 
 ---
 
-## Phase 3: Network layer
+## Phase 2: Network layer
 
 **Priority: Medium — environment control for error/loading state testing.**
 
@@ -158,7 +115,7 @@ network.delay(urlPattern, ms)     // Add latency
 
 ---
 
-## Phase 4: Snapshots
+## Phase 3: Snapshots
 
 **Priority: Medium — DOM state comparison for cancel/undo/restore flows.**
 
@@ -187,9 +144,9 @@ await user.expectSnapshot('profile-card', before)
 
 ---
 
-## Phase 5: CI integration
+## Phase 4: CI integration
 
-**Priority: Medium — depends on Phase 2 (JSONL reports).**
+**Priority: Medium — depends on Phase 1 (JSONL reports).**
 
 ### Implementation
 
@@ -204,7 +161,7 @@ await user.expectSnapshot('profile-card', before)
 
 ---
 
-## Phase 6: Interactive UI mode (`--ui`)
+## Phase 5: Interactive UI mode (`--ui`)
 
 **Priority: Low — quality-of-life, not blocking adoption.**
 
@@ -217,7 +174,7 @@ Design: [`cli-v2.md`](cli-v2.md) section 10
 
 ---
 
-## Phase 7: Visualization
+## Phase 6: Visualization
 
 **Priority: Low — aspirational, depends on JSONL reports.**
 
@@ -244,12 +201,11 @@ Design: [`cli-v2.md`](cli-v2.md) section 10
 | Phase | Feature | Priority | Depends on | Design doc |
 |-------|---------|----------|------------|------------|
 | 0 | Execution model decision | Blocking | Usage data | `scene-vs-flow.md` |
-| 1 | Multi-context assertions | High | — | `server-actions.md` |
-| 2 | JSONL reports & viewer | High | — | `dashboard.md` |
-| 3 | Network layer | Medium | Phase 0 | `cli-v2.md` §7 |
-| 4 | Snapshots | Medium | Phase 0 | `cli-v2.md` §8 |
-| 5 | CI integration | Medium | Phase 2 | `dashboard.md` |
-| 6 | Interactive UI | Low | — | `cli-v2.md` §10 |
-| 7 | Visualization | Low | Phase 2 | `cli-v2.md` §10 |
+| 1 | JSONL reports & viewer | High | — | `dashboard.md` |
+| 2 | Network layer | Medium | Phase 0 | `cli-v2.md` §7 |
+| 3 | Snapshots | Medium | Phase 0 | `cli-v2.md` §8 |
+| 4 | CI integration | Medium | Phase 1 | `dashboard.md` |
+| 5 | Interactive UI | Low | — | `cli-v2.md` §10 |
+| 6 | Visualization | Low | Phase 1 | `cli-v2.md` §10 |
 
-Phases 0, 1, and 2 are independent and can progress in parallel. Phase 0 should be resolved before Phases 3 and 4 since network and snapshot APIs differ between execution models. Phase 5 depends on Phase 2's JSONL format being stable.
+Phases 0 and 1 are independent and can progress in parallel. Phase 0 should be resolved before Phases 2 and 3 since network and snapshot APIs differ between execution models. Phase 4 depends on Phase 1's JSONL format being stable.
