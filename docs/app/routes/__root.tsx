@@ -235,7 +235,6 @@ pre {
   font-size: 0.82rem;
   line-height: 1.6;
   background: #fff;
-  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 4px;
   overflow-x: auto;
@@ -243,9 +242,10 @@ pre {
   box-shadow: 2px 2px 2px 2px rgb(0 0 255 / 0.1);
 }
 
-pre code {
-  background: none;
-  padding: 0;
+pre code,
+pre code.hljs {
+  background: #fff;
+  padding: 16px;
 }
 
 blockquote {
