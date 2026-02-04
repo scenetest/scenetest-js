@@ -183,7 +183,7 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
 
   // Fetch markdown
   useEffect(() => {
-    fetch(src)
+    fetch(src, { headers: { 'X-Raw': '1' } })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch ${src}: ${res.status}`)
         return res.text()

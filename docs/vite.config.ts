@@ -4,6 +4,7 @@ import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { execSync } from 'child_process'
+import { markdownNav } from './vite-plugin-md-nav'
 
 const gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
 
@@ -22,6 +23,7 @@ export default defineConfig(({ command }) => ({
       srcDirectory: 'app',
     }),
     viteReact(),
+    markdownNav(),
     command === 'build' ? nitro() : null,
   ],
 }))
