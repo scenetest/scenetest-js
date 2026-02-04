@@ -242,8 +242,7 @@ pre {
   box-shadow: 2px 2px 2px 2px rgb(0 0 255 / 0.1);
 }
 
-pre code,
-pre code.hljs {
+pre code {
   background: #fff;
   padding: 16px;
 }
