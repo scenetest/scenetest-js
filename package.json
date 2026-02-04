@@ -11,12 +11,12 @@
   },
   "author": "msnook.xyz",
   "scripts": {
-    "build": "pnpm --filter @scenetest/core --filter @scenetest/cli build && pnpm -r build",
+    "build": "pnpm --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
     "dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
     "docs": "pnpx serve docs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm test:unit && pnpm test:e2e",
-    "test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/observer --filter @scenetest/eslint-plugin test",
+    "test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/checks-panel --filter @scenetest/eslint-plugin test",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

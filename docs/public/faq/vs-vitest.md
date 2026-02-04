@@ -1,4 +1,4 @@
-## How is this different from Vitest's in-source testing?
+# How is this different from Vitest's in-source testing?
 
 Vitest's in-source testing (`if (import.meta.vitest)`) lets you write unit tests alongside your code:
 

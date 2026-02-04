@@ -1,9 +1,9 @@
-## How is `assert()` different from Playwright's `page.evaluate()`?
+# How is `serverCheck()` different from Playwright's `page.evaluate()`?
 
 We should start by saying Playwright is fantastic technology and its browser drivers and headless
 context management power Scenetest-JS at the very last mile!
 
-Second, our `assert` was inspired
+Second, our `serverCheck` was inspired
 directly by the usefulness of Playwright's `page.evaluate()`, which lets you run your tests on your
 server, but make assertions about data that has to be gathered from inside the specific agent's
 browser context, DOM, etc.
@@ -16,14 +16,14 @@ expect(count).toBe(dbCount)
 ```
 
 Scenetest flips this relationship. Instead of reaching into the browser from the tests outside,
-you write assertions directly in your components, including these `assert`:
+you write assertions directly in your components, including these `serverCheck` calls:
 
 ```tsx
-// Scenetest - inline assertion "should", and server action "assert"
+// Scenetest - inline assertion "should", and server action "serverCheck"
 function ItemList({ items }) {
   should('should have items', items.length > 0)
   // In react you would wrap this in an effect
-  assert(
+  serverCheck(
     'check items after transaction',
     async (server, data) => {
       const serverCount = await server.orm

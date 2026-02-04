@@ -1,24 +1,6 @@
-import type { ServerContext } from '@scenetest/core'
+import type { ScenetestConfig } from '@scenetest/checks'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
-
-/**
- * Scenetest configuration object
- */
-export interface ScenetestConfig {
-  /**
-   * Server functions available in serverFn via the `server` parameter.
-   * These functions can access databases, APIs, or any server-side resources.
-   */
-  serverFunctions?: Partial<ServerContext>
-}
-
-/**
- * Helper function for defining scenetest config with type safety
- */
-export function defineScenetestConfig(config: ScenetestConfig): ScenetestConfig {
-  return config
-}
 
 /**
  * Cached config to avoid re-loading on every request
@@ -53,6 +35,9 @@ export function findConfigPath(root: string): string | null {
 /**
  * Load the scenetest config using Vite's SSR module loader.
  * This must be called from the server context with access to ViteDevServer.
+ *
+ * Reads the unified scenetest.config.ts and extracts fields the plugin needs
+ * (currently just `serverFunctions`). All other config fields are ignored.
  */
 export async function loadConfig(
   root: string,

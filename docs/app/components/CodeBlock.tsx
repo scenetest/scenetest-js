@@ -29,7 +29,7 @@ export function CodeBlock({ language = 'typescript', children }: CodeBlockProps)
 
   return (
     <div className="code-block" data-language={language}>
-      <button className="copy-btn" onClick={handleCopy} style={{ opacity: 1 }}>
+      <button className="copy-btn" onClick={handleCopy}>
         {copied ? 'Copied!' : 'Copy'}
       </button>
       <pre>

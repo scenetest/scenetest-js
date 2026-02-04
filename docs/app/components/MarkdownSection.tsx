@@ -1,26 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
-import { useLocation } from '@tanstack/react-router'
-import { marked } from 'marked'
-import hljs from 'highlight.js/lib/core'
-import typescript from 'highlight.js/lib/languages/typescript'
-import 'highlight.js/styles/github.css'
-
-hljs.registerLanguage('typescript', typescript)
-hljs.registerLanguage('ts', typescript)
+import { Children, createElement, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Link, useLocation, useRouter } from '@tanstack/react-router'
+import Markdown from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
+import { CodeBlock } from './CodeBlock'
+import { TabbedCode } from './TabbedCode'
 
 interface MarkdownSectionProps {
   src: string
   className?: string
 }
-
-// Configure marked for syntax highlighting hooks
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-})
-
-// Custom renderer for headings with id anchors, and code blocks with copy buttons
-const renderer = new marked.Renderer()
 
 function slugify(text: string): string {
   return text
@@ -31,131 +20,133 @@ function slugify(text: string): string {
     .trim()
 }
 
-renderer.heading = function ({ text, depth }: { text: string; depth: number }) {
-  const id = slugify(text)
-  return `<h${depth} id="${id}">${text}</h${depth}>\n`
+/** Extract plain text from React children (for heading ID generation). */
+function textContent(children: ReactNode): string {
+  const parts: string[] = []
+  Children.forEach(children, (child) => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      parts.push(String(child))
+    } else if (child && typeof child === 'object' && 'props' in child) {
+      const props = child.props as { children?: ReactNode }
+      parts.push(textContent(props.children))
+    }
+  })
+  return parts.join('')
 }
 
-renderer.code = function (code: { text: string; lang?: string }) {
-  const rawLang = code.lang || ''
-  const text = code.text
+// -- Segment types for pre-processing markdown --------------------------
 
-  // Check for tab label: ```ts [Tab Label]
-  const tabMatch = rawLang.match(/^(\w*)\s*\[(.+)\]$/)
-  const lang = tabMatch ? tabMatch[1] : rawLang
-  const tabLabel = tabMatch ? tabMatch[2] : ''
-
-  // Highlight at parse time so the HTML already has hljs classes baked in.
-  // No post-render DOM walk needed.
-  let highlighted: string
-  if (lang && hljs.getLanguage(lang)) {
-    highlighted = hljs.highlight(text, { language: lang }).value
-  } else {
-    highlighted = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-  }
-
-  // Use data attribute to store the code text for copying
-  // Double-encode to handle all special characters safely in HTML attributes
-  const encodedText = encodeURIComponent(encodeURIComponent(text))
-
-  const tabAttr = tabLabel
-    ? ` data-tab="${tabLabel.replace(/"/g, '&quot;')}"`
-    : ''
-
-  return `
-    <div class="code-block"${tabAttr} data-language="${lang}">
-      <button class="copy-btn" data-code="${encodedText}">
-        Copy
-      </button>
-      <pre><code class="hljs language-${lang}">${highlighted}</code></pre>
-    </div>
-  `
+interface MarkdownSegment {
+  type: 'markdown'
+  content: string
 }
 
-marked.use({ renderer })
+interface TabbedSegment {
+  type: 'tabs'
+  tabs: { label: string; language: string; code: string }[]
+}
+
+type Segment = MarkdownSegment | TabbedSegment
 
 /**
- * Post-process marked HTML to group consecutive code blocks that have
- * data-tab attributes into a single tabbed container.
+ * Split raw markdown into segments, grouping consecutive fenced code blocks
+ * that carry a `[Tab Label]` annotation into TabbedSegment entries.
  *
- * Authoring convention in markdown:
+ * A tab-annotated block looks like:
  *
  *   ```ts [classic.spec.ts]
- *   test('login', async ({ actor }) => { ... })
+ *   code here
  *   ```
  *
- *   ```ts [concurrent.spec.ts]
- *   scene('login', async ({ actor }) => { ... })
- *   ```
- *
- *   ```ts [dsl.spec.md]
- *   ['openTo /login', 'see login-form', ...]
- *   ```
- *
- * Consecutive fenced blocks whose language includes [Label] are merged
- * into a single .tabbed-code widget.
+ * Two or more consecutive such blocks become a single TabbedSegment.
+ * A lone annotated block is kept as regular markdown (label stripped).
  */
-function groupTabbedBlocks(html: string): string {
-  // Match a single tabbed code block.  The inner HTML never contains a
-  // nested <div>, so a lazy match to the first </div> is safe.
-  const blockRe =
-    /<div class="code-block" data-tab="([^"]*)"[^>]*>[\s\S]*?<\/div>/g
+function splitMarkdownSegments(md: string): Segment[] {
+  // Match fenced code blocks: ```lang [label]\n...\n```
+  const fenceRe = /^(`{3,})(\w*)\s*\[([^\]]+)\]\s*\n([\s\S]*?)^\1\s*$/gm
 
-  // Collect every tabbed block with its position in the source string.
-  interface Match { full: string; tab: string; start: number; end: number }
-  const matches: Match[] = []
-  let m: RegExpExecArray | null
-  while ((m = blockRe.exec(html)) !== null) {
-    matches.push({ full: m[0], tab: m[1], start: m.index, end: m.index + m[0].length })
+  interface FencedBlock {
+    label: string
+    language: string
+    code: string
+    start: number
+    end: number
   }
 
-  if (matches.length === 0) return html
+  const blocks: FencedBlock[] = []
+  let m: RegExpExecArray | null
+  while ((m = fenceRe.exec(md)) !== null) {
+    blocks.push({
+      label: m[3],
+      language: m[2] || 'typescript',
+      code: m[4].replace(/\n$/, ''),
+      start: m.index,
+      end: m.index + m[0].length,
+    })
+  }
 
-  // Group consecutive matches (only whitespace between them).
-  const groups: Match[][] = []
-  let cur: Match[] = [matches[0]]
-  for (let i = 1; i < matches.length; i++) {
-    const between = html.slice(cur[cur.length - 1].end, matches[i].start).trim()
+  if (blocks.length === 0) {
+    return [{ type: 'markdown', content: md }]
+  }
+
+  // Group consecutive blocks (only whitespace between them)
+  const groups: FencedBlock[][] = []
+  let cur: FencedBlock[] = [blocks[0]]
+  for (let i = 1; i < blocks.length; i++) {
+    const between = md.slice(cur[cur.length - 1].end, blocks[i].start).trim()
     if (between === '') {
-      cur.push(matches[i])
+      cur.push(blocks[i])
     } else {
-      if (cur.length > 1) groups.push(cur)
-      cur = [matches[i]]
+      groups.push(cur)
+      cur = [blocks[i]]
     }
   }
-  if (cur.length > 1) groups.push(cur)
+  groups.push(cur)
 
-  // Replace each group (iterate backwards to preserve positions).
-  let result = html
-  for (let g = groups.length - 1; g >= 0; g--) {
-    const group = groups[g]
-    const start = group[0].start
-    const end = group[group.length - 1].end
+  // Build segments
+  const segments: Segment[] = []
+  let pos = 0
 
-    const tabs = group
-      .map(
-        (b, i) =>
-          `<button class="tabbed-code-tab${i === 0 ? ' active' : ''}" data-tab-index="${i}">${b.tab}</button>`,
-      )
-      .join('')
+  for (const group of groups) {
+    const groupStart = group[0].start
+    const groupEnd = group[group.length - 1].end
 
-    const panels = group
-      .map(
-        (b, i) =>
-          `<div class="tabbed-code-panel${i === 0 ? ' active' : ''}">${b.full}</div>`,
-      )
-      .join('')
+    // Markdown before this group
+    if (pos < groupStart) {
+      const before = md.slice(pos, groupStart).trim()
+      if (before) segments.push({ type: 'markdown', content: before })
+    }
 
-    const widget = `<div class="tabbed-code"><div class="tabbed-code-tabs">${tabs}</div>${panels}</div>`
-    result = result.slice(0, start) + widget + result.slice(end)
+    if (group.length >= 2) {
+      // Real tabbed group
+      segments.push({
+        type: 'tabs',
+        tabs: group.map((b) => ({
+          label: b.label,
+          language: b.language,
+          code: b.code,
+        })),
+      })
+    } else {
+      // Single annotated block — render as plain code block (strip the label)
+      const b = group[0]
+      const plain = '```' + b.language + '\n' + b.code + '\n```'
+      segments.push({ type: 'markdown', content: plain })
+    }
+
+    pos = groupEnd
   }
 
-  return result
+  // Trailing markdown
+  if (pos < md.length) {
+    const after = md.slice(pos).trim()
+    if (after) segments.push({ type: 'markdown', content: after })
+  }
+
+  return segments
 }
+
+// -- Scroll helper -------------------------------------------------------
 
 function scrollToHash(hash: string) {
   const id = hash.replace(/^#/, '')
@@ -166,30 +157,114 @@ function scrollToHash(hash: string) {
   }
 }
 
+// -- Heading component factory -------------------------------------------
+
+function makeHeading(level: number) {
+  const tag = `h${level}`
+  return function HeadingComponent({ children }: { children?: ReactNode }) {
+    const id = slugify(textContent(children))
+    return createElement(tag, { id }, children)
+  }
+}
+
+// -- rehype plugins -------------------------------------------------------
+
+const rehypePlugins = [rehypeRaw]
+
+// -- Main component -------------------------------------------------------
+
 export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
-  const [content, setContent] = useState<string>('<p>Loading...</p>')
   const [rawMarkdown, setRawMarkdown] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { hash } = useLocation()
+  const router = useRouter()
 
+  // Fetch markdown
   useEffect(() => {
-    fetch(src)
+    fetch(src, { headers: { 'X-Raw': '1' } })
       .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch ${src}: ${res.status}`)
-        }
+        if (!res.ok) throw new Error(`Failed to fetch ${src}: ${res.status}`)
         return res.text()
       })
       .then((md) => {
         setRawMarkdown(md)
-        setContent(groupTabbedBlocks(marked(md) as string))
+        setError(null)
       })
       .catch((err) => {
         console.error('Error loading markdown:', err)
-        setContent(`<p class="error">Error loading content from ${src}</p>`)
+        setError(`Error loading content from ${src}`)
       })
   }, [src])
+
+  // Scroll to hash target after content renders or hash changes.
+  // Delay slightly so the view transition animation doesn't reset scroll.
+  useEffect(() => {
+    if (!hash || rawMarkdown === null) return
+    const timeout = setTimeout(() => scrollToHash(hash), 320)
+    return () => clearTimeout(timeout)
+  }, [hash, rawMarkdown])
+
+  // Split into segments
+  const segments = useMemo(
+    () => (rawMarkdown ? splitMarkdownSegments(rawMarkdown) : []),
+    [rawMarkdown],
+  )
+
+  // Custom components for react-markdown
+  const components = useMemo(
+    () => ({
+      a({ href, children }: { href?: string; children?: ReactNode }) {
+        if (href?.startsWith('/')) {
+          return <Link to={href}>{children}</Link>
+        }
+        if (href?.startsWith('#')) {
+          return (
+            <a
+              href={href}
+              onClick={(e) => {
+                e.preventDefault()
+                scrollToHash(href)
+                history.replaceState(null, '', href)
+              }}
+            >
+              {children}
+            </a>
+          )
+        }
+        return <a href={href}>{children}</a>
+      },
+      h1: makeHeading(1),
+      h2: makeHeading(2),
+      h3: makeHeading(3),
+      h4: makeHeading(4),
+      h5: makeHeading(5),
+      h6: makeHeading(6),
+      code({
+        className: codeClassName,
+        children,
+      }: {
+        className?: string
+        children?: ReactNode
+      }) {
+        // Inline code — no className set by react-markdown
+        if (!codeClassName) return <code>{children}</code>
+        // Fenced block — render via CodeBlock
+        const lang = codeClassName.replace('language-', '')
+        return (
+          <CodeBlock language={lang}>
+            {String(children).replace(/\n$/, '')}
+          </CodeBlock>
+        )
+      },
+      // CodeBlock already wraps in <pre>, so unwrap the default <pre>
+      pre({ children }: { children?: ReactNode }) {
+        return <>{children}</>
+      },
+    }),
+    [router],
+  )
 
   function handleCopyMarkdown() {
     if (!rawMarkdown) return
@@ -198,93 +273,34 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Scroll to hash target after content renders or hash changes.
-  // Delay slightly so the view transition animation doesn't reset scroll.
-  useEffect(() => {
-    if (!hash || content === '<p>Loading...</p>') return
-    const timeout = setTimeout(() => scrollToHash(hash), 320)
-    return () => clearTimeout(timeout)
-  }, [hash, content])
-
-  // Intercept hash-only link clicks inside rendered markdown so they
-  // scroll directly instead of triggering a router navigation + view transition.
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    function handleClick(e: MouseEvent) {
-      const link = (e.target as HTMLElement).closest('a')
-      if (!link) return
-      const href = link.getAttribute('href')
-      if (!href || !href.startsWith('#')) return
-      e.preventDefault()
-      e.stopPropagation()
-      scrollToHash(href)
-      history.replaceState(null, '', href)
-    }
-
-    container.addEventListener('click', handleClick)
-    return () => container.removeEventListener('click', handleClick)
-  }, [content])
-
-  // Copy button handlers
-  useEffect(() => {
-    function handleCopyClick(e: MouseEvent) {
-      const target = e.target as HTMLElement
-      if (target.classList.contains('copy-btn') && target.dataset.code) {
-        const text = decodeURIComponent(decodeURIComponent(target.dataset.code))
-        navigator.clipboard.writeText(text)
-        target.textContent = 'Copied!'
-        setTimeout(() => {
-          target.textContent = 'Copy'
-        }, 2000)
-      }
-    }
-
-    document.addEventListener('click', handleCopyClick)
-    return () => document.removeEventListener('click', handleCopyClick)
-  }, [content])
-
-  // Tab switching for tabbed code blocks
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    function handleTabClick(e: MouseEvent) {
-      const tab = (e.target as HTMLElement).closest('.tabbed-code-tab') as HTMLElement | null
-      if (!tab) return
-      const tabbed = tab.closest('.tabbed-code')
-      if (!tabbed) return
-
-      const index = tab.dataset.tabIndex
-      if (index == null) return
-
-      // Update active tab
-      tabbed.querySelectorAll('.tabbed-code-tab').forEach((t, i) => {
-        t.classList.toggle('active', i === Number(index))
-      })
-
-      // Update active panel
-      tabbed.querySelectorAll('.tabbed-code-panel').forEach((p, i) => {
-        p.classList.toggle('active', i === Number(index))
-      })
-    }
-
-    container.addEventListener('click', handleTabClick)
-    return () => container.removeEventListener('click', handleTabClick)
-  }, [content])
+  if (error) {
+    return (
+      <div className={`markdown-section ${className}`}>
+        <p className="error">{error}</p>
+      </div>
+    )
+  }
 
   return (
-    <div className={`markdown-section ${className}`}>
+    <div className={`markdown-section ${className}`} ref={containerRef}>
       {rawMarkdown && (
         <button className="copy-md-btn" onClick={handleCopyMarkdown}>
           {copied ? 'Copied!' : 'Copy markdown'}
         </button>
       )}
-      <div
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
+      {segments.map((seg, i) =>
+        seg.type === 'tabs' ? (
+          <TabbedCode key={i} tabs={seg.tabs} />
+        ) : (
+          <Markdown
+            key={i}
+            rehypePlugins={rehypePlugins}
+            components={components}
+          >
+            {seg.content}
+          </Markdown>
+        ),
+      )}
     </div>
   )
 }

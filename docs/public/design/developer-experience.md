@@ -110,7 +110,7 @@ The LSP would need to:
 3. Resolve actor configs from the project's actors files
 4. Resolve macros from `defineMacro()` calls in `.spec.ts` files
 
-This is moderate complexity — the DSL parser already exists in `packages/scenetest-cli/src/dsl.ts` and could be adapted.
+This is moderate complexity — the DSL parser already exists in `packages/scenes/src/dsl.ts` and could be adapted.
 
 ---
 

@@ -148,8 +148,7 @@ intuitive.
 
 - Delete `ActionChainImpl` from `actor.ts` (the thenable chain)
 - Delete `SequentialActorHandleImpl` (the handle that creates throwaway chains)
-- Remove `test()` export from `scene.ts` (keep `sceneRegistry`, `runScene`,
-  `when`)
+- Remove `test()` export from `scene.ts` (keep `sceneRegistry`, `runScene`)
 - Remove `ActionChain` and `SequentialActorHandle` from `types.ts`
 - Update `runner.ts` — it calls `runScene` which calls `scene.fn`,
   which already works with `scene()` since it registers as a scene

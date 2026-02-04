@@ -1,21 +1,13 @@
 # Concurrent and Classic Mode
 
-Scenetest has two TypeScript execution models and a plain-text format. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
-
-| Style | File | Function | Execution model | Best for |
-|-------|------|----------|----------------|----------|
-| **Text DSL** | `.spec.md` | Compiles to `scene()` | Concurrent | Simplest way to write a spec with as many actors as you want |
-| **Concurrent** | `.spec.ts` | `scene()` | Reactive concurrent draining | Full TypeScript control with automatic concurrency |
-| **Classic Driver** | `.spec.ts` | `test()` | Sequential await-driven | Familiar Cypress/Playwright model with explicit control |
-
-> **STATUS:** Both models are implemented. Before 1.0, one will be removed. See the [decision document](/design/scene-vs-flow) for the trade-off analysis. Text DSL `.spec.md` files compile to `scene()`.
+Scenetest has two TypeScript execution models and three ways to author specs. All three use the same [actor DSL methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management. They differ in **syntax and execution model**.
 
 ---
 
 ## Concurrent — scene()
 
 ```typescript
-import { scene } from '@scenetest/cli'
+import { scene } from '@scenetest/scenes'
 
 scene('user updates their profile', ({ actor }) => {
   const user = actor('user')
@@ -40,14 +32,14 @@ scene('user updates their profile', ({ actor }) => {
 
 **How it works:** The entire function body is **synchronous declaration**. `actor()` returns a handle immediately (config is resolved, browser launches later). DSL calls push to a persistent queue on the actor and return the actor itself. Nothing executes during the function body. After it returns, browsers launch in parallel, then all actors drain their queues concurrently. Each actor advances through its own queue as fast as the DOM allows.
 
-**When to use:** Multi-actor scenes (concurrency is automatic), or when you want to write specs without thinking about timing. `see`/`seeText` naturally poll for DOM state, so cross-actor sync happens through the application, not through `await` ordering.
+**When to use:** Any time. Particularly for multi-actor scenes (concurrency is automatic), or when you want to write specs without thinking about timing. `see`/`seeText` naturally poll for DOM state, so cross-actor sync happens through the application, not through `await` ordering.
 
 ---
 
 ## Classic Driver — test()
 
 ```typescript
-import { test } from '@scenetest/cli'
+import { test } from '@scenetest/scenes'
 
 test('user updates their profile', async ({ actor }) => {
   const user = await actor('user')
@@ -80,7 +72,7 @@ test('user updates their profile', async ({ actor }) => {
 
 | | Concurrent — `scene()` | Classic Driver — `test()` |
 |---|---------|--------|
-| **Import** | `import { scene } from '@scenetest/cli'` | `import { test } from '@scenetest/cli'` |
+| **Import** | `import { scene } from '@scenetest/scenes'` | `import { test } from '@scenetest/scenes'` |
 | **`actor()` call** | `const user = actor('user')` (sync) | `const user = await actor('user')` |
 | **Function signature** | `({ actor }) => { ... }` (no async needed) | `async ({ actor }) => { ... }` |
 | **DSL calls need `await`?** | No — calls just queue, execution is automatic | Yes — `await` triggers execution |
@@ -88,7 +80,7 @@ test('user updates their profile', async ({ actor }) => {
 | **Where scope lives** | On the actor (persists through the entire queue) | On the chain (resets at each `await`) |
 | **Multi-actor concurrency** | Automatic — all actors drain concurrently | Explicit `Promise.all()` |
 | **`if(selector, cb)`** | Persistent one-shot monitor, polls for **all subsequent actions** | Watcher that polls during actions, **cleared after each `await`** |
-| **`waitFor(message)`** | Available — blocks actor's queue until bus message arrives | Not available (use `when()`) |
+| **`waitFor(message)`** | Available — blocks actor's queue until bus message arrives | Available — blocks until bus message arrives |
 
 ### Critical: DO NOT mix the two models
 
@@ -150,7 +142,7 @@ test('two users can chat', async ({ actor }) => {
 
 ## Multi-Actor Coordination
 
-### Concurrent uses `emit()` and `waitFor()`
+### Both modes use `emit()` and `waitFor()`
 
 ```typescript
 scene('sender and receiver', ({ actor }) => {
@@ -171,24 +163,25 @@ scene('sender and receiver', ({ actor }) => {
 })
 ```
 
-### Classic Driver uses `when()` and `emit()`
+### Classic Driver uses `emit()` and `waitFor()`
 
 ```typescript
-import { test, when } from '@scenetest/cli'
+import { test } from '@scenetest/scenes'
 
 test('sender and receiver', async ({ actor }) => {
   const sender = await actor('sender')
   const receiver = await actor('receiver')
 
-  when('sender-ready', async () => {
-    await receiver.openTo('/inbox')
-    await receiver.seeText('New message')
-  })
-
   await sender.openTo('/login')
   // ... login flow ...
   await sender.emit('sender-ready')
   await sender.see('compose').typeInto('body', 'Hello!').click('send')
+
+  // waitFor is available in classic mode too — it returns a promise
+  // that resolves when the named message arrives on the bus.
+  await receiver.waitFor('sender-ready')
+  await receiver.openTo('/inbox')
+  await receiver.seeText('New message')
 })
 ```
 
@@ -248,7 +241,7 @@ user
   .click('submit')
   .see('dashboard')
 
-// waitFor is only available in the concurrent model
+// waitFor is available in both models
 user.waitFor('data-ready')
 user.see('loaded-content')
 ```

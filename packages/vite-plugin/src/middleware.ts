@@ -1,5 +1,5 @@
 import type { Connect, ViteDevServer } from 'vite'
-import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/core'
+import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
 import { AsyncLocalStorage } from 'async_hooks'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
@@ -55,7 +55,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
     if (req.method === 'GET' && req.url === '/__scenetest/observer.js') {
       try {
         // Resolve the observer's auto entry point
-        const resolved = await server.pluginContainer.resolveId('@scenetest/observer/auto')
+        const resolved = await server.pluginContainer.resolveId('@scenetest/checks-panel/auto')
         if (!resolved) {
           res.statusCode = 404
           res.end('Observer module not found')
@@ -84,7 +84,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
     // Serve the recorder module at /__scenetest/recorder.js
     if (req.method === 'GET' && req.url === '/__scenetest/recorder.js') {
       try {
-        const resolved = await server.pluginContainer.resolveId('@scenetest/recorder/auto')
+        const resolved = await server.pluginContainer.resolveId('@scenetest/scenes-panel/auto')
         if (!resolved) {
           res.statusCode = 404
           res.end('Recorder module not found')

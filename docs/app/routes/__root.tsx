@@ -7,8 +7,12 @@ import {
 } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { SectionNav } from '../components/SectionNav'
+import { LinkCard } from '../components/LinkCard'
+import { Footer } from '../components/Footer'
+import { guides, reference, faqs } from '../sections'
 
 export const Route = createRootRoute({
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -28,7 +32,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   useEffect(() => {
     // Initialize observer panel for demo
-    import('@scenetest/observer').then(({ initObserver }) => {
+    import('@scenetest/checks-panel').then(({ initObserver }) => {
       initObserver()
     })
   }, [])
@@ -52,6 +56,44 @@ function RootComponent() {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function NotFound() {
+  return (
+    <article className="not-found">
+      <div className="not-found-hero">
+        <span className="hero-logo" style={{ fontSize: '5rem', width: '120px', height: '120px', borderRadius: '24px' }}>🎬</span>
+        <h1>404 - That's not a page!</h1>
+        <p>
+          We're sorry &mdash; this site is under active development and things move around.
+          Try one of the pages below, or head <Link to="/">back home</Link>.
+        </p>
+      </div>
+
+      <h2>Guides</h2>
+      <div className="link-card-grid">
+        {guides.map((g) => (
+          <LinkCard key={g.slug} to={`/guides/${g.slug}`} title={g.title} description={g.description} />
+        ))}
+      </div>
+
+      <h2>API Reference</h2>
+      <div className="link-card-grid">
+        {reference.map((r) => (
+          <LinkCard key={r.slug} to={`/reference/${r.slug}`} title={r.title} description={r.description} />
+        ))}
+      </div>
+
+      <h2>FAQ</h2>
+      <div className="link-card-grid">
+        {faqs.map((f) => (
+          <LinkCard key={f.slug} to={`/faq/${f.slug}`} title={f.title} description={f.description} />
+        ))}
+      </div>
+
+      <Footer />
+    </article>
   )
 }
 
@@ -89,8 +131,8 @@ article {
 /* Side nav */
 .side-nav {
   position: fixed;
-  right: 105px;
-  top: 80px;
+  right: calc(15vw - 60px);
+  top: 120px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -240,6 +282,17 @@ footer {
   border-top: 1px solid var(--border);
   font-size: 0.95rem;
   color: var(--text-light);
+}
+
+footer a {
+  color: var(--text-light);
+  text-decoration: none;
+  text-decoration: underline;
+}
+
+footer a.active {
+	opacity: 70%;
+	cursor: default;
 }
 
 .footer-logo {
@@ -715,5 +768,29 @@ footer {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 404 page */
+.not-found {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 80px 24px 120px;
+}
+
+.not-found-hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.not-found-hero p {
+  color: var(--text-light);
+  font-size: 1.05rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.not-found h2 {
+  margin-top: 40px;
+  margin-bottom: 16px;
 }
 `

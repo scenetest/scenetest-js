@@ -7,7 +7,7 @@ import MagicString from 'magic-string'
 const traverse = (typeof _traverse === 'function' ? _traverse : (_traverse as any).default) as typeof _traverse
 
 /**
- * Extracted assertion from an assert() call
+ * Extracted assertion from a serverCheck() call
  */
 export interface ExtractedAssertion {
   /** Unique identifier (filename:line:col) */
@@ -59,9 +59,9 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
 }
 
 /**
- * Transform assert() calls in source code.
+ * Transform serverCheck() calls in source code.
  *
- * For assert(title, serverFn, withData?) calls:
+ * For serverCheck(title, serverFn, withData?) calls:
  * 1. Extract the serverFn to be run on the server
  * 2. Replace the call with __scenetest_rpc({ id, title, withData })
  *
@@ -72,22 +72,22 @@ function extractServerFnBody(code: string, serverFnNode: t.Node, filename: strin
 export function transformAssertions(code: string, options: TransformOptions = {}): TransformResult | null {
   const { sourceMap = true, filename = 'unknown.js' } = options
 
-  // Quick check - if no assert call, skip
-  if (!code.includes('assert')) {
+  // Quick check - if no serverCheck call, skip
+  if (!code.includes('serverCheck')) {
     return null
   }
 
   // All scenetest packages
   const SCENETEST_PACKAGES = [
-    '@scenetest/core',
-    '@scenetest/react',
-    '@scenetest/vue',
-    '@scenetest/solid',
-    '@scenetest/svelte',
+    '@scenetest/checks',
+    '@scenetest/checks-react',
+    '@scenetest/checks-vue',
+    '@scenetest/checks-solid',
+    '@scenetest/checks-svelte',
   ]
 
-  // Track imported assert name
-  let assertLocalName: string | null = null
+  // Track imported serverCheck name
+  let serverCheckLocalName: string | null = null
 
   // Parse with Babel
   const parserOptions: ParserOptions = {
@@ -130,32 +130,32 @@ export function transformAssertions(code: string, options: TransformOptions = {}
           const imported = t.isIdentifier(specifier.imported)
             ? specifier.imported.name
             : specifier.imported.value
-          if (imported === 'assert') {
-            assertLocalName = specifier.local.name
+          if (imported === 'serverCheck') {
+            serverCheckLocalName = specifier.local.name
           }
         }
       }
     },
   })
 
-  if (!assertLocalName) {
+  if (!serverCheckLocalName) {
     return null
   }
 
-  // Second pass: transform assert(title, serverFn, withData?) calls
+  // Second pass: transform serverCheck(title, serverFn, withData?) calls
   traverse(ast, {
     CallExpression(path: NodePath<t.CallExpression>) {
       const callee = path.node.callee
 
-      // Check if this is an assert() call
-      if (!t.isIdentifier(callee) || callee.name !== assertLocalName) {
+      // Check if this is a serverCheck() call
+      if (!t.isIdentifier(callee) || callee.name !== serverCheckLocalName) {
         return
       }
 
-      // Get the arguments: assert(title, serverFn, withData?)
+      // Get the arguments: serverCheck(title, serverFn, withData?)
       const args = path.node.arguments
       if (args.length < 2) {
-        console.warn(`[vite-plugin-scenetest] assert() requires at least (title, serverFn) at ${filename}:${path.node.loc?.start.line}`)
+        console.warn(`[vite-plugin-scenetest] serverCheck() requires at least (title, serverFn) at ${filename}:${path.node.loc?.start.line}`)
         return
       }
 
@@ -222,7 +222,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     }
   }
 
-  const rpcImport = `\nimport { __scenetest_rpc } from '@scenetest/core/runtime'\n`
+  const rpcImport = `\nimport { __scenetest_rpc } from '@scenetest/checks/runtime'\n`
   s.appendLeft(importInsertPos, rpcImport)
 
   return {

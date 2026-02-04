@@ -6,6 +6,12 @@ export interface SectionItem {
 
 export const guides: SectionItem[] = [
   {
+    slug: 'getting-started',
+    title: 'Getting Started',
+    description:
+      'Simple steps for setting up your first actors, scenes and checks, converting old specs, and more.',
+  },
+  {
     slug: 'writing-scene-specs',
     title: 'Scene Specs',
     description:
@@ -15,7 +21,7 @@ export const guides: SectionItem[] = [
     slug: 'writing-inline-assertions',
     title: 'Inline Assertions',
     description:
-      'Use assert(), should() and failed() in application code to check state across the server-client boundary.',
+      'Use serverCheck(), should() and failed() in application code to check state across the server-client boundary.',
   },
 
   {
@@ -27,29 +33,29 @@ export const guides: SectionItem[] = [
 ]
 
 export const reference: SectionItem[] = [
+	{
+	  slug: 'text-dsl',
+	  title: 'Text DSL Format',
+	  description:
+		 'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
+	},
+	{
+	  slug: 'actor-api',
+	  title: 'Actor API',
+	  description:
+		 'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
+	},
+	{
+	  slug: 'selectors',
+	  title: 'Selectors',
+	  description:
+		 'How selectors resolve to DOM elements: attribute matching, nested selectors, key selectors, aliases, and sigil prefixes.',
+	},
   {
     slug: 'cli',
     title: 'CLI Reference',
     description:
       'Command-line options, configuration file format, team discovery, device rotation, swarm mode, and report output.',
-  },
-  {
-    slug: 'actor-api',
-    title: 'Actor API',
-    description:
-      'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
-  },
-  {
-    slug: 'selectors',
-    title: 'Selectors',
-    description:
-      'How selectors resolve to DOM elements: attribute matching, nested selectors, key selectors, aliases, and sigil prefixes.',
-  },
-  {
-    slug: 'text-dsl',
-    title: 'Text DSL Format',
-    description:
-      'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
   },
   {
     slug: 'concurrent-and-classic',
@@ -63,15 +69,15 @@ export const faqs: SectionItem[] = [
 
   {
     slug: 'concurrent-vs-classic',
-    title: "What's the difference between Concurrent and Classic?",
+    title: "Concurrent Flow and Classic Driver",
     description:
       'How the concurrent drain model is built on the classic async driver, and why support both (for now).',
   },
   {
 	  slug: 'security',
-	  title: 'Is it safe?',
+	  title: 'Is Scenetest Safe?',
 	  description:
-	  `Yes, we make very sure that none of your tests or server fns ever make it into your production bundle! Read up.`,
+	  `Yes, the serverCheck bridge only runs in dev, and all your inline checks are stripped from your production bundle! Read up.`,
 	},
 	{
 		slug: 'swarm-mode',
@@ -81,7 +87,7 @@ export const faqs: SectionItem[] = [
 	},
 	{
 		slug: 'vscode-extension',
-		title: 'Syntax Highlighting?',
+		title: 'Did You Say "spec.md syntax highlighting"?',
 		description:
 		 "Yes, we made a VSCode extension to make the markdown DSL feel more like writing Javascript.",
 	},
