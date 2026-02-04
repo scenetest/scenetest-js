@@ -49,7 +49,7 @@ scene('user completes onboarding', ({ actor }) => {
 })
 ```
 
-```markdown [Text DSL (md)]
+```scenetest [Text DSL (md)]
 # user completes onboarding
 new-user:
 - openTo /

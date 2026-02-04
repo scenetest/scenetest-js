@@ -13,7 +13,7 @@ concurrent actor behaviour naturally, reliably, ergonomically.
 
 Imagine modeling the following scene in test code:
 
-```md
+```scenetest
 ## user1 sends a friend request; user2 sees the alert and accepts
 user1:                                  user2:
 login                                   login
@@ -67,7 +67,7 @@ mean serializing the way it executes. The following are all valid styles for wri
 scenes that all build the same exact pair of action queues:
 
 
-```md [Sequential]
+```scenetest [Sequential]
 user1: login
 user2: login
 
@@ -88,7 +88,7 @@ click sidebar-chats-link
 see [user2.username]
 ```
 
-```md [Mixed]
+```scenetest [Mixed]
 user1:
 login
 searchFriend user2
@@ -109,7 +109,7 @@ click sidebar-chats-link
 see [user2.username]
 ```
 
-```md [Sorted]
+```scenetest [Sorted]
 user1:
 login
 searchFriend user2
@@ -130,7 +130,7 @@ see /friends/[user1.id]
 see friend-profile-picture [user1.id]
 ```
 
-```md [1-Liners]
+```scenetest [1-Liners]
 user1: login
 user2: login
 user1: searchFriend user2
@@ -186,7 +186,7 @@ at the same time.
 This is a valid and correct concurrent spec for the thing we're trying to describe, but
 we've written it
 
-```md
+```scenetest
 user2: login
 
 user1:
@@ -415,7 +415,7 @@ pattern works in both concurrent and classic modes.
 
 The same scene as plain text. Markdown specs compile to `scene()` — concurrent model:
 
-```markdown
+```scenetest
 # user1 invites user2 as a friend
 
 user1:

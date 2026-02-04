@@ -175,7 +175,7 @@ For the full inline assertions guide, see [Writing Inline Assertions](/guides/wr
 
 Scene specs describe user journeys -- what does the user see, what do they click, what do they expect. The simplest way to write a spec is with the Markdown DSL. Create a `.spec.md` file:
 
-```markdown
+```scenetest
 <!-- scenetest/scenes/hello.spec.md -->
 
 # user can view the home page
@@ -213,7 +213,7 @@ Each entry in the array is a **team** -- a self-contained set of actors with cre
 
 Here's a spec with a logged-in user and some interaction:
 
-```markdown
+```scenetest
 <!-- scenetest/scenes/profile.spec.md -->
 
 # user can update their profile
@@ -372,7 +372,7 @@ At this point you have the foundations: inline checks validating your mental mod
 
 Most real user journeys involve more than one person. Add roles to your team and use them in specs:
 
-```markdown
+```scenetest
 # sender sends a message and receiver sees it
 
 sender:

@@ -8,7 +8,7 @@ Scene specs describe **user journeys** — the flows a person takes through your
 
 The primary and most-advised way to write scenes is with the Markdown DSL, which is basically Javascript without the punctuation. The following Markdown and Typescript produce the same scene output:
 
-```markdown [markdown]
+```scenetest [markdown]
 // scenes/user-onboarding.spec.md
 # user completes onboarding
 
@@ -58,7 +58,7 @@ really want to write async/await style specs, see the docs on [Concurrent Flow &
 Click the tabs to compare:
 
 
-```markdown [concurrent md]
+```scenetest [concurrent md]
 # user completes onboarding
 
 new-user:
@@ -200,7 +200,7 @@ scene('user can complete checkout', ({ actor }) => {
 })
 ```
 
-```markdown [text-dsl.spec.md]
+```scenetest [text-dsl.spec.md]
 # user can complete checkout
 customer:
 - openTo /cart
