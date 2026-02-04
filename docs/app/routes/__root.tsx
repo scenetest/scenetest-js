@@ -234,7 +234,8 @@ pre {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.82rem;
   line-height: 1.6;
-  background: var(--code-bg);
+  background: #fff;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 4px;
   overflow-x: auto;
