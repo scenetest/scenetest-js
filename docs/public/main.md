@@ -163,7 +163,8 @@ test(
 )
 ```
 
-In the example above, the two &ldquo;Concurrent&rdquo; examples are identical. They both declare a sequence of actions,
+In the example above, the Concurrent Markdown spec is identical to the Concurrent TS example.
+Both declare a sequence of actions,
 spin up a virtual browser context for each user, and then run through their respective action queues concurrently.
 In this mode, there's no difference between the roughly-ordered markdown you see above and this fully sorted version here:
 
@@ -188,3 +189,21 @@ That's because the scene is not running these actions and awaiting their consequ
 it's time to run the scene, each actor will advance as far as the DOM allows, and then wait and poll for their next step.
 But we don't have to write this logic in the spec; the framework handles it for us; we just have to write who does what
 and what they expect, roughly in order.
+
+## Try it Out
+
+There's a lot more we could say about _Scenetest_ – we could talk about the finer points of the selector API,
+about aliases, macros, failures that "settle," swarm mode, the scene recorder, the reporting dashboard, and more! But you've gotten
+through the main highlights: inline checks that validate your mental model from inside the app, and scene specs that
+drive the browser through all your happy paths and edge cases.
+
+Below are the guides and references to get you going, starting with [the Getting Started guide](/guides/getting-started) which walks you through installation, your first inline check, and your first markdown spec – happy testing!
+
+### Guides
+
+- [Getting Started](/guides/getting-started) – install Scenetest, add your first check, write your first spec
+- [Writing Scene Specs](/guides/writing-scene-specs) – all three authoring styles, scope navigation, coordination, and the collaboration loop
+- [Writing Inline Assertions](/guides/writing-inline-assertions) – `should()`, `failed()`, `serverCheck()`, and framework-specific hooks like `useServerCheck` and `createServerCheck`.
+- [Building Good Teams of Actors](/guides/building-teams) – designing teams that mirror your seed data, scaling concurrency
+
+Or find detailed references on the [Actor handle](/reference/actor-api), [DOM selectors](/reference/selectors), [The markdown DSL Format](/reference/text-dsl), [Concurrent and Classic Mode](/reference/concurrent-and-classic), and the full [CLI Reference](/reference/cli).

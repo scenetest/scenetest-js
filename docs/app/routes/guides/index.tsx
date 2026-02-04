@@ -16,10 +16,16 @@ function GuidesIndex() {
         For humans and language models writing scene specs and inline checks.
       </p>
 
+		<LinkCard
+			to="/guides/getting-started"
+			title="Getting Started"
+			description="Simple steps for setting up your first actors, scenes and checks, converting old specs, and more."
+		/>
+
       <h2>How Scenetest Works</h2>
 
       <p>
-        We've split the test into its two main parts: `scenes` and `checks`
+        We've split the test into its two main parts: `scenes` and `checks`.
       </p>
 
       <ol>

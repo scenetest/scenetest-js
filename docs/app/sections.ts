@@ -6,6 +6,12 @@ export interface SectionItem {
 
 export const guides: SectionItem[] = [
   {
+    slug: 'getting-started',
+    title: 'Getting Started',
+    description:
+      'Simple steps for setting up your first actors, scenes and checks, converting old specs, and more.',
+  },
+  {
     slug: 'writing-scene-specs',
     title: 'Scene Specs',
     description:
@@ -27,29 +33,29 @@ export const guides: SectionItem[] = [
 ]
 
 export const reference: SectionItem[] = [
+	{
+	  slug: 'text-dsl',
+	  title: 'Text DSL Format',
+	  description:
+		 'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
+	},
+	{
+	  slug: 'actor-api',
+	  title: 'Actor API',
+	  description:
+		 'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
+	},
+	{
+	  slug: 'selectors',
+	  title: 'Selectors',
+	  description:
+		 'How selectors resolve to DOM elements: attribute matching, nested selectors, key selectors, aliases, and sigil prefixes.',
+	},
   {
     slug: 'cli',
     title: 'CLI Reference',
     description:
       'Command-line options, configuration file format, team discovery, device rotation, swarm mode, and report output.',
-  },
-  {
-    slug: 'actor-api',
-    title: 'Actor API',
-    description:
-      'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
-  },
-  {
-    slug: 'selectors',
-    title: 'Selectors',
-    description:
-      'How selectors resolve to DOM elements: attribute matching, nested selectors, key selectors, aliases, and sigil prefixes.',
-  },
-  {
-    slug: 'text-dsl',
-    title: 'Text DSL Format',
-    description:
-      'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
   },
   {
     slug: 'concurrent-and-classic',
