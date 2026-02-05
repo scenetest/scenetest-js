@@ -150,6 +150,11 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   private warningTriggers: WarningTrigger[] = []
   private conditionalMonitors: ConditionalMonitor[] = []
 
+  // URL when scope was last set (for detecting navigation-induced staleness)
+  private scopeSetUrl = ''
+  // Per-entry URLs matching scopeStack (kept in sync)
+  private scopeStackUrls: string[] = []
+
   private _draining = false
   private _aborted = false
   private _abortReason?: string
@@ -250,6 +255,61 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     return this.currentScope ?? this.page
   }
 
+  /**
+   * Validate that the current scope is still present in the DOM.
+   *
+   * Called lazily before each action. When the page URL has changed since the
+   * scope was established, we check whether the scope element still exists.
+   * If it doesn't, we walk up the scopeStack until we find an ancestor that
+   * does, or fall back to the page root.
+   */
+  private async validateScope(): Promise<void> {
+    if (this.currentScope === null || this.currentScope === this.page) return
+
+    const currentUrl = this.page.url()
+    if (this.scopeSetUrl && currentUrl === this.scopeSetUrl) return
+
+    // URL changed — check if current scope element still exists
+    try {
+      const count = await (this.currentScope as Locator).count()
+      if (count > 0) {
+        // Element survived the navigation
+        this.scopeSetUrl = currentUrl
+        return
+      }
+    } catch {
+      // Element detached or frame destroyed
+    }
+
+    // Current scope is gone — walk up the stack
+    while (this.scopeStack.length > 0) {
+      const candidate = this.scopeStack.pop()!
+      this.scopeStackUrls.pop()
+
+      if (candidate === this.page) {
+        this.currentScope = this.page
+        this.scopeStack = []
+        this.scopeStackUrls = []
+        this.scopeSetUrl = ''
+        return
+      }
+      try {
+        const count = await (candidate as Locator).count()
+        if (count > 0) {
+          this.currentScope = candidate
+          this.scopeSetUrl = currentUrl
+          return
+        }
+      } catch {
+        // Also gone, continue up
+      }
+    }
+
+    // Nothing in the stack was valid — reset to page root
+    this.currentScope = this.page
+    this.scopeSetUrl = ''
+  }
+
   // -----------------------------------------------------------------------
   // Navigation
   // -----------------------------------------------------------------------
@@ -259,6 +319,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       await this.page.goto(url, { timeout: this.actionTimeout })
       this.currentScope = this.page
       this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
     })
   }
 
@@ -298,7 +360,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       const locator = resolveSelector(this.scope, selector)
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.scopeStack.push(this.scope)
+      this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
+      this.scopeSetUrl = this.page.url()
     })
   }
 
@@ -319,7 +383,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         )
       }
       this.scopeStack.push(this.scope)
+      this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
+      this.scopeSetUrl = this.page.url()
     })
   }
 
@@ -337,7 +403,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       const locator = this.page.getByText(text).first()
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.scopeStack.push(this.scope)
+      this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
+      this.scopeSetUrl = this.page.url()
     })
   }
 
@@ -403,6 +471,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       return this.push('up', '(root)', async () => {
         this.currentScope = this.page
         this.scopeStack = []
+        this.scopeSetUrl = ''
+        this.scopeStackUrls = []
       })
     }
     return this.push('up', selector, async () => {
@@ -412,7 +482,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         timeout: this.actionTimeout,
       })
       this.scopeStack.push(this.scope)
+      this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = ancestorLocator
+      this.scopeSetUrl = this.page.url()
     })
   }
 
@@ -420,8 +492,10 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     return this.push('prev', undefined, async () => {
       if (this.scopeStack.length === 0) {
         this.currentScope = this.page
+        this.scopeSetUrl = ''
       } else {
         this.currentScope = this.scopeStack.pop()!
+        this.scopeSetUrl = this.scopeStackUrls.pop() ?? ''
       }
     })
   }
@@ -702,6 +776,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    * monitors (execute sub-actions inline).
    */
   private async executeWithMonitors(action: QueuedAction): Promise<void> {
+    // Validate scope before each action in case a URL change invalidated it
+    await this.validateScope()
+
     const hasWarnings = this.warningTriggers.some((t) => !t.triggered)
     const hasMonitors = this.conditionalMonitors.some((m) => !m.triggered)
 

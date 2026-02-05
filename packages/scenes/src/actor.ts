@@ -52,6 +52,11 @@ class ActionChainImpl implements ActionChain {
   // Previous scope stack for prev()
   private scopeStack: Array<Page | Locator> = []
 
+  // URL when scope was last set (for detecting navigation-induced staleness)
+  private scopeSetUrl = ''
+  // Per-entry URLs matching scopeStack (kept in sync)
+  private scopeStackUrls: string[] = []
+
   constructor(
     private actor: SequentialActorHandleImpl,
     private page: Page,
@@ -74,7 +79,9 @@ class ActionChainImpl implements ActionChain {
    */
   private pushScope(newScope: Page | Locator): void {
     this.scopeStack.push(this.currentScope)
+    this.scopeStackUrls.push(this.scopeSetUrl)
     this.currentScope = newScope
+    this.scopeSetUrl = this.page.url()
   }
 
   /**
@@ -84,12 +91,69 @@ class ActionChainImpl implements ActionChain {
     return this.currentScope
   }
 
+  /**
+   * Validate that the current scope is still present in the DOM.
+   *
+   * Called lazily before each action. When the page URL has changed since the
+   * scope was established, we check whether the scope element still exists.
+   * If it doesn't, we walk up the scopeStack until we find an ancestor that
+   * does, or fall back to the page root.
+   */
+  private async validateScope(): Promise<void> {
+    if (this.currentScope === this.page) return
+
+    const currentUrl = this.page.url()
+    if (this.scopeSetUrl && currentUrl === this.scopeSetUrl) return
+
+    // URL changed — check if current scope element still exists
+    try {
+      const count = await (this.currentScope as Locator).count()
+      if (count > 0) {
+        // Element survived the navigation
+        this.scopeSetUrl = currentUrl
+        return
+      }
+    } catch {
+      // Element detached or frame destroyed
+    }
+
+    // Current scope is gone — walk up the stack
+    while (this.scopeStack.length > 0) {
+      const candidate = this.scopeStack.pop()!
+      this.scopeStackUrls.pop()
+
+      if (candidate === this.page) {
+        this.currentScope = this.page
+        this.scopeStack = []
+        this.scopeStackUrls = []
+        this.scopeSetUrl = ''
+        return
+      }
+      try {
+        const count = await (candidate as Locator).count()
+        if (count > 0) {
+          this.currentScope = candidate
+          this.scopeSetUrl = currentUrl
+          return
+        }
+      } catch {
+        // Also gone, continue up
+      }
+    }
+
+    // Nothing in the stack was valid — reset to page root
+    this.currentScope = this.page
+    this.scopeSetUrl = ''
+  }
+
   openTo(url: string): ActionChain {
     return this.addAction('openTo', url, async () => {
       await this.page.goto(url, { timeout: this.actionTimeout })
       // Reset scope to page after navigation
       this.currentScope = this.page
       this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
     })
   }
 
@@ -244,6 +308,8 @@ class ActionChainImpl implements ActionChain {
       return this.addAction('up', '(root)', async () => {
         this.currentScope = this.page
         this.scopeStack = []
+        this.scopeSetUrl = ''
+        this.scopeStackUrls = []
       })
     }
     const target = formatSelector(selector)
@@ -259,8 +325,10 @@ class ActionChainImpl implements ActionChain {
       if (this.scopeStack.length === 0) {
         // No previous scope, reset to page
         this.currentScope = this.page
+        this.scopeSetUrl = ''
       } else {
         this.currentScope = this.scopeStack.pop()!
+        this.scopeSetUrl = this.scopeStackUrls.pop() ?? ''
       }
     })
   }
@@ -289,6 +357,9 @@ class ActionChainImpl implements ActionChain {
    * If a warning trigger's selector becomes visible, a warning is recorded.
    */
   private async executeWithWatchers(action: QueuedAction): Promise<void> {
+    // Validate scope before each action in case a URL change invalidated it
+    await this.validateScope()
+
     const watchers = this.actor.getWatchers()
     const warningTriggers = this.actor.getWarningTriggers()
 
