@@ -37,23 +37,35 @@ testUser.see('sidebar nav-menu settings-link')
 
 ## Key Selectors
 
-If an element has a `data-key` attribute, the next token can match against it **without descending** into a child:
+When a token matches an element whose **child** has a `data-key`, the next token resolves against that key — narrowing to a specific item without an extra nesting level:
 
 ```typescript
-testUser.click('playlist-row 12345 like-button')
-// 1. Find element matching 'playlist-row'
-// 2. Check if it has data-key="12345" — if yes, stay on same element
-// 3. If no, look for child matching '12345'
-// 4. Then find 'like-button' as a child
+testUser.click('playlist like-button')
+// 1. Find element matching 'playlist'
+// 2. Find descendant matching 'like-button'
+
+testUser.click('playlist 12345 like-button')
+// 1. Find element matching 'playlist'
+// 2. Find child with data-key="12345"
+// 3. Find 'like-button' inside that child
 ```
 
 This works with markup like:
 
 ```html
-<div data-testid="playlist-row" data-key="12345">
-  <button aria-label="like-button">Like</button>
-</div>
+<ul data-testid="playlist">
+  <li data-key="12345">
+    <span>Track name</span>
+    <button aria-label="like-button">Like</button>
+  </li>
+  <li data-key="67890">
+    <span>Another track</span>
+    <button aria-label="like-button">Like</button>
+  </li>
+</ul>
 ```
+
+The key token (`12345`) scopes the search to the matching list item, so `like-button` resolves to the correct one.
 
 ### Container + `data-key` Pattern
 
