@@ -370,7 +370,7 @@ interface InterpolationContext {
  *
  * @example
  * // In an action line:
- * interpolate('see user-card-[target.id]', { actors, self, aliases: new Map([['target', 'new-user']]) })
+ * interpolate('see user-card-[target.key]', { actors, self, aliases: new Map([['target', 'new-user']]) })
  * // => 'see user-card-12345'
  */
 function interpolate(line: string, ctx: InterpolationContext): string {

@@ -45,7 +45,7 @@ function createTestActor(role = 'user') {
 
   const actor = new ConcurrentActorHandleImpl(
     role,
-    { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
+    { key: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     page as any,
     bus,
     timeline,
@@ -380,7 +380,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
     const alicePage = mockPage()
     const alice = new ConcurrentActorHandleImpl(
       'alice',
-      { id: 'alice-1', username: 'alice_user', email: 'alice@test.com', password: 'pass' },
+      { key: 'alice-1', username: 'alice_user', email: 'alice@test.com', password: 'pass' },
       alicePage as any,
       bus,
       timeline,
@@ -393,7 +393,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
     const bobPage = mockPage()
     const bob = new ConcurrentActorHandleImpl(
       'bob',
-      { id: 'bob-1', username: 'bob_user', email: 'bob@test.com', password: 'pass' },
+      { key: 'bob-1', username: 'bob_user', email: 'bob@test.com', password: 'pass' },
       bobPage as any,
       bus,
       timeline,
@@ -412,7 +412,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
     // Alice references bob's username
     alice.dsl(`
       typeInto search-input [bob.username]
-      see user-card-[bob.id]
+      see user-card-[bob.key]
     `)
 
     expect(alice.pending).toBe(2)
@@ -428,7 +428,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
     const actor = new ConcurrentActorHandleImpl(
       'hacker',
       {
-        id: 'user-1',
+        key: 'user-1',
         username: "test[inject]'value",
         email: 'test@test.com',
         password: 'pass',
@@ -475,7 +475,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
 
     const actor = new ConcurrentActorHandleImpl(
       'alice',
-      { id: 'alice-1', username: 'alice', email: 'alice@test.com', password: 'pass' },
+      { key: 'alice-1', username: 'alice', email: 'alice@test.com', password: 'pass' },
       page as any,
       bus,
       timeline,
@@ -502,7 +502,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
 
     const actor = new ConcurrentActorHandleImpl(
       'alice',
-      { id: '12345', username: 'alice', email: 'alice@test.com', password: 'pass' },
+      { key: '12345', username: 'alice', email: 'alice@test.com', password: 'pass' },
       page as any,
       bus,
       timeline,
@@ -513,8 +513,8 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
 
     // Use self reference in compound selector
     actor.dsl(`
-      see user-result-[self.id]
-      click delete-btn-[self.id]
+      see user-result-[self.key]
+      click delete-btn-[self.key]
     `)
 
     expect(actor.pending).toBe(2)

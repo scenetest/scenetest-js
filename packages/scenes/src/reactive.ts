@@ -137,7 +137,7 @@ interface ConditionalMonitor {
  */
 export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   readonly role: string
-  readonly id: string
+  readonly key: string
   readonly username?: string
   readonly email?: string
   readonly password?: string;
@@ -177,14 +177,14 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     this.role = role
     this._page = page
     this.currentScope = page
-    this.id = config.id
+    this.key = config.key
 
     // Forward all config properties
-    for (const [key, value] of Object.entries(config)) {
-      if (!(key in this)) {
-        ;(this as Record<string, unknown>)[key] = value
-      } else if (key !== 'id') {
-        ;(this as Record<string, unknown>)[key] = value
+    for (const [k, value] of Object.entries(config)) {
+      if (!(k in this)) {
+        ;(this as Record<string, unknown>)[k] = value
+      } else if (k !== 'key') {
+        ;(this as Record<string, unknown>)[k] = value
       }
     }
   }

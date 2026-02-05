@@ -128,7 +128,7 @@ export class SceneRunner {
           for (const [role, actor] of session.getActors()) {
             const device = session.getActorDevice(role)
             report.actors[role] = {
-              id: actor.id,
+              key: actor.key,
               username: actor.username,
               ...(device ? { device: device.name } : {}),
             }

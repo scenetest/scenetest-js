@@ -127,13 +127,13 @@ Use `[namespace.field]` to interpolate values into action lines:
 ```scenetest
 alice:
 - typeInto email [self.email]           # alice's own email
-- see user-card-[bob.id]                # bob's id embedded in selector
+- see user-card-[bob.key]                # bob's id embedded in selector
 - click [team.language]-section         # team metadata in selector
 ```
 
 Variables work inside selectors for compound IDs:
 ```
-see user-result-[target.id]             # becomes "see user-result-12345"
+see user-result-[target.key]             # becomes "see user-result-12345"
 click language-card-[team.language]     # becomes "click language-card-spanish"
 ```
 
@@ -238,7 +238,7 @@ scene('multi-user interaction', ({ actor }) => {
   bob.dsl(`
     openTo /search
     typeInto search-input [alice.username]
-    see user-card-[alice.id]
+    see user-card-[alice.key]
     click add-friend-button
   `)
 })
@@ -278,7 +278,7 @@ defineMacro('send-friend-request', [
   'openTo /friends',
   'click search',
   'typeInto search-input [target.username]',
-  'see user-card-[target.id]',
+  'see user-card-[target.key]',
   'click send-request-button',
 ])
 ```

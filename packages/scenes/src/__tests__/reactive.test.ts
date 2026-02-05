@@ -48,7 +48,7 @@ function createTestActor(
 
   const actor = new ConcurrentActorHandleImpl(
     role,
-    { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
+    { key: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     page as any,
     bus,
     timeline,
@@ -72,7 +72,7 @@ function createDeferredActor(role = 'user') {
 
   const actor = new ConcurrentActorHandleImpl(
     role,
-    { id: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
+    { key: `${role}-1`, username: role, email: `${role}@test.com`, password: 'pass' },
     null, // deferred — page set later via _setPage
     bus,
     timeline,
@@ -134,7 +134,7 @@ describe('ConcurrentActorHandleImpl', () => {
     it('forwards config properties', () => {
       const { actor } = createTestActor('alice')
       expect(actor.role).toBe('alice')
-      expect(actor.id).toBe('alice-1')
+      expect(actor.key).toBe('alice-1')
       expect(actor.username).toBe('alice')
       expect(actor.email).toBe('alice@test.com')
     })
@@ -386,7 +386,7 @@ describe('deferred page initialization', () => {
     const { actor } = createDeferredActor('alice')
 
     expect(actor.role).toBe('alice')
-    expect(actor.id).toBe('alice-1')
+    expect(actor.key).toBe('alice-1')
     expect(actor.email).toBe('alice@test.com')
   })
 

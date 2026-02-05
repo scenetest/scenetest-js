@@ -105,10 +105,10 @@ export async function runScene(
   }
 
   // Build actor map for report
-  const actors: Record<string, { id: string; username?: string }> = {}
+  const actors: Record<string, { key: string; username?: string }> = {}
   for (const [role, actor] of session.getActors()) {
     actors[role] = {
-      id: actor.id,
+      key: actor.key,
       username: actor.username,
     }
   }
