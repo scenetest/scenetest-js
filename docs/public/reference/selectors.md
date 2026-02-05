@@ -67,7 +67,7 @@ Key selectors are useful for lists where each row has a unique key. For the full
 Configure shorthand selectors in your config file with the `~` prefix:
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({

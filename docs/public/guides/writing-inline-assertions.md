@@ -139,12 +139,11 @@ The `serverCheck()` function:
 Define server functions in your scenetest config:
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
 
   serverFunctions: {
     getUser: (id) => db.users.findById(id),

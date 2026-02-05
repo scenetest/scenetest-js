@@ -36,8 +36,10 @@ export default defineConfig({
 Create the Scenetest directory and config:
 
 ```bash
-mkdir -p scenetest/scenes
+npx scenetest init
 ```
+
+This creates the `scenetest/` folder with config, scenes, and actors:
 
 ```typescript
 // scenetest/config.ts
@@ -45,7 +47,6 @@ import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
 })
 ```
 
@@ -55,7 +56,8 @@ Your project should now look like this:
 your-project/
 ├── scenetest/
 │   ├── config.ts
-│   └── scenes/          # your specs will go here
+│   ├── actors/           # one file per actor team
+│   └── scenes/           # your specs will go here
 ├── vite.config.ts
 ├── src/
 │   └── ...
@@ -137,7 +139,6 @@ import { db } from '../src/server/db'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
 
   serverFunctions: {
     getPost: (id) => db.posts.findById(id),
@@ -190,10 +191,10 @@ That's a complete, runnable scene spec. `visitor` is an **actor** -- a named rol
 
 ### Define your first actor
 
-Actors need credentials. Create an actors file next to your config:
+Actors need credentials. Create an actors file in `scenetest/actors/`:
 
 ```typescript
-// scenetest/actors.ts
+// scenetest/actors/default.ts
 import type { TeamConfig } from '@scenetest/scenes'
 
 export default [

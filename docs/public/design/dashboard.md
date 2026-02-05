@@ -21,7 +21,7 @@ scenetest/
 │   ├── 2026-01-25T104512-f69279b-feat-checkout.jsonl
 │   └── ...
 ├── scenes/
-└── scenetest.config.ts
+└── config.ts
 ```
 
 Report naming: `{timestamp}-{commit}-{branch}.jsonl`

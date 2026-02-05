@@ -54,28 +54,15 @@ export class SceneRunner {
   }
 
   /**
-   * Discover scene files (.spec.ts and .spec.md)
+   * Discover scene files (.spec.ts and .spec.md) from ./scenetest/scenes/
    */
   async discoverScenes(): Promise<string[]> {
-    const scenes = this.config.scenes || './scenes'
-
-    // If pointing at a specific file, use it directly
-    if (scenes.endsWith('.spec.ts') || scenes.endsWith('.spec.md')) {
-      const files = await glob(scenes, {
-        ignore: this.config.ignore || [],
-        absolute: true,
-      })
-      return files.sort()
-    }
-
-    // Otherwise discover both .spec.ts and .spec.md files
-    const pattern = path.join(scenes, '**/*.spec.{ts,md}')
+    const pattern = path.join('./scenetest/scenes', '**/*.spec.{ts,md}')
     const files = await glob(pattern, {
       ignore: this.config.ignore || [],
       absolute: true,
     })
 
-    // Sort alphabetically
     return files.sort()
   }
 

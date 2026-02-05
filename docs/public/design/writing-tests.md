@@ -108,12 +108,11 @@ For the full selector syntax — attribute matching, nested selectors, key selec
 ## Configuration
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
   browser: 'chromium',
   headed: false,
   timeout: 30000,
@@ -132,6 +131,6 @@ For the full configuration reference including hooks, timing, and reporting, see
 
 ### Actor teams
 
-Define actor credentials in `actors.ts` (array of teams) or `actors/*.ts` (one file per team) next to your config. Teams enable parallel scene execution — each scene acquires a team, so scenes using different teams run concurrently without data conflicts.
+Define actor credentials in `scenetest/actors/` (one `.ts` file per team). Teams enable parallel scene execution — each scene acquires a team, so scenes using different teams run concurrently without data conflicts.
 
 For the full guide on team design, seed data, and scaling concurrency, see [Building Good Teams of Actors](/guides/building-teams).
