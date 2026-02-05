@@ -3,6 +3,8 @@ import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWar
 import type { DeviceProfile } from './devices.js'
 import type { StorageState } from './warmup.js'
 import { WarmupCache } from './warmup.js'
+import type { NavigationMode } from './keyboard.js'
+import { NavigationModeRotation } from './keyboard.js'
 import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
@@ -19,6 +21,7 @@ export class TeamManager {
   private browser: Browser | null = null
   private deviceRotation: DeviceRotation | null = null
   private warmupCache = new WarmupCache()
+  private navigationModeRotation: NavigationModeRotation | null = null
 
   constructor(teams: ResolvedTeam[]) {
     this.teams = teams
@@ -50,6 +53,20 @@ export class TeamManager {
    */
   getTeams(): ResolvedTeam[] {
     return this.teams
+  }
+
+  /**
+   * Enable keyboard navigation mode rotation.
+   */
+  setNavigationModeRotation(rotation: NavigationModeRotation): void {
+    this.navigationModeRotation = rotation
+  }
+
+  /**
+   * Get the current navigation mode rotation instance, if any.
+   */
+  getNavigationModeRotation(): NavigationModeRotation | null {
+    return this.navigationModeRotation
   }
 
   /**
@@ -186,7 +203,8 @@ export class TeamManager {
       warnAfter,
       baseUrl,
       this.deviceRotation,
-      this.warmupCache
+      this.warmupCache,
+      this.navigationModeRotation
     )
   }
 }
@@ -199,6 +217,7 @@ export class TeamSession {
   private contexts = new Map<string, BrowserContext>()
   private actors = new Map<string, SequentialActorHandleImpl>()
   private actorDevices = new Map<string, DeviceProfile>()
+  private actorNavigationModes = new Map<string, NavigationMode>()
   private bus = new MessageBus()
   readonly timeline: TimelineEntry[] = []
   readonly assertions: AssertionResult[] = []
@@ -216,7 +235,8 @@ export class TeamSession {
     readonly warnAfter: number,
     private baseUrl?: string,
     private deviceRotation?: DeviceRotation | null,
-    private warmupCache: WarmupCache = new WarmupCache()
+    private warmupCache: WarmupCache = new WarmupCache(),
+    private navigationModeRotation?: NavigationModeRotation | null
   ) {
     this.meta = meta
   }
@@ -282,6 +302,22 @@ export class TeamSession {
   }
 
   /**
+   * Get the navigation mode assigned to an actor role.
+   * If rotation is enabled, assigns and caches a mode for this role.
+   * If rotation is not enabled, returns 'pointer'.
+   * Used by flow() to pass the mode to ConcurrentActorHandleImpl.
+   */
+  getNavigationMode(role: string): NavigationMode {
+    // Return cached mode if already assigned
+    const existing = this.actorNavigationModes.get(role)
+    if (existing) return existing
+
+    const mode = this.navigationModeRotation?.next() ?? 'pointer'
+    this.actorNavigationModes.set(role, mode)
+    return mode
+  }
+
+  /**
    * Create a browser context + page for a role and wire up assertion collection.
    * Returns the Page. Used by flow() to initialize actors after declaration.
    */
@@ -297,24 +333,36 @@ export class TeamSession {
       this.actorDevices.set(role, device)
     }
 
+    // Determine navigation mode for this actor (if rotation is enabled)
+    const navMode = this.getNavigationMode(role)
+
     // Create context with storageState + device emulation + baseURL
     const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
-    // Track device name for assertions
+    // Track device name and navigation mode for assertions
     const deviceName = device?.name
+    const navigationMode = navMode !== 'pointer' ? navMode : undefined
 
     await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
-      const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
+      const enriched = {
+        ...result,
+        actor: role,
+        ...(deviceName ? { device: deviceName } : {}),
+        ...(navigationMode ? { navigationMode } : {}),
+      }
       this.assertions.push(enriched)
     })
 
     this.contexts.set(role, context)
 
-    // Log device assignment
-    if (device) {
-      console.log(`    [${role}] assigned device: ${device.name} (${device.category})`)
+    // Log assignments
+    const assignments: string[] = []
+    if (device) assignments.push(`device: ${device.name} (${device.category})`)
+    if (navMode === 'keyboard') assignments.push('navigation: keyboard')
+    if (assignments.length > 0) {
+      console.log(`    [${role}] ${assignments.join(', ')}`)
     }
 
     return page
@@ -389,18 +437,26 @@ export class TeamSession {
       this.actorDevices.set(role, device)
     }
 
+    // Determine navigation mode for this actor (if rotation is enabled)
+    const navMode = this.getNavigationMode(role)
+
     // Create new browser context with storageState + device emulation + baseURL
     const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
-    // Track device name for assertions
+    // Track device name and navigation mode for assertions
     const deviceName = device?.name
+    const navigationMode = navMode !== 'pointer' ? navMode : undefined
 
     // Set up assertion collection
     await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
-      // Add actor and device info to assertion
-      const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
+      const enriched = {
+        ...result,
+        actor: role,
+        ...(deviceName ? { device: deviceName } : {}),
+        ...(navigationMode ? { navigationMode } : {}),
+      }
       this.assertions.push(enriched)
     })
 
@@ -418,15 +474,19 @@ export class TeamSession {
       this.warnings,
       this.actionTimeout,
       this.warnAfter,
+      navMode,
       pageFactory
     )
 
     this.contexts.set(role, context)
     this.actors.set(role, actor)
 
-    // Log device assignment
-    if (device) {
-      console.log(`    [${role}] assigned device: ${device.name} (${device.category})`)
+    // Log assignments
+    const assignments: string[] = []
+    if (device) assignments.push(`device: ${device.name} (${device.category})`)
+    if (navMode === 'keyboard') assignments.push('navigation: keyboard')
+    if (assignments.length > 0) {
+      console.log(`    [${role}] ${assignments.join(', ')}`)
     }
 
     return actor
@@ -444,6 +504,20 @@ export class TeamSession {
    */
   getActorDevices(): Map<string, DeviceProfile> {
     return this.actorDevices
+  }
+
+  /**
+   * Get the navigation mode assigned to an actor role (from cache)
+   */
+  getActorNavigationMode(role: string): NavigationMode | undefined {
+    return this.actorNavigationModes.get(role)
+  }
+
+  /**
+   * Get all actor-navigation-mode assignments
+   */
+  getActorNavigationModes(): Map<string, NavigationMode> {
+    return this.actorNavigationModes
   }
 
   /**
@@ -470,6 +544,7 @@ export class TeamSession {
     this.contexts.clear()
     this.actors.clear()
     this.actorDevices.clear()
+    this.actorNavigationModes.clear()
     this.bus.clear()
   }
 }

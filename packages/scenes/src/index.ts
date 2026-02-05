@@ -20,6 +20,10 @@ export { setAliases, getAliases, clearAliases, explainSelector } from './selecto
 export { DeviceRotation, builtinDevices, findDevice } from './devices.js'
 export type { DeviceProfile } from './devices.js'
 
+// Keyboard navigation mode
+export { NavigationModeRotation } from './keyboard.js'
+export type { NavigationMode } from './keyboard.js'
+
 // Swarm mode
 export { SwarmTrigger } from './swarm.js'
 

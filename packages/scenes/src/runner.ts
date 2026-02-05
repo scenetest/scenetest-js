@@ -4,6 +4,7 @@ import path from 'path'
 import type { ScenetestConfig, ResolvedTeam, TeamConfig, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
+import { NavigationModeRotation } from './keyboard.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
 import { importFile } from './loader.js'
@@ -30,6 +31,12 @@ export class SceneRunner {
     if (config.devices) {
       const devices = Array.isArray(config.devices) ? config.devices : undefined
       this.teamManager.setDeviceRotation(new DeviceRotation(devices))
+    }
+
+    // Set up keyboard navigation mode rotation if configured
+    if (config.keyboard) {
+      const modes = Array.isArray(config.keyboard) ? config.keyboard : undefined
+      this.teamManager.setNavigationModeRotation(new NavigationModeRotation(modes))
     }
 
     // Set up swarm trigger if configured
@@ -104,7 +111,19 @@ export class SceneRunner {
     // Log device rotation status
     const rotation = this.teamManager.getDeviceRotation()
     if (rotation) {
-      console.log(`  Device rotation: ON (${rotation.devices.length} devices in pool)\n`)
+      console.log(`  Device rotation: ON (${rotation.devices.length} devices in pool)`)
+    }
+
+    // Log keyboard navigation mode status
+    const navRotation = this.teamManager.getNavigationModeRotation()
+    if (navRotation) {
+      const pool = navRotation.modes
+      const keyboardCount = pool.filter(m => m === 'keyboard').length
+      console.log(`  Keyboard navigation: ON (${keyboardCount}/${pool.length} actors use keyboard)`)
+    }
+
+    if (rotation || navRotation) {
+      console.log('')
     }
 
     for (const registered of sceneRegistry) {
@@ -137,13 +156,15 @@ export class SceneRunner {
           // Run the scene
           const report = await runScene(registered, session, timeout)
 
-          // Enrich actor info with device assignments
+          // Enrich actor info with device and navigation mode assignments
           for (const [role, actor] of session.getActors()) {
             const device = session.getActorDevice(role)
+            const navMode = session.getActorNavigationMode(role)
             report.actors[role] = {
               key: actor.key,
               username: actor.username,
               ...(device ? { device: device.name } : {}),
+              ...(navMode && navMode !== 'pointer' ? { navigationMode: navMode } : {}),
             }
           }
 
@@ -432,13 +453,18 @@ export function printSummary(report: RunReport): void {
     console.log(`\n  ✗ ${report.summary.failed} scene(s) failed`)
   }
 
-  // Device rotation info
+  // Device and navigation mode info
   for (const scene of report.scenes) {
-    const devicesUsed = Object.entries(scene.actors)
-      .filter(([, a]) => a.device)
-      .map(([role, a]) => `${role}→${a.device}`)
-    if (devicesUsed.length > 0) {
-      console.log(`  ${scene.name}: ${devicesUsed.join(', ')}`)
+    const actorInfo = Object.entries(scene.actors)
+      .filter(([, a]) => a.device || a.navigationMode)
+      .map(([role, a]) => {
+        const parts: string[] = []
+        if (a.device) parts.push(a.device)
+        if (a.navigationMode) parts.push(a.navigationMode)
+        return `${role}→${parts.join(',')}`
+      })
+    if (actorInfo.length > 0) {
+      console.log(`  ${scene.name}: ${actorInfo.join(', ')}`)
     }
   }
 
