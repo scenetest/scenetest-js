@@ -6,6 +6,12 @@ import fs from 'fs'
 import { loadConfig } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
 import { init } from './init.js'
+import {
+  gatherProjectContext,
+  generatePrompt,
+  formatPromptOutput,
+  type PromptType,
+} from './prompt-generator.js'
 import type { CLIOptions, RunReport } from './types.js'
 
 const program = new Command()
@@ -293,6 +299,44 @@ program
   .action(async (options: { force?: boolean }) => {
     try {
       await init(process.cwd(), { force: options.force })
+    } catch (err) {
+      console.error('Error:', err instanceof Error ? err.message : err)
+      process.exit(1)
+    }
+  })
+
+program
+  .command('prompt')
+  .description('Generate LLM prompts for team/seed data creation')
+  .argument('<type>', 'Prompt type: teams, seeds, or both')
+  .option('-o, --output <file>', 'Write prompt to file instead of stdout')
+  .action(async (type: string, options: { output?: string }) => {
+    if (!['teams', 'seeds', 'both'].includes(type)) {
+      console.error(`Error: Invalid prompt type "${type}". Must be: teams, seeds, or both`)
+      process.exit(1)
+    }
+
+    try {
+      console.error('Analyzing project...')
+      const ctx = await gatherProjectContext()
+
+      console.error(`Found:`)
+      console.error(`  - ${ctx.userModels.length} user/account model files`)
+      console.error(`  - ${ctx.dbSchema.length} database schema files`)
+      console.error(`  - ${ctx.existingSeeds.length} existing seed files`)
+      console.error(`  - ${ctx.existingScenes.length} scene files`)
+      console.error(`  - ${ctx.existingActors.length} actor team files`)
+      console.error('')
+
+      const prompt = generatePrompt(ctx, type as PromptType)
+      const output = formatPromptOutput(prompt, type as PromptType)
+
+      if (options.output) {
+        fs.writeFileSync(options.output, output)
+        console.error(`Prompt written to: ${options.output}`)
+      } else {
+        console.log(output)
+      }
     } catch (err) {
       console.error('Error:', err instanceof Error ? err.message : err)
       process.exit(1)
