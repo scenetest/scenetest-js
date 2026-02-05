@@ -122,7 +122,7 @@ export class SceneRunner {
 
         try {
           // Log which scene is starting
-          const relativeFile = path.relative(process.cwd(), registered.file)
+          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
           console.log(`▶ ${registered.name} (${relativeFile})`)
 
           // Run the scene
