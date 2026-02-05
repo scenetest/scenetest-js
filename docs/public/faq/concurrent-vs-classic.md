@@ -20,7 +20,7 @@ test('user searches for themself', async ({ actor }) => {
   await user.openTo('/friend-search')
   await user.see('main-section search-form')
   await user.typeInto('search-input', user.username)
-  await user.click(`view-search-result ${user.id}`)
+  await user.click(`view-search-result ${user.key}`)
 })
 ```
 
@@ -65,7 +65,7 @@ scene('friend request flow', ({ actor }) => {
   bob.openTo('/notifications')
     .click('accept')
     .click('sidebar-menu chats-page-link')
-    .see(`chat-list-item ${alice.id}`)
+    .see(`chat-list-item ${alice.key}`)
 
   alice.see('alert-friend-accepted')
     .click()
@@ -80,19 +80,19 @@ Nice, right? And very forgiving, and hopefully quite easy to reason about, to re
   bob.openTo('/notifications')
     .click('accept')
     .click('sidebar-menu chats-page-link')
-    .see(`chat-list-item ${alice.id}`)
+    .see(`chat-list-item ${alice.key}`)
 
   // 2. per action ✅
   bob.openTo('/notifications')
     .click('accept')
   bob.click('sidebar-menu chats-page-link')
-    .see(`chat-list-item ${alice.id}`)
+    .see(`chat-list-item ${alice.key}`)
 
   // 3. per-line ✅
   bob.openTo('/notifications')
   bob.click('accept')
   bob.click('sidebar-menu chats-page-link')
-  bob.see(`chat-list-item ${alice.id}`)
+  bob.see(`chat-list-item ${alice.key}`)
 ```
 
 This forgiving syntax and grammar made concurrent model specs so simple that practically speaking, **anyone could write them**. And though we do have primitives for more direct manipulation and coordination between the queues,
@@ -109,7 +109,7 @@ bob:
 - openTo /notifications
 - click accept
 - click sidebar-menu chats-page-link
-- see chat-list-item [alice.id]
+- see chat-list-item [alice.key]
 
 alice:
 - see alert-friend-accepted
@@ -124,7 +124,7 @@ bob:
 - openTo /notifications
 - click accept
 - click sidebar-menu chats-page-link
-- see chat-list-item [alice.id]
+- see chat-list-item [alice.key]
 
 alice:
 - openTo /search

@@ -20,7 +20,7 @@ new-user:
 best-friend:
 - openTo /friends/search
 - typeInto search-input [new-user.username]
-- see results-box [new-user.id]
+- see results-box [new-user.key]
 
 
 
@@ -38,7 +38,7 @@ scene('user completes onboarding', ({ actor }) => {
       .click('continue-button')
   friend.openTo('/friends/search')
       .typeInto('search-input', user.username)
-      .see(`results-box ${user.id}`)
+      .see(`results-box ${user.key}`)
 })
 ```
 
@@ -69,7 +69,7 @@ new-user:
 best-friend:
 - openTo /friends/search
 - typeInto search-input [new-user.username]
-- see results-box [new-user.id]
+- see results-box [new-user.key]
 
 
 
@@ -87,7 +87,7 @@ scene('user completes onboarding', ({ actor }) => {
       .click('continue-button')
   friend.openTo('/friends/search')
       .typeInto('search-input', user.username)
-      .see(`results-box ${user.id}`)
+      .see(`results-box ${user.key}`)
 })
 ```
 
@@ -103,7 +103,7 @@ test('user completes onboarding', async ({ actor }) => {
             .click('continue-button')
   await friend.openTo('/friends/search')
   await friend.typeInto('search-input', user.username)
-  await friend.see(`results-box ${user.id}`)
+  await friend.see(`results-box ${user.key}`)
 })
 ```
 

@@ -102,13 +102,13 @@ new-friend: openTo /home
 main-user-1:
 - openTo /search-users
 - typeInto search-input [new-friend.username]
-- click live-results-box [new-friend.id] send-request-btn
+- click live-results-box [new-friend.key] send-request-btn
 
 new-friend:
 - seeToast friend-request-notice
 - see site-navbar notifications-menu
 - click menu-trigger
-- click friend-request-from-[main-user-1.id] accept-btn
+- click friend-request-from-[main-user-1.key] accept-btn
 
 main-user-1: seeToast friend-request-accepted
 
@@ -127,13 +127,13 @@ scene(
 
     user1.openTo('/search-users')
       .typeInto('search-input', friend.username)
-      .click(`live-results-box ${friend.id} send-request-btn`)
+      .click(`live-results-box ${friend.key} send-request-btn`)
 
     friend.openTo('/')
       .seeToast('friend-request-notice')
       .see('site-navbar notifications-menu')
       .click('menu-trigger')
-      .click(`friend-request-from-${user1.id} accept-btn`)
+      .click(`friend-request-from-${user1.key} accept-btn`)
 
     user1.seeToast('friend-request-accepted')
   }
@@ -153,12 +153,12 @@ test(
     await friend.openTo('/')
 
     await user1.typeInto('search-input', friend.username)
-    await user1.click(`live-results-box ${friend.id} send-request-btn`)
+    await user1.click(`live-results-box ${friend.key} send-request-btn`)
 
     await friend.seeToast('friend-request-notice')
     await friend.see('site-navbar notifications-menu')
     await friend.click('menu-trigger')
-    await friend.click(`friend-request-from-${user1.id} accept-btn`)
+    await friend.click(`friend-request-from-${user1.key} accept-btn`)
 
     await user1.seeToast('friend-request-accepted')
   }
@@ -184,7 +184,7 @@ In this mode, there's no difference between the roughly-ordered markdown you see
 main-user-1:
 - openTo /search-users
 - typeInto search-input [new-friend.username]
-- click live-results-box [new-friend.id] send-request-btn
+- click live-results-box [new-friend.key] send-request-btn
 - seeToast friend-request-accepted
 
 new-friend:
@@ -192,7 +192,7 @@ new-friend:
 - seeToast friend-request-notice
 - see site-navbar notifications-menu
 - click menu-trigger
-- click friend-request-from-[main-user-1.id] accept-btn
+- click friend-request-from-[main-user-1.key] accept-btn
 ```
 
 That's because the scene is not running these actions and awaiting their consequences: it's building the queue. Then when

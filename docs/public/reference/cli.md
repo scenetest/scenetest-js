@@ -98,12 +98,12 @@ import type { TeamConfig } from '@scenetest/scenes'
 
 const teams: TeamConfig[] = [
   {
-    admin: { id: 'admin-1', username: 'admin', email: 'admin@example.com', password: 'secret' },
-    user: { id: 'user-1', username: 'alice', email: 'alice@example.com', password: 'secret' },
+    admin: { key: 'admin-1', username: 'admin', email: 'admin@example.com', password: 'secret' },
+    user: { key: 'user-1', username: 'alice', email: 'alice@example.com', password: 'secret' },
   },
   {
-    admin: { id: 'admin-2', username: 'admin2', email: 'admin2@example.com', password: 'secret' },
-    user: { id: 'user-2', username: 'bob', email: 'bob@example.com', password: 'secret' },
+    admin: { key: 'admin-2', username: 'admin2', email: 'admin2@example.com', password: 'secret' },
+    user: { key: 'user-2', username: 'bob', email: 'bob@example.com', password: 'secret' },
   },
 ]
 
@@ -124,8 +124,8 @@ Each file exports a single `TeamConfig`:
 ```typescript
 // actors/team-alpha.ts
 export default {
-  admin: { id: 'admin-alpha', username: 'admin', ... },
-  user: { id: 'user-alpha', username: 'alice', ... },
+  admin: { key: 'admin-alpha', username: 'admin', ... },
+  user: { key: 'user-alpha', username: 'alice', ... },
 }
 ```
 

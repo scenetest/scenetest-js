@@ -19,11 +19,11 @@ user1:                                  user2:
 login                                   login
 searchFriend user2
 see results-pane
-click [user2.id] invite-btn
-                                        see alert-friend-invite [user1.id]
+click [user2.key] invite-btn
+                                        see alert-friend-invite [user1.key]
                                         click accept-button
-see alert-friend-accepted [user2.id]    see /friends/[user1.id]
-click sidebar-chats-link                see friend-profile-picture [user1.id]
+see alert-friend-accepted [user2.key]    see /friends/[user1.key]
+click sidebar-chats-link                see friend-profile-picture [user1.key]
 see [user2.username]
 ```
 
@@ -74,16 +74,16 @@ user2: login
 user1:
 searchFriend user2
 see results-pane
-click [user2.id] invite-btn
+click [user2.key] invite-btn
 
 user2:
-see alert-friend-invite [user1.id]
+see alert-friend-invite [user1.key]
 click accept-button
-see /friends/[user1.id]
-see friend-profile-picture [user1.id]
+see /friends/[user1.key]
+see friend-profile-picture [user1.key]
 
 user1:
-see alert-friend-accepted [user2.id]
+see alert-friend-accepted [user2.key]
 click sidebar-chats-link
 see [user2.username]
 ```
@@ -93,18 +93,18 @@ user1:
 login
 searchFriend user2
 see results-pane
-click [user2.id] invite-btn
+click [user2.key] invite-btn
 
 user2:
 // still fires on the first tick!
 login
-see alert-friend-invite [user1.id]
+see alert-friend-invite [user1.key]
 click accept-button
-see /friends/[user1.id]
-see friend-profile-picture [user1.id]
+see /friends/[user1.key]
+see friend-profile-picture [user1.key]
 
 user1:
-see alert-friend-accepted [user2.id]
+see alert-friend-accepted [user2.key]
 click sidebar-chats-link
 see [user2.username]
 ```
@@ -114,9 +114,9 @@ user1:
 login
 searchFriend user2
 see results-pane
-click [user2.id] invite-btn
+click [user2.key] invite-btn
 // time will pass while user2 accepts my request
-see alert-friend-accepted [user2.id]
+see alert-friend-accepted [user2.key]
 click sidebar-chats-link
 see [user2.username]
 
@@ -124,10 +124,10 @@ user2:
 // fires in the first tick, same as user1's login
 login
 // ready for invite to come
-see alert-friend-invite [user1.id]!
+see alert-friend-invite [user1.key]!
 click accept-button
-see /friends/[user1.id]
-see friend-profile-picture [user1.id]
+see /friends/[user1.key]
+see friend-profile-picture [user1.key]
 ```
 
 ```scenetest [1-Liners]
@@ -135,12 +135,12 @@ user1: login
 user2: login
 user1: searchFriend user2
 user1: see results-pane
-user1: click [user2.id] invite-btn
-user2: see alert-friend-invite [user1.id]
+user1: click [user2.key] invite-btn
+user2: see alert-friend-invite [user1.key]
 user2: click accept-button
-user2: see /friends/[user1.id]
-user2: see friend-profile-picture [user1.id]
-user1: see alert-friend-accepted [user2.id]
+user2: see /friends/[user1.key]
+user2: see friend-profile-picture [user1.key]
+user1: see alert-friend-accepted [user2.key]
 user1: click sidebar-chats-link
 user1: see [user2.username]
 
@@ -193,16 +193,16 @@ user1:
 login
 searchFriend user2
 see results-pane
-click [user2.id] invite-btn
+click [user2.key] invite-btn
 
 user2:
-see alert-friend-invite [user1.id]
+see alert-friend-invite [user1.key]
 click accept-button
-see /friends/[user1.id]
-see friend-profile-picture [user1.id]
+see /friends/[user1.key]
+see friend-profile-picture [user1.key]
 
 user1:
-see alert-friend-accepted [user2.id]
+see alert-friend-accepted [user2.key]
 click sidebar-chats-link
 see [user2.username]
 ```
@@ -240,14 +240,14 @@ scene('user1 invites user2 as a friend', ({ actor }) => {
   user1.see('login-form').typeInto('email', user1.email!).typeInto('password', user1.password!).click('submit')
   user1.see('search-friends').typeInto('search-friends', 'user2')
   user1.see('results-pane')
-  user1.click([user2.id!, 'invite-btn'])
+  user1.click([user2.key!, 'invite-btn'])
 
-  user2.see(['alert-friend-invite', user1.id!])
+  user2.see(['alert-friend-invite', user1.key!])
   user2.click('accept-button')
-  user2.see(['/friends/', user1.id!])
-  user2.see(['friend-profile-picture', user1.id!])
+  user2.see(['/friends/', user1.key!])
+  user2.see(['friend-profile-picture', user1.key!])
 
-  user1.see(['alert-friend-accepted', user2.id!])
+  user1.see(['alert-friend-accepted', user2.key!])
   user1.click('sidebar-chats-link')
   user1.see([user2.username!])
 })
@@ -261,7 +261,7 @@ After the function returns, the framework:
 The concurrent model doesn't care whether user2's 5th action comes before or after
 user1's 5th action. It only cares about the order within each actor's own queue.
 Timing coordination between the two actors usually happens naturally through the DOM —
-user2's `see(['alert-friend-invite', user1.id!])` will simply poll until that element
+user2's `see(['alert-friend-invite', user1.key!])` will simply poll until that element
 appears.
 
 ---
@@ -287,14 +287,14 @@ test('user1 invites user2 as a friend', async ({ actor }) => {
   await user1.see('login-form').typeInto('email', user1.email).typeInto('password', user1.password).click('submit')
   await user1.see('search-friends').typeInto('search-friends', 'user2')
   await user1.see('results-pane')
-  await user1.click([user2.id, 'invite-btn'])
+  await user1.click([user2.key, 'invite-btn'])
 
   // Switch back to user2
-  await user2.see(['alert-friend-invite', user1.id])
+  await user2.see(['alert-friend-invite', user1.key])
   await user2.click('accept-button')
 
   // Back to user1
-  await user1.see(['alert-friend-accepted', user2.id])
+  await user1.see(['alert-friend-accepted', user2.key])
   await user1.click('sidebar-chats-link')
   await user1.see([user2.username])
 })
@@ -330,7 +330,7 @@ eliminates race conditions from setup ordering.
 ### When do you need it?
 
 **Usually you don't.** In the friend-invite example above, no bus coordination is needed.
-User2's `see(['alert-friend-invite', user1.id!])` polls the DOM — it just waits until the
+User2's `see(['alert-friend-invite', user1.key!])` polls the DOM — it just waits until the
 invite notification appears. The DOM is the synchronization mechanism.
 
 You need the bus when **ordering isn't observable in the DOM**:
@@ -427,8 +427,8 @@ user1:
 - see search-friends
 - typeInto search-friends user2
 - see results-pane
-- click [user2.id] invite-btn
-- see alert-friend-accepted [user2.id]
+- click [user2.key] invite-btn
+- see alert-friend-accepted [user2.key]
 - click sidebar-chats-link
 - see [user2.username]
 
@@ -438,10 +438,10 @@ user2:
 - typeInto email [user2.email]
 - typeInto password [user2.password]
 - click submit
-- see alert-friend-invite [user1.id]
+- see alert-friend-invite [user1.key]
 - click accept-button
-- see /friends/[user1.id]
-- see friend-profile-picture [user1.id]
+- see /friends/[user1.key]
+- see friend-profile-picture [user1.key]
 ```
 
 Each actor heading becomes an actor. Each line becomes a queued action.

@@ -45,10 +45,10 @@ export default defineConfig({
 
 export default [
   {
-    user: { id: 'user-1', username: 'alice', email: 'alice@test.com' },
+    user: { key: 'user-1', username: 'alice', email: 'alice@test.com' },
   },
   {
-    user: { id: 'user-2', username: 'bob', email: 'bob@test.com' },
+    user: { key: 'user-2', username: 'bob', email: 'bob@test.com' },
   },
 ] satisfies TeamConfig[]
 `)

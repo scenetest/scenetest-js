@@ -517,7 +517,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   private warningTriggers: WarningTrigger[] = []
 
   // Forward config properties
-  readonly id: string
+  readonly key: string
   readonly username?: string
   readonly email?: string
   readonly password?: string
@@ -537,14 +537,14 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     this.role = role
     this.page = page
     this.context = context
-    this.id = config.id
+    this.key = config.key
 
     // Copy all config properties to this instance
-    for (const [key, value] of Object.entries(config)) {
-      if (!(key in this)) {
-        (this as Record<string, unknown>)[key] = value
-      } else if (key !== 'id') {
-        (this as Record<string, unknown>)[key] = value
+    for (const [k, value] of Object.entries(config)) {
+      if (!(k in this)) {
+        (this as Record<string, unknown>)[k] = value
+      } else if (k !== 'key') {
+        (this as Record<string, unknown>)[k] = value
       }
     }
   }

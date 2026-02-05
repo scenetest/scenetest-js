@@ -21,7 +21,7 @@ export type Selector = string
  * Actor credentials and identity from config
  */
 export interface ActorConfig {
-  id: string
+  key: string
   username?: string
   email?: string
   password?: string
@@ -183,7 +183,7 @@ export interface SceneReport {
   file: string
   status: 'completed' | 'failed' | 'timeout'
   teamIndex: number
-  actors: Record<string, { id: string; username?: string; device?: string }>
+  actors: Record<string, { key: string; username?: string; device?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
   timeline: TimelineEntry[]
@@ -325,8 +325,8 @@ export interface SwarmReport {
  * Live actor instance during a scene
  */
 export interface Actor {
-  /** Actor ID from config */
-  id: string
+  /** Actor key from config */
+  key: string
 
   /** Role this actor is playing */
   role: string
@@ -644,8 +644,8 @@ export interface ConcurrentActorHandle {
   /** Role this actor is playing */
   readonly role: string
 
-  /** Actor ID from config */
-  readonly id: string
+  /** Actor key from config */
+  readonly key: string
 
   /** Actor credentials forwarded from config */
   readonly username?: string
