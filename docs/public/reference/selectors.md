@@ -55,7 +55,128 @@ This works with markup like:
 </div>
 ```
 
-Key selectors are useful for lists where each row has a unique key. For the full guide on when to use `data-name` + `data-key` vs. `data-testid`, see [Preparing Your DOM](/guides/preparing-your-dom).
+### Container + `data-key` Pattern
+
+The most important pattern for lists: put `data-testid` on the **container** and `data-key` on each **item**.
+
+Prefer:
+
+```tsx
+<ul data-testid="language-options">
+  {languages.map(lang => (
+    <li data-key={lang.value}>
+      <span>{lang.label}</span>
+      <button aria-label="select-language">Select</button>
+    </li>
+  ))}
+</ul>
+```
+
+Over dynamic `data-testid` values like `data-testid={`language-option-${lang.value}`}`. The dynamic approach bakes the key into the attribute name, which causes problems:
+
+1. **Specs can't separate identity from key.** With container + `data-key`, the spec addresses the item structurally:
+
+    ```scenetest
+    user:
+    - click language-options fr select-language
+    ```
+
+    The selector resolver finds the container via `data-testid="language-options"`, descends to the child with `data-key="fr"`, and then finds `select-language` inside it. Each token does one job.
+
+2. **Variable interpolation works naturally.** When the key comes from actor config or another actor's data:
+
+    ```scenetest
+    user:
+    - click language-options [self.preferred_language] select-language
+    ```
+
+    With dynamic `data-testid`, you'd need string concatenation in the spec, which the text DSL doesn't support.
+
+3. **Selector tokens stay stable.** If you rename the key from `fr` to `fra`, you update the seed data -- not the spec's selector structure. The container token `language-options` never changes.
+
+4. **Debugging is clearer.** When a selector fails, the error message shows which token couldn't be resolved. `language-options` > `fr` > `select-language` tells you exactly where the chain broke. `language-option-fr` is opaque.
+
+Here's the pattern in full with a todo list:
+
+```tsx
+<ul data-testid="todo-list">
+  {todos.map(todo => (
+    <li data-key={todo.id}>
+      <span>{todo.text}</span>
+      <input
+        type="checkbox"
+        aria-label="toggle-complete"
+        checked={todo.done}
+        onChange={() => toggle(todo.id)}
+      />
+      <button aria-label="delete-todo" onClick={() => remove(todo.id)}>
+        <TrashIcon />
+      </button>
+    </li>
+  ))}
+</ul>
+```
+
+```scenetest
+# user can complete and delete a todo
+
+user:
+- openTo /todos
+- see todo-list
+- click todo-list abc123 toggle-complete
+- click todo-list def456 delete-todo
+- notSee todo-list def456
+```
+
+Each token in `todo-list abc123 toggle-complete` has a clear role: **container**, **key**, **child action target**.
+
+### Nested Lists
+
+When lists are nested, each level gets its own container `data-testid` and item `data-key`:
+
+```tsx
+<div data-testid="playlist-browser">
+  {playlists.map(pl => (
+    <div data-key={pl.id}>
+      <h3>{pl.name}</h3>
+      <ul data-testid="track-list">
+        {pl.tracks.map(track => (
+          <li data-key={track.id}>
+            <span>{track.title}</span>
+            <button aria-label="play-track">Play</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</div>
+```
+
+```scenetest
+user:
+- click playlist-browser summer-vibes track-list song-42 play-track
+```
+
+The resolver walks: `playlist-browser` -> `data-key="summer-vibes"` -> `track-list` -> `data-key="song-42"` -> `play-track`.
+
+### When There's No Natural Container
+
+If items appear without a clear wrapper element, you can use `data-name` on the items themselves as a fallback. `data-name` acts like an inline type label:
+
+```tsx
+{tabs.map(tab => (
+  <button data-name="tab" data-key={tab.id} onClick={() => select(tab.id)}>
+    {tab.label}
+  </button>
+))}
+```
+
+```scenetest
+user:
+- click tab settings
+```
+
+Prefer a container with `data-testid` when one exists. Use `data-name` + `data-key` on items only when the DOM structure doesn't have a natural wrapper to label.
 
 ## Sigil Prefixes
 

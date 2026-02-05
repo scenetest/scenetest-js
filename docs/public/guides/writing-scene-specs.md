@@ -227,22 +227,112 @@ test('user can complete checkout', async ({ actor }) => {
 })
 ```
 
-### Use Meaningful Test IDs
+### Choosing the Right Attribute
 
-Test IDs create stable hooks between specs and components:
+Scenetest's [selector resolution](/reference/selectors) matches each token against six attributes. In practice, you'll use three:
+
+| Attribute | Use for | Example |
+|-----------|---------|---------|
+| `data-testid` | One-of-a-kind elements and list containers | `data-testid="checkout-form"` |
+| `aria-label` | Interactive elements (buttons, links, inputs) | `aria-label="close-dialog"` |
+| `data-key` | Items inside a list container | `data-key="fr"` |
+
+For **static elements** that appear once on a page, `data-testid` is the default. Name by **what it represents**, not how it looks:
 
 ```tsx
-// Good: explicit test IDs based on what they represent
+// Good
 <button data-testid="submit-order">Place Order</button>
 <div data-testid="cart-summary">...</div>
-<span data-testid="total-price">{formattedPrice}</span>
 
-// Avoid: relying on text content or classes
-<button class="btn-primary">Place Order</button>  // class could change
-<button>Place Order</button>  // text could be translated
+// Bad
+<button data-testid="blue-button">Place Order</button>
+<div data-testid="top-div">...</div>
 ```
 
-> **Best Practice**: Name test IDs based on **what they represent**, not how they look. Use `data-testid="submit-order"` not `data-testid="blue-button"`. For list items, prefer `data-name` + `data-key` over dynamic `data-testid`. See the full [Preparing Your DOM](/guides/preparing-your-dom) guide.
+For **interactive elements** (buttons, links, inputs), prefer `aria-label`. It does double duty -- accessible to screen readers *and* targetable by specs:
+
+```tsx
+<button aria-label="remove-item" onClick={handleRemove}>
+  <TrashIcon />
+</button>
+```
+
+The `@scenetest/eslint-plugin` includes a `prefer-aria-label` rule that flags interactive elements with `data-testid` but no `aria-label`. Enable it:
+
+```js
+// eslint.config.js
+import scenetest from '@scenetest/eslint-plugin'
+
+export default [
+  scenetest.configs.recommended,
+  // ... your other config
+]
+```
+
+For **list items**, use the container + `data-key` pattern described in the [Selectors Reference](/reference/selectors#container--data-key-pattern).
+
+| Situation | Attribute | Spec selector |
+|-----------|-----------|--------------|
+| A form that appears once | `data-testid="login-form"` | `login-form` |
+| A submit button | `aria-label="submit-login"` | `submit-login` |
+| An icon-only button | `aria-label="close-dialog"` | `close-dialog` |
+| A list container | `data-testid="user-list"` | `user-list` |
+| A row inside that list | `data-key={user.id}` | `user-list abc123` |
+| A button inside a list row | `aria-label="edit-user"` (on the button) | `user-list abc123 edit-user` |
+| A static section | `data-testid="sidebar"` | `sidebar` |
+| Items with no container | `data-name="tab" data-key="settings"` | `tab settings` |
+
+### Common Mistakes
+
+**Embedding state in `data-testid`:**
+
+```tsx
+// Don't
+<div data-testid={`order-${order.status}`}>  // "order-pending", "order-shipped"
+
+// Do
+<div data-testid="order-card" data-status={order.status}>
+```
+
+Specs should target `order-card`, not guess at status suffixes.
+
+**Using index as key:**
+
+```tsx
+// Don't
+<li data-key={index}>
+
+// Do
+<li data-key={item.id}>
+```
+
+Array indices shift when items are added or removed. Use stable identifiers.
+
+**Bare `data-key` without a labeled container:**
+
+```tsx
+// Don't — data-key alone has no context
+<div>
+  <li data-key={todo.id}>...</li>
+</div>
+
+// Do — label the container
+<div data-testid="todo-list">
+  <li data-key={todo.id}>...</li>
+</div>
+```
+
+Without a named container, the spec has to target `data-key` directly, which is fragile if multiple lists on the page share key values. The container gives the scope.
+
+### Adding Markers to an Existing Codebase
+
+If you're adding markers to an existing codebase in bulk, see the LLM prompt in the [Getting Started guide](/guides/getting-started#4-add-semantic-dom-markers). It walks through finding selector tokens in your specs and adding the right attributes to your components.
+
+The short version:
+1. Read your spec files to find every selector token
+2. Find the corresponding element in your source
+3. Add `data-testid` for static elements and list containers, `aria-label` for interactive elements, `data-key` for items inside a container
+4. Run `pnpm scenetest` and watch specs start passing
 
 ## The Handoff: Reporting to Engineers
 

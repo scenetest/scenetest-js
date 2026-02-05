@@ -101,7 +101,7 @@ For the complete method reference (navigation, visibility, interaction, scope na
 
 ## Selector Resolution
 
-For the full selector syntax — attribute matching, nested selectors, key selectors, sigils, and aliases — see the [Selectors reference](/reference/selectors). For guidance on which attributes to use (`data-testid` vs. `aria-label` vs. `data-name` + `data-key`), see [Preparing Your DOM](/guides/preparing-your-dom).
+For the full selector syntax — attribute matching, nested selectors, key selectors, sigils, and aliases — see the [Selectors reference](/reference/selectors). For guidance on which attributes to use (`data-testid` vs. `aria-label` vs. `data-name` + `data-key`), see [Choosing the Right Attribute](/guides/writing-scene-specs#choosing-the-right-attribute).
 
 ---
 

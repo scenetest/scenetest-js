@@ -250,7 +250,7 @@ For the full Markdown DSL syntax (nesting, quoting, conditionals, macros, variab
 
 ## 4. Add Semantic DOM Markers
 
-Your specs target elements by semantic names like `login-form` or `submit-button`. These need to exist in your markup as `data-testid`, `aria-label`, or one of the other [supported attributes](/reference/selectors). For the full guide on which attribute to use when -- especially the `data-name` + `data-key` pattern for list items -- see [Preparing Your DOM](/guides/preparing-your-dom).
+Your specs target elements by semantic names like `login-form` or `submit-button`. These need to exist in your markup as `data-testid`, `aria-label`, or one of the other [supported attributes](/reference/selectors). For guidance on which attribute to use when, see [Choosing the Right Attribute](/guides/writing-scene-specs#choosing-the-right-attribute). For the container + `data-key` pattern for list items, see the [Selectors Reference](/reference/selectors#container--data-key-pattern).
 
 Adding these markers is mechanical work, and LLMs are very good at it. Copy the prompt below into a conversation with your codebase:
 
@@ -427,7 +427,7 @@ When your test suite grows, add more actor teams to run scenes in parallel. Each
 
 ## What's Next
 
-- [Preparing Your DOM](/guides/preparing-your-dom) -- which attributes to use, the `data-name` + `data-key` pattern for lists, and common mistakes
+- [Choosing the Right Attribute](/guides/writing-scene-specs#choosing-the-right-attribute) -- which attributes to use, common mistakes, and the ESLint plugin
 - [Writing Scene Specs](/guides/writing-scene-specs) -- the full guide to all three authoring styles
 - [Writing Inline Assertions](/guides/writing-inline-assertions) -- deep dive into `should()`, `failed()`, `serverCheck()`, and framework hooks
 - [Building Good Teams of Actors](/guides/building-teams) -- designing teams, seed data, and scaling concurrency
