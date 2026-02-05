@@ -1,5 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import { execSync } from 'child_process'
+import { createRequire } from 'module'
 import { stripScenetest } from './strip.js'
 import { transformAssertions } from './transform.js'
 import {
@@ -61,10 +62,10 @@ function getGitHash(): string {
 }
 
 // Get version from observer package
+const _require = createRequire(import.meta.url)
 function getVersion(): string {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('@scenetest/checks-panel/package.json')
+    const pkg = _require('@scenetest/checks-panel/package.json')
     return pkg.version || 'dev'
   } catch {
     return 'dev'
@@ -101,14 +102,16 @@ export interface ScenetestPluginOptions {
   /**
    * Content Security Policy configuration for dev mode.
    * Adds CSP headers to protect against XSS and other injection attacks.
-   * Defaults to enabled in development mode when devPanel is active.
+   * Defaults to disabled — opt in with `csp: true` or `csp: { enabled: true }`.
+   * The default policy is restrictive ('self' + 'unsafe-inline') and will block
+   * external resources like Google Fonts, third-party APIs, etc.
    */
   csp?:
     | boolean
     | {
         /**
          * Whether to enable CSP headers.
-         * Defaults to true when devPanel is enabled.
+         * Defaults to false.
          */
         enabled?: boolean
 
@@ -172,17 +175,16 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       // Recorder: opt-in, only in development
       showRecorder = options.recorder === true && !shouldStrip
 
-      // CSP configuration: enabled by default when devPanel is active
+      // CSP configuration: opt-in to avoid breaking external resources
       if (typeof options.csp === 'boolean') {
         cspEnabled = options.csp
       } else if (typeof options.csp === 'object') {
-        cspEnabled = options.csp.enabled ?? showDevPanel
+        cspEnabled = options.csp.enabled ?? false
         if (options.csp.directives) {
           cspDirectives = { ...DEFAULT_CSP_DIRECTIVES, ...options.csp.directives }
         }
       } else {
-        // Default: enable CSP when devPanel is shown
-        cspEnabled = showDevPanel
+        cspEnabled = false
       }
 
     },

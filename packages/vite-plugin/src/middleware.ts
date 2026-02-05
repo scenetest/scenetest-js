@@ -1,8 +1,24 @@
 import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
 import { AsyncLocalStorage } from 'async_hooks'
+import { createRequire } from 'module'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
+
+/**
+ * Resolve a module specifier from the plugin's own directory.
+ * This ensures transitive dependencies like @scenetest/checks-panel are found
+ * even under pnpm's strict hoisting, where they wouldn't be visible from the
+ * consuming project's root.
+ */
+const _require = createRequire(import.meta.url)
+function resolveFromPlugin(specifier: string): string | null {
+  try {
+    return _require.resolve(specifier)
+  } catch {
+    return null
+  }
+}
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -54,16 +70,16 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
     // Serve the observer module at /__scenetest/observer.js
     if (req.method === 'GET' && req.url === '/__scenetest/observer.js') {
       try {
-        // Resolve the observer's auto entry point
-        const resolved = await server.pluginContainer.resolveId('@scenetest/checks-panel/auto')
-        if (!resolved) {
+        // Resolve from the plugin's own directory so pnpm strict hoisting works
+        const resolvedPath = resolveFromPlugin('@scenetest/checks-panel/auto')
+        if (!resolvedPath) {
           res.statusCode = 404
-          res.end('Observer module not found')
+          res.end('Observer module not found — @scenetest/checks-panel could not be resolved')
           return
         }
 
         // Transform the module through Vite's pipeline
-        const result = await server.transformRequest(resolved.id)
+        const result = await server.transformRequest(resolvedPath)
         if (!result) {
           res.statusCode = 500
           res.end('Failed to transform observer module')
@@ -84,14 +100,15 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
     // Serve the recorder module at /__scenetest/recorder.js
     if (req.method === 'GET' && req.url === '/__scenetest/recorder.js') {
       try {
-        const resolved = await server.pluginContainer.resolveId('@scenetest/scenes-panel/auto')
-        if (!resolved) {
+        // Resolve from the plugin's own directory so pnpm strict hoisting works
+        const resolvedPath = resolveFromPlugin('@scenetest/scenes-panel/auto')
+        if (!resolvedPath) {
           res.statusCode = 404
-          res.end('Recorder module not found')
+          res.end('Recorder module not found — @scenetest/scenes-panel could not be resolved')
           return
         }
 
-        const result = await server.transformRequest(resolved.id)
+        const result = await server.transformRequest(resolvedPath)
         if (!result) {
           res.statusCode = 500
           res.end('Failed to transform recorder module')
