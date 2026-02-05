@@ -254,7 +254,7 @@ To make these tests pass, please add the following:
 
 1. Add `data-testid="welcome-box"` to the main welcome container
 2. Add `data-testid="continue-button"` to the Continue button
-3. Add `data-name="onboarding-step"` with a `data-key` attribute to each step
+3. Add `data-testid="onboarding-steps"` to the step container, and `data-key` to each step
 
 Once these are added, the scene should start to pass.
 
@@ -285,7 +285,7 @@ For configuration, see the [guides overview](/guides).
 - Scene specs describe **user journeys** — write them as concurrent TypeScript, text DSL markdown, or classic driver-style TypeScript
 - Write specs in **plain language** from the user's perspective
 - Choose your format: concurrent `scene()` for simplicity, `.spec.md` for maximum readability, classic `test()` for async/await compatibility
-- Use stable `data-testid` attributes, or `data-name` with `data-key`, as the contract with engineers
+- Use stable `data-testid` attributes on containers, `data-key` on list items, and `aria-label` on interactive elements as the contract with engineers
 - Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
 - Use `seeInView()` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
