@@ -163,6 +163,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   private _actorRegistry: Map<string, ConcurrentActorHandle> | null = null
   /** Team metadata for [team.field] interpolation */
   private _teamMetadata: Record<string, string> | null = null
+  /** Per-scene-run nonce shared by all actors */
+  private _nonce = ''
 
   constructor(
     role: string,
@@ -218,6 +220,13 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   /**
+   * Set the per-scene-run nonce for {{nonce}} interpolation.
+   */
+  _setRunNonce(nonce: string): void {
+    this._nonce = nonce
+  }
+
+  /**
    * Set team metadata for [team.field] interpolation.
    */
   _setTeamMetadata(metadata: Record<string, string>): void {
@@ -250,6 +259,11 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   // -----------------------------------------------------------------------
   // Scope helper — scope is always set during drain (page is initialized)
   // -----------------------------------------------------------------------
+
+  /** Replace {{nonce}} with the per-run nonce value */
+  private sub(str: string): string {
+    return str.replace(/\{\{nonce\}\}/g, this._nonce)
+  }
 
   private get scope(): Page | Locator {
     return this.currentScope ?? this.page
@@ -399,8 +413,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   seeText(text: string): this {
-    return this.push('seeText', text, async () => {
-      const locator = this.page.getByText(text).first()
+    const resolved = this.sub(text)
+    return this.push('seeText', resolved, async () => {
+      const locator = this.page.getByText(resolved).first()
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.scopeStack.push(this.scope)
       this.scopeStackUrls.push(this.scopeSetUrl)
@@ -439,8 +454,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   typeInto(selector: Selector, value: string): this {
-    return this.push('typeInto', `${selector}=${value}`, async () => {
-      await resolveSelector(this.scope, selector).fill(value, {
+    const resolved = this.sub(value)
+    return this.push('typeInto', `${selector}=${resolved}`, async () => {
+      await resolveSelector(this.scope, selector).fill(resolved, {
         timeout: this.actionTimeout,
       })
     })
@@ -455,8 +471,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   select(selector: Selector, value: string): this {
-    return this.push('select', `${selector}=${value}`, async () => {
-      await resolveSelector(this.scope, selector).selectOption(value, {
+    const resolved = this.sub(value)
+    return this.push('select', `${selector}=${resolved}`, async () => {
+      await resolveSelector(this.scope, selector).selectOption(resolved, {
         timeout: this.actionTimeout,
       })
     })
@@ -511,8 +528,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   emit(message: string): this {
-    return this.push('emit', message, async () => {
-      this.bus.emit(message)
+    const resolved = this.sub(message)
+    return this.push('emit', resolved, async () => {
+      this.bus.emit(resolved)
     })
   }
 
@@ -523,8 +541,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    * resolves immediately — no race.
    */
   waitFor(message: string): this {
-    return this.push('waitFor', message, async () => {
-      await this.bus.waitFor(message)
+    const resolved = this.sub(message)
+    return this.push('waitFor', resolved, async () => {
+      await this.bus.waitFor(resolved)
     })
   }
 
@@ -1004,9 +1023,10 @@ export function flow(name: string, fn: FlowFn): void {
       await result
     }
 
-    // Set actor registry on all actors for [role.field] interpolation
+    // Set actor registry and run nonce on all actors
     for (const actor of reactiveActors) {
       actor._setActorRegistry(actorRegistry)
+      actor._setRunNonce(session.nonce)
     }
 
     // Phase 2: Initialize — create browser contexts in parallel

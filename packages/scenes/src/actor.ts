@@ -91,6 +91,11 @@ class ActionChainImpl implements ActionChain {
     return this.currentScope
   }
 
+  /** Replace {{nonce}} with the per-run nonce value */
+  private sub(str: string): string {
+    return str.replace(/\{\{nonce\}\}/g, this.actor.nonce)
+  }
+
   /**
    * Validate that the current scope is still present in the DOM.
    *
@@ -196,8 +201,9 @@ class ActionChainImpl implements ActionChain {
   }
 
   seeText(text: string): ActionChain {
-    return this.addAction('seeText', text, async () => {
-      const locator = this.page.getByText(text).first()
+    const resolved = this.sub(text)
+    return this.addAction('seeText', resolved, async () => {
+      const locator = this.page.getByText(resolved).first()
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       // Update scope to the found element
       this.pushScope(locator)
@@ -231,9 +237,10 @@ class ActionChainImpl implements ActionChain {
   }
 
   typeInto(selector: Selector, value: string): ActionChain {
-    const target = `${formatSelector(selector)}=${value}`
+    const resolved = this.sub(value)
+    const target = `${formatSelector(selector)}=${resolved}`
     return this.addAction('typeInto', target, async () => {
-      await resolveSelector(this.getScope(), selector).fill(value, { timeout: this.actionTimeout })
+      await resolveSelector(this.getScope(), selector).fill(resolved, { timeout: this.actionTimeout })
       // typeInto stays in current scope
     })
   }
@@ -246,9 +253,10 @@ class ActionChainImpl implements ActionChain {
   }
 
   select(selector: Selector, value: string): ActionChain {
-    const target = `${formatSelector(selector)}=${value}`
+    const resolved = this.sub(value)
+    const target = `${formatSelector(selector)}=${resolved}`
     return this.addAction('select', target, async () => {
-      await resolveSelector(this.getScope(), selector).selectOption(value, { timeout: this.actionTimeout })
+      await resolveSelector(this.getScope(), selector).selectOption(resolved, { timeout: this.actionTimeout })
     })
   }
 
@@ -259,14 +267,16 @@ class ActionChainImpl implements ActionChain {
   }
 
   emit(message: string): ActionChain {
-    return this.addAction('emit', message, async () => {
-      this.bus.emit(message)
+    const resolved = this.sub(message)
+    return this.addAction('emit', resolved, async () => {
+      this.bus.emit(resolved)
     })
   }
 
   waitFor(message: string): ActionChain {
-    return this.addAction('waitFor', message, async () => {
-      await this.bus.waitFor(message)
+    const resolved = this.sub(message)
+    return this.addAction('waitFor', resolved, async () => {
+      await this.bus.waitFor(resolved)
     })
   }
 
@@ -523,6 +533,9 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   readonly password?: string
   [key: string]: unknown
 
+  /** Per-scene-run nonce shared by all actors */
+  readonly nonce: string
+
   constructor(
     role: string,
     public readonly config: ActorConfig,
@@ -532,12 +545,14 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
     private actionTimeout: number,
-    private warnAfter: number
+    private warnAfter: number,
+    nonce: string
   ) {
     this.role = role
     this.page = page
     this.context = context
     this.id = config.id
+    this.nonce = nonce
 
     // Copy all config properties to this instance
     for (const [key, value] of Object.entries(config)) {

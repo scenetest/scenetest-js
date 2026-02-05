@@ -157,6 +157,9 @@ export class TeamSession {
   readonly assertions: AssertionResult[] = []
   readonly warnings: ScriptWarning[] = []
 
+  /** Per-scene-run nonce for {{nonce}} interpolation in string arguments */
+  readonly nonce: string
+
   constructor(
     private browser: Browser,
     private team: TeamConfig,
@@ -165,7 +168,9 @@ export class TeamSession {
     readonly warnAfter: number,
     private baseUrl?: string,
     private deviceRotation?: DeviceRotation | null
-  ) {}
+  ) {
+    this.nonce = Math.random().toString(36).slice(2, 8)
+  }
 
   /**
    * Get the actor config for a role (sync — no browser setup).
@@ -271,7 +276,8 @@ export class TeamSession {
       this.timeline,
       this.warnings,
       this.actionTimeout,
-      this.warnAfter
+      this.warnAfter,
+      this.nonce
     )
 
     this.contexts.set(role, context)
