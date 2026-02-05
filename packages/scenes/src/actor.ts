@@ -1,5 +1,7 @@
 import type { Page, BrowserContext, Locator } from 'playwright'
 import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector, PageFactory } from './types.js'
+import type { NavigationMode } from './keyboard.js'
+import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
@@ -65,9 +67,17 @@ class ActionChainImpl implements ActionChain {
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
     private actionTimeout: number,
-    private warnAfter: number
+    private warnAfter: number,
+    private navigationMode: NavigationMode = 'pointer'
   ) {
     this.currentScope = page
+  }
+
+  /**
+   * Whether this chain uses keyboard navigation.
+   */
+  private get isKeyboard(): boolean {
+    return this.navigationMode === 'keyboard'
   }
 
   private addAction(name: string, target: string | undefined, execute: () => Promise<void>): ActionChain {
@@ -273,19 +283,38 @@ class ActionChainImpl implements ActionChain {
         if (scope === this.page) {
           throw new Error('click with no selector requires a scope (use see() first)')
         }
-        await (scope as Locator).click({ timeout: this.actionTimeout })
+        if (this.isKeyboard) {
+          await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
+          await pressEnter(this.page)
+        } else {
+          await (scope as Locator).click({ timeout: this.actionTimeout })
+        }
       })
     }
     const target = formatSelector(selector)
     return this.addAction('click', target, async () => {
-      await resolveSelector(this.getScope(), selector).click({ timeout: this.actionTimeout })
+      const locator = resolveSelector(this.getScope(), selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await pressEnter(this.page)
+      } else {
+        await locator.click({ timeout: this.actionTimeout })
+      }
     })
   }
 
   typeInto(selector: Selector, value: string): ActionChain {
     const target = `${formatSelector(selector)}=${value}`
     return this.addAction('typeInto', target, async () => {
-      await resolveSelector(this.getScope(), selector).fill(value, { timeout: this.actionTimeout })
+      const locator = resolveSelector(this.getScope(), selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await clearAndType(this.page, value)
+      } else {
+        await locator.fill(value, { timeout: this.actionTimeout })
+      }
       // typeInto stays in current scope
     })
   }
@@ -293,14 +322,28 @@ class ActionChainImpl implements ActionChain {
   check(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('check', target, async () => {
-      await resolveSelector(this.getScope(), selector).check({ timeout: this.actionTimeout })
+      const locator = resolveSelector(this.getScope(), selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await pressSpace(this.page)
+      } else {
+        await locator.check({ timeout: this.actionTimeout })
+      }
     })
   }
 
   select(selector: Selector, value: string): ActionChain {
     const target = `${formatSelector(selector)}=${value}`
     return this.addAction('select', target, async () => {
-      await resolveSelector(this.getScope(), selector).selectOption(value, { timeout: this.actionTimeout })
+      const locator = resolveSelector(this.getScope(), selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await keyboardSelectOption(this.page, locator, value)
+      } else {
+        await locator.selectOption(value, { timeout: this.actionTimeout })
+      }
     })
   }
 
@@ -561,6 +604,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   private _page: Page
   private _context: BrowserContext
   readonly assertions: AssertionResult[] = []
+  readonly navigationMode: NavigationMode
 
   // Registered watchers for conditional handling
   private watchers: Watcher[] = []
@@ -588,6 +632,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     private warnings: ScriptWarning[],
     private actionTimeout: number,
     private warnAfter: number,
+    navigationMode: NavigationMode = 'pointer',
     pageFactory?: PageFactory | null
   ) {
     this.role = role
@@ -595,6 +640,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     this._context = context
     this._pageFactory = pageFactory ?? null
     this.key = config.key
+    this.navigationMode = navigationMode
 
     // Copy all config properties to this instance
     for (const [k, value] of Object.entries(config)) {
@@ -650,7 +696,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   }
 
   private createChain(): ActionChainImpl {
-    return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.warnings, this.actionTimeout, this.warnAfter)
+    return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.warnings, this.actionTimeout, this.warnAfter, this.navigationMode)
   }
 
   openTo(url: string): ActionChain {

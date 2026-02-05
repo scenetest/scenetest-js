@@ -1,6 +1,7 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { DeviceProfile } from './devices.js'
+import type { NavigationMode } from './keyboard.js'
 
 /**
  * Factory function for creating a new browser page + context.
@@ -193,6 +194,21 @@ export interface ScenetestConfig extends BaseConfig {
   devices?: boolean | DeviceProfile[]
 
   /**
+   * Keyboard navigation mode: some actors navigate entirely via Tab/Enter
+   * instead of mouse clicks, testing that the app is keyboard-accessible.
+   *
+   * When `true`, actors alternate between pointer and keyboard mode
+   * (round-robin: pointer, keyboard, pointer, keyboard, ...).
+   *
+   * When an array of NavigationMode, uses that as the rotation pool.
+   * For example, `['pointer', 'pointer', 'keyboard']` makes every
+   * third actor a keyboard user.
+   *
+   * When `false` or omitted, all actors use pointer (default mouse) navigation.
+   */
+  keyboard?: boolean | NavigationMode[]
+
+  /**
    * Swarm mode configuration.
    * When set, enables automatic swarm triggering based on failure thresholds.
    */
@@ -238,6 +254,8 @@ export interface AssertionResult {
   actor?: string
   /** Device the actor was using when this assertion fired */
   device?: string
+  /** Navigation mode the actor was using (pointer or keyboard) */
+  navigationMode?: string
 }
 
 /**
@@ -280,7 +298,7 @@ export interface SceneReport {
   teamIndex: number
   /** Team metadata (name, tags) — empty object when not provided */
   team: TeamMeta
-  actors: Record<string, { key: string; username?: string; device?: string }>
+  actors: Record<string, { key: string; username?: string; device?: string; navigationMode?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
   timeline: TimelineEntry[]
@@ -943,6 +961,9 @@ export interface CLIOptions {
 
   /** Enable device rotation */
   devices?: boolean
+
+  /** Enable keyboard navigation rotation */
+  keyboard?: boolean
 
   /** Force swarm mode (run all teams against all scenes) */
   swarm?: boolean

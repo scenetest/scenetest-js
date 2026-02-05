@@ -59,6 +59,8 @@ import type {
   TeamMeta,
   PageFactory,
 } from './types.js'
+import type { NavigationMode } from './keyboard.js'
+import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
@@ -145,6 +147,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   readonly username?: string
   readonly email?: string
   readonly password?: string;
+  readonly navigationMode: NavigationMode;
   [key: string]: unknown
 
   private _page: Page | null
@@ -178,12 +181,14 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
     private actionTimeout: number,
-    private warnAfter: number
+    private warnAfter: number,
+    navigationMode: NavigationMode = 'pointer'
   ) {
     this.role = role
     this._page = page
     this.currentScope = page
     this.key = config.key
+    this.navigationMode = navigationMode
 
     // Forward all config properties
     for (const [k, value] of Object.entries(config)) {
@@ -236,6 +241,13 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    */
   _setPageFactory(factory: PageFactory): void {
     this._pageFactory = factory
+  }
+
+  /**
+   * Whether this actor uses keyboard navigation.
+   */
+  private get isKeyboard(): boolean {
+    return this.navigationMode === 'keyboard'
   }
 
   // -----------------------------------------------------------------------
@@ -488,37 +500,62 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         if (scope === this.page) {
           throw new Error('click with no selector requires a scope (use see() first)')
         }
-        await (scope as Locator).click({ timeout: this.actionTimeout })
+        if (this.isKeyboard) {
+          await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
+          await pressEnter(this.page)
+        } else {
+          await (scope as Locator).click({ timeout: this.actionTimeout })
+        }
       })
     }
     return this.push('click', selector, async () => {
-      await resolveSelector(this.scope, selector).click({
-        timeout: this.actionTimeout,
-      })
+      const locator = resolveSelector(this.scope, selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await pressEnter(this.page)
+      } else {
+        await locator.click({ timeout: this.actionTimeout })
+      }
     })
   }
 
   typeInto(selector: Selector, value: string): this {
     return this.push('typeInto', `${selector}=${value}`, async () => {
-      await resolveSelector(this.scope, selector).fill(value, {
-        timeout: this.actionTimeout,
-      })
+      const locator = resolveSelector(this.scope, selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await clearAndType(this.page, value)
+      } else {
+        await locator.fill(value, { timeout: this.actionTimeout })
+      }
     })
   }
 
   check(selector: Selector): this {
     return this.push('check', selector, async () => {
-      await resolveSelector(this.scope, selector).check({
-        timeout: this.actionTimeout,
-      })
+      const locator = resolveSelector(this.scope, selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await pressSpace(this.page)
+      } else {
+        await locator.check({ timeout: this.actionTimeout })
+      }
     })
   }
 
   select(selector: Selector, value: string): this {
     return this.push('select', `${selector}=${value}`, async () => {
-      await resolveSelector(this.scope, selector).selectOption(value, {
-        timeout: this.actionTimeout,
-      })
+      const locator = resolveSelector(this.scope, selector)
+      if (this.isKeyboard) {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+        await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+        await keyboardSelectOption(this.page, locator, value)
+      } else {
+        await locator.selectOption(value, { timeout: this.actionTimeout })
+      }
     })
   }
 
@@ -1049,6 +1086,9 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
         // Resolve config synchronously — no browser needed yet
         const config = session.getActorConfig(role)
 
+        // Determine navigation mode for this actor (if rotation is enabled)
+        const navMode = session.getNavigationMode(role)
+
         // Create reactive handle without a page (deferred init)
         const reactive = new ConcurrentActorHandleImpl(
           role,
@@ -1058,7 +1098,8 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
           session.timeline,
           session.warnings,
           session.actionTimeout,
-          session.warnAfter
+          session.warnAfter,
+          navMode
         )
 
         reactiveActors.push(reactive)
