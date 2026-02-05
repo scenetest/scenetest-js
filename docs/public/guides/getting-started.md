@@ -266,7 +266,7 @@ You are adding semantic DOM markers to a web application so that end-to-end test
 3. Add the appropriate attribute:
    - `data-testid="token"` — the default for one-of-a-kind elements AND list containers
    - `aria-label="token"` — prefer this for interactive elements that would benefit from accessibility labeling anyway (buttons with just an icon, close buttons, navigation landmarks)
-   - `data-key="value"` — use on items inside a `data-testid` container to identify each row by ID. NEVER use dynamic `data-testid` like `data-testid={`item-${id}`}` for list items — put `data-testid` on the container and `data-key` on each item instead
+   - `data-key="value"` — use on items inside a `data-testid` container to identify each row by ID. Prefer this over dynamic `data-testid` like `data-testid={`item-${id}`}` — put `data-testid` on the container and `data-key` on each item
    - `data-name="token"` with `data-key="value"` — fallback for list items that have no natural container element. `data-name` identifies the element type, `data-key` identifies the instance
 
 4. Name markers by **what the element represents**, not how it looks:
