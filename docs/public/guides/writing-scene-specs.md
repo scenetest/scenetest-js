@@ -242,7 +242,7 @@ Test IDs create stable hooks between specs and components:
 <button>Place Order</button>  // text could be translated
 ```
 
-> **Best Practice**: Name test IDs based on **what they represent**, not how they look. Use `data-testid="submit-order"` not `data-testid="blue-button"`.
+> **Best Practice**: Name test IDs based on **what they represent**, not how they look. Use `data-testid="submit-order"` not `data-testid="blue-button"`. For list items, prefer `data-name` + `data-key` over dynamic `data-testid`. See the full [Preparing Your DOM](/guides/preparing-your-dom) guide.
 
 ## The Handoff: Reporting to Engineers
 

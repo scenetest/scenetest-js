@@ -55,7 +55,7 @@ This works with markup like:
 </div>
 ```
 
-Key selectors are useful for lists where each row has a unique key.
+Key selectors are useful for lists where each row has a unique key. For the full guide on when to use `data-name` + `data-key` vs. `data-testid`, see [Preparing Your DOM](/guides/preparing-your-dom).
 
 ## Sigil Prefixes
 
