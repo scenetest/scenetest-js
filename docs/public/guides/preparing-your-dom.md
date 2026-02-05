@@ -8,11 +8,11 @@ Scenetest's [selector resolution](/reference/selectors) matches each token again
 
 | Attribute | Use for | Example |
 |-----------|---------|---------|
-| `data-testid` | Static, one-of-a-kind elements | `data-testid="checkout-form"` |
+| `data-testid` | One-of-a-kind elements and list containers | `data-testid="checkout-form"` |
 | `aria-label` | Interactive elements (buttons, links, inputs) | `aria-label="close-dialog"` |
-| `data-name` + `data-key` | Repeated items in a list | `data-name="language-option" data-key="fr"` |
+| `data-key` | Items inside a list container | `data-key="fr"` |
 
-The other three (`id`, `name`, bare `data-key`) are supported but rarely the best choice for new markup.
+The other three (`id`, `data-name`, `name`) are supported but rarely the best choice for new markup.
 
 ## Static Elements: `data-testid`
 
@@ -71,76 +71,84 @@ export default [
 ]
 ```
 
-## List Items: `data-name` + `data-key`
+## List Items: Container + `data-key`
 
-This is the most important pattern to get right. When you have a list of repeated elements and need to target a specific one, use `data-name` to identify the **type** and `data-key` to identify the **instance**.
+This is the most important pattern to get right. When you have a list of repeated elements and need to target a specific one, put `data-testid` on the **container** and `data-key` on each **item**.
 
 Prefer:
 
 ```tsx
-{languages.map(lang => (
-  <div data-name="language-option" data-key={lang.value}>
-    <span>{lang.label}</span>
-    <button aria-label="select-language">Select</button>
-  </div>
-))}
+<ul data-testid="language-options">
+  {languages.map(lang => (
+    <li data-key={lang.value}>
+      <span>{lang.label}</span>
+      <button aria-label="select-language">Select</button>
+    </li>
+  ))}
+</ul>
 ```
 
 Over:
 
 ```tsx
-{languages.map(lang => (
-  <div data-testid={`language-option-${lang.value}`}>
-    <span>{lang.label}</span>
-    <button aria-label="select-language">Select</button>
-  </div>
-))}
+<ul>
+  {languages.map(lang => (
+    <li data-testid={`language-option-${lang.value}`}>
+      <span>{lang.label}</span>
+      <button aria-label="select-language">Select</button>
+    </li>
+  ))}
+</ul>
 ```
+
+The container is a one-of-a-kind element -- there's one "language options" list on the page -- so it gets `data-testid`. Each item only needs `data-key` because the container already provides the type context.
 
 ### Why this matters
 
 The dynamic `data-testid` approach (`language-option-fr`, `language-option-en`) bakes the key into the attribute name. This causes problems:
 
-1. **Specs can't separate identity from type.** With `data-testid="language-option-fr"`, a spec has to hard-code the full string. With `data-name` + `data-key`, the spec can address the item structurally:
+1. **Specs can't separate identity from key.** With `data-testid="language-option-fr"`, a spec has to hard-code the full string. With container + `data-key`, the spec addresses the item structurally:
 
     ```scenetest
     user:
-    - click language-option fr select-language
+    - click language-options fr select-language
     ```
 
-    The selector resolver finds the element with `data-name="language-option"`, checks that it (or a child) has `data-key="fr"`, and then finds the `select-language` button inside it. Each token does one job.
+    The selector resolver finds the container via `data-testid="language-options"`, descends to the child with `data-key="fr"`, and then finds `select-language` inside it. Each token does one job.
 
 2. **Variable interpolation works naturally.** When the key comes from actor config or another actor's data:
 
     ```scenetest
     user:
-    - click language-option [self.preferred_language] select-language
+    - click language-options [self.preferred_language] select-language
     ```
 
     With the dynamic `data-testid` approach, you'd need string concatenation in the spec, which the text DSL doesn't support.
 
-3. **Selector tokens stay stable.** If you rename the key from `fr` to `fra`, you update the seed data -- not the spec's selector structure. The token `language-option` never changes.
+3. **Selector tokens stay stable.** If you rename the key from `fr` to `fra`, you update the seed data -- not the spec's selector structure. The container token `language-options` never changes.
 
-4. **Debugging is clearer.** When a selector fails, the error message shows which token couldn't be resolved. `language-option` > `fr` > `select-language` tells you exactly where the chain broke. `language-option-fr` is opaque.
+4. **Debugging is clearer.** When a selector fails, the error message shows which token couldn't be resolved. `language-options` > `fr` > `select-language` tells you exactly where the chain broke. `language-option-fr` is opaque.
 
 ### The pattern in full
 
 ```tsx
 // A todo list
-{todos.map(todo => (
-  <li data-name="todo-item" data-key={todo.id}>
-    <span>{todo.text}</span>
-    <input
-      type="checkbox"
-      aria-label="toggle-complete"
-      checked={todo.done}
-      onChange={() => toggle(todo.id)}
-    />
-    <button aria-label="delete-todo" onClick={() => remove(todo.id)}>
-      <TrashIcon />
-    </button>
-  </li>
-))}
+<ul data-testid="todo-list">
+  {todos.map(todo => (
+    <li data-key={todo.id}>
+      <span>{todo.text}</span>
+      <input
+        type="checkbox"
+        aria-label="toggle-complete"
+        checked={todo.done}
+        onChange={() => toggle(todo.id)}
+      />
+      <button aria-label="delete-todo" onClick={() => remove(todo.id)}>
+        <TrashIcon />
+      </button>
+    </li>
+  ))}
+</ul>
 ```
 
 ```scenetest
@@ -149,37 +157,60 @@ The dynamic `data-testid` approach (`language-option-fr`, `language-option-en`) 
 user:
 - openTo /todos
 - see todo-list
-- click todo-item abc123 toggle-complete
-- click todo-item def456 delete-todo
-- notSee todo-item def456
+- click todo-list abc123 toggle-complete
+- click todo-list def456 delete-todo
+- notSee todo-list def456
 ```
 
-Each token in `todo-item abc123 toggle-complete` has a clear role: **type**, **key**, **child action target**.
+Each token in `todo-list abc123 toggle-complete` has a clear role: **container**, **key**, **child action target**.
 
 ### Nested lists
 
-When lists are nested, each level gets its own `data-name` + `data-key`:
+When lists are nested, each level gets its own container `data-testid` and item `data-key`:
 
 ```tsx
-{playlists.map(pl => (
-  <div data-name="playlist" data-key={pl.id}>
-    <h3>{pl.name}</h3>
-    {pl.tracks.map(track => (
-      <div data-name="track" data-key={track.id}>
-        <span>{track.title}</span>
-        <button aria-label="play-track">Play</button>
-      </div>
-    ))}
-  </div>
+<div data-testid="playlist-browser">
+  {playlists.map(pl => (
+    <div data-key={pl.id}>
+      <h3>{pl.name}</h3>
+      <ul data-testid="track-list">
+        {pl.tracks.map(track => (
+          <li data-key={track.id}>
+            <span>{track.title}</span>
+            <button aria-label="play-track">Play</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</div>
+```
+
+```scenetest
+user:
+- click playlist-browser summer-vibes track-list song-42 play-track
+```
+
+The resolver walks: `playlist-browser` -> `data-key="summer-vibes"` -> `track-list` -> `data-key="song-42"` -> `play-track`.
+
+### When there's no natural container
+
+If items appear without a clear wrapper element, you can use `data-name` on the items themselves as a fallback. `data-name` acts like an inline type label:
+
+```tsx
+{tabs.map(tab => (
+  <button data-name="tab" data-key={tab.id} onClick={() => select(tab.id)}>
+    {tab.label}
+  </button>
 ))}
 ```
 
 ```scenetest
 user:
-- click playlist summer-vibes track song-42 play-track
+- click tab settings
 ```
 
-The resolver walks: `playlist` -> `data-key="summer-vibes"` -> `track` -> `data-key="song-42"` -> `play-track`.
+Prefer a container with `data-testid` when one exists. Use `data-name` + `data-key` on items only when the DOM structure doesn't have a natural wrapper to label.
 
 ## When to Use What
 
@@ -188,10 +219,11 @@ The resolver walks: `playlist` -> `data-key="summer-vibes"` -> `track` -> `data-
 | A form that appears once | `data-testid="login-form"` | `login-form` |
 | A submit button | `aria-label="submit-login"` | `submit-login` |
 | An icon-only button | `aria-label="close-dialog"` | `close-dialog` |
-| A row in a list | `data-name="user-row" data-key={user.id}` | `user-row abc123` |
-| A button inside a list row | `aria-label="edit-user"` (on the button) | `user-row abc123 edit-user` |
+| A list container | `data-testid="user-list"` | `user-list` |
+| A row inside that list | `data-key={user.id}` | `user-list abc123` |
+| A button inside a list row | `aria-label="edit-user"` (on the button) | `user-list abc123 edit-user` |
 | A static section | `data-testid="sidebar"` | `sidebar` |
-| A tab in a tab bar | `data-name="tab" data-key="settings"` | `tab settings` |
+| Items with no container | `data-name="tab" data-key="settings"` | `tab settings` |
 
 ## Common Mistakes
 
@@ -211,25 +243,29 @@ Specs should target `order-card`, not guess at status suffixes.
 
 ```tsx
 // Don't
-<li data-name="item" data-key={index}>
+<li data-key={index}>
 
 // Do
-<li data-name="item" data-key={item.id}>
+<li data-key={item.id}>
 ```
 
 Array indices shift when items are added or removed. Use stable identifiers.
 
-**Skipping `data-name` on keyed elements:**
+**Bare `data-key` without a labeled container:**
 
 ```tsx
-// Don't — data-key alone has no type context
-<li data-key={todo.id}>
+// Don't — data-key alone has no context
+<div>
+  <li data-key={todo.id}>...</li>
+</div>
 
-// Do
-<li data-name="todo-item" data-key={todo.id}>
+// Do — label the container
+<div data-testid="todo-list">
+  <li data-key={todo.id}>...</li>
+</div>
 ```
 
-Without `data-name`, the selector has to match on `data-key` alone, which is fragile if multiple lists on the page share key values.
+Without a named container, the spec has to target `data-key` directly, which is fragile if multiple lists on the page share key values. The container gives the scope.
 
 ## Adding Markers to an Existing Codebase
 
@@ -238,5 +274,5 @@ If you're adding markers to an existing codebase in bulk, see the LLM prompt in 
 The short version:
 1. Read your spec files to find every selector token
 2. Find the corresponding element in your source
-3. Add `data-testid` for static elements, `aria-label` for interactive ones, `data-name` + `data-key` for list items
+3. Add `data-testid` for static elements and list containers, `aria-label` for interactive elements, `data-key` for items inside a container
 4. Run `pnpm scenetest` and watch specs start passing

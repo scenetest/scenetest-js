@@ -264,14 +264,15 @@ You are adding semantic DOM markers to a web application so that end-to-end test
 2. For each selector token, find the corresponding element in the application source code.
 
 3. Add the appropriate attribute:
-   - `data-testid="token"` — the default, use for most elements
+   - `data-testid="token"` — the default for one-of-a-kind elements AND list containers
    - `aria-label="token"` — prefer this for interactive elements that would benefit from accessibility labeling anyway (buttons with just an icon, close buttons, navigation landmarks)
-   - `data-name="token"` with `data-key="value"` — use for items in a list where you need to target a specific row by ID. The `data-name` identifies the element type, `data-key` identifies the instance. NEVER use dynamic `data-testid` like `data-testid={`item-${id}`}` for list items — always use `data-name` + `data-key` instead
+   - `data-key="value"` — use on items inside a `data-testid` container to identify each row by ID. NEVER use dynamic `data-testid` like `data-testid={`item-${id}`}` for list items — put `data-testid` on the container and `data-key` on each item instead
+   - `data-name="token"` with `data-key="value"` — fallback for list items that have no natural container element. `data-name` identifies the element type, `data-key` identifies the instance
 
 4. Name markers by **what the element represents**, not how it looks:
    - Good: `data-testid="submit-order"`, `data-testid="cart-summary"`
    - Bad: `data-testid="blue-button"`, `data-testid="div-3"`
-   - Bad: `data-testid={`order-${order.id}`}` — use `data-name="order" data-key={order.id}` instead
+   - Bad: `data-testid={`order-${order.id}`}` — use `data-testid="order-list"` on the container + `data-key={order.id}` on each item
 
 5. Do NOT remove or change any existing attributes, event handlers, or component logic. Only add the data-testid / aria-label / data-name / data-key attributes.
 
