@@ -121,6 +121,10 @@ export class SceneRunner {
         const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl)
 
         try {
+          // Log which scene is starting
+          const relativeFile = path.relative(process.cwd(), registered.file)
+          console.log(`▶ ${registered.name} (${relativeFile})`)
+
           // Run the scene
           const report = await runScene(registered, session, timeout)
 
