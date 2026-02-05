@@ -25,25 +25,21 @@ scenetest --swarm              # Run swarm mode (all teams, all scenes)
 
 ## Configuration File
 
-Scenetest looks for config in this order:
+Scenetest looks for config at:
 
-1. `scenetest.config.ts`
-2. `scenetest.config.js`
-3. `scenetest.config.mjs`
-4. `scenetest/config.ts`
-5. `scenetest/config.js`
-6. `scenetest/config.mjs`
+1. `scenetest/config.ts`
+2. `scenetest/config.js`
+3. `scenetest/config.mjs`
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   // Required
   baseUrl: 'http://localhost:5173',
 
-  // Scene discovery
-  scenes: './scenes',           // Directory or glob pattern
+  // Scene discovery (scenes live in scenetest/scenes/)
   ignore: ['**/helpers/**'],    // Patterns to skip
 
   // Browser

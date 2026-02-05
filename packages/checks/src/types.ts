@@ -35,7 +35,7 @@ export type AssertDataFn<TData = unknown> = () => TData
 
 /**
  * Server context available in serverFn.
- * Users augment this interface via module declaration in scenetest.config.ts
+ * Users augment this interface via module declaration in scenetest/config.ts
  */
 export interface ServerContext {
   // Users extend this via module augmentation
@@ -74,7 +74,7 @@ export interface AssertionRpcResponse {
 /**
  * Scenetest configuration.
  *
- * This is the base config shape used by scenetest.config.ts.
+ * This is the base config shape used by scenetest/config.ts.
  * @scenetest/scenes extends it with runner-specific fields (browser, headed, etc.)
  * via declaration merging — see `@scenetest/scenes/types`.
  *
@@ -85,9 +85,6 @@ export interface AssertionRpcResponse {
 export interface ScenetestConfig {
   /** Base URL for the application under test */
   baseUrl?: string
-
-  /** Directory or glob for scene specs */
-  scenes?: string
 
   /**
    * Server functions for multi-context assertions.
@@ -108,7 +105,7 @@ export interface ScenetestConfig {
 }
 
 /**
- * Type-checked helper for scenetest.config.ts.
+ * Type-checked helper for scenetest/config.ts.
  *
  * Works with the base config shape. If using @scenetest/scenes runner features,
  * import defineConfig from '@scenetest/scenes' instead for full type coverage

@@ -145,38 +145,18 @@ export default {
 
 ### Discovery rules
 
-Scenetest looks for actor files relative to your config file:
-
-1. `actors.ts` (or `.js`/`.mjs`) -- single file exporting an array of teams
-2. `actors/*.ts` -- directory with one file per team
-
-The config file itself has no actor definitions:
+Scenetest discovers actor teams from `scenetest/actors/` — each `.ts` file exports one team. The config file itself has no actor definitions:
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/scenes'
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
-  scenes: './scenes',
 })
 ```
 
 ### Project layout
-
-```
-your-project/
-├── scenetest.config.ts          # or scenetest/config.ts
-├── actors.ts                    # or actors/*.ts
-├── scenes/
-│   ├── onboarding.spec.ts
-│   └── social/
-│       └── friend-request.spec.ts
-└── src/
-    └── ...
-```
-
-Or using the `scenetest/` directory convention:
 
 ```
 your-project/

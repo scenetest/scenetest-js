@@ -17,13 +17,13 @@ export function clearConfigCache(): void {
 }
 
 /**
- * Find the scenetest config file path
+ * Find the scenetest config file path (scenetest/config.{ts,js,mjs})
  */
 export function findConfigPath(root: string): string | null {
   const extensions = ['ts', 'js', 'mjs']
 
   for (const ext of extensions) {
-    const configPath = resolve(root, `scenetest.config.${ext}`)
+    const configPath = resolve(root, `scenetest/config.${ext}`)
     if (existsSync(configPath)) {
       return configPath
     }
@@ -36,7 +36,7 @@ export function findConfigPath(root: string): string | null {
  * Load the scenetest config using Vite's SSR module loader.
  * This must be called from the server context with access to ViteDevServer.
  *
- * Reads the unified scenetest.config.ts and extracts fields the plugin needs
+ * Reads scenetest/config.ts and extracts fields the plugin needs
  * (currently just `serverFunctions`). All other config fields are ignored.
  */
 export async function loadConfig(

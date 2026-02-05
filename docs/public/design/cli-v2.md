@@ -271,7 +271,6 @@ interface SequentialActorHandle {
 ```typescript
 defineConfig({
   baseUrl: 'http://localhost:3000',
-  scenes: './scenes',
 
   // Browser settings
   browser: 'chromium',  // 'chromium' | 'firefox' | 'webkit'

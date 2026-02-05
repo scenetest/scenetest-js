@@ -65,7 +65,7 @@ The `withData` function runs in the browser (has access to React state, cache, e
 │  │   serverCheck() │ ────POST────► │  Load serverFn by ID     │    │
 │  │        │         │               │    ↓                     │    │
 │  │        ↓         │               │  Create server context   │    │
-│  │  withData() runs  │               │  (from scenetest.config)│    │
+│  │  withData() runs  │               │  (from scenetest/config)│    │
 │  │  serialize       │               │    ↓                     │    │
 │  │  POST to server  │ ◄───JSON───── │  Run serverFn(server,    │    │
 │  │        ↓         │               │              data)    │    │
@@ -258,7 +258,7 @@ async function handleAssertionRun(req, res) {
 Users configure server functions in a config file:
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 import { defineConfig } from '@scenetest/vite-plugin'
 import { db } from './src/db'
 
@@ -326,7 +326,7 @@ function serverCheck<TwithData>(config: ServerCheckConfig<TwithData>): void
 For `ServerContext`, users can extend the type:
 
 ```typescript
-// scenetest.config.ts
+// scenetest/config.ts
 declare module '@scenetest/checks' {
   interface ServerContext {
     getProfile: (id: string) => Promise<Profile>
@@ -464,7 +464,7 @@ async waitForAssertions(options = {}) {
 
 ### Phase 4: Configuration
 
-1. Define `scenetest.config.ts` format
+1. Define `scenetest/config.ts` format
 2. Load config in Vite plugin
 3. Create server context from config
 4. TypeScript types for server functions
@@ -540,7 +540,7 @@ packages/
 │       ├── transform.ts       # Extend to handle serverCheck()
 │       ├── extract.ts         # New: Extract serverFn to virtual module
 │       ├── middleware.ts      # New: /__scenetest/run handler
-│       └── config.ts          # New: Load scenetest.config.ts
+│       └── config.ts          # New: Load scenetest/config.ts
 │
 └── checks/
     └── src/

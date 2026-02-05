@@ -8,7 +8,6 @@ import { importFile } from './loader.js'
  * Default config values
  */
 const defaults: Partial<ScenetestConfig> = {
-  scenes: './scenes',
   browser: 'chromium',
   headed: false,
   slowMo: 0,
@@ -23,9 +22,6 @@ const defaults: Partial<ScenetestConfig> = {
  * Config file names to search for (in order of preference)
  */
 const CONFIG_FILES = [
-  'scenetest.config.ts',
-  'scenetest.config.js',
-  'scenetest.config.mjs',
   'scenetest/config.ts',
   'scenetest/config.js',
   'scenetest/config.mjs',
@@ -45,51 +41,41 @@ export function findConfigFile(cwd = process.cwd()): string | null {
 }
 
 /**
- * Discover actor team files relative to the config file directory.
+ * Discover actor team files from scenetest/actors/ directory.
  *
- * Looks for:
- * 1. `actors.ts` (single file exporting an array of teams)
- * 2. `actors/*.ts` (directory with one file per team)
+ * Each .ts/.js file in the directory exports a single team.
  */
 async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
-  // Check for single actors file first
-  const singleFiles = ['actors.ts', 'actors.js', 'actors.mjs']
-  for (const name of singleFiles) {
-    const filepath = path.join(configDir, name)
-    if (fs.existsSync(filepath)) {
-      const module = await importFile(filepath)
-      const exported = module.default
-      if (Array.isArray(exported)) {
-        return exported as TeamConfig[]
-      }
-      // Single team exported as object
-      return [exported as TeamConfig]
-    }
-  }
-
-  // Check for actors directory
   const actorsDir = path.join(configDir, 'actors')
-  if (fs.existsSync(actorsDir) && fs.statSync(actorsDir).isDirectory()) {
-    const files = await glob('*.{ts,js,mjs}', {
-      cwd: actorsDir,
-      absolute: true,
-    })
 
-    if (files.length === 0) {
-      throw new Error(`actors/ directory found at ${actorsDir} but contains no .ts/.js files`)
-    }
-
-    const teams: TeamConfig[] = []
-    for (const file of files.sort()) {
-      const module = await importFile(file)
-      teams.push(module.default as TeamConfig)
-    }
-    return teams
+  if (!fs.existsSync(actorsDir) || !fs.statSync(actorsDir).isDirectory()) {
+    throw new Error(
+      `No actors/ directory found at ${actorsDir}. Create scenetest/actors/ with one .ts file per team.`
+    )
   }
 
-  throw new Error(
-    `No actor files found. Create actors.ts (exporting an array of teams) or actors/*.ts (one file per team) next to your config file at ${configDir}`
-  )
+  const files = await glob('*.{ts,js,mjs}', {
+    cwd: actorsDir,
+    absolute: true,
+  })
+
+  if (files.length === 0) {
+    throw new Error(`actors/ directory found at ${actorsDir} but contains no .ts/.js files`)
+  }
+
+  const teams: TeamConfig[] = []
+  for (const file of files.sort()) {
+    const module = await importFile(file)
+    const exported = module.default
+    if (Array.isArray(exported)) {
+      // File exports an array of teams
+      teams.push(...(exported as TeamConfig[]))
+    } else {
+      // File exports a single team
+      teams.push(exported as TeamConfig)
+    }
+  }
+  return teams
 }
 
 /**
