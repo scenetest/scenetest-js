@@ -250,7 +250,7 @@ For the full Markdown DSL syntax (nesting, quoting, conditionals, macros, variab
 
 ## 4. Add Semantic DOM Markers
 
-Your specs target elements by semantic names like `login-form` or `submit-button`. These need to exist in your markup as `data-testid`, `aria-label`, or one of the other [supported attributes](/reference/selectors).
+Your specs target elements by semantic names like `login-form` or `submit-button`. These need to exist in your markup as `data-testid`, `aria-label`, or one of the other [supported attributes](/reference/selectors). For the full guide on which attribute to use when -- especially the `data-name` + `data-key` pattern for list items -- see [Preparing Your DOM](/guides/preparing-your-dom).
 
 Adding these markers is mechanical work, and LLMs are very good at it. Copy the prompt below into a conversation with your codebase:
 
@@ -266,11 +266,12 @@ You are adding semantic DOM markers to a web application so that end-to-end test
 3. Add the appropriate attribute:
    - `data-testid="token"` — the default, use for most elements
    - `aria-label="token"` — prefer this for interactive elements that would benefit from accessibility labeling anyway (buttons with just an icon, close buttons, navigation landmarks)
-   - `data-name="token"` with `data-key="value"` — use for items in a list where you need to target a specific row by ID. The `data-name` identifies the element type, `data-key` identifies the instance
+   - `data-name="token"` with `data-key="value"` — use for items in a list where you need to target a specific row by ID. The `data-name` identifies the element type, `data-key` identifies the instance. NEVER use dynamic `data-testid` like `data-testid={`item-${id}`}` for list items — always use `data-name` + `data-key` instead
 
 4. Name markers by **what the element represents**, not how it looks:
    - Good: `data-testid="submit-order"`, `data-testid="cart-summary"`
    - Bad: `data-testid="blue-button"`, `data-testid="div-3"`
+   - Bad: `data-testid={`order-${order.id}`}` — use `data-name="order" data-key={order.id}` instead
 
 5. Do NOT remove or change any existing attributes, event handlers, or component logic. Only add the data-testid / aria-label / data-name / data-key attributes.
 
@@ -425,6 +426,7 @@ When your test suite grows, add more actor teams to run scenes in parallel. Each
 
 ## What's Next
 
+- [Preparing Your DOM](/guides/preparing-your-dom) -- which attributes to use, the `data-name` + `data-key` pattern for lists, and common mistakes
 - [Writing Scene Specs](/guides/writing-scene-specs) -- the full guide to all three authoring styles
 - [Writing Inline Assertions](/guides/writing-inline-assertions) -- deep dive into `should()`, `failed()`, `serverCheck()`, and framework hooks
 - [Building Good Teams of Actors](/guides/building-teams) -- designing teams, seed data, and scaling concurrency
