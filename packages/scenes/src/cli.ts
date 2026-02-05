@@ -13,7 +13,7 @@ const program = new Command()
 program
   .name('scenetest')
   .description('Run scenetest scene specs')
-  .version('0.0.1')
+  .version('0.1.0')
   .argument('[scenes...]', 'Scene files or directories to run')
   .option('--ui', 'Run in interactive UI mode')
   .option('--headed', 'Run with visible browser')

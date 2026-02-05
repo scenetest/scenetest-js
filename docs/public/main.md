@@ -165,9 +165,17 @@ test(
 )
 ```
 
-In the example above, the Concurrent Markdown spec is identical to the Concurrent TS example.
-Both declare a sequence of actions,
-spin up a virtual browser context for each user, and then run through their respective action queues concurrently.
+In the example above, the first two specs are both describing "Concurrent" scene flows –
+one uses Typescript to do it, and the other uses Markdown, but they both resolve to the
+same set of instructions and run identically.
+
+Each actor builds a single action queue,
+and then works through their own action queue, with each queue awaiting some instruction
+to the browser driver, and then passing its scope and history on to the next step. Each
+actor handle works sequentially as far as it can go until it completes the list, or waits
+and polls the DOM for any changes that might allow it to continue (like the appearance
+of the button we've been waiting to click).
+
 In this mode, there's no difference between the roughly-ordered markdown you see above and this fully sorted version here:
 
 ```scenetest [Markdown Concurrent]

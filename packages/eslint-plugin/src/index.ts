@@ -3,7 +3,7 @@ import preferAriaLabel from './rules/prefer-aria-label.js'
 const plugin = {
   meta: {
     name: '@scenetest/eslint-plugin',
-    version: '0.0.3',
+    version: '0.1.0',
   },
   rules: {
     'prefer-aria-label': preferAriaLabel,

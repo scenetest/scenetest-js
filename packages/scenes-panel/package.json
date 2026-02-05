@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/scenes-panel",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Scene recorder for scenetest - records user interactions as DSL",
   "type": "module",
   "license": "MIT",
