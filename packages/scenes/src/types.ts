@@ -35,6 +35,97 @@ export interface ActorConfig {
 export type TeamConfig = Record<string, ActorConfig>
 
 /**
+ * Team-level metadata — identity, ownership, and tags.
+ *
+ * Metadata describes what part of the system the team is concerned with,
+ * enabling filtering, reporting, and `[team.field]` interpolation in DSL text.
+ *
+ * @example
+ * ```ts
+ * {
+ *   name: 'French Content',
+ *   owns: ['/categories/french', '/playlists?lang=fr'],
+ *   tags: { locale: 'fr', region: 'europe' },
+ * }
+ * ```
+ */
+export interface TeamMeta {
+  /** Human-readable team name (used in reports and CLI output) */
+  name?: string
+
+  /**
+   * URL path prefixes, patterns, or feature areas this team owns.
+   * Used for filtering (`--owns /categories/french`) and reporting.
+   */
+  owns?: string | string[]
+
+  /**
+   * Arbitrary key-value tags for filtering and `[team.field]` interpolation.
+   *
+   * @example
+   * ```ts
+   * tags: { locale: 'fr', region: 'europe', tier: 'premium' }
+   * // In DSL: openTo /categories/[team.locale]
+   * ```
+   */
+  tags?: Record<string, string>
+}
+
+/**
+ * Full team definition — actors plus optional metadata.
+ *
+ * This is the recommended export format for actor files.
+ * Plain `TeamConfig` (Record<string, ActorConfig>) is still supported
+ * for backwards compatibility.
+ *
+ * @example
+ * ```ts
+ * // scenetest/actors/french.ts
+ * import { defineTeam } from '@scenetest/scenes'
+ *
+ * export default defineTeam({
+ *   name: 'French Content',
+ *   owns: ['/categories/french'],
+ *   tags: { locale: 'fr', region: 'europe' },
+ *   actors: {
+ *     user:  { key: 'fr-user-1', username: 'pierre', email: 'pierre@test.com' },
+ *     admin: { key: 'fr-admin-1', username: 'marie', email: 'marie@admin.com' },
+ *   },
+ * })
+ * ```
+ */
+export interface TeamDef {
+  /** Actor credentials by role */
+  actors: TeamConfig
+
+  /** Human-readable team name */
+  name?: string
+
+  /**
+   * URL path prefixes, patterns, or feature areas this team owns.
+   */
+  owns?: string | string[]
+
+  /**
+   * Arbitrary key-value tags for filtering and `[team.field]` interpolation.
+   */
+  tags?: Record<string, string>
+}
+
+/**
+ * Resolved team — the internal representation after loading.
+ *
+ * Every team gets a `ResolvedTeam` with actors and metadata split apart,
+ * regardless of whether it was defined as a plain `TeamConfig` or a `TeamDef`.
+ */
+export interface ResolvedTeam {
+  /** Actor credentials by role */
+  actors: TeamConfig
+  /** Team metadata (empty object if not provided) */
+  meta: TeamMeta
+}
+
+/**
  * Scenetest CLI configuration.
  *
  * Extends the base ScenetestConfig from @scenetest/checks with runner-specific
@@ -183,6 +274,8 @@ export interface SceneReport {
   file: string
   status: 'completed' | 'failed' | 'timeout'
   teamIndex: number
+  /** Team metadata (name, owns, tags) — empty object when not provided */
+  team: TeamMeta
   actors: Record<string, { key: string; username?: string; device?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
@@ -353,6 +446,9 @@ export interface SceneContext {
 
   /** The team index assigned to this scene */
   teamIndex: number
+
+  /** Team metadata (name, owns, tags) */
+  team: TeamMeta
 }
 
 /**
@@ -733,6 +829,8 @@ export interface FlowContext {
   actor: (role: string) => ConcurrentActorHandle
   /** The team index assigned to this flow */
   teamIndex: number
+  /** Team metadata (name, owns, tags) */
+  team: TeamMeta
 }
 
 /**

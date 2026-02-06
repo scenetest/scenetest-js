@@ -443,7 +443,7 @@ export function registerMarkdownScenes(
   filePath: string
 ): void {
   for (const scene of scenes) {
-    flow(scene.name, ({ actor }) => {
+    flow(scene.name, ({ actor, team: teamMeta }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
       const actors = new Map<string, ConcurrentActorHandle>()
 
@@ -462,11 +462,20 @@ export function registerMarkdownScenes(
         const a = actors.get(block.alias || block.role)!
 
         // Base interpolation context for this actor block
+        // Build team interpolation map from tags + name + owns
+        const teamInterpolation: Record<string, string> = {
+          ...(teamMeta.tags ?? {}),
+          ...(teamMeta.name ? { name: teamMeta.name } : {}),
+        }
+        if (teamMeta.owns) {
+          teamInterpolation.owns = Array.isArray(teamMeta.owns)
+            ? teamMeta.owns.join(',')
+            : teamMeta.owns
+        }
         const baseCtx: InterpolationContext = {
           actors,
           self: a,
-          // TODO: wire up team metadata when TeamManager provides it
-          team: undefined,
+          team: Object.keys(teamInterpolation).length > 0 ? teamInterpolation : undefined,
         }
 
         for (const action of block.actions) {

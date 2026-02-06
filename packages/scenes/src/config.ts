@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { glob } from 'glob'
-import type { ScenetestConfig, TeamConfig } from './types.js'
+import type { ScenetestConfig, TeamConfig, TeamDef, TeamMeta, ResolvedTeam } from './types.js'
 import { importFile } from './loader.js'
 
 /**
@@ -41,11 +41,41 @@ export function findConfigFile(cwd = process.cwd()): string | null {
 }
 
 /**
+ * Check whether a value looks like a TeamDef (has `actors` key)
+ * vs a plain TeamConfig (Record<string, ActorConfig>).
+ */
+function isTeamDef(value: unknown): value is TeamDef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'actors' in value &&
+    typeof (value as Record<string, unknown>).actors === 'object'
+  )
+}
+
+/**
+ * Normalize a raw export (TeamConfig or TeamDef) into a ResolvedTeam.
+ */
+function resolveTeam(raw: TeamConfig | TeamDef): ResolvedTeam {
+  if (isTeamDef(raw)) {
+    const meta: TeamMeta = {}
+    if (raw.name !== undefined) meta.name = raw.name
+    if (raw.owns !== undefined) meta.owns = raw.owns
+    if (raw.tags !== undefined) meta.tags = raw.tags
+    return { actors: raw.actors, meta }
+  }
+  // Plain Record<string, ActorConfig> — no metadata
+  return { actors: raw, meta: {} }
+}
+
+/**
  * Discover actor team files from scenetest/actors/ directory.
  *
- * Each .ts/.js file in the directory exports a single team.
+ * Each .ts/.js file in the directory exports either:
+ * - A single TeamConfig or TeamDef
+ * - An array of TeamConfig[] or TeamDef[]
  */
-async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
+async function discoverTeams(configDir: string): Promise<ResolvedTeam[]> {
   const actorsDir = path.join(configDir, 'actors')
 
   if (!fs.existsSync(actorsDir) || !fs.statSync(actorsDir).isDirectory()) {
@@ -63,16 +93,18 @@ async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
     throw new Error(`actors/ directory found at ${actorsDir} but contains no .ts/.js files`)
   }
 
-  const teams: TeamConfig[] = []
+  const teams: ResolvedTeam[] = []
   for (const file of files.sort()) {
     const module = await importFile(file)
     const exported = module.default
     if (Array.isArray(exported)) {
       // File exports an array of teams
-      teams.push(...(exported as TeamConfig[]))
+      for (const item of exported) {
+        teams.push(resolveTeam(item as TeamConfig | TeamDef))
+      }
     } else {
       // File exports a single team
-      teams.push(exported as TeamConfig)
+      teams.push(resolveTeam(exported as TeamConfig | TeamDef))
     }
   }
   return teams
@@ -83,7 +115,7 @@ async function discoverTeams(configDir: string): Promise<TeamConfig[]> {
  */
 export interface LoadedConfig {
   config: ScenetestConfig
-  teams: TeamConfig[]
+  teams: ResolvedTeam[]
 }
 
 /**
@@ -122,7 +154,7 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
   const teams = await discoverTeams(configDir)
 
   if (teams.length === 0) {
-    throw new Error('No actor teams found. Each actor file must export a team (Record<string, ActorConfig>).')
+    throw new Error('No actor teams found. Each actor file must export a team (Record<string, ActorConfig> or defineTeam({...})).')
   }
 
   return { config: resolved, teams }
@@ -133,4 +165,27 @@ export async function loadConfig(configPath?: string): Promise<LoadedConfig> {
  */
 export function defineConfig(config: ScenetestConfig): ScenetestConfig {
   return config
+}
+
+/**
+ * Helper to define a team with type checking.
+ *
+ * @example
+ * ```ts
+ * // scenetest/actors/french.ts
+ * import { defineTeam } from '@scenetest/scenes'
+ *
+ * export default defineTeam({
+ *   name: 'French Content',
+ *   owns: ['/categories/french'],
+ *   tags: { locale: 'fr', region: 'europe' },
+ *   actors: {
+ *     user:  { key: 'fr-user-1', username: 'pierre', email: 'pierre@test.com' },
+ *     admin: { key: 'fr-admin-1', username: 'marie', email: 'marie@admin.com' },
+ *   },
+ * })
+ * ```
+ */
+export function defineTeam(team: TeamDef): TeamDef {
+  return team
 }

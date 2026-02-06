@@ -55,6 +55,7 @@ import type {
   FlowContext,
   FlowFn,
   ConcurrentActorHandle,
+  TeamMeta,
 } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
@@ -966,6 +967,18 @@ export function flow(name: string, fn: FlowFn): void {
     // Actor registry for [role.field] interpolation across actors
     const actorRegistry = new Map<string, ConcurrentActorHandle>()
 
+    // Build team metadata for [team.field] interpolation from tags
+    const teamMeta = session.meta
+    const teamMetadataForInterpolation: Record<string, string> = {
+      ...(teamMeta.tags ?? {}),
+      ...(teamMeta.name ? { name: teamMeta.name } : {}),
+    }
+    // Add owns as a comma-separated string if present
+    if (teamMeta.owns) {
+      const owns = Array.isArray(teamMeta.owns) ? teamMeta.owns.join(',') : teamMeta.owns
+      teamMetadataForInterpolation.owns = owns
+    }
+
     const flowContext: FlowContext = {
       actor: (role: string) => {
         // Check if already created (re-referencing an actor)
@@ -995,6 +1008,7 @@ export function flow(name: string, fn: FlowFn): void {
         return reactive
       },
       teamIndex: context.teamIndex,
+      team: teamMeta,
     }
 
     // Phase 1: Declaration — user code queues actions, nothing executes.
@@ -1004,9 +1018,12 @@ export function flow(name: string, fn: FlowFn): void {
       await result
     }
 
-    // Set actor registry on all actors for [role.field] interpolation
+    // Set actor registry and team metadata on all actors for interpolation
     for (const actor of reactiveActors) {
       actor._setActorRegistry(actorRegistry)
+      if (Object.keys(teamMetadataForInterpolation).length > 0) {
+        actor._setTeamMetadata(teamMetadataForInterpolation)
+      }
     }
 
     // Phase 2: Initialize — create browser contexts in parallel
