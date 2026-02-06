@@ -116,7 +116,27 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - **Production**: Strips all @scenetest/* package imports and calls via Babel AST transform
 - **Packages stripped**: checks, checks-react, checks-vue, checks-solid, checks-svelte
 - **Plugin options**: `strip` (force), `devPanel` (show observer), `demo` (keep code + panel in prod), `csp` (Content-Security-Policy config)
-- **CSP**: Configurable middleware, default directives with 'unsafe-inline' for dev panel
+- **CSP**: Opt-in middleware (`csp: true`), disabled by default to avoid breaking external resources (Google Fonts, CDNs, etc.)
+
+### Dev panel injection architecture
+
+The observer and recorder panels are injected into the consumer's dev page using Vite's **virtual module pattern** — NOT custom middleware routes. This is important and was learned the hard way:
+
+- `transformIndexHtml` injects `<script type="module" src="/@scenetest/observer.js">` (external script tag)
+- `resolveId` intercepts `/@scenetest/observer.js` and returns it as a virtual module
+- `load` returns bootstrap code: `import '@scenetest/checks-panel/auto'`
+- `resolveId` also intercepts `@scenetest/checks-panel/auto` and resolves it via `import.meta.resolve()` — this handles **pnpm strict hoisting** where transitive deps aren't visible from the consumer's project root
+
+**Why not middleware?** Previous approaches tried to serve the observer via a custom middleware route that manually called `server.transformRequest()`. This broke because:
+1. `createRequire` (CJS resolution) can't match `import`-only package.json exports
+2. `server.transformRequest()` with `/@fs/` paths fails for symlinked workspace packages outside the consumer's `server.fs.allow` scope
+3. Inline `<script type="module">import 'bare-spec'</script>` fails because the browser parses bare specifiers *before* Vite can transform them
+
+**The correct pattern:** `resolveId` + `load` virtual modules with `<script src="">` tags. The browser requests the URL → Vite intercepts → plugin pipeline resolves bare imports. This is the standard approach used by vite-plugin-inspect, vite-plugin-pwa, and @vitejs/plugin-react.
+
+### @babel/traverse type compatibility
+
+`@types/babel__traverse@7.28+` changed the default export type to a namespace (not callable). The runtime ESM/CJS interop works fine, but TypeScript complains. We cast through `_traverse.TraverseOptions` instead of `typeof _traverse`.
 
 ## Observer Dev Panel
 

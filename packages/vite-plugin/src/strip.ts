@@ -4,7 +4,11 @@ import * as t from '@babel/types'
 import MagicString from 'magic-string'
 
 // Handle ESM/CJS interop for @babel/traverse
-const traverse = (typeof _traverse === 'function' ? _traverse : (_traverse as any).default) as typeof _traverse
+// Cast through any because @types/babel__traverse@7.28+ types the default export as a namespace, not a function
+const traverse = (typeof _traverse === 'function' ? _traverse : (_traverse as any).default) as (
+  ast: t.Node,
+  opts: _traverse.TraverseOptions
+) => void
 
 export interface StripResult {
   code: string

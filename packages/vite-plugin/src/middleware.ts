@@ -1,24 +1,8 @@
 import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
 import { AsyncLocalStorage } from 'async_hooks'
-import { createRequire } from 'module'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
-
-/**
- * Resolve a module specifier from the plugin's own directory.
- * This ensures transitive dependencies like @scenetest/checks-panel are found
- * even under pnpm's strict hoisting, where they wouldn't be visible from the
- * consuming project's root.
- */
-const _require = createRequire(import.meta.url)
-function resolveFromPlugin(specifier: string): string | null {
-  try {
-    return _require.resolve(specifier)
-  } catch {
-    return null
-  }
-}
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -58,7 +42,11 @@ export function failed(description: string, context?: Record<string, unknown>): 
 }
 
 /**
- * Create the scenetest middleware for handling RPC requests and serving the observer.
+ * Create the scenetest middleware for handling RPC requests.
+ *
+ * Observer and recorder modules are served via Vite's resolveId hook
+ * (see index.ts) — not through middleware. This avoids fs.allow issues
+ * with symlinked workspace packages.
  *
  * SECURITY NOTE: This middleware executes user-provided assertion code
  * from the virtual module in the dev server context with full Node.js
@@ -67,65 +55,6 @@ export function failed(description: string, context?: Record<string, unknown>): 
  */
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   return async (req, res, next) => {
-    // Serve the observer module at /__scenetest/observer.js
-    if (req.method === 'GET' && req.url === '/__scenetest/observer.js') {
-      try {
-        // Resolve from the plugin's own directory so pnpm strict hoisting works
-        const resolvedPath = resolveFromPlugin('@scenetest/checks-panel/auto')
-        if (!resolvedPath) {
-          res.statusCode = 404
-          res.end('Observer module not found — @scenetest/checks-panel could not be resolved')
-          return
-        }
-
-        // Transform the module through Vite's pipeline
-        const result = await server.transformRequest(resolvedPath)
-        if (!result) {
-          res.statusCode = 500
-          res.end('Failed to transform observer module')
-          return
-        }
-
-        res.setHeader('Content-Type', 'application/javascript')
-        res.end(result.code)
-        return
-      } catch (err) {
-        console.error('[vite-plugin-scenetest] Error serving observer:', err)
-        res.statusCode = 500
-        res.end('Error serving observer module')
-        return
-      }
-    }
-
-    // Serve the recorder module at /__scenetest/recorder.js
-    if (req.method === 'GET' && req.url === '/__scenetest/recorder.js') {
-      try {
-        // Resolve from the plugin's own directory so pnpm strict hoisting works
-        const resolvedPath = resolveFromPlugin('@scenetest/scenes-panel/auto')
-        if (!resolvedPath) {
-          res.statusCode = 404
-          res.end('Recorder module not found — @scenetest/scenes-panel could not be resolved')
-          return
-        }
-
-        const result = await server.transformRequest(resolvedPath)
-        if (!result) {
-          res.statusCode = 500
-          res.end('Failed to transform recorder module')
-          return
-        }
-
-        res.setHeader('Content-Type', 'application/javascript')
-        res.end(result.code)
-        return
-      } catch (err) {
-        console.error('[vite-plugin-scenetest] Error serving recorder:', err)
-        res.statusCode = 500
-        res.end('Error serving recorder module')
-        return
-      }
-    }
-
     // Only handle POST /__scenetest/run
     if (req.method !== 'POST' || req.url !== '/__scenetest/run') {
       return next()
