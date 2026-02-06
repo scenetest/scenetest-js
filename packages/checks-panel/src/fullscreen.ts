@@ -22,7 +22,7 @@ import {
   toggleGroupCollapsed,
 } from './state.js'
 import { filterItems, openInEditor } from './utils.js'
-import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners } from './render.js'
+import { renderFullscreenGroup, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners, buildFileTree, renderFileTree } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -36,7 +36,7 @@ import {
   playGroupChord,
   playAssertionSound,
 } from './audio.js'
-import { assertions, GROUP_THRESHOLD_MS } from './state.js'
+import { assertions, GROUP_THRESHOLD_MS, toggleFileTreeCollapsed } from './state.js'
 
 /**
  * Set up event listeners for fullscreen view rendered content.
@@ -71,6 +71,10 @@ function setupFullscreenEventListeners(_doc: Document, listEl: HTMLElement): voi
     },
     toggleCollapsed: (groupId) => {
       toggleGroupCollapsed(groupId)
+    },
+    toggleFileTree: (path) => {
+      toggleFileTreeCollapsed(path)
+      updateFullscreenWindow()
     },
   })
 }
@@ -446,11 +450,11 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
     return
   }
 
+  const tree = buildFileTree(filteredLocations)
+
   listEl.innerHTML = `
     ${renderPianoRoll(filteredLocations, assertions)}
-    <div class="location-list">
-      ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
-    </div>
+    ${renderFileTree(tree)}
   `
 
   // Set up click handlers for piano roll columns and note badges

@@ -10,6 +10,7 @@ import type { AssertionResult, AssertionGroup, LocationGroup, LocationEntry } fr
 import { getHistoryStats, formatHistorySummary, computeFlakyStats, computeResolutionStats, formatResolutionSummary, formatFlakyStatus } from './history.js'
 import { escapeHtml, escapeHtmlAttr, formatContext, formatLocation, formatLocationShort, formatTime, getGroupStats } from './utils.js'
 import { getNoteInfo } from './audio.js'
+import { fileTreeCollapsed, FILE_TREE_GLOW_MS } from './state.js'
 
 /**
  * Render a single assertion item for the main panel
@@ -449,6 +450,299 @@ export function renderBackButton(fromView: 'grouped' | 'byLocation' = 'byLocatio
   return `<div class="back-btn" data-action="backToLocationView">\u2190 ${label}</div>`
 }
 
+// ---------------------------------------------------------------------------
+// File Tree View
+// ---------------------------------------------------------------------------
+
+/**
+ * A node in the file tree. Directories have children, files have assertions.
+ */
+export interface FileTreeNode {
+  /** Display name for this segment (e.g. "App.tsx" or "components") */
+  name: string
+  /** Full relative path up to this node (used as collapse key) */
+  path: string
+  /** True if this is a leaf file node */
+  isFile: boolean
+  /** Child directory/file nodes */
+  children: FileTreeNode[]
+  /** Assertion groups that belong to this file (only for file nodes) */
+  assertions: LocationGroup[]
+  /** Aggregated status */
+  status: 'pass' | 'fail' | 'warn'
+  /** Most recent timestamp among all assertions in this subtree */
+  lastTimestamp: number
+  /** Total assertion count in this subtree */
+  totalAssertions: number
+  /** Total failures in this subtree */
+  totalFailures: number
+}
+
+/**
+ * Shorten a file path for display: strip everything up to and including /src/,
+ * or everything before the last three segments.
+ */
+function shortenPath(file: string): string {
+  const srcIdx = file.indexOf('/src/')
+  if (srcIdx !== -1) return file.slice(srcIdx + 1) // "src/..."
+  // Fallback: last 3 path segments
+  const parts = file.split('/')
+  return parts.slice(Math.max(0, parts.length - 3)).join('/')
+}
+
+/**
+ * Build a file tree from location groups.
+ *
+ * Groups assertions by their `location.file`, constructs a trie from the path
+ * segments, and compacts single-child directory chains (e.g. "src/components").
+ */
+export function buildFileTree(locations: LocationGroup[]): FileTreeNode[] {
+  // Group by file path
+  const byFile = new Map<string, LocationGroup[]>()
+  for (const loc of locations) {
+    const file = loc.location ? shortenPath(loc.location.file) : '(unknown)'
+    let group = byFile.get(file)
+    if (!group) {
+      group = []
+      byFile.set(file, group)
+    }
+    group.push(loc)
+  }
+
+  // Build trie
+  interface TrieNode {
+    name: string
+    path: string
+    children: Map<string, TrieNode>
+    assertions: LocationGroup[]
+  }
+
+  const root: TrieNode = { name: '', path: '', children: new Map(), assertions: [] }
+
+  for (const [filePath, locs] of byFile) {
+    const parts = filePath.split('/')
+    let current = root
+    let pathSoFar = ''
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      pathSoFar = pathSoFar ? pathSoFar + '/' + part : part
+      let child = current.children.get(part)
+      if (!child) {
+        child = { name: part, path: pathSoFar, children: new Map(), assertions: [] }
+        current.children.set(part, child)
+      }
+      current = child
+    }
+
+    // Leaf node: attach assertions
+    current.assertions = locs
+  }
+
+  // Convert trie to FileTreeNode array, compacting single-child dirs
+  function convert(trie: TrieNode): FileTreeNode {
+    const isFile = trie.children.size === 0
+    const children: FileTreeNode[] = []
+
+    for (const child of trie.children.values()) {
+      children.push(convert(child))
+    }
+
+    // Sort: directories first (alphabetical), then files (alphabetical)
+    children.sort((a, b) => {
+      if (a.isFile !== b.isFile) return a.isFile ? 1 : -1
+      return a.name.localeCompare(b.name)
+    })
+
+    // Compute aggregate stats
+    let totalAssertions = 0
+    let totalFailures = 0
+    let lastTimestamp = 0
+
+    if (isFile) {
+      for (const loc of trie.assertions) {
+        totalAssertions += loc.entries.length
+        totalFailures += loc.entries.filter(e => !e.result).length
+        if (loc.lastTimestamp > lastTimestamp) lastTimestamp = loc.lastTimestamp
+      }
+    } else {
+      for (const child of children) {
+        totalAssertions += child.totalAssertions
+        totalFailures += child.totalFailures
+        if (child.lastTimestamp > lastTimestamp) lastTimestamp = child.lastTimestamp
+      }
+    }
+
+    const hasAnyFails = totalFailures > 0
+    // Determine if any assertion is currently failing
+    const anyCurrentFail = isFile
+      ? trie.assertions.some(a => !a.lastResult)
+      : children.some(c => c.status === 'fail')
+    const status: 'pass' | 'fail' | 'warn' = anyCurrentFail ? 'fail' : hasAnyFails ? 'warn' : 'pass'
+
+    return {
+      name: trie.name,
+      path: trie.path,
+      isFile,
+      children,
+      assertions: trie.assertions,
+      status,
+      lastTimestamp,
+      totalAssertions,
+      totalFailures,
+    }
+  }
+
+  // Convert root's children (skip the empty root node)
+  const topLevel: FileTreeNode[] = []
+  for (const child of root.children.values()) {
+    topLevel.push(convert(child))
+  }
+
+  // Compact: if a directory has a single child directory, merge names
+  function compact(node: FileTreeNode): FileTreeNode {
+    if (!node.isFile && node.children.length === 1 && !node.children[0].isFile) {
+      const child = node.children[0]
+      return compact({
+        ...child,
+        name: node.name + '/' + child.name,
+        // Keep the child's path since it's the full path
+      })
+    }
+    return {
+      ...node,
+      children: node.children.map(compact),
+    }
+  }
+
+  return topLevel.map(compact).sort((a, b) => {
+    if (a.isFile !== b.isFile) return a.isFile ? 1 : -1
+    return a.name.localeCompare(b.name)
+  })
+}
+
+/**
+ * Render the full file tree view.
+ */
+export function renderFileTree(tree: FileTreeNode[]): string {
+  if (tree.length === 0) return ''
+
+  return `
+    <div class="file-tree">
+      ${tree.map(node => renderFileTreeNode(node, 0)).join('')}
+    </div>
+  `
+}
+
+/**
+ * Render a single file tree node (directory or file) recursively.
+ */
+function renderFileTreeNode(node: FileTreeNode, depth: number): string {
+  const now = Date.now()
+  const isActive = now - node.lastTimestamp < FILE_TREE_GLOW_MS
+  const isCollapsed = fileTreeCollapsed.has(node.path)
+  const pathJson = escapeHtmlAttr(JSON.stringify(node.path))
+
+  if (node.isFile) {
+    // File node with assertions underneath
+    const fileStatusIcon = node.status === 'fail'
+      ? '<span class="ft-status-icon fail">\u2717</span>'
+      : node.status === 'warn'
+        ? '<span class="ft-status-icon warn">\u26A0</span>'
+        : '<span class="ft-status-icon pass">\u2713</span>'
+
+    const assertionCount = node.assertions.reduce((sum, a) => sum + a.entries.length, 0)
+
+    return `
+      <div class="ft-node ft-file ${node.status}${isActive ? ' ft-active' : ''}${isCollapsed ? ' ft-collapsed' : ''}"
+           style="--depth: ${depth}">
+        <div class="ft-file-header" data-action="toggleFileTree" data-tree-path="${pathJson}">
+          <span class="ft-indent" style="width: ${depth * 16}px"></span>
+          <span class="ft-toggle">${isCollapsed ? '\u25B6' : '\u25BC'}</span>
+          <span class="ft-file-icon">\uD83D\uDCC4</span>
+          ${fileStatusIcon}
+          <span class="ft-name">${escapeHtml(node.name)}</span>
+          <span class="ft-badge">${assertionCount}</span>
+        </div>
+        ${!isCollapsed ? `
+          <div class="ft-assertions">
+            ${node.assertions
+              .sort((a, b) => b.lastTimestamp - a.lastTimestamp)
+              .map(loc => renderFileTreeAssertion(loc, depth + 1))
+              .join('')}
+          </div>
+        ` : ''}
+      </div>
+    `
+  }
+
+  // Directory node
+  const dirStatusIcon = node.status === 'fail'
+    ? '<span class="ft-status-icon fail">\u2717</span>'
+    : node.status === 'warn'
+      ? '<span class="ft-status-icon warn">\u26A0</span>'
+      : '<span class="ft-status-icon pass">\u2713</span>'
+
+  return `
+    <div class="ft-node ft-dir ${node.status}${isActive ? ' ft-active' : ''}${isCollapsed ? ' ft-collapsed' : ''}"
+         style="--depth: ${depth}">
+      <div class="ft-dir-header" data-action="toggleFileTree" data-tree-path="${pathJson}">
+        <span class="ft-indent" style="width: ${depth * 16}px"></span>
+        <span class="ft-toggle">${isCollapsed ? '\u25B6' : '\u25BC'}</span>
+        <span class="ft-dir-icon">${isCollapsed ? '\uD83D\uDCC1' : '\uD83D\uDCC2'}</span>
+        ${dirStatusIcon}
+        <span class="ft-name">${escapeHtml(node.name)}</span>
+        <span class="ft-badge">${node.totalAssertions}</span>
+        ${node.totalFailures > 0 ? `<span class="ft-fail-badge">${node.totalFailures} \u2717</span>` : ''}
+      </div>
+      ${!isCollapsed ? `
+        <div class="ft-children">
+          ${node.children.map(child => renderFileTreeNode(child, depth + 1)).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
+/**
+ * Render a single assertion row inside a file tree file node.
+ */
+function renderFileTreeAssertion(group: LocationGroup, depth: number): string {
+  const now = Date.now()
+  const isActive = now - group.lastTimestamp < FILE_TREE_GLOW_MS
+  const keyJson = escapeHtmlAttr(JSON.stringify(group.key))
+  const lastFailed = !group.lastResult
+  const hasAnyFails = group.entries.some(e => !e.result)
+  const statusClass = lastFailed ? 'fail' : hasAnyFails ? 'warn' : 'pass'
+  const total = group.entries.length
+  const line = group.location?.line
+
+  const statusIcon = lastFailed
+    ? '<span class="ft-assert-icon fail">\u2717</span>'
+    : hasAnyFails
+      ? '<span class="ft-assert-icon warn">\u26A0</span>'
+      : '<span class="ft-assert-icon pass">\u2713</span>'
+
+  // Recent status dots (last 5)
+  const recentEntries = group.entries.slice(-5)
+  const dots = recentEntries
+    .map(e => `<span class="ft-dot ${e.result ? 'pass' : 'fail'}"></span>`)
+    .join('')
+
+  return `
+    <div class="ft-assertion ${statusClass}${isActive ? ' ft-active' : ''}"
+         data-action="showSequence" data-key="${keyJson}"
+         style="--depth: ${depth}">
+      <span class="ft-indent" style="width: ${depth * 16}px"></span>
+      ${statusIcon}
+      <span class="ft-assert-desc">${escapeHtml(group.description)}</span>
+      ${line ? `<span class="ft-assert-line">:${line}</span>` : ''}
+      <span class="ft-dots">${dots}</span>
+      <span class="ft-assert-count">${total}x</span>
+    </div>
+  `
+}
+
 /**
  * Attach event listeners to rendered elements using event delegation.
  * Call this after rendering HTML to a container.
@@ -466,6 +760,7 @@ export function attachEventListeners(
     backToLocationView?: () => void
     setViewMode?: (mode: string) => void
     toggleCollapsed?: (groupId: number) => void
+    toggleFileTree?: (path: string) => void
   }
 ): void {
   const root = container instanceof Document ? container.body : container
@@ -543,6 +838,19 @@ export function attachEventListeners(
           const groupId = parseInt(parent.dataset.groupId || '', 10)
           if (!isNaN(groupId) && handlers.toggleCollapsed) {
             handlers.toggleCollapsed(groupId)
+          }
+        }
+        break
+      }
+
+      case 'toggleFileTree': {
+        const treePath = actionEl.dataset.treePath
+        if (treePath && handlers.toggleFileTree) {
+          try {
+            const pathParsed = JSON.parse(treePath)
+            handlers.toggleFileTree(pathParsed)
+          } catch {
+            // Invalid JSON, ignore
           }
         }
         break
