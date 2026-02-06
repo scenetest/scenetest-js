@@ -665,6 +665,14 @@ export interface ActionChain extends PromiseLike<void> {
 export type SceneFn = (context: SceneContext) => Promise<void>
 
 /**
+ * Options for scene/flow registration.
+ */
+export interface SceneOptions {
+  /** Roles required by this scene. Used for team matching. */
+  roles?: string[]
+}
+
+/**
  * Registered scene
  */
 export interface RegisteredScene {
@@ -673,6 +681,8 @@ export interface RegisteredScene {
   file: string
   /** Pre-cleanup expression from `cleanup:` directive in .spec.md files */
   cleanup?: string
+  /** Roles required by this scene — used for team matching */
+  roles?: string[]
 }
 
 // ---------------------------------------------------------------------------

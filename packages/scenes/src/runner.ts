@@ -113,8 +113,10 @@ export class SceneRunner {
         await this.config.beforeEach({ name: registered.name, file: registered.file })
       }
 
-      // Acquire a team
-      const teamIndex = await this.teamManager.acquireWait()
+      // Acquire a team — use role-filtered acquisition if the scene declares roles
+      const teamIndex = registered.roles
+        ? await this.teamManager.acquireWaitForRoles(registered.roles)
+        : await this.teamManager.acquireWait()
 
       try {
         // Create session

@@ -178,6 +178,11 @@ export async function runSwarm(
     const tasks: SwarmTask[] = []
     for (let repeat = 0; repeat < resolved.repeats; repeat++) {
       for (let teamIndex = 0; teamIndex < totalTeams; teamIndex++) {
+        // Skip teams that lack roles this scene needs
+        if (scene.roles) {
+          const teamRoles = Object.keys(teamManager.getTeam(teamIndex).actors)
+          if (!scene.roles.every(r => teamRoles.includes(r))) continue
+        }
         tasks.push({ teamIndex, repeat })
       }
     }

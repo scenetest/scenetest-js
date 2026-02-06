@@ -454,7 +454,10 @@ export function registerMarkdownScenes(
   filePath: string
 ): void {
   for (const mdScene of scenes) {
-    flow(mdScene.name, ({ actor, team: teamMeta }) => {
+    // Extract unique roles from actor blocks for team matching
+    const roles = [...new Set(mdScene.blocks.map(b => b.role))]
+
+    flow(mdScene.name, { roles }, ({ actor, team: teamMeta }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
       const actors = new Map<string, ConcurrentActorHandle>()
 

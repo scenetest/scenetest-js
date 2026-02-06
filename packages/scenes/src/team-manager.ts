@@ -92,6 +92,33 @@ export class TeamManager {
   }
 
   /**
+   * Wait for a team that has all the required roles.
+   * Skips teams that are missing any of the specified roles.
+   */
+  async acquireWaitForRoles(roles: string[], timeout = 60000): Promise<number> {
+    const start = Date.now()
+
+    while (true) {
+      for (let i = 0; i < this.teams.length; i++) {
+        if (this.inUse.has(i)) continue
+        const teamRoles = Object.keys(this.teams[i].actors)
+        if (roles.every(r => teamRoles.includes(r))) {
+          this.inUse.add(i)
+          return i
+        }
+      }
+
+      if (Date.now() - start > timeout) {
+        throw new Error(
+          `Timeout: no available team has roles [${roles.join(', ')}]`
+        )
+      }
+
+      await new Promise(r => setTimeout(r, 100))
+    }
+  }
+
+  /**
    * Release a team back to the pool
    */
   release(teamIndex: number): void {

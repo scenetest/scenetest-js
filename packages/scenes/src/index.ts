@@ -31,6 +31,7 @@ export type {
   TeamMeta,
   ResolvedTeam,
   ActorConfig,
+  SceneOptions,
   SceneContext,
   SequentialActorHandle,
   ActionChain,

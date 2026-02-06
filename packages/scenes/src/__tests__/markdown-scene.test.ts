@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { parseMarkdownScenes } from '../markdown-scene.js'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { parseMarkdownScenes, registerMarkdownScenes } from '../markdown-scene.js'
+import { sceneRegistry } from '../scene.js'
 
 // ---------------------------------------------------------------------------
 // Parser tests
@@ -608,5 +609,82 @@ learner:
     expect(scenes).toHaveLength(2)
     expect(scenes[0].cleanup).toBe("supabase.from('decks').delete().eq('uid', '[learner.key]')")
     expect(scenes[1].cleanup).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Registration tests — role extraction
+// ---------------------------------------------------------------------------
+
+describe('registerMarkdownScenes', () => {
+  beforeEach(() => {
+    sceneRegistry.length = 0
+  })
+
+  it('extracts unique roles from actor blocks', () => {
+    const scenes = parseMarkdownScenes(`
+# two users chat
+
+alice:
+openTo /chat
+typeInto message-input Hello!
+click send
+
+bob:
+openTo /chat
+seeText Hello!
+`, '/test/chat.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/chat.spec.md')
+
+    expect(sceneRegistry).toHaveLength(1)
+    expect(sceneRegistry[0].roles).toEqual(['alice', 'bob'])
+  })
+
+  it('deduplicates roles when same actor appears in multiple blocks', () => {
+    const scenes = parseMarkdownScenes(`
+# friend request
+
+alice:
+openTo /friends
+
+bob:
+openTo /notifications
+
+alice:
+click send-request
+`, '/test/dedup.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/dedup.spec.md')
+
+    expect(sceneRegistry).toHaveLength(1)
+    expect(sceneRegistry[0].roles).toEqual(['alice', 'bob'])
+  })
+
+  it('extracts roles for each scene in multi-scene files', () => {
+    const scenes = parseMarkdownScenes(`
+# Auth flows
+
+## admin promotes user
+
+admin:
+openTo /admin
+click promote
+
+user:
+see promoted-badge
+
+## user views profile
+
+user:
+openTo /profile
+see profile-form
+`, '/test/multi-roles.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/multi-roles.spec.md')
+
+    expect(sceneRegistry).toHaveLength(2)
+    expect(sceneRegistry[0].roles).toEqual(['admin', 'user'])
+    expect(sceneRegistry[1].roles).toEqual(['user'])
   })
 })
