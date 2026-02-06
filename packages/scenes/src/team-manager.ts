@@ -166,7 +166,7 @@ export class TeamSession {
   readonly assertions: AssertionResult[] = []
   readonly warnings: ScriptWarning[] = []
 
-  /** Team metadata (name, owns, tags) */
+  /** Team metadata (name, tags) */
   readonly meta: TeamMeta
 
   constructor(

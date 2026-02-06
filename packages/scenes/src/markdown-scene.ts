@@ -473,15 +473,10 @@ export function registerMarkdownScenes(
         const a = actors.get(block.alias || block.role)!
 
         // Base interpolation context for this actor block
-        // Build team interpolation map from tags + name + owns
+        // Build team interpolation map from tags + name
         const teamInterpolation: Record<string, string> = {
           ...(teamMeta.tags ?? {}),
           ...(teamMeta.name ? { name: teamMeta.name } : {}),
-        }
-        if (teamMeta.owns) {
-          teamInterpolation.owns = Array.isArray(teamMeta.owns)
-            ? teamMeta.owns.join(',')
-            : teamMeta.owns
         }
         const baseCtx: InterpolationContext = {
           actors,

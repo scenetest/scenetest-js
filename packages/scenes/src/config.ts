@@ -60,7 +60,6 @@ function resolveTeam(raw: TeamConfig | TeamDef): ResolvedTeam {
   if (isTeamDef(raw)) {
     const meta: TeamMeta = {}
     if (raw.name !== undefined) meta.name = raw.name
-    if (raw.owns !== undefined) meta.owns = raw.owns
     if (raw.tags !== undefined) meta.tags = raw.tags
     return { actors: raw.actors, meta }
   }
@@ -177,7 +176,6 @@ export function defineConfig(config: ScenetestConfig): ScenetestConfig {
  *
  * export default defineTeam({
  *   name: 'French Content',
- *   owns: ['/categories/french'],
  *   tags: { locale: 'fr', region: 'europe' },
  *   actors: {
  *     user:  { key: 'fr-user-1', username: 'pierre', email: 'pierre@test.com' },

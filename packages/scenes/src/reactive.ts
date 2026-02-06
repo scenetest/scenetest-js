@@ -973,11 +973,6 @@ export function flow(name: string, fn: FlowFn): void {
       ...(teamMeta.tags ?? {}),
       ...(teamMeta.name ? { name: teamMeta.name } : {}),
     }
-    // Add owns as a comma-separated string if present
-    if (teamMeta.owns) {
-      const owns = Array.isArray(teamMeta.owns) ? teamMeta.owns.join(',') : teamMeta.owns
-      teamMetadataForInterpolation.owns = owns
-    }
 
     const flowContext: FlowContext = {
       actor: (role: string) => {
