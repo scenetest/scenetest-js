@@ -87,18 +87,20 @@ export interface ScenetestConfig {
   baseUrl?: string
 
   /**
-   * Server functions for multi-context assertions.
-   * These become the `server` parameter inside serverCheck() serverFn callbacks.
+   * Server resources for multi-context assertions and scene cleanup.
+   * These become the `server` parameter inside serverCheck() serverFn callbacks,
+   * and are destructured into scope for `cleanup:` expressions in `.spec.md` files.
    *
    * @example
    * ```ts
-   * serverFunctions: {
+   * server: {
+   *   supabase: createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY),
    *   getProfile: async (id) => db.query('SELECT * FROM profiles WHERE id = $1', [id]),
    *   validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
    * }
    * ```
    */
-  serverFunctions?: Record<string, (...args: any[]) => any>
+  server?: Record<string, unknown>
 
   /** Allow additional fields from CLI or other extensions */
   [key: string]: unknown

@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
 import path from 'path'
-import type { ScenetestConfig, ResolvedTeam, RunReport, SceneReport } from './types.js'
+import type { ScenetestConfig, ResolvedTeam, TeamConfig, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
@@ -124,6 +124,13 @@ export class SceneRunner {
           // Log which scene is starting
           const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
           console.log(`▶ ${registered.name} (${relativeFile})`)
+
+          // Run pre-cleanup if configured
+          await runCleanup(
+            registered,
+            this.teamManager.getTeam(teamIndex).actors,
+            this.config.server as Record<string, unknown> | undefined
+          )
 
           // Run the scene
           const report = await runScene(registered, session, timeout)
@@ -251,7 +258,8 @@ export class SceneRunner {
       actionTimeout,
       warnAfter,
       this.config.baseUrl,
-      trigger
+      trigger,
+      this.config.server as Record<string, unknown> | undefined
     )
 
     // Build a RunReport that includes the swarm results
@@ -309,6 +317,84 @@ export class SceneRunner {
       await this.browser.close()
       this.browser = null
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cleanup expression evaluation
+// ---------------------------------------------------------------------------
+
+/**
+ * Interpolate `[role.field]` tokens in a cleanup expression with team data.
+ *
+ * Replaces tokens like `[learner.key]` with the corresponding value from the
+ * team config, yielding a string literal in the expression.
+ */
+function interpolateCleanup(expression: string, team: TeamConfig): string {
+  return expression.replace(
+    /\[([\w][\w-]*)\.([\w]+)\]/g,
+    (_match, role: string, field: string) => {
+      const actor = team[role]
+      if (!actor) {
+        const available = Object.keys(team).join(', ')
+        throw new Error(
+          `cleanup: unknown role "${role}" in [${role}.${field}] — available: ${available}`
+        )
+      }
+      const value = actor[field]
+      if (value === undefined) {
+        throw new Error(
+          `cleanup: role "${role}" has no field "${field}"`
+        )
+      }
+      return String(value)
+    }
+  )
+}
+
+/**
+ * Evaluate a cleanup expression with `config.server` properties in scope.
+ *
+ * The expression is evaluated via `new Function()` with server properties
+ * destructured as local variables. The result is awaited if it's a promise.
+ */
+function evaluateCleanup(expression: string, server: Record<string, unknown>): unknown {
+  const keys = Object.keys(server)
+  const values = Object.values(server)
+  const fn = new Function(...keys, `return ${expression}`)
+  return fn(...values)
+}
+
+/**
+ * Run pre-cleanup for a scene if it has a cleanup expression.
+ * Interpolates team data, evaluates with server context, and logs errors.
+ * Never throws — cleanup failures are logged but don't prevent the scene.
+ */
+export async function runCleanup(
+  registered: RegisteredScene,
+  team: TeamConfig,
+  server: Record<string, unknown> | undefined
+): Promise<void> {
+  if (!registered.cleanup) return
+
+  try {
+    const interpolated = interpolateCleanup(registered.cleanup, team)
+
+    if (!server || Object.keys(server).length === 0) {
+      console.warn(`  ⚠ cleanup: expression references server resources but no server config provided`)
+      return
+    }
+
+    const result = evaluateCleanup(interpolated, server)
+    // Await if promise
+    if (result && typeof (result as Promise<unknown>).then === 'function') {
+      await result
+    }
+    console.log(`  ♻ cleanup ran`)
+  } catch (err) {
+    console.warn(
+      `  ⚠ cleanup failed: ${err instanceof Error ? err.message : String(err)}`
+    )
   }
 }
 

@@ -263,7 +263,7 @@ import { defineConfig } from '@scenetest/vite-plugin'
 import { db } from './src/db'
 
 export default defineConfig({
-  serverFunctions: {
+  server: {
     // These become available as server.getProfile(), etc.
     getProfile: async (userId: string) => {
       return db.query('SELECT * FROM profiles WHERE id = $1', [userId])
@@ -284,7 +284,7 @@ export default defineConfig({
 
 The Vite plugin:
 1. Loads this config at dev server startup
-2. Creates the `server` context object from `serverFunctions`
+2. Creates the `server` context object from `config.server`
 3. Passes it to each `serverFn` when executed
 
 ## Type Safety

@@ -60,7 +60,7 @@ import path from 'path'
 import type { ConcurrentActorHandle } from './types.js'
 import { parseAction, applyDslAction, getMacro } from './dsl.js'
 import { flow } from './reactive.js'
-import { setCurrentFile } from './scene.js'
+import { sceneRegistry, setCurrentFile } from './scene.js'
 
 // ---------------------------------------------------------------------------
 // Intermediate representation
@@ -69,6 +69,8 @@ import { setCurrentFile } from './scene.js'
 export interface MarkdownScene {
   name: string
   group?: string
+  /** Pre-cleanup expression from `cleanup:` directive */
+  cleanup?: string
   blocks: ActorBlock[]
 }
 
@@ -152,6 +154,15 @@ export function parseMarkdownScenes(
         currentBlock = null
         continue
       }
+    }
+
+    // ── Cleanup directive ─────────────────────────────────────────────
+    // `cleanup: <expression>` — one per scene, before actor cues
+
+    const cleanupMatch = trimmed.match(/^cleanup:\s+(.+)$/)
+    if (cleanupMatch && currentScene && !currentBlock) {
+      currentScene.cleanup = cleanupMatch[1]
+      continue
     }
 
     // ── Content lines (need an active scene) ──────────────────────────
@@ -442,12 +453,12 @@ export function registerMarkdownScenes(
   scenes: MarkdownScene[],
   filePath: string
 ): void {
-  for (const scene of scenes) {
-    flow(scene.name, ({ actor, team: teamMeta }) => {
+  for (const mdScene of scenes) {
+    flow(mdScene.name, ({ actor, team: teamMeta }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
       const actors = new Map<string, ConcurrentActorHandle>()
 
-      for (const block of scene.blocks) {
+      for (const block of mdScene.blocks) {
         if (!actors.has(block.role)) {
           const a = actor(block.role)
           actors.set(block.role, a)
@@ -458,7 +469,7 @@ export function registerMarkdownScenes(
       }
 
       // ── Phase 2: apply actions to each actor block ──────────────────
-      for (const block of scene.blocks) {
+      for (const block of mdScene.blocks) {
         const a = actors.get(block.alias || block.role)!
 
         // Base interpolation context for this actor block
@@ -555,6 +566,11 @@ export function registerMarkdownScenes(
         }
       }
     })
+
+    // Propagate cleanup expression to the registered scene
+    if (mdScene.cleanup && sceneRegistry.length > 0) {
+      sceneRegistry[sceneRegistry.length - 1].cleanup = mdScene.cleanup
+    }
   }
 }
 

@@ -37,7 +37,7 @@ export function findConfigPath(root: string): string | null {
  * This must be called from the server context with access to ViteDevServer.
  *
  * Reads scenetest/config.ts and extracts fields the plugin needs
- * (currently just `serverFunctions`). All other config fields are ignored.
+ * (currently just `server`). All other config fields are ignored.
  */
 export async function loadConfig(
   root: string,

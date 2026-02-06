@@ -685,6 +685,8 @@ export interface RegisteredScene {
   name: string
   fn: SceneFn
   file: string
+  /** Pre-cleanup expression from `cleanup:` directive in .spec.md files */
+  cleanup?: string
 }
 
 // ---------------------------------------------------------------------------

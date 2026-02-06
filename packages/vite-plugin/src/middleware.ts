@@ -104,7 +104,7 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
 
       // Load config to get server functions
       const config = await loadConfig(root, (id) => server.ssrLoadModule(id))
-      const serverContext = (config.serverFunctions || {}) as ServerContext
+      const serverContext = (config.server || {}) as ServerContext
 
       // Execute serverFn with AsyncLocalStorage for result collection
       const results: AssertionResult[] = []
