@@ -178,7 +178,7 @@ function generateHtmlReport(report: RunReport): string {
       return `
         <div class="scene">
           <h3 style="color: ${statusColor}">${statusIcon} ${escapeHtml(scene.name)}</h3>
-          <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Team: ${scene.teamIndex}</p>
+          <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Team: ${scene.team?.name ? escapeHtml(scene.team.name) : String(scene.teamIndex)}</p>
           ${actorDevices ? `<p class="devices">${actorDevices}</p>` : ''}
           ${scene.error ? `<p class="error">Error: ${escapeHtml(scene.error)}</p>` : ''}
           <h4>Assertions (${scene.assertions.length})</h4>

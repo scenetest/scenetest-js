@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning } from './types.js'
+import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ResolvedTeam, TeamMeta } from './types.js'
 import type { DeviceProfile } from './devices.js'
 import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
@@ -12,12 +12,12 @@ import { MessageBus } from './message-bus.js'
  * The team manager tracks which teams are in use.
  */
 export class TeamManager {
-  private teams: TeamConfig[]
+  private teams: ResolvedTeam[]
   private inUse = new Set<number>()
   private browser: Browser | null = null
   private deviceRotation: DeviceRotation | null = null
 
-  constructor(teams: TeamConfig[]) {
+  constructor(teams: ResolvedTeam[]) {
     this.teams = teams
   }
 
@@ -99,9 +99,9 @@ export class TeamManager {
   }
 
   /**
-   * Get the team config for a given index
+   * Get the resolved team for a given index
    */
-  getTeam(teamIndex: number): TeamConfig {
+  getTeam(teamIndex: number): ResolvedTeam {
     if (teamIndex < 0 || teamIndex >= this.teams.length) {
       throw new Error(`Invalid team index: ${teamIndex}`)
     }
@@ -109,13 +109,20 @@ export class TeamManager {
   }
 
   /**
+   * Get team metadata for a given index
+   */
+  getTeamMeta(teamIndex: number): TeamMeta {
+    return this.getTeam(teamIndex).meta
+  }
+
+  /**
    * Get actor config for a role in a team
    */
   getActorConfig(teamIndex: number, role: string): ActorConfig {
     const team = this.getTeam(teamIndex)
-    const actor = team[role]
+    const actor = team.actors[role]
     if (!actor) {
-      throw new Error(`Role "${role}" not found in team ${teamIndex}. Available roles: ${Object.keys(team).join(', ')}`)
+      throw new Error(`Role "${role}" not found in team ${teamIndex}. Available roles: ${Object.keys(team.actors).join(', ')}`)
     }
     return actor
   }
@@ -132,9 +139,11 @@ export class TeamManager {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
     }
+    const resolved = this.getTeam(teamIndex)
     return new TeamSession(
       this.browser,
-      this.getTeam(teamIndex),
+      resolved.actors,
+      resolved.meta,
       teamIndex,
       actionTimeout,
       warnAfter,
@@ -157,15 +166,21 @@ export class TeamSession {
   readonly assertions: AssertionResult[] = []
   readonly warnings: ScriptWarning[] = []
 
+  /** Team metadata (name, owns, tags) */
+  readonly meta: TeamMeta
+
   constructor(
     private browser: Browser,
     private team: TeamConfig,
+    meta: TeamMeta,
     readonly teamIndex: number,
     readonly actionTimeout: number,
     readonly warnAfter: number,
     private baseUrl?: string,
     private deviceRotation?: DeviceRotation | null
-  ) {}
+  ) {
+    this.meta = meta
+  }
 
   /**
    * Get the actor config for a role (sync — no browser setup).

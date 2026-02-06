@@ -14,6 +14,7 @@ function makeSceneReport(
     file: `scenes/${name}.spec.ts`,
     status,
     teamIndex: 0,
+    team: {},
     actors: {},
     assertions: assertions.map((a) => ({
       type: a.result ? 'pass' as const : 'fail' as const,

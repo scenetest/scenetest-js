@@ -1,6 +1,6 @@
 // Public API for scene specs
 export { scene } from './scene.js'
-export { defineConfig } from './config.js'
+export { defineConfig, defineTeam } from './config.js'
 
 // Reactive flow API
 export { flow } from './reactive.js'
@@ -27,6 +27,9 @@ export { SwarmTrigger } from './swarm.js'
 export type {
   ScenetestConfig,
   TeamConfig,
+  TeamDef,
+  TeamMeta,
+  ResolvedTeam,
   ActorConfig,
   SceneContext,
   SequentialActorHandle,

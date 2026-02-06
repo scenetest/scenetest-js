@@ -77,6 +77,7 @@ export async function runScene(
       return session.getActor(role)
     },
     teamIndex: session.teamIndex,
+    team: session.meta,
   }
 
   // Set current session for when() calls
@@ -118,6 +119,7 @@ export async function runScene(
     file: registered.file,
     status,
     teamIndex: session.teamIndex,
+    team: session.meta,
     actors,
     assertions: session.assertions,
     warnings: session.warnings,
