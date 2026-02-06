@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/eslint-plugin",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "ESLint plugin for scenetest - accessibility and testing best practices",
   "type": "module",
   "license": "MIT",

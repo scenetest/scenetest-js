@@ -1,7 +1,10 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import { execSync } from 'child_process'
-import { createRequire } from 'module'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
 import { stripScenetest } from './strip.js'
+
 import { transformAssertions } from './transform.js'
 import {
   registerAssertions,
@@ -14,6 +17,22 @@ import {
 import { clearConfigCache, isConfigFile } from './config.js'
 import { createScenetestMiddleware } from './middleware.js'
 import type { Connect } from 'vite'
+
+// Virtual module IDs for injected dev panel scripts
+const OBSERVER_VIRTUAL_ID = '/@scenetest/observer.js'
+const RECORDER_VIRTUAL_ID = '/@scenetest/recorder.js'
+
+// The actual packages these resolve to
+const OBSERVER_MODULE = '@scenetest/checks-panel/auto'
+const RECORDER_MODULE = '@scenetest/scenes-panel/auto'
+
+function resolveFromPlugin(specifier: string): string | null {
+  try {
+    return fileURLToPath(import.meta.resolve(specifier))
+  } catch {
+    return null
+  }
+}
 
 /**
  * Default CSP directives for dev mode.
@@ -61,11 +80,11 @@ function getGitHash(): string {
   }
 }
 
-// Get version from observer package
-const _require = createRequire(import.meta.url)
+// Get version from own package.json (all packages share the same version)
+const __dirname = dirname(fileURLToPath(import.meta.url))
 function getVersion(): string {
   try {
-    const pkg = _require('@scenetest/checks-panel/package.json')
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf-8'))
     return pkg.version || 'dev'
   } catch {
     return 'dev'
@@ -209,12 +228,33 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       if (id === VIRTUAL_MODULE_ID) {
         return RESOLVED_VIRTUAL_MODULE_ID
       }
+      // Virtual modules for dev panel injection
+      if (id === OBSERVER_VIRTUAL_ID || id === RECORDER_VIRTUAL_ID) {
+        return id
+      }
+      // Resolve panel packages for the consumer — handles pnpm strict hoisting
+      // where transitive deps aren't directly accessible from the project root
+      if (id === OBSERVER_MODULE || id === RECORDER_MODULE) {
+        return resolveFromPlugin(id)
+      }
       return null
     },
 
     load(id) {
       if (id === RESOLVED_VIRTUAL_MODULE_ID) {
         return generateVirtualModuleCode()
+      }
+      // Virtual module that bootstraps the observer panel
+      if (id === OBSERVER_VIRTUAL_ID) {
+        const gitHash = getGitHash()
+        const version = getVersion()
+        return `window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
+window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
+import '${OBSERVER_MODULE}';`
+      }
+      // Virtual module that bootstraps the recorder panel
+      if (id === RECORDER_VIRTUAL_ID) {
+        return `import '${RECORDER_MODULE}';`
       }
       return null
     },
@@ -284,24 +324,14 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
         return html
       }
 
-      const gitHash = getGitHash()
-      const version = getVersion()
       let scripts = ''
 
       if (showDevPanel) {
-        // Inject observer via middleware route - serves bundled observer from local installation
-        scripts += `<script type="module">
-window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
-window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
-import '/__scenetest/observer.js';
-</script>`
+        scripts += `<script type="module" src="${OBSERVER_VIRTUAL_ID}"></script>`
       }
 
       if (showRecorder) {
-        // Inject recorder sidebar
-        scripts += `<script type="module">
-import '/__scenetest/recorder.js';
-</script>`
+        scripts += `<script type="module" src="${RECORDER_VIRTUAL_ID}"></script>`
       }
 
       return html.replace('</body>', `${scripts}</body>`)
