@@ -168,6 +168,21 @@ export function toggleGroupCollapsed(groupId: number): void {
   }
 }
 
+// File tree collapsed state (tracks which paths are collapsed in the tree view)
+// By default everything is expanded; collapsed paths are added here
+export const fileTreeCollapsed = new Set<string>()
+
+export function toggleFileTreeCollapsed(path: string): void {
+  if (fileTreeCollapsed.has(path)) {
+    fileTreeCollapsed.delete(path)
+  } else {
+    fileTreeCollapsed.add(path)
+  }
+}
+
+// Duration (ms) for the "light up" glow on recently-active file tree nodes
+export const FILE_TREE_GLOW_MS = 2000
+
 // Grouping state
 export const GROUP_THRESHOLD_MS = 50
 export let pendingGroup: AssertionGroup | null = null
@@ -187,6 +202,7 @@ export function clearAll(): void {
   groups.length = 0
   assertionHistory.clear()
   locationGroups.clear()
+  fileTreeCollapsed.clear()
   passCount = 0
   failCount = 0
   pendingGroup = null

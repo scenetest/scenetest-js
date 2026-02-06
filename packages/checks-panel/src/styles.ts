@@ -1185,6 +1185,203 @@ body {
   transform: scale(0.95);
 }
 
+/* File tree view styles */
+.file-tree {
+  margin-bottom: 16px;
+}
+.ft-node {
+  border-radius: 4px;
+}
+/* Directory header */
+.ft-dir-header,
+.ft-file-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s;
+  user-select: none;
+}
+.ft-dir-header:hover,
+.ft-file-header:hover {
+  background: #1a1a2e;
+}
+.ft-indent {
+  flex-shrink: 0;
+}
+.ft-toggle {
+  font-size: 9px;
+  color: #6a6a8a;
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ft-dir-icon,
+.ft-file-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  filter: saturate(0.7);
+}
+.ft-status-icon {
+  font-size: 12px;
+  font-weight: bold;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+.ft-status-icon.pass { color: #4ade80; }
+.ft-status-icon.warn { color: #f59e0b; }
+.ft-status-icon.fail { color: #f87171; }
+.ft-name {
+  font-size: 13px;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ft-dir .ft-name {
+  font-weight: 500;
+}
+.ft-badge {
+  font-size: 10px;
+  color: #6a6a8a;
+  background: #252542;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ft-fail-badge {
+  font-size: 10px;
+  color: #f87171;
+  background: #3a1a1a;
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.ft-children {
+  border-left: 1px solid #2a2a4a;
+  margin-left: 22px;
+}
+.ft-assertions {
+  border-left: 1px solid #2a2a4a;
+  margin-left: 22px;
+}
+/* Assertion row inside a file */
+.ft-assertion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s;
+  font-size: 12px;
+}
+.ft-assertion:hover {
+  background: #1a1a2e;
+}
+.ft-assert-icon {
+  font-size: 11px;
+  font-weight: bold;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ft-assert-icon.pass { color: #4ade80; }
+.ft-assert-icon.warn { color: #f59e0b; }
+.ft-assert-icon.fail { color: #f87171; }
+.ft-assert-desc {
+  color: #c0c0d0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.ft-assertion.fail .ft-assert-desc {
+  color: #f87171;
+}
+.ft-assert-line {
+  color: #6a6a8a;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ft-dots {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ft-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.ft-dot.pass { background: #4ade80; }
+.ft-dot.fail { background: #f87171; }
+.ft-assert-count {
+  color: #6a6a8a;
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: right;
+}
+
+/* Light-up glow animation for recently-active nodes */
+.ft-active > .ft-dir-header,
+.ft-active > .ft-file-header {
+  animation: ft-glow 2s ease-out;
+}
+.ft-assertion.ft-active {
+  animation: ft-glow 2s ease-out;
+}
+@keyframes ft-glow {
+  0% {
+    background: rgba(160, 160, 255, 0.25);
+    box-shadow: 0 0 12px rgba(160, 160, 255, 0.3);
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+/* File-level glow coloring based on status */
+.ft-file.pass.ft-active > .ft-file-header {
+  animation: ft-glow-pass 2s ease-out;
+}
+.ft-file.fail.ft-active > .ft-file-header {
+  animation: ft-glow-fail 2s ease-out;
+}
+.ft-assertion.pass.ft-active {
+  animation: ft-glow-pass 2s ease-out;
+}
+.ft-assertion.fail.ft-active {
+  animation: ft-glow-fail 2s ease-out;
+}
+@keyframes ft-glow-pass {
+  0% {
+    background: rgba(74, 222, 128, 0.2);
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.25);
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+@keyframes ft-glow-fail {
+  0% {
+    background: rgba(248, 113, 113, 0.2);
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.25);
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
 /* Piano roll visualization - grid style */
 .piano-roll {
   background: #12121f;
