@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ResolvedTeam, TeamMeta } from './types.js'
+import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
 import type { DeviceProfile } from './devices.js'
 import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
@@ -237,6 +237,53 @@ export class TeamSession {
   }
 
   /**
+   * Create a page factory for a role.
+   *
+   * The returned factory closes the current browser context for this role,
+   * creates a new one (optionally with device emulation), wires up assertion
+   * collection, and returns the new page + context.
+   *
+   * Used by `switchDevice()` on both actor models.
+   */
+  createPageFactory(role: string): PageFactory {
+    return async (device: DeviceProfile | null) => {
+      // Close old context for this role
+      const oldContext = this.contexts.get(role)
+      if (oldContext) {
+        await oldContext.close()
+      }
+
+      // Resolve device: explicit > rotation > none
+      const resolvedDevice = device ?? this.deviceRotation?.next() ?? null
+      if (resolvedDevice) {
+        this.actorDevices.set(role, resolvedDevice)
+      }
+
+      const deviceName = resolvedDevice?.name
+
+      const contextOptions = {
+        ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
+        ...(resolvedDevice ? resolvedDevice.contextOptions : {}),
+      }
+      const context = await this.browser.newContext(contextOptions)
+      const page = await context.newPage()
+
+      await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
+        const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
+        this.assertions.push(enriched)
+      })
+
+      this.contexts.set(role, context)
+
+      if (resolvedDevice) {
+        console.log(`    [${role}] switched to device: ${resolvedDevice.name} (${resolvedDevice.category})`)
+      }
+
+      return { page, context }
+    }
+  }
+
+  /**
    * Get or create an actor for a role
    */
   async getActor(role: string): Promise<SequentialActorHandleImpl> {
@@ -276,6 +323,9 @@ export class TeamSession {
       this.assertions.push(enriched)
     })
 
+    // Create page factory for switchDevice support
+    const pageFactory = this.createPageFactory(role)
+
     // Create actor handle
     const actor = new SequentialActorHandleImpl(
       role,
@@ -286,7 +336,8 @@ export class TeamSession {
       this.timeline,
       this.warnings,
       this.actionTimeout,
-      this.warnAfter
+      this.warnAfter,
+      pageFactory
     )
 
     this.contexts.set(role, context)
