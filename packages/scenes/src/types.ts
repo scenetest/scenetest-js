@@ -25,6 +25,10 @@ export interface ActorConfig {
   username?: string
   email?: string
   password?: string
+  /** localStorage entries injected into actor's browser context before each scene */
+  localStorage?: Record<string, string>
+  /** Warmup: macro name (string) or function. Runs once at test-run start, captures storageState. */
+  warmup?: string | ((page: Page, actor: ActorConfig) => Promise<void>)
   [key: string]: unknown
 }
 
