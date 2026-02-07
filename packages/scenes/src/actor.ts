@@ -1,8 +1,9 @@
 import type { Page, BrowserContext, Locator } from 'playwright'
-import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector } from './types.js'
+import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector, PageFactory } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
+import { findDevice } from './devices.js'
 
 /**
  * Action to be executed in a chain
@@ -150,6 +151,37 @@ class ActionChainImpl implements ActionChain {
     return this.addAction('openTo', url, async () => {
       await this.page.goto(url, { timeout: this.actionTimeout })
       // Reset scope to page after navigation
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  refresh(): ActionChain {
+    return this.addAction('refresh', undefined, async () => {
+      await this.page.reload({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  switchDevice(device?: string): ActionChain {
+    return this.addAction('switchDevice', device ?? '(next)', async () => {
+      const factory = this.actor.getPageFactory()
+      if (!factory) {
+        throw new Error('switchDevice requires the scene runner (page factory not available)')
+      }
+      const profile = device ? findDevice(device) : null
+      // Factory closes old context, creates new one with assertion wiring
+      const { page, context } = await factory(profile)
+      // Update actor's backing references
+      this.actor._switchPage(page, context)
+      // Update chain's local page reference
+      this.page = page
+      // Reset scope to new page root
       this.currentScope = this.page
       this.scopeStack = []
       this.scopeSetUrl = ''
@@ -506,8 +538,8 @@ class ActionChainImpl implements ActionChain {
  */
 export class SequentialActorHandleImpl implements SequentialActorHandle {
   readonly role: string
-  readonly page: Page
-  readonly context: BrowserContext
+  private _page: Page
+  private _context: BrowserContext
   readonly assertions: AssertionResult[] = []
 
   // Registered watchers for conditional handling
@@ -516,11 +548,14 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   // Registered warning triggers
   private warningTriggers: WarningTrigger[] = []
 
+  // Page factory for switchDevice support
+  private _pageFactory: PageFactory | null
+
   // Forward config properties
   readonly key: string
   readonly username?: string
   readonly email?: string
-  readonly password?: string
+  readonly password?: string;
   [key: string]: unknown
 
   constructor(
@@ -532,11 +567,13 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
     private actionTimeout: number,
-    private warnAfter: number
+    private warnAfter: number,
+    pageFactory?: PageFactory | null
   ) {
     this.role = role
-    this.page = page
-    this.context = context
+    this._page = page
+    this._context = context
+    this._pageFactory = pageFactory ?? null
     this.key = config.key
 
     // Copy all config properties to this instance
@@ -547,6 +584,27 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
         (this as Record<string, unknown>)[k] = value
       }
     }
+  }
+
+  /** Playwright page for this actor */
+  get page(): Page {
+    return this._page
+  }
+
+  /** Playwright browser context for this actor */
+  get context(): BrowserContext {
+    return this._context
+  }
+
+  /** Get the page factory (used by ActionChainImpl for switchDevice) */
+  getPageFactory(): PageFactory | null {
+    return this._pageFactory
+  }
+
+  /** Update page and context after a device switch */
+  _switchPage(page: Page, context: BrowserContext): void {
+    this._page = page
+    this._context = context
   }
 
   /**
@@ -577,6 +635,14 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
 
   openTo(url: string): ActionChain {
     return this.createChain().openTo(url)
+  }
+
+  refresh(): ActionChain {
+    return this.createChain().refresh()
+  }
+
+  switchDevice(device?: string): ActionChain {
+    return this.createChain().switchDevice(device)
   }
 
   see(selector: Selector): ActionChain {

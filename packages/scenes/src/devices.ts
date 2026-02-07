@@ -132,6 +132,20 @@ export const builtinDevices: DeviceProfile[] = [
 ]
 
 /**
+ * Look up a built-in device profile by name.
+ *
+ * @throws Error if no device matches the given name.
+ */
+export function findDevice(name: string): DeviceProfile {
+  const found = builtinDevices.find((d) => d.name === name)
+  if (!found) {
+    const available = builtinDevices.map((d) => d.name).join(', ')
+    throw new Error(`Unknown device "${name}". Available: ${available}`)
+  }
+  return found
+}
+
+/**
  * Manages device assignment via round-robin rotation.
  *
  * Each actor gets the next device in the pool. The rotation advances

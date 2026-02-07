@@ -17,7 +17,7 @@ export type { MarkdownScene, ActorBlock, SceneAction } from './markdown-scene.js
 export { setAliases, getAliases, clearAliases, explainSelector } from './selectors.js'
 
 // Device rotation
-export { DeviceRotation, builtinDevices } from './devices.js'
+export { DeviceRotation, builtinDevices, findDevice } from './devices.js'
 export type { DeviceProfile } from './devices.js'
 
 // Swarm mode
@@ -51,4 +51,5 @@ export type {
   SwarmSceneResult,
   SwarmRunDetail,
   SwarmClassification,
+  PageFactory,
 } from './types.js'

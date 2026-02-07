@@ -57,11 +57,13 @@ import type {
   SceneOptions,
   ConcurrentActorHandle,
   TeamMeta,
+  PageFactory,
 } from './types.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
+import { findDevice } from './devices.js'
 
 // ---------------------------------------------------------------------------
 // Interpolation helpers
@@ -157,6 +159,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   // Per-entry URLs matching scopeStack (kept in sync)
   private scopeStackUrls: string[] = []
 
+  private _pageFactory: PageFactory | null = null
+
   private _draining = false
   private _aborted = false
   private _abortReason?: string
@@ -224,6 +228,14 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    */
   _setTeamMetadata(metadata: Record<string, string>): void {
     this._teamMetadata = metadata
+  }
+
+  /**
+   * Set the page factory for switchDevice support.
+   * Called by the flow runner after page initialization.
+   */
+  _setPageFactory(factory: PageFactory): void {
+    this._pageFactory = factory
   }
 
   // -----------------------------------------------------------------------
@@ -320,6 +332,32 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     return this.push('openTo', url, async () => {
       await this.page.goto(url, { timeout: this.actionTimeout })
       this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  refresh(): this {
+    return this.push('refresh', undefined, async () => {
+      await this.page.reload({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  switchDevice(device?: string): this {
+    return this.push('switchDevice', device ?? '(next)', async () => {
+      if (!this._pageFactory) {
+        throw new Error('switchDevice requires the scene runner (page factory not available)')
+      }
+      const profile = device ? findDevice(device) : null
+      // Factory closes old context, creates new one with assertion wiring
+      const { page } = await this._pageFactory(profile)
+      this._page = page
+      this.currentScope = page
       this.scopeStack = []
       this.scopeSetUrl = ''
       this.scopeStackUrls = []
@@ -1030,8 +1068,11 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
     // Phase 2: Initialize — create browser contexts in parallel
     await Promise.all(
       reactiveActors.map(async (actor, i) => {
-        const page = await session.createPage(actorRoles[i])
+        const role = actorRoles[i]
+        const page = await session.createPage(role)
         actor._setPage(page)
+        // Provide page factory for switchDevice support
+        actor._setPageFactory(session.createPageFactory(role))
       })
     )
 

@@ -7,6 +7,8 @@ import type { DslTarget, Selector } from './types.js'
  *
  * Actions:
  *   openTo <url>                    - Navigate to URL
+ *   refresh                         - Reload the current page
+ *   switchDevice [<name>]           - Switch to new device (new browser context)
  *   see <selector>                  - Wait for element visible
  *   notSee <selector>               - Wait for element hidden
  *   seeText <text>                  - Wait for text visible
@@ -118,7 +120,7 @@ export function parseAction(line: string): ParsedAction {
   const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up']
 
   // Actions that take a value only (no selector)
-  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor']
+  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice']
 
   // Actions that take selector + value (everything after first selector word is value)
   const selectorValueActions = ['typeInto', 'select', 'warnIf']
@@ -180,6 +182,14 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
     case 'openTo':
       if (!value) throw new Error('openTo requires a URL')
       target.openTo(value)
+      break
+
+    case 'refresh':
+      target.refresh()
+      break
+
+    case 'switchDevice':
+      target.switchDevice(value || undefined)
       break
 
     case 'see':

@@ -3,6 +3,20 @@ import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { DeviceProfile } from './devices.js'
 
 /**
+ * Factory function for creating a new browser page + context.
+ *
+ * Used by `switchDevice()` to tear down the current browser context and
+ * create a fresh one.  The factory is created by `TeamSession` and knows
+ * how to wire assertion collection, apply device emulation, and track the
+ * new context for cleanup.
+ *
+ * When `device` is non-null, the context uses that device's emulation
+ * settings.  When `device` is null, the factory may pick the next device
+ * from rotation (if enabled) or create a plain context.
+ */
+export type PageFactory = (device: DeviceProfile | null) => Promise<{ page: Page; context: BrowserContext }>
+
+/**
  * Selector: space-separated tokens that resolve to DOM elements.
  *
  * Each token matches (in order): aria-label, id, data-testid, data-name, data-key, name
@@ -459,6 +473,27 @@ export interface SequentialActorHandle extends ActorConfig {
   openTo(url: string): ActionChain
 
   /**
+   * Reload the current page.
+   * Resets scope to page root. Tests that client-side state survives a
+   * page refresh (e.g. data persisted to localStorage or fetched from server).
+   */
+  refresh(): ActionChain
+
+  /**
+   * Switch to a new device (new browser context).
+   *
+   * Closes the current browser context — destroying cookies, localStorage,
+   * and all client-side state — then creates a fresh context with different
+   * device emulation.  Server-side state is unaffected, so this tests
+   * whether the app correctly picks up server state on a new device.
+   *
+   * @param device  Device name from the built-in pool (e.g. `'iPhone 14'`).
+   *                When omitted, picks the next device from rotation (or
+   *                creates a plain context if rotation is disabled).
+   */
+  switchDevice(device?: string): ActionChain
+
+  /**
    * Wait for element to be visible and set it as the current scope.
    * Supports nested selectors: 'parent child'
    * Supports tuple selectors: ['playlist-row', '12345'] for name + key
@@ -585,6 +620,18 @@ export interface ActionChain extends PromiseLike<void> {
   /** Open browser to URL (full page load, not SPA routing) */
   openTo(url: string): ActionChain
 
+  /** Reload the current page. Resets scope to page root. */
+  refresh(): ActionChain
+
+  /**
+   * Switch to a new device (new browser context).
+   * Closes current context (destroys local state), creates fresh context
+   * with different device emulation. Server-side state persists.
+   *
+   * @param device  Device name (e.g. `'iPhone 14'`), or omit for next rotation.
+   */
+  switchDevice(device?: string): ActionChain
+
   /**
    * Wait for element to be visible and set it as the current scope.
    * Subsequent actions (click, typeInto, etc.) will look within this scope.
@@ -705,6 +752,8 @@ export interface RegisteredScene {
  */
 export interface DslTarget {
   openTo(url: string): unknown
+  refresh(): unknown
+  switchDevice(device?: string): unknown
   see(selector: Selector): unknown
   seeInView(selector: Selector): unknown
   notSee(selector: Selector): unknown
@@ -759,6 +808,14 @@ export interface ConcurrentActorHandle {
 
   // -- Navigation --
   openTo(url: string): ConcurrentActorHandle
+  /** Reload the current page. Resets scope to page root. */
+  refresh(): ConcurrentActorHandle
+  /**
+   * Switch to a new device (new browser context).
+   * Closes current context, creates fresh one with different device emulation.
+   * @param device  Device name (e.g. `'iPhone 14'`), or omit for next rotation.
+   */
+  switchDevice(device?: string): ConcurrentActorHandle
   scrollToBottom(): ConcurrentActorHandle
 
   // -- Observation --
