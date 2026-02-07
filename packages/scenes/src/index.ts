@@ -23,6 +23,9 @@ export type { DeviceProfile } from './devices.js'
 // Swarm mode
 export { SwarmTrigger } from './swarm.js'
 
+// Warmup
+export type { StorageState } from './warmup.js'
+
 // Types
 export type {
   ScenetestConfig,

@@ -1,6 +1,8 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
 import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ResolvedTeam, TeamMeta } from './types.js'
 import type { DeviceProfile } from './devices.js'
+import type { StorageState } from './warmup.js'
+import { WarmupCache } from './warmup.js'
 import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
@@ -16,6 +18,7 @@ export class TeamManager {
   private inUse = new Set<number>()
   private browser: Browser | null = null
   private deviceRotation: DeviceRotation | null = null
+  private warmupCache = new WarmupCache()
 
   constructor(teams: ResolvedTeam[]) {
     this.teams = teams
@@ -40,6 +43,13 @@ export class TeamManager {
    */
   getDeviceRotation(): DeviceRotation | null {
     return this.deviceRotation
+  }
+
+  /**
+   * Get all resolved teams.
+   */
+  getTeams(): ResolvedTeam[] {
+    return this.teams
   }
 
   /**
@@ -175,7 +185,8 @@ export class TeamManager {
       actionTimeout,
       warnAfter,
       baseUrl,
-      this.deviceRotation
+      this.deviceRotation,
+      this.warmupCache
     )
   }
 }
@@ -204,9 +215,58 @@ export class TeamSession {
     readonly actionTimeout: number,
     readonly warnAfter: number,
     private baseUrl?: string,
-    private deviceRotation?: DeviceRotation | null
+    private deviceRotation?: DeviceRotation | null,
+    private warmupCache: WarmupCache = new WarmupCache()
   ) {
     this.meta = meta
+  }
+
+  /**
+   * Build context options for a role, merging device emulation, baseURL,
+   * warmup storageState (lazy — runs on first use), and actor localStorage.
+   */
+  private async buildContextOptions(role: string, device: DeviceProfile | null): Promise<Record<string, unknown>> {
+    const config = this.team[role]
+
+    // Lazy warmup: runs on first use, cached for subsequent scenes
+    const warmupState = config
+      ? await this.warmupCache.ensure(this.browser, config, this.baseUrl ?? '', this.actionTimeout)
+      : undefined
+    const hasLocalStorage = config?.localStorage && Object.keys(config.localStorage).length > 0
+
+    let storageState: StorageState | undefined
+    if (warmupState || hasLocalStorage) {
+      // Clone warmup state or start fresh
+      storageState = warmupState
+        ? JSON.parse(JSON.stringify(warmupState))
+        : { cookies: [], origins: [] }
+
+      // Merge actor localStorage if present
+      if (hasLocalStorage && this.baseUrl) {
+        const origin = new URL(this.baseUrl).origin
+        let originEntry = storageState!.origins.find(o => o.origin === origin)
+        if (!originEntry) {
+          originEntry = { origin, localStorage: [] }
+          storageState!.origins.push(originEntry)
+        }
+
+        for (const [name, value] of Object.entries(config!.localStorage!)) {
+          // Actor config overrides warmup entries with same name
+          const existing = originEntry.localStorage.findIndex(e => e.name === name)
+          if (existing >= 0) {
+            originEntry.localStorage[existing].value = value
+          } else {
+            originEntry.localStorage.push({ name, value })
+          }
+        }
+      }
+    }
+
+    return {
+      ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
+      ...(device ? device.contextOptions : {}),
+      ...(storageState ? { storageState } : {}),
+    }
   }
 
   /**
@@ -237,11 +297,8 @@ export class TeamSession {
       this.actorDevices.set(role, device)
     }
 
-    // Create context with device emulation if assigned
-    const contextOptions = {
-      ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
-      ...(device ? device.contextOptions : {}),
-    }
+    // Create context with storageState + device emulation + baseURL
+    const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
@@ -285,11 +342,8 @@ export class TeamSession {
       this.actorDevices.set(role, device)
     }
 
-    // Create new browser context for this actor, with device emulation if assigned
-    const contextOptions = {
-      ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
-      ...(device ? device.contextOptions : {}),
-    }
+    // Create new browser context with storageState + device emulation + baseURL
+    const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
