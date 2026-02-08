@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { parseMarkdownScenes } from '../markdown-scene.js'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { parseMarkdownScenes, registerMarkdownScenes } from '../markdown-scene.js'
+import { sceneRegistry } from '../scene.js'
 
 // ---------------------------------------------------------------------------
 // Parser tests
@@ -537,5 +538,153 @@ see login-form
     expect(scenes[1].name).toBe('old user re-activates')
     expect(scenes[1].blocks).toHaveLength(1)
     expect(scenes[1].blocks[0].role).toBe('returning-user')
+  })
+
+  it('parses cleanup: directive before actor cues', () => {
+    const content = `
+## learner creates a new deck
+
+cleanup: supabase.from('user_deck').delete().eq('uid', '[learner.key]').eq('lang', 'spa')
+
+learner:
+- openTo /learn
+- see deck-list
+`
+    const scenes = parseMarkdownScenes(content, '/test/cleanup.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].cleanup).toBe(
+      "supabase.from('user_deck').delete().eq('uid', '[learner.key]').eq('lang', 'spa')"
+    )
+    expect(scenes[0].blocks).toHaveLength(1)
+    expect(scenes[0].blocks[0].role).toBe('learner')
+  })
+
+  it('ignores cleanup: after actor cues have started', () => {
+    const content = `
+# test
+
+user:
+- openTo /
+cleanup: something
+- see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/cleanup-late.spec.md')
+    expect(scenes[0].cleanup).toBeUndefined()
+    // cleanup: is treated as a macro since it's inside an actor block
+  })
+
+  it('handles cleanup: with no ## headings (# = scene)', () => {
+    const content = `
+# learner creates deck
+
+cleanup: db.clear()
+
+learner:
+- openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/cleanup-h1.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].cleanup).toBe('db.clear()')
+  })
+
+  it('supports cleanup: per scene in multi-scene file', () => {
+    const content = `
+# Deck management
+
+## create deck
+
+cleanup: supabase.from('decks').delete().eq('uid', '[learner.key]')
+
+learner:
+- openTo /decks
+- click create
+
+## delete deck
+
+learner:
+- openTo /decks
+- click delete
+`
+    const scenes = parseMarkdownScenes(content, '/test/cleanup-multi.spec.md')
+    expect(scenes).toHaveLength(2)
+    expect(scenes[0].cleanup).toBe("supabase.from('decks').delete().eq('uid', '[learner.key]')")
+    expect(scenes[1].cleanup).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Registration tests — role extraction
+// ---------------------------------------------------------------------------
+
+describe('registerMarkdownScenes', () => {
+  beforeEach(() => {
+    sceneRegistry.length = 0
+  })
+
+  it('extracts unique roles from actor blocks', () => {
+    const scenes = parseMarkdownScenes(`
+# two users chat
+
+alice:
+openTo /chat
+typeInto message-input Hello!
+click send
+
+bob:
+openTo /chat
+seeText Hello!
+`, '/test/chat.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/chat.spec.md')
+
+    expect(sceneRegistry).toHaveLength(1)
+    expect(sceneRegistry[0].roles).toEqual(['alice', 'bob'])
+  })
+
+  it('deduplicates roles when same actor appears in multiple blocks', () => {
+    const scenes = parseMarkdownScenes(`
+# friend request
+
+alice:
+openTo /friends
+
+bob:
+openTo /notifications
+
+alice:
+click send-request
+`, '/test/dedup.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/dedup.spec.md')
+
+    expect(sceneRegistry).toHaveLength(1)
+    expect(sceneRegistry[0].roles).toEqual(['alice', 'bob'])
+  })
+
+  it('extracts roles for each scene in multi-scene files', () => {
+    const scenes = parseMarkdownScenes(`
+# Auth flows
+
+## admin promotes user
+
+admin:
+openTo /admin
+click promote
+
+user:
+see promoted-badge
+
+## user views profile
+
+user:
+openTo /profile
+see profile-form
+`, '/test/multi-roles.spec.md')
+
+    registerMarkdownScenes(scenes, '/test/multi-roles.spec.md')
+
+    expect(sceneRegistry).toHaveLength(2)
+    expect(sceneRegistry[0].roles).toEqual(['admin', 'user'])
+    expect(sceneRegistry[1].roles).toEqual(['user'])
   })
 })

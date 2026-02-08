@@ -25,6 +25,10 @@ export interface ActorConfig {
   username?: string
   email?: string
   password?: string
+  /** localStorage entries injected into actor's browser context before each scene */
+  localStorage?: Record<string, string>
+  /** Warmup: macro name (string) or function. Runs once at test-run start, captures storageState. */
+  warmup?: string | ((page: Page, actor: ActorConfig) => Promise<void>)
   [key: string]: unknown
 }
 
@@ -35,16 +39,14 @@ export interface ActorConfig {
 export type TeamConfig = Record<string, ActorConfig>
 
 /**
- * Team-level metadata — identity, ownership, and tags.
+ * Team-level metadata — identity and tags.
  *
- * Metadata describes what part of the system the team is concerned with,
- * enabling filtering, reporting, and `[team.field]` interpolation in DSL text.
+ * Metadata describes the team for reporting and `[team.field]` interpolation in DSL text.
  *
  * @example
  * ```ts
  * {
  *   name: 'French Content',
- *   owns: ['/categories/french', '/playlists?lang=fr'],
  *   tags: { locale: 'fr', region: 'europe' },
  * }
  * ```
@@ -52,12 +54,6 @@ export type TeamConfig = Record<string, ActorConfig>
 export interface TeamMeta {
   /** Human-readable team name (used in reports and CLI output) */
   name?: string
-
-  /**
-   * URL path prefixes, patterns, or feature areas this team owns.
-   * Used for filtering (`--owns /categories/french`) and reporting.
-   */
-  owns?: string | string[]
 
   /**
    * Arbitrary key-value tags for filtering and `[team.field]` interpolation.
@@ -85,7 +81,6 @@ export interface TeamMeta {
  *
  * export default defineTeam({
  *   name: 'French Content',
- *   owns: ['/categories/french'],
  *   tags: { locale: 'fr', region: 'europe' },
  *   actors: {
  *     user:  { key: 'fr-user-1', username: 'pierre', email: 'pierre@test.com' },
@@ -100,11 +95,6 @@ export interface TeamDef {
 
   /** Human-readable team name */
   name?: string
-
-  /**
-   * URL path prefixes, patterns, or feature areas this team owns.
-   */
-  owns?: string | string[]
 
   /**
    * Arbitrary key-value tags for filtering and `[team.field]` interpolation.
@@ -274,7 +264,7 @@ export interface SceneReport {
   file: string
   status: 'completed' | 'failed' | 'timeout'
   teamIndex: number
-  /** Team metadata (name, owns, tags) — empty object when not provided */
+  /** Team metadata (name, tags) — empty object when not provided */
   team: TeamMeta
   actors: Record<string, { key: string; username?: string; device?: string }>
   assertions: AssertionResult[]
@@ -447,7 +437,7 @@ export interface SceneContext {
   /** The team index assigned to this scene */
   teamIndex: number
 
-  /** Team metadata (name, owns, tags) */
+  /** Team metadata (name, tags) */
   team: TeamMeta
 }
 
@@ -679,12 +669,24 @@ export interface ActionChain extends PromiseLike<void> {
 export type SceneFn = (context: SceneContext) => Promise<void>
 
 /**
+ * Options for scene/flow registration.
+ */
+export interface SceneOptions {
+  /** Roles required by this scene. Used for team matching. */
+  roles?: string[]
+}
+
+/**
  * Registered scene
  */
 export interface RegisteredScene {
   name: string
   fn: SceneFn
   file: string
+  /** Pre-cleanup expression from `cleanup:` directive in .spec.md files */
+  cleanup?: string
+  /** Roles required by this scene — used for team matching */
+  roles?: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -829,7 +831,7 @@ export interface FlowContext {
   actor: (role: string) => ConcurrentActorHandle
   /** The team index assigned to this flow */
   teamIndex: number
-  /** Team metadata (name, owns, tags) */
+  /** Team metadata (name, tags) */
   team: TeamMeta
 }
 

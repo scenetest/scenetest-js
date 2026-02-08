@@ -19,7 +19,7 @@ export default defineConfig({
   timeout: 30000,
   actionTimeout: 5000,
 
-  serverFunctions: {
+  server: {
     validateEmail: (email: string): boolean => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       return emailRegex.test(email)

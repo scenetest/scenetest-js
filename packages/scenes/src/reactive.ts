@@ -54,6 +54,7 @@ import type {
   ScriptWarning,
   FlowContext,
   FlowFn,
+  SceneOptions,
   ConcurrentActorHandle,
   TeamMeta,
 } from './types.js'
@@ -952,10 +953,15 @@ export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<voi
  * })
  * ```
  */
-export function flow(name: string, fn: FlowFn): void {
+export function flow(name: string, fn: FlowFn): void
+export function flow(name: string, options: SceneOptions, fn: FlowFn): void
+export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?: FlowFn): void {
+  const fn = typeof fnOrOptions === 'function' ? fnOrOptions : maybeFn!
+  const options = typeof fnOrOptions === 'function' ? undefined : fnOrOptions
+
   // Register as a normal scene — the runner doesn't need to know it's
   // reactive.  The wrapping scene fn handles the three-phase execution.
-  scene(name, async (context) => {
+  const wrappedFn = async (context: import('./types.js').SceneContext) => {
     const session = getCurrentSession()
     if (!session) {
       throw new Error('flow() must be run inside the scene runner')
@@ -972,11 +978,6 @@ export function flow(name: string, fn: FlowFn): void {
     const teamMetadataForInterpolation: Record<string, string> = {
       ...(teamMeta.tags ?? {}),
       ...(teamMeta.name ? { name: teamMeta.name } : {}),
-    }
-    // Add owns as a comma-separated string if present
-    if (teamMeta.owns) {
-      const owns = Array.isArray(teamMeta.owns) ? teamMeta.owns.join(',') : teamMeta.owns
-      teamMetadataForInterpolation.owns = owns
     }
 
     const flowContext: FlowContext = {
@@ -1036,5 +1037,11 @@ export function flow(name: string, fn: FlowFn): void {
 
     // Phase 3: Execution — all actors drain concurrently
     await drainAll(reactiveActors)
-  })
+  }
+
+  if (options) {
+    scene(name, options, wrappedFn)
+  } else {
+    scene(name, wrappedFn)
+  }
 }

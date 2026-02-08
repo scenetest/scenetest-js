@@ -74,8 +74,8 @@ function resolveToken(base: Page | Locator, token: string): Locator {
     return base.locator(`[aria-label="${label}"]`)
   }
 
-  // Default: try all attribute types
-  return base.locator(buildTokenSelector(token)).first()
+  // Default: try all attribute types (no .first() — callers narrow further)
+  return base.locator(buildTokenSelector(token))
 }
 
 /**
@@ -115,56 +115,13 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
   while (i < tokens.length) {
     const nextToken = tokens[i]
 
-    // Check if current element has data-key matching the next token
-    // This allows 'playlist-row 12345' to match a single element with both attributes
-    const withKey = locator.filter({ has: base.locator(`[data-key="${nextToken}"]`) })
+    // Same-element match: current element has data-key=nextToken (stay on it)
+    const sameElement = locator.locator(`xpath=self::*[@data-key="${nextToken}"]`)
+    // Descendant match: find child/descendant matching nextToken (descend)
+    const descendant = locator.locator(buildTokenSelector(nextToken))
 
-    // We need to check if the current locator itself has the data-key
-    // Use a more direct approach: check if locator[data-key=nextToken] exists
-    const sameElementWithKey = locator.locator(`xpath=self::*[@data-key="${nextToken}"]`)
-
-    // Try to resolve: does the current element have this data-key?
-    // We'll build a locator that checks, and use it in the chain
-    // Since we can't do async checks here, we use a filter approach
-
-    // Actually, let's use a simpler approach:
-    // Build a locator that tries both interpretations and takes the first match
-    // But that's complex. Let's just always check for key on same element first.
-
-    // Simpler: use locator chaining with 'or'
-    // Option 1: Same element has data-key=nextToken (consume token, stay on element)
-    // Option 2: Child matches nextToken (descend)
-
-    // We'll prioritize: if current element has data-key matching next token,
-    // treat it as a key match and skip to the token after
-    // This is done by checking self::*[@data-key=...]
-
-    // For now, use a practical approach: try to find child, but also support
-    // the key-on-same-element pattern by including data-key in the resolution
-
-    // Actually the cleanest way: always descend, but data-key IS in the attribute list
-    // So 'playlist-row 12345' will:
-    // 1. Find playlist-row (matches data-name or similar)
-    // 2. Look for '12345' in children - but wait, it might be on same element!
-
-    // The user's algorithm says: after matching token1, check if THAT SAME ELEMENT
-    // has data-key=token2. If yes, stay on same element and consume token2.
-
-    // We need to do this check. Let's restructure:
-
-    // Check if current locator's element has data-key = nextToken
-    // We can do this with a self:: xpath or by checking the attribute
-
-    // Build combined locator:
-    // Either: current element has data-key=nextToken (stay, consume)
-    // Or: find child matching nextToken (descend)
-
-    // Use Playwright's .or() to combine
-    const stayOnCurrent = locator.locator(`xpath=self::*[@data-key="${nextToken}"]`)
-    const descendToChild = locator.locator(buildTokenSelector(nextToken)).first()
-
-    // Prefer staying on current if it has the key, otherwise descend
-    locator = stayOnCurrent.or(descendToChild).first()
+    // No .first() here — keep all candidates so subsequent tokens can narrow further
+    locator = sameElement.or(descendant)
     i++
   }
 

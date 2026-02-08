@@ -130,7 +130,7 @@ By the time `onSettled` fires, the mutation is done, `onSuccess` has run, and th
 
 ### Multi-context assertions with serverCheck
 
-If you want to go further and compare browser state against server/database state, configure `serverFunctions` in your config:
+If you want to go further and compare browser state against server/database state, configure `server` in your config:
 
 ```typescript
 // scenetest/config.ts
@@ -140,7 +140,7 @@ import { db } from '../src/server/db'
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
 
-  serverFunctions: {
+  server: {
     getPost: (id) => db.posts.findById(id),
     getUser: (id) => db.users.findById(id),
   },

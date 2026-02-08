@@ -1,4 +1,4 @@
-import type { SceneFn, RegisteredScene, SceneContext, SceneReport } from './types.js'
+import type { SceneFn, SceneOptions, RegisteredScene, SceneContext, SceneReport } from './types.js'
 import { TeamSession } from './team-manager.js'
 
 /**
@@ -31,13 +31,24 @@ export function setCurrentFile(file: string): void {
  *   await user.openTo('/settings/profile')
  *   await user.see('profile-form')
  * })
+ *
+ * // With roles for team matching:
+ * scene('admin promotes user', { roles: ['admin', 'user'] }, async ({ actor }) => {
+ *   const admin = await actor('admin')
+ *   const user = await actor('user')
+ * })
  * ```
  */
-export function scene(name: string, fn: SceneFn): void {
+export function scene(name: string, fn: SceneFn): void
+export function scene(name: string, options: SceneOptions, fn: SceneFn): void
+export function scene(name: string, fnOrOptions: SceneFn | SceneOptions, maybeFn?: SceneFn): void {
+  const fn = typeof fnOrOptions === 'function' ? fnOrOptions : maybeFn!
+  const options = typeof fnOrOptions === 'function' ? undefined : fnOrOptions
   sceneRegistry.push({
     name,
     fn,
     file: currentFile,
+    ...(options?.roles ? { roles: options.roles } : {}),
   })
 }
 
