@@ -25,6 +25,8 @@ function mockPage() {
   return {
     goto: vi.fn().mockResolvedValue(undefined),
     reload: vi.fn().mockResolvedValue(undefined),
+    goBack: vi.fn().mockResolvedValue(undefined),
+    goForward: vi.fn().mockResolvedValue(undefined),
     url: vi.fn().mockReturnValue('http://localhost:5173/'),
     getByText: vi.fn().mockReturnValue({ first: () => locator }),
     locator: vi.fn().mockReturnValue(locator),
@@ -120,12 +122,15 @@ describe('ConcurrentActorHandleImpl', () => {
         .seeText('Welcome')
         .seeToast('saved')
         .scrollToBottom()
+        .reload()
+        .goBack()
+        .goForward()
         .up('header')
         .prev()
         .do(async () => {})
 
       expect(returned).toBe(actor)
-      expect(actor.pending).toBe(16)
+      expect(actor.pending).toBe(19)
     })
 
     it('starts with zero pending actions', () => {
@@ -528,11 +533,11 @@ describe('drainAll', () => {
   })
 })
 
-describe('refresh()', () => {
-  it('queues a refresh action', () => {
+describe('reload()', () => {
+  it('queues a reload action', () => {
     const { actor } = createTestActor()
 
-    actor.refresh()
+    actor.reload()
 
     expect(actor.pending).toBe(1)
   })
@@ -540,7 +545,7 @@ describe('refresh()', () => {
   it('chains fluently — returns the same actor', () => {
     const { actor } = createTestActor()
 
-    const returned = actor.refresh()
+    const returned = actor.reload()
 
     expect(returned).toBe(actor)
   })
@@ -548,7 +553,7 @@ describe('refresh()', () => {
   it('calls page.reload() during drain', async () => {
     const { actor, page } = createTestActor()
 
-    actor.refresh()
+    actor.reload()
     await actor.drain()
 
     expect(page.reload).toHaveBeenCalledWith({ timeout: 5000 })
@@ -557,15 +562,12 @@ describe('refresh()', () => {
   it('resets scope to page root after reload', async () => {
     const { actor, page } = createTestActor()
 
-    // Manually set scope to something other than page via do()
     actor.do(async () => {
-      // Simulate scoped state (as if see() had run)
       ;(actor as any).currentScope = { fake: 'locator' }
       ;(actor as any).scopeStack = [page]
     })
-    actor.refresh()
+    actor.reload()
     actor.do(async () => {
-      // After refresh, scope should be reset to page
       expect((actor as any).currentScope).toBe(page)
       expect((actor as any).scopeStack).toEqual([])
     })
@@ -576,12 +578,76 @@ describe('refresh()', () => {
   it('records timeline entry', async () => {
     const { actor, timeline } = createTestActor()
 
-    actor.refresh()
+    actor.reload()
     await actor.drain()
 
     expect(timeline).toHaveLength(1)
-    expect(timeline[0].action).toBe('refresh')
+    expect(timeline[0].action).toBe('reload')
     expect(timeline[0].actor).toBe('user')
+  })
+})
+
+describe('goBack() / goForward()', () => {
+  it('queues goBack and goForward actions', () => {
+    const { actor } = createTestActor()
+
+    actor.goBack()
+    actor.goForward()
+
+    expect(actor.pending).toBe(2)
+  })
+
+  it('chains fluently', () => {
+    const { actor } = createTestActor()
+
+    expect(actor.goBack()).toBe(actor)
+    expect(actor.goForward()).toBe(actor)
+  })
+
+  it('calls page.goBack() during drain', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.goBack()
+    await actor.drain()
+
+    expect(page.goBack).toHaveBeenCalledWith({ timeout: 5000 })
+  })
+
+  it('calls page.goForward() during drain', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.goForward()
+    await actor.drain()
+
+    expect(page.goForward).toHaveBeenCalledWith({ timeout: 5000 })
+  })
+
+  it('resets scope to page root', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.do(async () => {
+      ;(actor as any).currentScope = { fake: 'locator' }
+      ;(actor as any).scopeStack = [page]
+    })
+    actor.goBack()
+    actor.do(async () => {
+      expect((actor as any).currentScope).toBe(page)
+      expect((actor as any).scopeStack).toEqual([])
+    })
+
+    await actor.drain()
+  })
+
+  it('records timeline entries', async () => {
+    const { actor, timeline } = createTestActor()
+
+    actor.goBack()
+    actor.goForward()
+    await actor.drain()
+
+    expect(timeline).toHaveLength(2)
+    expect(timeline[0].action).toBe('goBack')
+    expect(timeline[1].action).toBe('goForward')
   })
 })
 

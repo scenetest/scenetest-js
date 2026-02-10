@@ -7,7 +7,9 @@ import type { DslTarget, Selector } from './types.js'
  *
  * Actions:
  *   openTo <url>                    - Navigate to URL
- *   refresh                         - Reload the current page
+ *   reload                          - Reload the current page
+ *   goBack                          - Navigate back in browser history
+ *   goForward                       - Navigate forward in browser history
  *   switchDevice [<name>]           - Switch to new device (new browser context)
  *   see <selector>                  - Wait for element visible
  *   notSee <selector>               - Wait for element hidden
@@ -184,8 +186,16 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
       target.openTo(value)
       break
 
-    case 'refresh':
-      target.refresh()
+    case 'reload':
+      target.reload()
+      break
+
+    case 'goBack':
+      target.goBack()
+      break
+
+    case 'goForward':
+      target.goForward()
       break
 
     case 'switchDevice':

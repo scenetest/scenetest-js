@@ -337,9 +337,29 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     })
   }
 
-  refresh(): this {
-    return this.push('refresh', undefined, async () => {
+  reload(): this {
+    return this.push('reload', undefined, async () => {
       await this.page.reload({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  goBack(): this {
+    return this.push('goBack', undefined, async () => {
+      await this.page.goBack({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  goForward(): this {
+    return this.push('goForward', undefined, async () => {
+      await this.page.goForward({ timeout: this.actionTimeout })
       this.currentScope = this.page
       this.scopeStack = []
       this.scopeSetUrl = ''
