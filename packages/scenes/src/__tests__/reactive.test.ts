@@ -24,6 +24,8 @@ function mockPage() {
   const locator = mockLocator()
   return {
     goto: vi.fn().mockResolvedValue(undefined),
+    reload: vi.fn().mockResolvedValue(undefined),
+    url: vi.fn().mockReturnValue('http://localhost:5173/'),
     getByText: vi.fn().mockReturnValue({ first: () => locator }),
     locator: vi.fn().mockReturnValue(locator),
     evaluate: vi.fn().mockResolvedValue(undefined),
@@ -523,5 +525,207 @@ describe('drainAll', () => {
     expect(events.indexOf('alice-work')).toBeLessThan(
       events.indexOf('bob-after-alice')
     )
+  })
+})
+
+describe('refresh()', () => {
+  it('queues a refresh action', () => {
+    const { actor } = createTestActor()
+
+    actor.refresh()
+
+    expect(actor.pending).toBe(1)
+  })
+
+  it('chains fluently — returns the same actor', () => {
+    const { actor } = createTestActor()
+
+    const returned = actor.refresh()
+
+    expect(returned).toBe(actor)
+  })
+
+  it('calls page.reload() during drain', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.refresh()
+    await actor.drain()
+
+    expect(page.reload).toHaveBeenCalledWith({ timeout: 5000 })
+  })
+
+  it('resets scope to page root after reload', async () => {
+    const { actor, page } = createTestActor()
+
+    // Manually set scope to something other than page via do()
+    actor.do(async () => {
+      // Simulate scoped state (as if see() had run)
+      ;(actor as any).currentScope = { fake: 'locator' }
+      ;(actor as any).scopeStack = [page]
+    })
+    actor.refresh()
+    actor.do(async () => {
+      // After refresh, scope should be reset to page
+      expect((actor as any).currentScope).toBe(page)
+      expect((actor as any).scopeStack).toEqual([])
+    })
+
+    await actor.drain()
+  })
+
+  it('records timeline entry', async () => {
+    const { actor, timeline } = createTestActor()
+
+    actor.refresh()
+    await actor.drain()
+
+    expect(timeline).toHaveLength(1)
+    expect(timeline[0].action).toBe('refresh')
+    expect(timeline[0].actor).toBe('user')
+  })
+})
+
+describe('switchDevice()', () => {
+  it('queues a switchDevice action', () => {
+    const { actor } = createTestActor()
+
+    actor.switchDevice('iPhone 14')
+
+    expect(actor.pending).toBe(1)
+  })
+
+  it('chains fluently — returns the same actor', () => {
+    const { actor } = createTestActor()
+
+    const returned = actor.switchDevice('iPhone 14')
+
+    expect(returned).toBe(actor)
+  })
+
+  it('throws during drain when no page factory is set', async () => {
+    const { actor } = createTestActor()
+
+    actor.switchDevice('iPhone 14')
+
+    await expect(actor.drain()).rejects.toThrow(
+      'switchDevice requires the scene runner'
+    )
+  })
+
+  it('calls the page factory and replaces the page', async () => {
+    const { actor } = createTestActor()
+    const newPage = mockPage()
+
+    const factory = vi.fn().mockResolvedValue({
+      page: newPage,
+      context: {},
+    })
+
+    actor._setPageFactory(factory)
+    actor.switchDevice('iPhone 14')
+    await actor.drain()
+
+    // Factory was called with the device profile
+    expect(factory).toHaveBeenCalledTimes(1)
+    const factoryArg = factory.mock.calls[0][0]
+    expect(factoryArg).not.toBeNull()
+    expect(factoryArg.name).toBe('iPhone 14')
+
+    // Actor's page should now be the new one
+    expect(actor.page).toBe(newPage)
+  })
+
+  it('passes null to factory when no device name given (rotation)', async () => {
+    const { actor } = createTestActor()
+    const newPage = mockPage()
+
+    const factory = vi.fn().mockResolvedValue({
+      page: newPage,
+      context: {},
+    })
+
+    actor._setPageFactory(factory)
+    actor.switchDevice()
+    await actor.drain()
+
+    // Factory called with null — lets the factory use device rotation
+    expect(factory).toHaveBeenCalledWith(null)
+    expect(actor.page).toBe(newPage)
+  })
+
+  it('throws for unknown device name', async () => {
+    const { actor } = createTestActor()
+
+    const factory = vi.fn()
+    actor._setPageFactory(factory)
+    actor.switchDevice('Nokia 3310')
+
+    await expect(actor.drain()).rejects.toThrow('Unknown device "Nokia 3310"')
+    expect(factory).not.toHaveBeenCalled()
+  })
+
+  it('resets scope after switching device', async () => {
+    const { actor, page: originalPage } = createTestActor()
+    const newPage = mockPage()
+
+    const factory = vi.fn().mockResolvedValue({
+      page: newPage,
+      context: {},
+    })
+
+    actor._setPageFactory(factory)
+
+    // Manually set scope to simulate a prior see()
+    actor.do(async () => {
+      ;(actor as any).currentScope = { fake: 'locator' }
+      ;(actor as any).scopeStack = [originalPage]
+    })
+    actor.switchDevice('iPhone 14')
+    actor.do(async () => {
+      // Scope should be reset to the new page
+      expect((actor as any).currentScope).toBe(newPage)
+      expect((actor as any).scopeStack).toEqual([])
+      expect(actor.page).toBe(newPage)
+    })
+
+    await actor.drain()
+  })
+
+  it('records timeline entry', async () => {
+    const { actor, timeline } = createTestActor()
+    const newPage = mockPage()
+
+    const factory = vi.fn().mockResolvedValue({
+      page: newPage,
+      context: {},
+    })
+
+    actor._setPageFactory(factory)
+    actor.switchDevice('iPhone 14')
+    await actor.drain()
+
+    const entry = timeline.find(e => e.action === 'switchDevice')
+    expect(entry).toBeDefined()
+    expect(entry!.actor).toBe('user')
+    expect(entry!.target).toBe('iPhone 14')
+  })
+
+  it('subsequent actions use the new page after switch', async () => {
+    const { actor, page: originalPage } = createTestActor()
+    const newPage = mockPage()
+
+    const factory = vi.fn().mockResolvedValue({
+      page: newPage,
+      context: {},
+    })
+
+    actor._setPageFactory(factory)
+    actor.switchDevice('iPhone 14')
+    actor.openTo('/dashboard')
+    await actor.drain()
+
+    // openTo should have navigated on the NEW page, not the original
+    expect(newPage.goto).toHaveBeenCalledWith('/dashboard', expect.any(Object))
+    expect(originalPage.goto).not.toHaveBeenCalled()
   })
 })
