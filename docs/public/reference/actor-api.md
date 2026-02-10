@@ -74,6 +74,60 @@ await user.see('landing-page')
 await user.openTo('/settings/profile')
 ```
 
+### refresh
+
+```typescript
+user.refresh(): ConcurrentActorHandle | ActionChain
+```
+
+Reloads the current page and resets scope to the page root. Useful for testing that server-side state persists across page loads.
+
+```typescript [concurrent]
+user.click('save-button')
+user.refresh()
+user.see('saved-content')    // verify state survived reload
+```
+```typescript [driver]
+await user.click('save-button')
+await user.refresh()
+await user.see('saved-content')
+```
+
+### switchDevice
+
+```typescript
+user.switchDevice(device?: string): ConcurrentActorHandle | ActionChain
+```
+
+Closes the actor's current browser context and opens a new one, simulating a device switch. If a `device` name is provided, the new context uses that device's emulation profile (viewport, user agent). If omitted, the next device from the [device rotation](/reference/devices) is used (or a default desktop context if no rotation is configured).
+
+The actor keeps its identity (role, credentials, config) but gets a fresh browser — no cookies, no localStorage, no session. This is the point: test that your app handles a new device picking up where the old one left off.
+
+```typescript [concurrent]
+scene('cross-device sync', ({ actor }) => {
+  const user = actor('primary-learner')
+
+  user.openTo('/notes')
+  user.typeInto('note-editor', 'Hello from laptop')
+  user.click('save-button')
+  user.switchDevice('iPhone 14')
+  user.openTo('/notes')
+  user.seeText('Hello from laptop')    // server state survived device switch
+})
+```
+```typescript [driver]
+test('cross-device sync', async ({ actor }) => {
+  const user = await actor('primary-learner')
+
+  await user.openTo('/notes')
+  await user.typeInto('note-editor', 'Hello from laptop')
+  await user.click('save-button')
+  await user.switchDevice('iPhone 14')
+  await user.openTo('/notes')
+  await user.seeText('Hello from laptop')
+})
+```
+
 ### scrollToBottom
 
 ```typescript

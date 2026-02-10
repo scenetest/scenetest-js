@@ -14,6 +14,8 @@ There are two ways to use the text DSL:
 
 Actions:
   openTo <url>                    Navigate to URL
+  refresh                         Reload the current page (resets scope)
+  switchDevice [<name>]           Switch to a new browser context (new device)
   see <selector>                  Wait for element visible (updates scope)
   seeInView <selector>            Wait for element visible in the viewport
   notSee <selector>               Wait for element hidden
@@ -33,6 +35,8 @@ Actions:
 ```
 
 > `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions.
+
+`refresh` takes no arguments. `switchDevice` optionally takes a device name (e.g., `switchDevice iPhone 14`). If omitted, the next device from the rotation is used.
 
 ### Nested selectors
 
@@ -135,6 +139,19 @@ Variables work inside selectors for compound IDs:
 ```
 see user-result-[target.key]             # becomes "see user-result-12345"
 click language-card-[team.language]     # becomes "click language-card-spanish"
+```
+
+### Cross-device testing in markdown
+
+```scenetest
+## notes sync across devices
+user:
+- openTo /notes
+- typeInto note-editor 'Remember to buy milk'
+- click save-button
+- switchDevice iPhone 14
+- openTo /notes
+- seeText Remember to buy milk
 ```
 
 ### Multi-actor coordination in markdown
