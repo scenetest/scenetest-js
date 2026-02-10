@@ -241,20 +241,27 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
     },
 
     load(id) {
+      // Virtual modules return { code, moduleType } so Vite 8's Rolldown
+      // bundler knows these are JS modules (it infers type from file extension,
+      // and virtual module IDs may not have one). This is backward-compatible
+      // with Vite 5/6/7 which ignore the moduleType property.
       if (id === RESOLVED_VIRTUAL_MODULE_ID) {
-        return generateVirtualModuleCode()
+        return { code: generateVirtualModuleCode(), moduleType: 'js' }
       }
       // Virtual module that bootstraps the observer panel
       if (id === OBSERVER_VIRTUAL_ID) {
         const gitHash = getGitHash()
         const version = getVersion()
-        return `window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
+        return {
+          code: `window.__SCENETEST_GIT_HASH__ = ${JSON.stringify(gitHash)};
 window.__SCENETEST_VERSION__ = ${JSON.stringify(version)};
-import '${OBSERVER_MODULE}';`
+import '${OBSERVER_MODULE}';`,
+          moduleType: 'js',
+        }
       }
       // Virtual module that bootstraps the recorder panel
       if (id === RECORDER_VIRTUAL_ID) {
-        return `import '${RECORDER_MODULE}';`
+        return { code: `import '${RECORDER_MODULE}';`, moduleType: 'js' }
       }
       return null
     },
