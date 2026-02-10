@@ -63,7 +63,9 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
   return {
     calls,
     openTo(url: string) { calls.push(`openTo:${url}`); return this },
-    refresh() { calls.push('refresh'); return this },
+    reload() { calls.push('reload'); return this },
+    goBack() { calls.push('goBack'); return this },
+    goForward() { calls.push('goForward'); return this },
     switchDevice(d?: string) { calls.push(`switchDevice:${d ?? '(next)'}`); return this },
     see(s: string) { calls.push(`see:${s}`); return this },
     seeInView(s: string) { calls.push(`seeInView:${s}`); return this },

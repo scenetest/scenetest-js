@@ -475,9 +475,15 @@ export interface SequentialActorHandle extends ActorConfig {
   /**
    * Reload the current page.
    * Resets scope to page root. Tests that client-side state survives a
-   * page refresh (e.g. data persisted to localStorage or fetched from server).
+   * page reload (e.g. data persisted to localStorage or fetched from server).
    */
-  refresh(): ActionChain
+  reload(): ActionChain
+
+  /** Navigate back in browser history. Resets scope to page root. */
+  goBack(): ActionChain
+
+  /** Navigate forward in browser history. Resets scope to page root. */
+  goForward(): ActionChain
 
   /**
    * Switch to a new device (new browser context).
@@ -621,7 +627,13 @@ export interface ActionChain extends PromiseLike<void> {
   openTo(url: string): ActionChain
 
   /** Reload the current page. Resets scope to page root. */
-  refresh(): ActionChain
+  reload(): ActionChain
+
+  /** Navigate back in browser history. Resets scope to page root. */
+  goBack(): ActionChain
+
+  /** Navigate forward in browser history. Resets scope to page root. */
+  goForward(): ActionChain
 
   /**
    * Switch to a new device (new browser context).
@@ -752,7 +764,9 @@ export interface RegisteredScene {
  */
 export interface DslTarget {
   openTo(url: string): unknown
-  refresh(): unknown
+  reload(): unknown
+  goBack(): unknown
+  goForward(): unknown
   switchDevice(device?: string): unknown
   see(selector: Selector): unknown
   seeInView(selector: Selector): unknown
@@ -809,7 +823,11 @@ export interface ConcurrentActorHandle {
   // -- Navigation --
   openTo(url: string): ConcurrentActorHandle
   /** Reload the current page. Resets scope to page root. */
-  refresh(): ConcurrentActorHandle
+  reload(): ConcurrentActorHandle
+  /** Navigate back in browser history. Resets scope to page root. */
+  goBack(): ConcurrentActorHandle
+  /** Navigate forward in browser history. Resets scope to page root. */
+  goForward(): ConcurrentActorHandle
   /**
    * Switch to a new device (new browser context).
    * Closes current context, creates fresh one with different device emulation.

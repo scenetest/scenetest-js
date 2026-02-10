@@ -74,23 +74,65 @@ await user.see('landing-page')
 await user.openTo('/settings/profile')
 ```
 
-### refresh
+### reload
 
 ```typescript
-user.refresh(): ConcurrentActorHandle | ActionChain
+user.reload(): ConcurrentActorHandle | ActionChain
 ```
 
 Reloads the current page and resets scope to the page root. Useful for testing that server-side state persists across page loads.
 
 ```typescript [concurrent]
 user.click('save-button')
-user.refresh()
+user.reload()
 user.see('saved-content')    // verify state survived reload
 ```
 ```typescript [driver]
 await user.click('save-button')
-await user.refresh()
+await user.reload()
 await user.see('saved-content')
+```
+
+### goBack
+
+```typescript
+user.goBack(): ConcurrentActorHandle | ActionChain
+```
+
+Navigates back in browser history (like clicking the browser's back button). Resets scope to the page root.
+
+```typescript [concurrent]
+user.openTo('/step-1')
+user.click('next-button')
+user.see('step-2-form')
+user.goBack()
+user.see('step-1-form')    // back to previous page
+```
+```typescript [driver]
+await user.openTo('/step-1')
+await user.click('next-button')
+await user.see('step-2-form')
+await user.goBack()
+await user.see('step-1-form')
+```
+
+### goForward
+
+```typescript
+user.goForward(): ConcurrentActorHandle | ActionChain
+```
+
+Navigates forward in browser history (like clicking the browser's forward button). Resets scope to the page root.
+
+```typescript [concurrent]
+user.goBack()
+user.goForward()
+user.see('current-page')
+```
+```typescript [driver]
+await user.goBack()
+await user.goForward()
+await user.see('current-page')
 ```
 
 ### switchDevice

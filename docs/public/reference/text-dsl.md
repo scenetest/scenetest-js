@@ -14,7 +14,9 @@ There are two ways to use the text DSL:
 
 Actions:
   openTo <url>                    Navigate to URL
-  refresh                         Reload the current page (resets scope)
+  reload                          Reload the current page (resets scope)
+  goBack                          Navigate back in browser history (resets scope)
+  goForward                       Navigate forward in browser history (resets scope)
   switchDevice [<name>]           Switch to a new browser context (new device)
   see <selector>                  Wait for element visible (updates scope)
   seeInView <selector>            Wait for element visible in the viewport
@@ -36,7 +38,7 @@ Actions:
 
 > `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions.
 
-`refresh` takes no arguments. `switchDevice` optionally takes a device name (e.g., `switchDevice iPhone 14`). If omitted, the next device from the rotation is used.
+`reload`, `goBack`, and `goForward` take no arguments. `switchDevice` optionally takes a device name (e.g., `switchDevice iPhone 14`). If omitted, the next device from the rotation is used.
 
 ### Nested selectors
 

@@ -158,9 +158,29 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
-  refresh(): ActionChain {
-    return this.addAction('refresh', undefined, async () => {
+  reload(): ActionChain {
+    return this.addAction('reload', undefined, async () => {
       await this.page.reload({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  goBack(): ActionChain {
+    return this.addAction('goBack', undefined, async () => {
+      await this.page.goBack({ timeout: this.actionTimeout })
+      this.currentScope = this.page
+      this.scopeStack = []
+      this.scopeSetUrl = ''
+      this.scopeStackUrls = []
+    })
+  }
+
+  goForward(): ActionChain {
+    return this.addAction('goForward', undefined, async () => {
+      await this.page.goForward({ timeout: this.actionTimeout })
       this.currentScope = this.page
       this.scopeStack = []
       this.scopeSetUrl = ''
@@ -637,8 +657,16 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     return this.createChain().openTo(url)
   }
 
-  refresh(): ActionChain {
-    return this.createChain().refresh()
+  reload(): ActionChain {
+    return this.createChain().reload()
+  }
+
+  goBack(): ActionChain {
+    return this.createChain().goBack()
+  }
+
+  goForward(): ActionChain {
+    return this.createChain().goForward()
   }
 
   switchDevice(device?: string): ActionChain {
