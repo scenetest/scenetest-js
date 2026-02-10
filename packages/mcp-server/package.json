@@ -1,0 +1,39 @@
+{
+  "name": "@scenetest/mcp-server",
+  "version": "0.2.0",
+  "description": "MCP server exposing scenetest documentation and guidance for LLMs",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scenetest/scenetest-js",
+    "directory": "packages/mcp-server"
+  },
+  "keywords": ["testing", "e2e", "scenetest", "mcp", "model-context-protocol", "llm"],
+  "bin": {
+    "scenetest-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "docs"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "bundle-docs": "node scripts/bundle-docs.js",
+    "build": "node scripts/bundle-docs.js && tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.10.0"
+  }
+}
