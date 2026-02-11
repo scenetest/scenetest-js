@@ -170,6 +170,16 @@ test('cross-device sync', async ({ actor }) => {
 })
 ```
 
+#### Built-in devices
+
+| Category | Names |
+|----------|-------|
+| Mobile | `iPhone 14`, `iPhone 12`, `Pixel 7`, `Galaxy S9+` |
+| Tablet | `iPad Pro 11`, `iPad Mini` |
+| Desktop | `Desktop 1920x1080`, `Desktop 1366x768`, `Desktop 1440x900`, `Desktop 2560x1440` |
+
+These are pulled from Playwright's device descriptors (with custom desktop profiles added). The `builtinDevices` array and `DeviceProfile` type are exported from `@scenetest/scenes` if you need to inspect or extend them. To use a custom device pool, configure it via `devices` in your [config](/design/cli-v2#9-configuration-reference).
+
 ### scrollToBottom
 
 ```typescript
