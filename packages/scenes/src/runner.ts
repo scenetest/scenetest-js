@@ -151,7 +151,7 @@ export class SceneRunner {
       try {
         // Create session
         const fuzzyFingers = !!this.config.fuzzyFingers
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel)
 
         try {
           // Log which scene is starting
@@ -296,7 +296,8 @@ export class SceneRunner {
       this.config.baseUrl,
       trigger,
       this.config.server as Record<string, unknown> | undefined,
-      fuzzyFingers
+      fuzzyFingers,
+      this.config.noPanel
     )
 
     // Build a RunReport that includes the swarm results

@@ -30,6 +30,7 @@ program
   .option('--no-keyboard-actor', 'Disable keyboard-only actor rotation (keyboard navigation is ON by default)')
   .option('--fuzzy-fingers', 'Enable fuzzy-finger touch behavior (simulates imprecise human touch ~1 in 5 clicks)')
   .option('--swarm', 'Force swarm mode: run all teams against all scenes to classify failures')
+  .option('--no-panel', 'Suppress the dev panel in the browser (useful for CI / headless runs)')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
       // Load config and discover actor teams
@@ -53,6 +54,9 @@ program
       }
       if (options.fuzzyFingers) {
         config.fuzzyFingers = true
+      }
+      if (options.noPanel) {
+        config.noPanel = true
       }
 
       // Interactive UI mode
