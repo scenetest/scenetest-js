@@ -120,7 +120,7 @@ export class SceneRunner {
 
       try {
         // Create session
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, this.config.noPanel)
 
         try {
           // Log which scene is starting
@@ -261,7 +261,8 @@ export class SceneRunner {
       warnAfter,
       this.config.baseUrl,
       trigger,
-      this.config.server as Record<string, unknown> | undefined
+      this.config.server as Record<string, unknown> | undefined,
+      this.config.noPanel
     )
 
     // Build a RunReport that includes the swarm results
