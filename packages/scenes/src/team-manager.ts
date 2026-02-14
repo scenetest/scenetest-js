@@ -171,7 +171,8 @@ export class TeamManager {
     teamIndex: number,
     actionTimeout: number,
     warnAfter: number,
-    baseUrl?: string
+    baseUrl?: string,
+    noPanel?: boolean
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -186,7 +187,8 @@ export class TeamManager {
       warnAfter,
       baseUrl,
       this.deviceRotation,
-      this.warmupCache
+      this.warmupCache,
+      noPanel
     )
   }
 }
@@ -216,7 +218,8 @@ export class TeamSession {
     readonly warnAfter: number,
     private baseUrl?: string,
     private deviceRotation?: DeviceRotation | null,
-    private warmupCache: WarmupCache = new WarmupCache()
+    private warmupCache: WarmupCache = new WarmupCache(),
+    private noPanel?: boolean
   ) {
     this.meta = meta
   }
@@ -302,6 +305,13 @@ export class TeamSession {
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
+    // Suppress dev panel if --no-panel was passed
+    if (this.noPanel) {
+      await page.addInitScript(() => {
+        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+      })
+    }
+
     // Track device name for assertions
     const deviceName = device?.name
 
@@ -346,6 +356,13 @@ export class TeamSession {
     const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
+
+    // Suppress dev panel if --no-panel was passed
+    if (this.noPanel) {
+      await page.addInitScript(() => {
+        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+      })
+    }
 
     // Track device name for assertions
     const deviceName = device?.name

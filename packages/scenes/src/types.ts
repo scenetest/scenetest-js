@@ -184,6 +184,13 @@ export interface ScenetestConfig extends BaseConfig {
    */
   swarm?: SwarmConfig
 
+  /**
+   * Suppress the dev panel in the browser.
+   * When true, the observer panel is prevented from initializing on pages
+   * created by the runner. Assertions still flow to the CLI reporter.
+   */
+  noPanel?: boolean
+
   /** Hook: before all scenes run */
   beforeAll?: () => Promise<void>
 
@@ -871,4 +878,7 @@ export interface CLIOptions {
 
   /** Force swarm mode (run all teams against all scenes) */
   swarm?: boolean
+
+  /** Suppress the dev panel in the browser (useful for CI / headless runs) */
+  noPanel?: boolean
 }
