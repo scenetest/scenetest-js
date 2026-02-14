@@ -189,7 +189,8 @@ export class TeamManager {
     actionTimeout: number,
     warnAfter: number,
     baseUrl?: string,
-    fuzzyFingers: boolean = false
+    fuzzyFingers: boolean = false,
+    noPanel?: boolean
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -206,7 +207,8 @@ export class TeamManager {
       this.deviceRotation,
       this.warmupCache,
       this.navigationModeRotation,
-      fuzzyFingers
+      fuzzyFingers,
+      noPanel
     )
   }
 }
@@ -239,7 +241,8 @@ export class TeamSession {
     private deviceRotation?: DeviceRotation | null,
     private warmupCache: WarmupCache = new WarmupCache(),
     private navigationModeRotation?: NavigationModeRotation | null,
-    private fuzzyFingers: boolean = false
+    private fuzzyFingers: boolean = false,
+    private noPanel?: boolean
   ) {
     this.meta = meta
   }
@@ -352,6 +355,13 @@ export class TeamSession {
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
 
+    // Suppress dev panel if --no-panel was passed
+    if (this.noPanel) {
+      await page.addInitScript(() => {
+        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+      })
+    }
+
     // Track device name and navigation mode for assertions
     const deviceName = device?.name
     const navigationMode = navMode !== 'pointer' ? navMode : undefined
@@ -455,6 +465,13 @@ export class TeamSession {
     const contextOptions = await this.buildContextOptions(role, device)
     const context = await this.browser.newContext(contextOptions)
     const page = await context.newPage()
+
+    // Suppress dev panel if --no-panel was passed
+    if (this.noPanel) {
+      await page.addInitScript(() => {
+        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+      })
+    }
 
     // Track device name and navigation mode for assertions
     const deviceName = device?.name
