@@ -10,6 +10,9 @@ export default defineConfig({
         'Scene-driven, concurrent-actor end-to-end testing for Vite apps, with inline runtime checks and simple multi-actor markdown specs.',
       favicon: '/images/favicon.png',
       customCss: ['./src/styles/custom.css'],
+      components: {
+        Head: './src/components/Head.astro',
+      },
       social: [
         {
           icon: 'github',

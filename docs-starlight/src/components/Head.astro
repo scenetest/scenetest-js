@@ -1,0 +1,129 @@
+---
+import Default from '@astrojs/starlight/components/Head.astro';
+---
+
+<Default {...Astro.props}><slot /></Default>
+
+<!-- Scenetest observer panel — demo of inline assertions -->
+<script>
+  import '@scenetest/checks-panel/auto'
+  import { should } from '@scenetest/checks'
+
+  // Boot demo assertions after DOM is ready
+  function setupDemoAssertions() {
+    // Page load assertions
+    setTimeout(() => {
+      should('Document should be fully loaded', document.readyState === 'complete')
+      should('DOM should be ready for interaction', document.body !== null)
+      // Flaky demo — occasionally fails
+      should('Async initialization should complete without race conditions', Math.random() > 0.15)
+    }, 300)
+
+    // Triple-click detection
+    const clickTimes: number[] = []
+    document.addEventListener('click', () => {
+      const now = Date.now()
+      while (clickTimes.length > 0 && now - clickTimes[0] > 500) clickTimes.shift()
+      clickTimes.push(now)
+      if (clickTimes.length >= 3) {
+        should('User should not click so much!!!', false, `${clickTimes.length} clicks in ${now - clickTimes[0]}ms`)
+        clickTimes.length = 0
+      }
+    })
+
+    // Code blocks
+    const codeBlockCounts = new WeakMap<Element, number>()
+    document.querySelectorAll<HTMLElement>('pre code').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        const count = (codeBlockCounts.get(el) || 0) + 1
+        codeBlockCounts.set(el, count)
+        should('Code block should be visible', el.offsetHeight > 0)
+        should('Code block should have text content', (el.textContent?.length || 0) > 0, `render #${count}`)
+        should('Syntax highlighting should not throw errors', Math.random() > 0.25)
+      })
+    })
+
+    // Section headers
+    document.querySelectorAll<HTMLElement>('h2').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        should('Section header should have text content', (el.textContent?.trim().length || 0) > 0)
+        should('Header element should be in the document', document.contains(el))
+      })
+    })
+
+    // Main title
+    document.querySelectorAll<HTMLElement>('h1').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        const text = el.textContent || ''
+        should('Page title should be rendered', text.includes('Scenetest') || text.includes('scenetest') || text.length > 0)
+      })
+      el.addEventListener('click', () => {
+        should('Click handler should not throw', true)
+        should('Document should remain interactive after click', document.body !== null)
+      })
+    })
+
+    // External links
+    document.querySelectorAll<HTMLAnchorElement>('a[href^="http"]').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        should('Link href should be valid URL', el.href.startsWith('http'))
+        should('Link should have accessible text', (el.textContent?.trim().length || 0) > 0)
+      })
+    })
+
+    // Images/figures
+    document.querySelectorAll<HTMLElement>('figure').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        const img = el.querySelector('img')
+        should('Figure should contain an image', img !== null)
+        if (img) {
+          should('Image should have alt text', !!(img.alt && img.alt.length > 0))
+          should('Image should have loaded', img.complete)
+        }
+      })
+      el.addEventListener('click', () => {
+        should('Image interaction should not cause errors', Math.random() > 0.2)
+      })
+    })
+
+    // Content paragraphs
+    let interactionCount = 0
+    document.querySelectorAll<HTMLElement>('p').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        interactionCount++
+        should('Paragraph should have readable content', (el.textContent?.length || 0) > 20)
+        if (interactionCount === 5) should('Multiple elements should be interactive', true)
+        if (interactionCount === 10) should('State should remain consistent across interactions', true)
+      })
+    })
+
+    // Footer
+    document.querySelectorAll<HTMLElement>('footer').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        should('Footer should be at end of document', true)
+        should('Page layout should be complete', document.readyState === 'complete')
+      })
+    })
+
+    // Panel meta-assertion
+    setTimeout(() => {
+      const panel = document.getElementById('scenetest-panel')
+      if (panel) {
+        panel.addEventListener('mouseenter', () => {
+          should('Assertion panel should be interactive', true)
+          should('Panel state should be consistent', panel.querySelector('#scenetest-list') !== null)
+        })
+      }
+    }, 200)
+  }
+
+  // Run on initial load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupDemoAssertions)
+  } else {
+    setupDemoAssertions()
+  }
+
+  // Re-run on Astro client-side navigation (View Transitions)
+  document.addEventListener('astro:page-load', setupDemoAssertions)
+</script>

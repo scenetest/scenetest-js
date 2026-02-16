@@ -75,6 +75,12 @@ importers:
       '@astrojs/starlight':
         specifier: ^0.33.0
         version: 0.33.2(astro@5.17.2(@types/node@20.19.30)(db0@0.3.4)(jiti@2.6.1)(rollup@4.57.1)(tsx@4.21.0)(typescript@5.9.3))
+      '@scenetest/checks':
+        specifier: workspace:*
+        version: link:../packages/checks
+      '@scenetest/checks-panel':
+        specifier: workspace:*
+        version: link:../packages/checks-panel
       astro:
         specifier: ^5.7.0
         version: 5.17.2(@types/node@20.19.30)(db0@0.3.4)(jiti@2.6.1)(rollup@4.57.1)(tsx@4.21.0)(typescript@5.9.3)

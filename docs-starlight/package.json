@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.33.0",
+    "@scenetest/checks": "workspace:*",
+    "@scenetest/checks-panel": "workspace:*",
     "astro": "^5.7.0",
     "sharp": "^0.33.0"
   },
