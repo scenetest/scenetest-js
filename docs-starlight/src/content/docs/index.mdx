@@ -1,0 +1,198 @@
+---
+title: Scenetest JS
+description: Scene-driven, concurrent-actor end-to-end testing for Vite apps, with inline runtime checks and simple multi-actor markdown specs.
+template: splash
+hero:
+  tagline: "Test your product and your mental model, not your tests. Scene-driven end-to-end testing for Vite, with inline runtime checks and simple multi-actor markdown specs."
+  actions:
+    - text: Get Started
+      link: /guides/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/scenetest/scenetest-js
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Two Domains, One Framework
+
+It's 2026, and end-to-end testing could use a refresh.
+We build apps differently now — TanStack Query, normalised cache, Zustand, localDb, PGlite...
+The _middle layer_ is taking on more and more of the app logic, but our E2E tests still only see the DOM.
+
+Scenetest splits "End to End" into the two things it actually means:
+
+<CardGrid>
+  <Card title="Scene Scripts" icon="rocket">
+    Drive the test user's browser from beginning to end — _user logs in, sees the form, submits, expects a toast and a redirect._
+    Write specs in markdown, TypeScript, or both.
+  </Card>
+  <Card title="Integrity Checks" icon="approve-check-circle">
+    Validate that state agrees across contexts — _by the time `onSettled` fires, my local collection and database record should match._
+    Inline assertions that run inside your app.
+  </Card>
+</CardGrid>
+
+---
+
+## Inline Checks from Inside the App
+
+We wrote little logging functions `should` and `failed` that report to an observer panel —
+feels a bit like `console.log('local DB should match server record:', booleanExpr)`.
+
+<figure>
+  <img src="/images/screenshot-4.png" alt="Scenetest dev panel showing inline assertions from React components" style="border-radius: 8px; max-width: 100%;" />
+  <figcaption style="text-align: center; opacity: 0.7; font-size: 0.9em; margin-top: 0.5em;">The dev panel collects should/failed assertions from your components, effects, and callbacks whenever they execute.</figcaption>
+</figure>
+
+The Vite plugin strips all Scenetest functions from your production build. Zero production footprint.
+
+And with `serverCheck`, you can compare browser state against server/database state — bundled as an RPC endpoint in dev, stripped in prod:
+
+```ts
+// inside your mutation callback
+onSettled: (data, error) => {
+  if (!error) should('Return data should be new', data.updated_at > thePost.updated_at)
+
+  serverCheck(
+    'Post should match in local DB and server DB',
+    async (server, { data, localPost }) => {
+      const dbPost = await server.getPost(data.id)
+      should('primary fields should match', match(
+        [localPost.title, dbPost.title],
+        [localPost.content, dbPost.content],
+        [localPost.updated_at, dbPost.updated_at],
+      ))
+    },
+    () => ({ data, localPost: cached })
+  )
+}
+```
+
+---
+
+## Scene Specs You Can Read, Write and Reason About
+
+When the spec doesn't have to count and evaluate and compare, you can focus on the basics:
+which seed-user are we using, what do they see, what do they click, what do they expect.
+
+The same scene in three styles — they all produce identical results:
+
+<Tabs syncKey="authoring-style">
+  <TabItem label="Markdown" icon="document">
+```text
+// scenes/friend-request.spec.md
+## User sends and receives a friend request
+
+new-friend: openTo /home
+
+main-user-1:
+- openTo /search-users
+- typeInto search-input [new-friend.username]
+- click live-results-box [new-friend.key] send-request-btn
+
+new-friend:
+- seeToast friend-request-notice
+- see site-navbar notifications-menu
+- click menu-trigger
+- click friend-request-from-[main-user-1.key] accept-btn
+
+main-user-1: seeToast friend-request-accepted
+```
+  </TabItem>
+  <TabItem label="Concurrent TS" icon="seti:typescript">
+```ts
+// scenes/friend-request.spec.ts
+scene(
+  'User sends and receives a friend request',
+  ({ actor }) => {
+    const user1 = actor('main-user-1')
+    const friend = actor('new-friend')
+
+    user1.openTo('/search-users')
+      .typeInto('search-input', friend.username)
+      .click(`live-results-box ${friend.key} send-request-btn`)
+
+    friend.openTo('/')
+      .seeToast('friend-request-notice')
+      .see('site-navbar notifications-menu')
+      .click('menu-trigger')
+      .click(`friend-request-from-${user1.key} accept-btn`)
+
+    user1.seeToast('friend-request-accepted')
+  }
+)
+```
+  </TabItem>
+  <TabItem label="Classic TS" icon="seti:typescript">
+```ts
+// scenes/friend-request.spec.ts
+test(
+  'User sends and receives a friend request',
+  async ({ actor }) => {
+    const user1 = await actor('main-user-1')
+    const friend = await actor('new-friend')
+
+    await user1.openTo('/search-users')
+    await friend.openTo('/')
+
+    await user1.typeInto('search-input', friend.username)
+    await user1.click(`live-results-box ${friend.key} send-request-btn`)
+
+    await friend.seeToast('friend-request-notice')
+    await friend.see('site-navbar notifications-menu')
+    await friend.click('menu-trigger')
+    await friend.click(`friend-request-from-${user1.key} accept-btn`)
+
+    await user1.seeToast('friend-request-accepted')
+  }
+)
+```
+  </TabItem>
+</Tabs>
+
+The Markdown and Concurrent TS styles are functionally identical — each actor builds a queue, then all queues drain concurrently. Ordering within each actor's queue matters; ordering _between_ actors doesn't. The framework handles the coordination.
+
+---
+
+## Try it Out
+
+There's a lot more — the selector API, aliases, macros, swarm mode, the scene recorder, the reporting dashboard, and more.
+But you've gotten the main highlights: **inline checks** that validate your mental model from inside the app, and **scene specs** that drive the browser through all your happy paths and edge cases.
+
+### Guides
+
+<CardGrid>
+  <LinkCard
+    title="Getting Started"
+    description="Install Scenetest, add your first check, write your first spec."
+    href="/guides/getting-started/"
+  />
+  <LinkCard
+    title="Writing Scene Specs"
+    description="All three authoring styles, scope navigation, coordination, and the collaboration loop."
+    href="/guides/writing-scene-specs/"
+  />
+  <LinkCard
+    title="Writing Inline Assertions"
+    description="should(), failed(), serverCheck(), and framework-specific hooks."
+    href="/guides/writing-inline-assertions/"
+  />
+  <LinkCard
+    title="Building Teams of Actors"
+    description="Designing teams that mirror your seed data, scaling concurrency."
+    href="/guides/building-teams/"
+  />
+</CardGrid>
+
+### Reference
+
+<CardGrid>
+  <LinkCard title="Actor API" description="Complete method reference for actor handles." href="/reference/actor-api/" />
+  <LinkCard title="Selectors" description="Attribute matching, nesting, key selectors, aliases." href="/reference/selectors/" />
+  <LinkCard title="Text DSL Format" description="Markdown DSL grammar, interpolation, macros." href="/reference/text-dsl/" />
+  <LinkCard title="CLI Reference" description="Command-line options, config, teams, reports." href="/reference/cli/" />
+</CardGrid>

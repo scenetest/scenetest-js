@@ -1,0 +1,24 @@
+/* Homepage-specific polish */
+
+/* Make the splash page hero tagline feel more premium */
+[data-page-type="splash"] .hero {
+  padding-block-end: 2rem;
+}
+
+/* Slightly tighter figure styling for the screenshot */
+figure {
+  margin: 2rem auto;
+  max-width: 720px;
+}
+
+figure img {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 8px;
+}
+
+figcaption {
+  text-align: center;
+  opacity: 0.7;
+  font-size: 0.9em;
+  margin-top: 0.5rem;
+}
