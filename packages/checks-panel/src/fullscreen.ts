@@ -22,7 +22,7 @@ import {
   toggleGroupCollapsed,
 } from './state.js'
 import { filterItems, openInEditor } from './utils.js'
-import { renderFullscreenGroup, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners, buildFileTree, renderFileTree } from './render.js'
+import { renderFullscreenGroup, renderLocationRow, renderSequenceEntry, renderSequenceHeader, renderChordTooltip, renderPianoRoll, renderBackButton, attachEventListeners, buildFileTree, renderFileTree } from './render.js'
 import { fullscreenStyles } from './styles.js'
 import { updatePanel } from './panel.js'
 import {
@@ -455,6 +455,9 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
   listEl.innerHTML = `
     ${renderPianoRoll(filteredLocations, assertions)}
     ${renderFileTree(tree)}
+    <div class="location-list">
+      ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
+    </div>
   `
 
   // Set up click handlers for piano roll columns and note badges
