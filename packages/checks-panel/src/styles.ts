@@ -1187,7 +1187,30 @@ body {
 
 /* File tree view styles */
 .file-tree {
+  background: #12121f;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  padding: 12px;
   margin-bottom: 16px;
+  overflow-x: auto;
+}
+.file-tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.file-tree-title {
+  font-weight: 600;
+  color: #a0a0ff;
+  font-size: 14px;
+}
+.file-tree-hint {
+  font-size: 11px;
+  color: #6a6a8a;
+}
+.file-tree-content {
+  /* contents */
 }
 .ft-node {
   border-radius: 4px;

@@ -627,9 +627,26 @@ export function buildFileTree(locations: LocationGroup[]): FileTreeNode[] {
 export function renderFileTree(tree: FileTreeNode[]): string {
   if (tree.length === 0) return ''
 
+  // Compute totals for header
+  let totalFiles = 0
+  let totalAssertions = 0
+  function countFiles(nodes: FileTreeNode[]): void {
+    for (const n of nodes) {
+      if (n.isFile) { totalFiles++; totalAssertions += n.totalAssertions }
+      else countFiles(n.children)
+    }
+  }
+  countFiles(tree)
+
   return `
     <div class="file-tree">
-      ${tree.map(node => renderFileTreeNode(node, 0)).join('')}
+      <div class="file-tree-header">
+        <span class="file-tree-title">\uD83D\uDCC2 File Tree</span>
+        <span class="file-tree-hint">${totalFiles} file${totalFiles === 1 ? '' : 's'}, ${totalAssertions} assertion${totalAssertions === 1 ? '' : 's'}</span>
+      </div>
+      <div class="file-tree-content">
+        ${tree.map(node => renderFileTreeNode(node, 0)).join('')}
+      </div>
     </div>
   `
 }
