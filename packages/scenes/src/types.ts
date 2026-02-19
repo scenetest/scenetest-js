@@ -1,7 +1,6 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { DeviceProfile } from './devices.js'
-import type { NavigationMode } from './keyboard.js'
 
 /**
  * Factory function for creating a new browser page + context.
@@ -194,19 +193,38 @@ export interface ScenetestConfig extends BaseConfig {
   devices?: boolean | DeviceProfile[]
 
   /**
-   * Keyboard navigation mode: some actors navigate entirely via Tab/Enter
-   * instead of mouse clicks, testing that the app is keyboard-accessible.
+   * Disable keyboard-only actor rotation.
    *
-   * When `true`, actors alternate between pointer and keyboard mode
-   * (round-robin: pointer, keyboard, pointer, keyboard, ...).
+   * By default, actors rotate through pointer and keyboard navigation modes.
+   * Set to `true` to disable keyboard rotation (all actors use pointer mode).
    *
-   * When an array of NavigationMode, uses that as the rotation pool.
-   * For example, `['pointer', 'pointer', 'keyboard']` makes every
-   * third actor a keyboard user.
-   *
-   * When `false` or omitted, all actors use pointer (default mouse) navigation.
+   * Mirrors the `--no-keyboard-actor` CLI flag.
    */
-  keyboard?: boolean | NavigationMode[]
+  noKeyboardActor?: boolean
+
+  /**
+   * Enable fuzzy-finger touch behavior.
+   *
+   * When enabled, pointer-mode actors occasionally (~1 in 5) miss their
+   * target, pause 100ms, then click correctly — simulating imprecise
+   * human touch input. Tests that touch targets are large enough (WCAG 2.5.8)
+   * and spaced far enough apart.
+   *
+   * Off by default. Mirrors the `--fuzzy-fingers` CLI flag.
+   */
+  fuzzyFingers?: boolean
+
+  /**
+   * Register built-in starter macros (login, logout, refresh-and-retry, etc.).
+   *
+   * When `true`, all built-in macros are registered before scenes run.
+   * When an array of strings, only the named macros are registered.
+   * When `false` or omitted, no built-in macros are registered.
+   *
+   * Built-in macros can be overridden by calling `defineMacro()` with the
+   * same name after registration.
+   */
+  builtinMacros?: boolean | string[]
 
   /**
    * Swarm mode configuration.
@@ -962,8 +980,11 @@ export interface CLIOptions {
   /** Enable device rotation */
   devices?: boolean
 
-  /** Enable keyboard navigation rotation */
-  keyboard?: boolean
+  /** Disable keyboard-only actor rotation (ON by default) */
+  noKeyboardActor?: boolean
+
+  /** Enable fuzzy-finger touch behavior (OFF by default) */
+  fuzzyFingers?: boolean
 
   /** Force swarm mode (run all teams against all scenes) */
   swarm?: boolean

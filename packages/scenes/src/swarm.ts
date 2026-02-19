@@ -147,7 +147,8 @@ export async function runSwarm(
   warnAfter: number,
   baseUrl: string | undefined,
   trigger: 'auto' | 'manual',
-  server?: Record<string, unknown>
+  server?: Record<string, unknown>,
+  fuzzyFingers: boolean = false
 ): Promise<SwarmReport> {
   const resolved = resolveSwarmConfig(config)
   const totalTeams = teamManager.totalCount
@@ -209,7 +210,8 @@ export async function runSwarm(
             task.teamIndex,
             actionTimeout,
             warnAfter,
-            baseUrl
+            baseUrl,
+            fuzzyFingers
           )
 
           try {

@@ -21,8 +21,11 @@ export { DeviceRotation, builtinDevices, findDevice } from './devices.js'
 export type { DeviceProfile } from './devices.js'
 
 // Keyboard navigation mode
-export { NavigationModeRotation } from './keyboard.js'
+export { NavigationModeRotation, FuzzyFingerError } from './keyboard.js'
 export type { NavigationMode } from './keyboard.js'
+
+// Built-in macros
+export { registerBuiltinMacros, registerSelectedMacros, builtinMacroDefinitions } from './builtin-macros.js'
 
 // Swarm mode
 export { SwarmTrigger } from './swarm.js'

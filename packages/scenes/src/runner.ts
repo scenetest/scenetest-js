@@ -5,11 +5,13 @@ import type { ScenetestConfig, ResolvedTeam, TeamConfig, RunReport, SceneReport,
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
 import { NavigationModeRotation } from './keyboard.js'
+import type { NavigationMode } from './keyboard.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
 import { importFile } from './loader.js'
 import { loadMarkdownScene } from './markdown-scene.js'
 import { SwarmTrigger, runSwarm } from './swarm.js'
+import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
 
 /**
  * Main scene runner
@@ -27,16 +29,25 @@ export class SceneRunner {
       setAliases(config.aliases)
     }
 
+    // Register built-in macros if configured
+    if (config.builtinMacros) {
+      if (Array.isArray(config.builtinMacros)) {
+        registerSelectedMacros(config.builtinMacros)
+      } else {
+        registerBuiltinMacros()
+      }
+    }
+
     // Set up device rotation if configured
     if (config.devices) {
       const devices = Array.isArray(config.devices) ? config.devices : undefined
       this.teamManager.setDeviceRotation(new DeviceRotation(devices))
     }
 
-    // Set up keyboard navigation mode rotation if configured
-    if (config.keyboard) {
-      const modes = Array.isArray(config.keyboard) ? config.keyboard : undefined
-      this.teamManager.setNavigationModeRotation(new NavigationModeRotation(modes))
+    // Set up keyboard navigation mode rotation (ON by default)
+    // This rotates actors through pointer and keyboard modes for accessibility testing
+    if (!config.noKeyboardActor) {
+      this.teamManager.setNavigationModeRotation(new NavigationModeRotation())
     }
 
     // Set up swarm trigger if configured
@@ -139,7 +150,8 @@ export class SceneRunner {
 
       try {
         // Create session
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl)
+        const fuzzyFingers = !!this.config.fuzzyFingers
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers)
 
         try {
           // Log which scene is starting
@@ -273,6 +285,7 @@ export class SceneRunner {
       }
     }
 
+    const fuzzyFingers = !!this.config.fuzzyFingers
     const swarmReport = await runSwarm(
       scenes,
       this.teamManager,
@@ -282,7 +295,8 @@ export class SceneRunner {
       warnAfter,
       this.config.baseUrl,
       trigger,
-      this.config.server as Record<string, unknown> | undefined
+      this.config.server as Record<string, unknown> | undefined,
+      fuzzyFingers
     )
 
     // Build a RunReport that includes the swarm results
