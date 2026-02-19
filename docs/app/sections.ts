@@ -25,6 +25,12 @@ export const guides: SectionItem[] = [
   },
 
   {
+    slug: 'conditional-handling',
+    title: 'Conditional Handling',
+    description:
+      'Use if() to dismiss optional UI like modals and banners, and warnIf() to flag unexpected paths without failing the test.',
+  },
+  {
     slug: 'building-teams',
     title: 'Teams of Actors',
     description:
