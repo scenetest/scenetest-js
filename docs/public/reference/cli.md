@@ -21,6 +21,8 @@ scenetest --swarm              # Run swarm mode (all teams, all scenes)
 | `--report <dir>` | Report output directory (default: `./scenetest-reports`) |
 | `--format <fmt>` | Report format: `html`, `json`, or `both` (default: `html`) |
 | `--devices` | Enable device rotation (assign rotating mobile/tablet/desktop devices to actors) |
+| `--no-keyboard-actor` | Disable keyboard-only actor rotation (keyboard navigation is ON by default) |
+| `--fuzzy-fingers` | Enable fuzzy-finger touch simulation (imprecise human touch, ~1 in 5 clicks miss) |
 | `--swarm` | Force swarm mode — run all teams against all scenes to classify failures |
 
 ## Configuration File
@@ -68,6 +70,16 @@ export default defineConfig({
   // devices: [
   //   { name: 'iPhone 14', category: 'mobile', contextOptions: { ... } },
   // ],
+
+  // Keyboard navigation (ON by default)
+  // Actors rotate between pointer and keyboard modes.
+  // Keyboard actors navigate via Tab and activate via Enter/Space.
+  noKeyboardActor: false,       // Set true to disable keyboard actor rotation
+
+  // Fuzzy-finger touch simulation (OFF by default)
+  // When enabled, pointer-mode actors occasionally mis-click (~1 in 5),
+  // pause 100ms, then click correctly — simulating imprecise human touch.
+  fuzzyFingers: false,          // Set true to enable
 
   // Swarm mode
   swarm: {
@@ -157,6 +169,67 @@ Device assignments appear in reports:
     [user] assigned device: iPhone 14 (mobile)
     [admin] assigned device: Desktop 1920x1080 (desktop)
 ```
+
+## Keyboard Navigation Mode
+
+By default, scenetest rotates actors between two navigation modes:
+
+- **`pointer`** — standard mouse/touch interaction (Playwright's normal `.click()`, `.fill()`, etc.)
+- **`keyboard`** — navigate via Tab key and activate via Enter/Space
+
+This rotation is **ON by default**. In the default pool `['pointer', 'keyboard']`, half your actors use keyboard navigation. This surfaces keyboard-accessibility issues (missing `tabindex`, non-focusable elements, broken tab order) without any extra test configuration.
+
+**How it works:** When an actor is in keyboard mode, every `click()` call becomes a series of Tab presses to reach the target element, followed by Enter. Every `typeInto()` tabs to the input, then types. Every `check()` tabs to the checkbox, then presses Space. The same spec works in both modes — test authors don't need to think about it.
+
+**Disabling:** Pass `--no-keyboard-actor` on the CLI or set `noKeyboardActor: true` in config.
+
+**What shows in reports:**
+
+```
+✓ user logs in (1523ms)
+    [user] navigationMode: keyboard
+    [admin] (pointer, default)
+```
+
+Only non-default modes (keyboard) are shown in reports. Pointer mode is the default and is omitted.
+
+**Keyboard actions used internally:**
+
+| Actor DSL method | Keyboard-mode implementation |
+|------------------|------------------------------|
+| `click(selector)` | Tab to element → Enter |
+| `typeInto(selector, value)` | Tab to element → Ctrl+A → Backspace → type characters |
+| `check(selector)` | Tab to element → Space |
+| `select(selector, value)` | Tab to element → `selectOption()` (native browser API) |
+
+## Fuzzy-Finger Touch Simulation
+
+When enabled, pointer-mode actors simulate imprecise human touch input. Approximately 1 in 5 clicks (~20%) intentionally miss the target, pause 100ms (human noticing the miss), then click correctly.
+
+**This is OFF by default.** Enable with `--fuzzy-fingers` on the CLI or `fuzzyFingers: true` in config.
+
+**Purpose:** Surface touch-target problems in your UI:
+
+- **Undersized targets** — WCAG 2.5.8 requires a minimum 24×24 CSS-px touch target. The `miss-center` strategy clicks 15px from the element's center. If that misses, the target is too small.
+- **Crowded targets** — The `miss-edge` strategy clicks 3px outside the element's bounding box. If that activates a neighbor, targets are packed too tightly.
+
+**How it works:**
+
+1. ~80% of clicks go through normally (no mis-click)
+2. ~20% of clicks: pick a strategy (alternating `miss-center` / `miss-edge`), click the wrong spot, pause 100ms, then click the correct element
+3. If the correct click succeeds → move on silently (humans miss all the time)
+4. If the correct click fails because the element vanished (the mis-click activated a neighbor) → throw `FuzzyFingerError`
+
+**`FuzzyFingerError` details:**
+
+```
+FuzzyFingerError: Fuzzy-finger failure on "close-btn":
+  target too close to neighbor (mis-click 3px outside edge activated adjacent element)
+```
+
+The error includes the strategy (`miss-center` or `miss-edge`), the selector, and the original error. Only thrown when the UI has a real touch-target problem — not on normal failures.
+
+**Applies to:** `click()`, `typeInto()`, `check()` — only for pointer-mode actors. Keyboard-mode actors are unaffected.
 
 ## Swarm Mode
 

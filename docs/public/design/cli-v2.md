@@ -286,6 +286,12 @@ defineConfig({
   reportDir: './scenetest-reports',
   reportFormat: 'html', // 'html' | 'json' | 'both'
 
+  // Keyboard navigation (ON by default)
+  noKeyboardActor: false, // Set true to disable keyboard actor rotation
+
+  // Fuzzy-finger touch simulation (OFF by default)
+  fuzzyFingers: false,    // Set true to enable imprecise touch (~1 in 5 clicks miss)
+
   // Actor teams are auto-discovered from actors.ts or actors/*.ts
   // (not defined in config)
 
