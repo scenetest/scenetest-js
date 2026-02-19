@@ -85,6 +85,7 @@ Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runne
 - `team-manager.ts` — `TeamManager` with pool acquire/release for parallel execution
 - `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks
 - `cli.ts` — CLI entry point, report generation (HTML/JSON)
+- `keyboard.ts` — `NavigationModeRotation`, `tabToElement()`, `pressEnter()`, `clearAndType()`, fuzzy-finger helpers (`fuzzyFingerClick`, `fuzzyFingerFill`, `fuzzyFingerCheck`), `FuzzyFingerError`
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
 - `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
 

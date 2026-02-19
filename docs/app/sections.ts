@@ -61,7 +61,7 @@ export const reference: SectionItem[] = [
     slug: 'cli',
     title: 'CLI Reference',
     description:
-      'Command-line options, configuration file format, team discovery, device rotation, swarm mode, and report output.',
+      'Command-line options, configuration file format, team discovery, device rotation, keyboard navigation, fuzzy-finger touch simulation, swarm mode, and report output.',
   },
   {
     slug: 'concurrent-and-classic',

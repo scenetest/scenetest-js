@@ -124,6 +124,12 @@ export default defineConfig({
   },
   reportDir: './scenetest-reports',
   reportFormat: 'html',
+
+  // Keyboard navigation (ON by default — actors rotate pointer/keyboard)
+  // noKeyboardActor: true,   // Uncomment to disable
+
+  // Fuzzy-finger touch simulation (OFF by default)
+  // fuzzyFingers: true,      // Uncomment to enable imprecise touch (~1 in 5 clicks miss)
 })
 ```
 

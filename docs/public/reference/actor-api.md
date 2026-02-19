@@ -309,6 +309,8 @@ user.click(selector?: Selector): ConcurrentActorHandle | ActionChain
 
 Clicks the element matching the selector within the current scope. When called with **no selector** (bare `click`), clicks the current scope element itself.
 
+In **keyboard mode**, this becomes Tab-to-element → Enter. With **fuzzy-fingers** enabled (pointer mode only), ~1 in 5 clicks intentionally miss first, then correct. See [Keyboard Navigation Mode](/reference/cli#keyboard-navigation-mode) and [Fuzzy-Finger Touch Simulation](/reference/cli#fuzzy-finger-touch-simulation).
+
 ```typescript [concurrent]
 user.click('submit-button')
 user.click('user-card action-menu')   // nested selector
@@ -332,6 +334,8 @@ user.typeInto(selector: Selector, value: string): ConcurrentActorHandle | Action
 
 Clears and types text into the input matching the selector within the current scope.
 
+In **keyboard mode**, this tabs to the input, selects all (Ctrl+A), deletes, then types character by character. With **fuzzy-fingers** enabled, the initial focus click may miss first.
+
 ```typescript [concurrent]
 user.typeInto('email-input', 'alice@example.com')
 user.typeInto('search-form query', 'scenetest')   // nested selector
@@ -349,6 +353,8 @@ user.check(selector: Selector): ConcurrentActorHandle | ActionChain
 
 Checks a checkbox matching the selector within the current scope.
 
+In **keyboard mode**, this tabs to the checkbox and presses Space. With **fuzzy-fingers** enabled, the initial focus click may miss first.
+
 ```typescript [concurrent]
 user.check('terms-checkbox')
 user.check('settings-form notifications-toggle')
@@ -365,6 +371,8 @@ user.select(selector: Selector, value: string): ConcurrentActorHandle | ActionCh
 ```
 
 Selects an option by value in a dropdown matching the selector within the current scope.
+
+In **keyboard mode**, this tabs to the select element, then uses the browser's native `selectOption()` API.
 
 ```typescript [concurrent]
 user.select('country-dropdown', 'us')
@@ -613,6 +621,18 @@ test('friend request flow', async ({ actor }) => {
   await receiver.see('friend-request-notification')
 })
 ```
+
+## Navigation Modes
+
+Each actor is assigned a **navigation mode** — either `pointer` (default mouse/touch) or `keyboard` (Tab + Enter/Space). The mode is assigned automatically by the `NavigationModeRotation` and is transparent to spec authors: the same `click()`, `typeInto()`, `check()`, and `select()` calls work in both modes.
+
+This is ON by default. To disable keyboard actor rotation, pass `--no-keyboard-actor` or set `noKeyboardActor: true` in config. See [Keyboard Navigation Mode](/reference/cli#keyboard-navigation-mode) for details.
+
+### Fuzzy-Finger Touch Simulation
+
+When `fuzzyFingers: true` is set in config (or `--fuzzy-fingers` is passed), pointer-mode actors simulate imprecise human touch. ~1 in 5 interactions intentionally miss the target, pause 100ms, then click correctly. If the mis-click causes the target to vanish (neighbor activated), a `FuzzyFingerError` is thrown.
+
+See [Fuzzy-Finger Touch Simulation](/reference/cli#fuzzy-finger-touch-simulation) for details on strategies and error handling.
 
 ## Selectors
 
