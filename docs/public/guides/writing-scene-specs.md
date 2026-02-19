@@ -158,27 +158,7 @@ await user.see('other-section')
 
 ## Conditional Handling
 
-Use `if()` to register a watcher for elements that may or may not appear. If the selector becomes visible during the next `await`, the callback runs:
-
-```typescript
-// Handle a welcome modal that sometimes appears
-user.if('welcome-modal', () => user.click('dismiss'))
-await user.see('dashboard')  // If modal appears, it gets dismissed first
-```
-
-Watchers are cleared after each `await`, so they only apply to the immediately following action.
-
-## Script Warnings
-
-Use `warnIf()` to flag unexpected paths without failing the test. Unlike `if()`, warnings persist for the entire scene:
-
-```typescript
-user.warnIf('welcome-modal', 'user should have dismiss flag set')
-await user.openTo('/dashboard')
-await user.see('main-content')
-```
-
-Warnings are reported separately in `SceneReport.warnings` and are useful for tracking deprecation paths, flaky conditions, and A/B test monitoring.
+Use `if()` to handle optional UI (modals, banners, announcements) that may or may not appear, and `warnIf()` to flag unexpected paths without failing the test. See the [Conditional Handling guide](/guides/conditional-handling) for a full walkthrough of when and how to use each.
 
 ## Writing Effective Scene Specs
 
