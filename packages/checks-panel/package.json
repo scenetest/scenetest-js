@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks-panel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Observer panel for scenetest - displays assertions in real-time",
   "type": "module",
   "license": "MIT",
