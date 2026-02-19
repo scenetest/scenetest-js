@@ -60,7 +60,7 @@ import type {
   PageFactory,
 } from './types.js'
 import type { NavigationMode } from './keyboard.js'
-import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption } from './keyboard.js'
+import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
@@ -148,6 +148,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   readonly email?: string
   readonly password?: string;
   readonly navigationMode: NavigationMode;
+  readonly fuzzyFingers: boolean;
   [key: string]: unknown
 
   private _page: Page | null
@@ -182,13 +183,15 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     private warnings: ScriptWarning[],
     private actionTimeout: number,
     private warnAfter: number,
-    navigationMode: NavigationMode = 'pointer'
+    navigationMode: NavigationMode = 'pointer',
+    fuzzyFingers: boolean = false
   ) {
     this.role = role
     this._page = page
     this.currentScope = page
     this.key = config.key
     this.navigationMode = navigationMode
+    this.fuzzyFingers = fuzzyFingers
 
     // Forward all config properties
     for (const [k, value] of Object.entries(config)) {
@@ -248,6 +251,14 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    */
   private get isKeyboard(): boolean {
     return this.navigationMode === 'keyboard'
+  }
+
+  /**
+   * Whether fuzzy-finger touch behavior is enabled for pointer mode.
+   * Fuzzy-finger simulates imprecise human touch: miss → pause → correct click.
+   */
+  private get useFuzzyFingers(): boolean {
+    return this.navigationMode === 'pointer' && this.fuzzyFingers
   }
 
   // -----------------------------------------------------------------------
@@ -503,6 +514,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         if (this.isKeyboard) {
           await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
           await pressEnter(this.page)
+        } else if (this.useFuzzyFingers) {
+          await fuzzyFingerClick(this.page, scope as Locator, this.actionTimeout, '(scope)')
         } else {
           await (scope as Locator).click({ timeout: this.actionTimeout })
         }
@@ -514,6 +527,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressEnter(this.page)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
       } else {
         await locator.click({ timeout: this.actionTimeout })
       }
@@ -527,6 +542,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await clearAndType(this.page, value)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerFill(this.page, locator, value, this.actionTimeout, selector)
       } else {
         await locator.fill(value, { timeout: this.actionTimeout })
       }
@@ -540,6 +557,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressSpace(this.page)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerCheck(this.page, locator, this.actionTimeout, selector)
       } else {
         await locator.check({ timeout: this.actionTimeout })
       }
@@ -553,6 +572,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await keyboardSelectOption(this.page, locator, value)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
+        await locator.selectOption(value, { timeout: this.actionTimeout })
       } else {
         await locator.selectOption(value, { timeout: this.actionTimeout })
       }
@@ -1089,6 +1111,9 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
         // Determine navigation mode for this actor (if rotation is enabled)
         const navMode = session.getNavigationMode(role)
 
+        // Get fuzzy-finger setting from session
+        const fuzzyFingers = session.getFuzzyFingers()
+
         // Create reactive handle without a page (deferred init)
         const reactive = new ConcurrentActorHandleImpl(
           role,
@@ -1099,7 +1124,8 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
           session.warnings,
           session.actionTimeout,
           session.warnAfter,
-          navMode
+          navMode,
+          fuzzyFingers
         )
 
         reactiveActors.push(reactive)

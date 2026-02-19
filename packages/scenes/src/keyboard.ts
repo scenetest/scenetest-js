@@ -3,12 +3,15 @@ import type { Page, Locator } from 'playwright'
 /**
  * Navigation mode for an actor.
  *
- * - `'pointer'` — default mouse/touch interaction (Playwright's normal click/fill)
- * - `'keyboard'` — navigate via Tab key and activate via Enter/Space
+ * - `'pointer'` — mouse/touch interaction. When fuzzy-fingers is enabled,
+ *   clicks occasionally miss the target first, pause, then click correctly
+ *   (simulating imprecise human touch input).
  *
- * Keyboard mode tests that the application is fully operable without a mouse.
- * The same `click('submit')` call works in both modes — in keyboard mode it
- * Tabs to the element and presses Enter instead of dispatching a mouse click.
+ * - `'keyboard'` — navigate entirely via Tab key and activate via Enter/Space.
+ *   Tests that the app is keyboard-accessible.
+ *
+ * All modes are transparent to test authors. The same `click('submit')` call
+ * works in every mode.
  */
 export type NavigationMode = 'pointer' | 'keyboard'
 
@@ -147,18 +150,288 @@ export async function keyboardSelectOption(
 }
 
 // ---------------------------------------------------------------------------
+// Fuzzy-finger (imprecise touch) helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Fuzzy-finger strategy, alternated per interaction:
+ *
+ * - `'miss-center'` — clicks 15px from the element's center instead of
+ *   dead-center.  Tests WCAG 2.5.8 minimum target size (24×24 CSS-px).
+ *
+ * - `'miss-edge'` — clicks a few pixels *outside* the element's bounding
+ *   box.  Tests touch-target *spacing* between neighbors.
+ *
+ * Both strategies follow the same flow: miss → pause → correct click.
+ * If the correct click succeeds, we move on silently (humans miss all
+ * the time). If the correct click fails because the element vanished
+ * (the mis-click activated something else), we throw FuzzyFingerError.
+ */
+type FuzzyFingerStrategy = 'miss-center' | 'miss-edge'
+
+/** Global counter — alternates strategy on every fuzzy-finger interaction. */
+let fuzzyFingerCounter = 0
+
+function nextStrategy(): FuzzyFingerStrategy {
+  return fuzzyFingerCounter++ % 2 === 0 ? 'miss-center' : 'miss-edge'
+}
+
+// -- miss-center helpers ----------------------------------------------------
+
+/**
+ * Distance from center for the miss-center strategy (px).
+ *
+ * WCAG 2.5.8 requires a minimum 24×24 CSS-px target size, so the
+ * center-to-edge distance is 12px.  Clicking 15px from center will
+ * miss a compliant-minimum element, surfacing undersized targets.
+ */
+const CENTER_OFFSET_PX = 15
+
+/**
+ * Pick a random point that is CENTER_OFFSET_PX away from the
+ * element's center, in a random direction.
+ */
+function missCenterPoint(box: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+  const angle = Math.random() * 2 * Math.PI
+  return {
+    x: cx + CENTER_OFFSET_PX * Math.cos(angle),
+    y: cy + CENTER_OFFSET_PX * Math.sin(angle),
+  }
+}
+
+// -- miss-edge helpers ------------------------------------------------------
+
+/**
+ * Overshoot distance beyond the element edge (px).
+ *
+ * We land 3px *outside* the bounding box.  If the element meets the
+ * WCAG minimum (12px from center to edge), the mis-tap ends up ~15px
+ * from center — outside the target but close enough to hit a neighbor
+ * that is packed too tightly.
+ */
+const EDGE_OVERSHOOT_PX = 3
+
+/**
+ * Pick a random point just outside the element's bounding box.
+ *
+ * Strategy: pick a random edge (top / right / bottom / left),
+ * place the coordinate EDGE_OVERSHOOT_PX beyond that edge, and
+ * randomize position along the edge so we don't always hit the
+ * same neighbor.
+ */
+function missEdgePoint(box: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
+  const edge = Math.floor(Math.random() * 4) // 0=top, 1=right, 2=bottom, 3=left
+  const t = 0.2 + Math.random() * 0.6 // bias toward center of edge, not corners
+
+  switch (edge) {
+    case 0: // top — above the element
+      return { x: box.x + box.width * t, y: box.y - EDGE_OVERSHOOT_PX }
+    case 1: // right — past the right edge
+      return { x: box.x + box.width + EDGE_OVERSHOOT_PX, y: box.y + box.height * t }
+    case 2: // bottom — below the element
+      return { x: box.x + box.width * t, y: box.y + box.height + EDGE_OVERSHOOT_PX }
+    case 3: // left — past the left edge
+    default:
+      return { x: box.x - EDGE_OVERSHOOT_PX, y: box.y + box.height * t }
+  }
+}
+
+// -- shared helpers ---------------------------------------------------------
+
+/**
+ * Probability of a mis-click on any given interaction.
+ * ~20% (1 in 5) — most clicks go through cleanly, but every now and
+ * then one goes slightly astray.
+ */
+const MISS_PROBABILITY = 0.2
+
+/**
+ * Returns true if this interaction should be a mis-click.
+ */
+function shouldMiss(): boolean {
+  return Math.random() < MISS_PROBABILITY
+}
+
+/**
+ * Pause duration (ms) after a mis-click before the correction.
+ * Short pause — human noticing the miss and re-tapping.
+ */
+const FUZZY_PAUSE_MS = 100
+
+// -- diagnostic error -------------------------------------------------------
+
+/**
+ * Thrown when a fuzzy-finger mis-click caused the target element to
+ * vanish (because the mis-click activated a neighboring element that
+ * navigated away or altered the DOM).
+ *
+ * This is a real UX problem: touch targets are too close together.
+ * The `strategy` field tells you which test surfaced the issue:
+ * - `'miss-center'` → element is undersized (WCAG 2.5.8)
+ * - `'miss-edge'`   → element is too close to a neighbor
+ */
+export class FuzzyFingerError extends Error {
+  readonly strategy: FuzzyFingerStrategy
+  readonly selector: string
+  readonly originalError: Error
+
+  constructor(strategy: FuzzyFingerStrategy, selector: string, originalError: Error) {
+    const reason = strategy === 'miss-center'
+      ? `target too small (mis-click ${CENTER_OFFSET_PX}px from center hit something else — WCAG 2.5.8 requires minimum 24×24 CSS-px)`
+      : `target too close to neighbor (mis-click ${EDGE_OVERSHOOT_PX}px outside edge activated adjacent element)`
+    super(`Fuzzy-finger failure on "${selector}": ${reason}`)
+    this.name = 'FuzzyFingerError'
+    this.strategy = strategy
+    this.selector = selector
+    this.originalError = originalError
+  }
+}
+
+// -- exported fuzzy-finger actions ------------------------------------------
+
+/**
+ * Fuzzy-finger click: miss → pause → correct click.
+ *
+ * Simulates imprecise human touch input. The mis-click lands either
+ * 15px from center (testing target size) or just outside the bounding
+ * box (testing target spacing), alternating between strategies.
+ *
+ * After the mis-click, pauses ~1s (like a human noticing the miss),
+ * then clicks the correct element. If the correct click succeeds,
+ * we move on silently — humans miss all the time, no big deal.
+ *
+ * If the correct click *fails* (element vanished because the mis-click
+ * activated a neighbor), we throw FuzzyFingerError — that's a real
+ * touch-target problem in the UI.
+ */
+export async function fuzzyFingerClick(
+  page: Page,
+  target: Locator,
+  timeout: number,
+  selector = '(scope)'
+): Promise<void> {
+  await target.waitFor({ state: 'visible', timeout })
+
+  // ~1 in 5 clicks will miss — most go through cleanly
+  if (shouldMiss()) {
+    const strategy = nextStrategy()
+    const box = await target.boundingBox({ timeout })
+
+    if (box) {
+      // Step 1: Miss click
+      const missPoint = strategy === 'miss-center' ? missCenterPoint(box) : missEdgePoint(box)
+      await page.mouse.click(missPoint.x, missPoint.y)
+
+      // Step 2: Pause (human noticing the miss)
+      await new Promise(resolve => setTimeout(resolve, FUZZY_PAUSE_MS))
+    }
+
+    // Step 3: Correct click — this is where we detect problems
+    try {
+      await target.click({ timeout })
+    } catch (err) {
+      // The correct click failed. Did the element vanish because our
+      // mis-click activated something else?
+      const stillExists = await target.count() > 0
+      if (!stillExists) {
+        // Element is gone — the mis-click caused navigation or DOM change
+        throw new FuzzyFingerError(strategy, selector, err instanceof Error ? err : new Error(String(err)))
+      }
+      // Element still exists but click failed for another reason — real bug
+      throw err
+    }
+    return
+  }
+
+  // Normal click (no mis-click this time)
+  await target.click({ timeout })
+}
+
+/**
+ * Fuzzy-finger fill: miss → pause → correct click → fill.
+ */
+export async function fuzzyFingerFill(
+  page: Page,
+  target: Locator,
+  value: string,
+  timeout: number,
+  selector = '(scope)'
+): Promise<void> {
+  await target.waitFor({ state: 'visible', timeout })
+
+  if (shouldMiss()) {
+    const strategy = nextStrategy()
+    const box = await target.boundingBox({ timeout })
+
+    if (box) {
+      const missPoint = strategy === 'miss-center' ? missCenterPoint(box) : missEdgePoint(box)
+      await page.mouse.click(missPoint.x, missPoint.y)
+      await new Promise(resolve => setTimeout(resolve, FUZZY_PAUSE_MS))
+    }
+
+    try {
+      await target.fill(value, { timeout })
+    } catch (err) {
+      const stillExists = await target.count() > 0
+      if (!stillExists) {
+        throw new FuzzyFingerError(strategy, selector, err instanceof Error ? err : new Error(String(err)))
+      }
+      throw err
+    }
+    return
+  }
+
+  await target.fill(value, { timeout })
+}
+
+/**
+ * Fuzzy-finger check: miss → pause → correct check.
+ */
+export async function fuzzyFingerCheck(
+  page: Page,
+  target: Locator,
+  timeout: number,
+  selector = '(scope)'
+): Promise<void> {
+  await target.waitFor({ state: 'visible', timeout })
+
+  if (shouldMiss()) {
+    const strategy = nextStrategy()
+    const box = await target.boundingBox({ timeout })
+
+    if (box) {
+      const missPoint = strategy === 'miss-center' ? missCenterPoint(box) : missEdgePoint(box)
+      await page.mouse.click(missPoint.x, missPoint.y)
+      await new Promise(resolve => setTimeout(resolve, FUZZY_PAUSE_MS))
+    }
+
+    try {
+      await target.check({ timeout })
+    } catch (err) {
+      const stillExists = await target.count() > 0
+      if (!stillExists) {
+        throw new FuzzyFingerError(strategy, selector, err instanceof Error ? err : new Error(String(err)))
+      }
+      throw err
+    }
+    return
+  }
+
+  await target.check({ timeout })
+}
+
+// ---------------------------------------------------------------------------
 // NavigationModeRotation
 // ---------------------------------------------------------------------------
 
 /**
  * Assigns navigation modes to actors via round-robin rotation.
  *
- * Similar to `DeviceRotation` — each actor gets the next mode in the pool.
- * The default pool alternates: pointer, keyboard, pointer, keyboard, ...
- *
- * This means in a two-actor scene, one actor uses mouse and the other
- * navigates entirely via keyboard — catching accessibility issues
- * alongside functional testing.
+ * The default pool alternates: pointer, keyboard.
+ * Fuzzy-finger behavior is controlled separately and applies to
+ * pointer-mode actors.
  *
  * @example
  * ```ts
@@ -168,10 +441,11 @@ export async function keyboardSelectOption(
  * rotation.next() // 'pointer'
  * ```
  *
- * @example Custom pool
+ * @example Keyboard only disabled
  * ```ts
- * // Only 1 in 3 actors uses keyboard
- * const rotation = new NavigationModeRotation(['pointer', 'pointer', 'keyboard'])
+ * const rotation = new NavigationModeRotation(['pointer'])
+ * rotation.next() // 'pointer'
+ * rotation.next() // 'pointer'
  * ```
  */
 export class NavigationModeRotation {

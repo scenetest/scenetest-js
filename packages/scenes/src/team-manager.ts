@@ -188,7 +188,8 @@ export class TeamManager {
     teamIndex: number,
     actionTimeout: number,
     warnAfter: number,
-    baseUrl?: string
+    baseUrl?: string,
+    fuzzyFingers: boolean = false
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -204,7 +205,8 @@ export class TeamManager {
       baseUrl,
       this.deviceRotation,
       this.warmupCache,
-      this.navigationModeRotation
+      this.navigationModeRotation,
+      fuzzyFingers
     )
   }
 }
@@ -236,7 +238,8 @@ export class TeamSession {
     private baseUrl?: string,
     private deviceRotation?: DeviceRotation | null,
     private warmupCache: WarmupCache = new WarmupCache(),
-    private navigationModeRotation?: NavigationModeRotation | null
+    private navigationModeRotation?: NavigationModeRotation | null,
+    private fuzzyFingers: boolean = false
   ) {
     this.meta = meta
   }
@@ -315,6 +318,14 @@ export class TeamSession {
     const mode = this.navigationModeRotation?.next() ?? 'pointer'
     this.actorNavigationModes.set(role, mode)
     return mode
+  }
+
+  /**
+   * Get whether fuzzy-finger touch behavior is enabled.
+   * Used by flow() to pass to ConcurrentActorHandleImpl.
+   */
+  getFuzzyFingers(): boolean {
+    return this.fuzzyFingers
   }
 
   /**
@@ -475,6 +486,7 @@ export class TeamSession {
       this.actionTimeout,
       this.warnAfter,
       navMode,
+      this.fuzzyFingers,
       pageFactory
     )
 

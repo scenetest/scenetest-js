@@ -1,7 +1,7 @@
 import type { Page, BrowserContext, Locator } from 'playwright'
 import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector, PageFactory } from './types.js'
 import type { NavigationMode } from './keyboard.js'
-import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption } from './keyboard.js'
+import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
@@ -68,7 +68,8 @@ class ActionChainImpl implements ActionChain {
     private warnings: ScriptWarning[],
     private actionTimeout: number,
     private warnAfter: number,
-    private navigationMode: NavigationMode = 'pointer'
+    private navigationMode: NavigationMode = 'pointer',
+    private fuzzyFingers: boolean = false
   ) {
     this.currentScope = page
   }
@@ -78,6 +79,14 @@ class ActionChainImpl implements ActionChain {
    */
   private get isKeyboard(): boolean {
     return this.navigationMode === 'keyboard'
+  }
+
+  /**
+   * Whether fuzzy-finger touch behavior is enabled for pointer mode.
+   * Fuzzy-finger simulates imprecise human touch: miss → pause → correct click.
+   */
+  private get useFuzzyFingers(): boolean {
+    return this.navigationMode === 'pointer' && this.fuzzyFingers
   }
 
   private addAction(name: string, target: string | undefined, execute: () => Promise<void>): ActionChain {
@@ -286,6 +295,8 @@ class ActionChainImpl implements ActionChain {
         if (this.isKeyboard) {
           await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
           await pressEnter(this.page)
+        } else if (this.useFuzzyFingers) {
+          await fuzzyFingerClick(this.page, scope as Locator, this.actionTimeout, '(scope)')
         } else {
           await (scope as Locator).click({ timeout: this.actionTimeout })
         }
@@ -298,6 +309,8 @@ class ActionChainImpl implements ActionChain {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressEnter(this.page)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
       } else {
         await locator.click({ timeout: this.actionTimeout })
       }
@@ -312,6 +325,8 @@ class ActionChainImpl implements ActionChain {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await clearAndType(this.page, value)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerFill(this.page, locator, value, this.actionTimeout, selector)
       } else {
         await locator.fill(value, { timeout: this.actionTimeout })
       }
@@ -327,6 +342,8 @@ class ActionChainImpl implements ActionChain {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressSpace(this.page)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerCheck(this.page, locator, this.actionTimeout, selector)
       } else {
         await locator.check({ timeout: this.actionTimeout })
       }
@@ -341,6 +358,9 @@ class ActionChainImpl implements ActionChain {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await keyboardSelectOption(this.page, locator, value)
+      } else if (this.useFuzzyFingers) {
+        await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
+        await locator.selectOption(value, { timeout: this.actionTimeout })
       } else {
         await locator.selectOption(value, { timeout: this.actionTimeout })
       }
@@ -605,6 +625,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   private _context: BrowserContext
   readonly assertions: AssertionResult[] = []
   readonly navigationMode: NavigationMode
+  readonly fuzzyFingers: boolean
 
   // Registered watchers for conditional handling
   private watchers: Watcher[] = []
@@ -633,6 +654,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     private actionTimeout: number,
     private warnAfter: number,
     navigationMode: NavigationMode = 'pointer',
+    fuzzyFingers: boolean = false,
     pageFactory?: PageFactory | null
   ) {
     this.role = role
@@ -641,6 +663,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     this._pageFactory = pageFactory ?? null
     this.key = config.key
     this.navigationMode = navigationMode
+    this.fuzzyFingers = fuzzyFingers
 
     // Copy all config properties to this instance
     for (const [k, value] of Object.entries(config)) {
@@ -696,7 +719,7 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   }
 
   private createChain(): ActionChainImpl {
-    return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.warnings, this.actionTimeout, this.warnAfter, this.navigationMode)
+    return new ActionChainImpl(this, this.page, this.bus, this.timeline, this.warnings, this.actionTimeout, this.warnAfter, this.navigationMode, this.fuzzyFingers)
   }
 
   openTo(url: string): ActionChain {

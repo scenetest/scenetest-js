@@ -27,6 +27,8 @@ program
   .option('--format <format>', 'Report format (html, json, both)')
   .option('--config <path>', 'Path to config file')
   .option('--devices', 'Enable device rotation (assign each actor a rotating mobile/tablet/desktop device)')
+  .option('--no-keyboard-actor', 'Disable keyboard-only actor rotation (keyboard navigation is ON by default)')
+  .option('--fuzzy-fingers', 'Enable fuzzy-finger touch behavior (simulates imprecise human touch ~1 in 5 clicks)')
   .option('--swarm', 'Force swarm mode: run all teams against all scenes to classify failures')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
@@ -45,6 +47,12 @@ program
       }
       if (options.devices) {
         config.devices = true
+      }
+      if (options.noKeyboardActor) {
+        config.noKeyboardActor = true
+      }
+      if (options.fuzzyFingers) {
+        config.fuzzyFingers = true
       }
 
       // Interactive UI mode
