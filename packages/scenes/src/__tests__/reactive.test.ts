@@ -7,7 +7,7 @@ import type { TimelineEntry, ScriptWarning } from '../types.js'
 // Helpers — minimal Playwright mocks
 // ---------------------------------------------------------------------------
 
-function mockLocator(visible = true) {
+function mockLocator(visible = false) {
   return {
     waitFor: vi.fn().mockResolvedValue(undefined),
     isVisible: vi.fn().mockResolvedValue(visible),
@@ -326,10 +326,9 @@ describe('ConcurrentActorHandleImpl', () => {
 
       actor.do(async () => { order.push('after') })
 
-      // We need the monitor to actually detect "modal" as visible.
-      // Since we're using mocks, the resolveSelector won't find anything,
-      // so the monitor won't fire.  This test verifies the flow completes
-      // without the monitor firing (no visible selector).
+      // The mock locator returns isVisible=false by default, so the
+      // monitor won't fire.  This test verifies the flow completes
+      // without the monitor firing (selector not visible).
       await actor.drain()
 
       expect(order).toEqual(['action-start', 'action-end', 'after'])
