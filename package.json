@@ -17,7 +17,8 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/checks-panel --filter @scenetest/eslint-plugin test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "release": "pnpm build && pnpm typecheck && pnpm -r publish --access public --no-git-checks"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
