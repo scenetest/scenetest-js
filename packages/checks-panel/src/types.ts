@@ -74,7 +74,7 @@ export interface ResolutionStats {
 
 export type FilterMode = 'all' | 'fails' | 'passes'
 
-export type ViewMode = 'grouped' | 'byLocation' | 'sequence'
+export type ViewMode = 'grouped' | 'byLocation' | 'sequence' | 'filesystem'
 
 export type CornerPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
 

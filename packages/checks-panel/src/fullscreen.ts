@@ -37,6 +37,20 @@ import {
   playAssertionSound,
 } from './audio.js'
 import { assertions, GROUP_THRESHOLD_MS, toggleFileTreeCollapsed } from './state.js'
+import { mountFsViewer } from './fs-viewer.js'
+
+// Track filesystem viewer cleanup function so we can tear it down on view mode change
+let fsViewerCleanup: (() => void) | null = null
+
+/**
+ * Clean up any active filesystem viewer before switching views
+ */
+function cleanupFsViewer(): void {
+  if (fsViewerCleanup) {
+    fsViewerCleanup()
+    fsViewerCleanup = null
+  }
+}
 
 /**
  * Set up event listeners for fullscreen view rendered content.
@@ -101,6 +115,7 @@ function getFullscreenHTML(): string {
           <div id="view-modes" class="btn-group">
             <button class="btn active" id="view-grouped" title="Group by time">Timeline</button>
             <button class="btn" id="view-byLocation" title="Group by code location">By Location</button>
+            <button class="btn" id="view-filesystem" title="Filesystem graph">Graph</button>
           </div>
           <div id="filters" class="btn-group">
             <button class="btn active" id="filter-all">All</button>
@@ -276,6 +291,10 @@ export function openFullscreen(groupId?: number): void {
     setFullscreenViewMode('byLocation')
   })
 
+  doc.getElementById('view-filesystem')?.addEventListener('click', () => {
+    setFullscreenViewMode('filesystem')
+  })
+
   // Set up event delegation once on the list element (not on every re-render)
   const listEl = doc.getElementById('list')
   if (listEl) {
@@ -339,13 +358,24 @@ export function updateFullscreenWindow(): void {
   const activeTab = viewMode === 'sequence' ? sequenceFromView : viewMode
   doc.getElementById('view-grouped')?.classList.toggle('active', activeTab === 'grouped')
   doc.getElementById('view-byLocation')?.classList.toggle('active', activeTab === 'byLocation')
+  doc.getElementById('view-filesystem')?.classList.toggle('active', activeTab === 'filesystem')
 
   const listEl = doc.getElementById('list')
   if (!listEl) return
 
+  // Clean up filesystem viewer when switching away
+  if (viewMode !== 'filesystem') {
+    cleanupFsViewer()
+  }
+
   // Render based on view mode
   if (viewMode === 'sequence' && sequenceLocationKey) {
     renderSequenceView(doc, listEl)
+    return
+  }
+
+  if (viewMode === 'filesystem') {
+    renderFilesystemView(doc, listEl)
     return
   }
 
@@ -463,6 +493,24 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
   // Set up click handlers for piano roll columns and note badges
   setupPianoRollHandlers(_doc, listEl)
   setupNoteClickHandlers(_doc, listEl)
+}
+
+/**
+ * Render the filesystem graph view
+ */
+function renderFilesystemView(_doc: Document, listEl: HTMLElement): void {
+  // Clean up any existing viewer first
+  cleanupFsViewer()
+
+  listEl.innerHTML = `
+    <div id="fs-viewer-container" class="fs-viewer-container">
+    </div>
+  `
+
+  const container = listEl.querySelector('#fs-viewer-container') as HTMLElement
+  if (container) {
+    fsViewerCleanup = mountFsViewer(container)
+  }
 }
 
 /**
