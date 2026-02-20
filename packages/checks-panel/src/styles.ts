@@ -1185,6 +1185,34 @@ body {
   transform: scale(0.95);
 }
 
+/* Filesystem viewer styles */
+.fs-viewer-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 80px);
+  min-height: 500px;
+  background: #0d1117;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.fs-viewer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.fs-viewer-status {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  font-size: 11px;
+  color: #6a6a8a;
+  font-family: ui-monospace, monospace;
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* File tree view styles */
 .file-tree {
   background: #12121f;
