@@ -1,41 +1,34 @@
 /**
  * Filesystem Viewer — Force-directed graph visualization
  *
- * Renders project files as nodes and import relationships as edges
- * in an interactive Canvas-based force-directed layout, styled with
- * a dark theme and colored node groups.
+ * Renders assertion locations as a force-directed graph where:
+ * - Each file with assertions becomes a node
+ * - Files in the same directory are connected by edges
+ * - Node size reflects assertion count
+ * - Node color reflects pass/fail status
+ * - Hover shows file details and assertion list
  */
+
+import type { LocationGroup } from './types.js'
 
 // ── Types ──────────────────────────────────────────────────────────
 
-interface FsNode {
-  id: string
-  name: string
-  dir: string
-  ext: string
-  size: number
-  group: number
+interface FileNode {
+  id: string        // relative file path
+  name: string      // file name
+  dir: string       // directory path
+  passCount: number
+  failCount: number
+  totalCount: number
+  assertions: { description: string; result: boolean }[]
 }
 
-interface FsEdge {
-  source: string
-  target: string
-}
-
-interface FsGraphData {
-  files: FsNode[]
-  edges: FsEdge[]
-  groups: string[]
-}
-
-interface SimNode extends FsNode {
+interface SimNode extends FileNode {
   x: number
   y: number
   vx: number
   vy: number
-  /** Visual radius (based on size + connections) */
   r: number
-  /** Whether currently dragged */
   pinned: boolean
 }
 
@@ -46,7 +39,7 @@ interface SimEdge {
 
 // ── Color palette ──────────────────────────────────────────────────
 
-const GROUP_COLORS = [
+const DIR_COLORS = [
   '#6e8efb', // blue
   '#f97316', // orange
   '#4ade80', // green
@@ -54,74 +47,104 @@ const GROUP_COLORS = [
   '#a78bfa', // purple
   '#facc15', // yellow
   '#22d3ee', // cyan
-  '#f87171', // red
   '#34d399', // emerald
   '#fb923c', // amber
   '#818cf8', // indigo
   '#e879f9', // fuchsia
+  '#f87171', // red
 ]
 
-function groupColor(group: number): string {
-  return GROUP_COLORS[group % GROUP_COLORS.length]
+function dirColor(dirIndex: number): string {
+  return DIR_COLORS[dirIndex % DIR_COLORS.length]
+}
+
+// ── Build graph from LocationGroups ────────────────────────────────
+
+function buildGraphFromLocations(locations: LocationGroup[]): { files: FileNode[]; dirMap: Map<string, number> } {
+  const fileMap = new Map<string, FileNode>()
+  const dirMap = new Map<string, number>()
+
+  for (const loc of locations) {
+    const file = loc.location?.file
+    if (!file) continue
+
+    const parts = file.split('/')
+    const name = parts[parts.length - 1]
+    const dir = parts.slice(0, -1).join('/') || '.'
+
+    if (!dirMap.has(dir)) {
+      dirMap.set(dir, dirMap.size)
+    }
+
+    let node = fileMap.get(file)
+    if (!node) {
+      node = { id: file, name, dir, passCount: 0, failCount: 0, totalCount: 0, assertions: [] }
+      fileMap.set(file, node)
+    }
+
+    node.totalCount += loc.entries.length
+    for (const entry of loc.entries) {
+      if (entry.result) node.passCount++
+      else node.failCount++
+    }
+    node.assertions.push({
+      description: loc.description,
+      result: loc.lastResult,
+    })
+  }
+
+  return { files: Array.from(fileMap.values()), dirMap }
 }
 
 // ── Force simulation ───────────────────────────────────────────────
 
-const REPULSION = 800
-const ATTRACTION = 0.005
-const EDGE_LENGTH = 120
-const CENTER_GRAVITY = 0.01
-const DAMPING = 0.92
+const REPULSION = 600
+const ATTRACTION = 0.008
+const EDGE_LENGTH = 100
+const CENTER_GRAVITY = 0.012
+const DAMPING = 0.9
 const MIN_VELOCITY = 0.01
 const MAX_VELOCITY = 8
 
-function initSimulation(data: FsGraphData): { nodes: SimNode[]; edges: SimEdge[] } {
-  const nodeMap = new Map<string, SimNode>()
+function initSimulation(files: FileNode[]): { nodes: SimNode[]; edges: SimEdge[] } {
+  const spread = Math.max(200, Math.sqrt(files.length) * 60)
 
-  // Count connections per node for sizing
-  const connectionCount = new Map<string, number>()
-  for (const edge of data.edges) {
-    connectionCount.set(edge.source, (connectionCount.get(edge.source) || 0) + 1)
-    connectionCount.set(edge.target, (connectionCount.get(edge.target) || 0) + 1)
-  }
+  const nodes: SimNode[] = files.map(f => ({
+    ...f,
+    x: (Math.random() - 0.5) * spread,
+    y: (Math.random() - 0.5) * spread,
+    vx: 0,
+    vy: 0,
+    r: Math.max(5, Math.min(20, 5 + Math.sqrt(f.totalCount) * 3)),
+    pinned: false,
+  }))
 
-  // Create simulation nodes with random initial positions
-  const cx = 0
-  const cy = 0
-  const spread = Math.sqrt(data.files.length) * 40
-
-  for (const file of data.files) {
-    const connections = connectionCount.get(file.id) || 0
-    const r = Math.max(3, Math.min(16, 4 + connections * 1.5))
-
-    nodeMap.set(file.id, {
-      ...file,
-      x: cx + (Math.random() - 0.5) * spread,
-      y: cy + (Math.random() - 0.5) * spread,
-      vx: 0,
-      vy: 0,
-      r,
-      pinned: false,
-    })
-  }
-
-  // Create simulation edges (resolved to node references)
+  // Build edges: connect files in the same directory
   const edges: SimEdge[] = []
-  for (const edge of data.edges) {
-    const source = nodeMap.get(edge.source)
-    const target = nodeMap.get(edge.target)
-    if (source && target) {
-      edges.push({ source, target })
+  const byDir = new Map<string, SimNode[]>()
+  for (const node of nodes) {
+    let group = byDir.get(node.dir)
+    if (!group) {
+      group = []
+      byDir.set(node.dir, group)
+    }
+    group.push(node)
+  }
+
+  for (const [, group] of byDir) {
+    // Connect files in same directory in a chain (not full mesh, to avoid clutter)
+    for (let i = 0; i < group.length - 1; i++) {
+      edges.push({ source: group[i], target: group[i + 1] })
     }
   }
 
-  return { nodes: Array.from(nodeMap.values()), edges }
+  return { nodes, edges }
 }
 
 function tickSimulation(nodes: SimNode[], edges: SimEdge[]): boolean {
   let totalKineticEnergy = 0
 
-  // Repulsion: each node pushes away from every other node
+  // Repulsion between all nodes
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i]
@@ -140,7 +163,7 @@ function tickSimulation(nodes: SimNode[], edges: SimEdge[]): boolean {
     }
   }
 
-  // Attraction: edges pull connected nodes together
+  // Attraction along edges
   for (const edge of edges) {
     const { source, target } = edge
     const dx = target.x - source.x
@@ -164,27 +187,21 @@ function tickSimulation(nodes: SimNode[], edges: SimEdge[]): boolean {
     node.vy -= node.y * CENTER_GRAVITY
   }
 
-  // Integrate velocity → position
+  // Integrate
   for (const node of nodes) {
     if (node.pinned) continue
-
     node.vx *= DAMPING
     node.vy *= DAMPING
-
-    // Clamp velocity
     const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy)
     if (speed > MAX_VELOCITY) {
       node.vx = (node.vx / speed) * MAX_VELOCITY
       node.vy = (node.vy / speed) * MAX_VELOCITY
     }
-
     node.x += node.vx
     node.y += node.vy
-
     totalKineticEnergy += node.vx * node.vx + node.vy * node.vy
   }
 
-  // Return true while simulation is still moving
   return totalKineticEnergy > MIN_VELOCITY * nodes.length
 }
 
@@ -196,6 +213,11 @@ interface ViewTransform {
   scale: number
 }
 
+function nodeColor(node: SimNode, dirMap: Map<string, number>): string {
+  if (node.failCount > 0) return '#f87171'
+  return dirColor(dirMap.get(node.dir) ?? 0)
+}
+
 function drawGraph(
   ctx: CanvasRenderingContext2D,
   nodes: SimNode[],
@@ -204,12 +226,11 @@ function drawGraph(
   hoveredNode: SimNode | null,
   width: number,
   height: number,
+  dirMap: Map<string, number>,
 ): void {
   const { offsetX, offsetY, scale } = transform
 
   ctx.clearRect(0, 0, width, height)
-
-  // Background
   ctx.fillStyle = '#0d1117'
   ctx.fillRect(0, 0, width, height)
 
@@ -218,12 +239,11 @@ function drawGraph(
   ctx.scale(scale, scale)
 
   // Draw edges
-  ctx.lineWidth = 0.5 / scale
   for (const edge of edges) {
     const isHighlighted = hoveredNode &&
       (edge.source === hoveredNode || edge.target === hoveredNode)
     ctx.strokeStyle = isHighlighted
-      ? 'rgba(160, 160, 255, 0.6)'
+      ? 'rgba(160, 160, 255, 0.5)'
       : 'rgba(100, 100, 140, 0.15)'
     ctx.lineWidth = isHighlighted ? 1.5 / scale : 0.5 / scale
     ctx.beginPath()
@@ -235,9 +255,8 @@ function drawGraph(
   // Draw nodes
   for (const node of nodes) {
     const isHovered = node === hoveredNode
-    const color = groupColor(node.group)
+    const color = nodeColor(node, dirMap)
 
-    // Glow for hovered node
     if (isHovered) {
       ctx.shadowColor = color
       ctx.shadowBlur = 15
@@ -248,15 +267,33 @@ function drawGraph(
     ctx.fillStyle = isHovered ? color : color + 'cc'
     ctx.fill()
 
+    // Pass/fail ring: outer ring shows failure ratio
+    if (node.failCount > 0 && node.totalCount > 1) {
+      const failAngle = (node.failCount / node.totalCount) * Math.PI * 2
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, node.r + 2 / scale, -Math.PI / 2, -Math.PI / 2 + failAngle)
+      ctx.strokeStyle = '#f87171'
+      ctx.lineWidth = 2 / scale
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, node.r + 2 / scale, -Math.PI / 2 + failAngle, -Math.PI / 2 + Math.PI * 2)
+      ctx.strokeStyle = '#4ade80'
+      ctx.lineWidth = 2 / scale
+      ctx.stroke()
+    }
+
     if (isHovered) {
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 2 / scale
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2)
       ctx.stroke()
       ctx.shadowBlur = 0
     }
   }
 
-  // Draw labels for hovered node and its neighbors
+  // Labels for hovered node and neighbors
   if (hoveredNode) {
     const neighbors = new Set<SimNode>()
     for (const edge of edges) {
@@ -274,7 +311,6 @@ function drawGraph(
       const label = node.name
       const labelY = node.y - node.r - 6 / scale
 
-      // Background for label
       const metrics = ctx.measureText(label)
       const padding = 4 / scale
       const bgX = node.x - metrics.width / 2 - padding
@@ -288,7 +324,7 @@ function drawGraph(
       ctx.fill()
 
       if (isMain) {
-        ctx.strokeStyle = groupColor(node.group)
+        ctx.strokeStyle = nodeColor(node, dirMap)
         ctx.lineWidth = 1 / scale
         ctx.stroke()
       }
@@ -297,18 +333,18 @@ function drawGraph(
       ctx.fillText(label, node.x, labelY + fontSize / 3)
     }
 
-    // Draw directory path for hovered node
-    const dirLabel = hoveredNode.dir === '.' ? hoveredNode.name : hoveredNode.id
-    const dirFontSize = Math.max(9, 10 / scale)
-    ctx.font = `${dirFontSize}px ui-monospace, monospace`
+    // Detail label below hovered node: file path + assertion counts
+    const detailFontSize = Math.max(9, 10 / scale)
+    ctx.font = `${detailFontSize}px ui-monospace, monospace`
     ctx.fillStyle = '#6a6a8a'
-    ctx.fillText(dirLabel, hoveredNode.x, hoveredNode.y + hoveredNode.r + 14 / scale + dirFontSize / 3)
+    const detail = `${hoveredNode.id}  (${hoveredNode.passCount}\u2713 ${hoveredNode.failCount}\u2717)`
+    ctx.fillText(detail, hoveredNode.x, hoveredNode.y + hoveredNode.r + 14 / scale + detailFontSize / 3)
   }
 
   ctx.restore()
 
-  // Draw legend (top-right corner)
-  drawLegend(ctx, nodes, width)
+  // Legend
+  drawLegend(ctx, nodes, width, dirMap)
 }
 
 function roundRect(
@@ -330,18 +366,13 @@ function drawLegend(
   ctx: CanvasRenderingContext2D,
   nodes: SimNode[],
   width: number,
+  dirMap: Map<string, number>,
 ): void {
-  // Collect unique groups
-  const groups = new Map<number, string>()
+  const dirs = new Map<string, number>()
   for (const node of nodes) {
-    if (!groups.has(node.group)) {
-      // Use top-level dir as group name
-      const topDir = node.id.split('/')[0]
-      groups.set(node.group, topDir)
-    }
+    dirs.set(node.dir, (dirs.get(node.dir) || 0) + 1)
   }
-
-  if (groups.size === 0) return
+  if (dirs.size === 0) return
 
   const fontSize = 11
   const lineHeight = 18
@@ -349,51 +380,47 @@ function drawLegend(
   const padding = 12
   const margin = 16
   const legendX = width - margin
-  const legendY = margin
 
   ctx.font = `${fontSize}px ui-monospace, monospace`
   ctx.textAlign = 'right'
 
   let maxWidth = 0
-  const entries = Array.from(groups.entries())
-  for (const [, name] of entries) {
-    const w = ctx.measureText(name).width
+  const entries = Array.from(dirs.entries())
+  for (const [dir] of entries) {
+    const w = ctx.measureText(`${dir}/`).width
     if (w > maxWidth) maxWidth = w
   }
 
   const boxW = maxWidth + dotR * 2 + padding * 3
   const boxH = entries.length * lineHeight + padding * 2
 
-  // Background
   ctx.fillStyle = 'rgba(13, 17, 23, 0.85)'
   ctx.beginPath()
-  roundRect(ctx, legendX - boxW, legendY, boxW, boxH, 6)
+  roundRect(ctx, legendX - boxW, margin, boxW, boxH, 6)
   ctx.fill()
   ctx.strokeStyle = 'rgba(100, 100, 140, 0.3)'
   ctx.lineWidth = 1
   ctx.stroke()
 
   for (let i = 0; i < entries.length; i++) {
-    const [group, name] = entries[i]
-    const y = legendY + padding + i * lineHeight + lineHeight / 2
+    const [dir] = entries[i]
+    const y = margin + padding + i * lineHeight + lineHeight / 2
 
-    // Dot
     ctx.beginPath()
     ctx.arc(legendX - boxW + padding + dotR, y, dotR, 0, Math.PI * 2)
-    ctx.fillStyle = groupColor(group)
+    ctx.fillStyle = dirColor(dirMap.get(dir) ?? 0)
     ctx.fill()
 
-    // Label
     ctx.fillStyle = '#c0c0d0'
     ctx.textAlign = 'left'
-    ctx.fillText(name, legendX - boxW + padding + dotR * 2 + 8, y + fontSize / 3)
+    ctx.fillText(`${dir}/`, legendX - boxW + padding + dotR * 2 + 8, y + fontSize / 3)
   }
 
-  // File count
+  const totalAssertions = nodes.reduce((sum, n) => sum + n.totalCount, 0)
   ctx.fillStyle = '#6a6a8a'
   ctx.textAlign = 'right'
   ctx.font = `10px ui-monospace, monospace`
-  ctx.fillText(`${nodes.length} files`, legendX - padding, legendY + boxH + 14)
+  ctx.fillText(`${nodes.length} files, ${totalAssertions} assertions`, legendX - padding, margin + boxH + 14)
 }
 
 // ── Interaction ────────────────────────────────────────────────────
@@ -406,11 +433,9 @@ function findNodeAt(
   canvasW: number,
   canvasH: number,
 ): SimNode | null {
-  // Convert screen coords to simulation coords
   const sx = (mx - canvasW / 2 - transform.offsetX) / transform.scale
   const sy = (my - canvasH / 2 - transform.offsetY) / transform.scale
 
-  // Find closest node within hit radius
   let closest: SimNode | null = null
   let closestDist = Infinity
 
@@ -433,12 +458,12 @@ function findNodeAt(
 
 /**
  * Mount the filesystem viewer into a container element.
- * Fetches graph data from the dev server and renders an interactive
- * force-directed graph.
+ * Takes location groups from panel state and renders an interactive
+ * force-directed graph of files containing assertions.
  *
  * Returns a cleanup function to stop the animation loop and remove listeners.
  */
-export function mountFsViewer(container: HTMLElement): () => void {
+export function mountFsViewer(container: HTMLElement, locations: LocationGroup[]): () => void {
   let destroyed = false
   let animationFrame: number | null = null
   let nodes: SimNode[] = []
@@ -446,6 +471,7 @@ export function mountFsViewer(container: HTMLElement): () => void {
   let isSimulating = true
   let hoveredNode: SimNode | null = null
   let draggedNode: SimNode | null = null
+  let dirMap = new Map<string, number>()
 
   const transform: ViewTransform = {
     offsetX: 0,
@@ -464,7 +490,6 @@ export function mountFsViewer(container: HTMLElement): () => void {
   // Status label
   const statusEl = document.createElement('div')
   statusEl.className = 'fs-viewer-status'
-  statusEl.textContent = 'Loading filesystem graph...'
 
   container.appendChild(canvas)
   container.appendChild(statusEl)
@@ -473,17 +498,19 @@ export function mountFsViewer(container: HTMLElement): () => void {
 
   function resize(): void {
     const rect = container.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return
     const dpr = window.devicePixelRatio || 1
     canvas.width = rect.width * dpr
     canvas.height = rect.height * dpr
-    ctx.scale(dpr, dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     render()
   }
 
   function render(): void {
     if (destroyed) return
     const rect = container.getBoundingClientRect()
-    drawGraph(ctx, nodes, edges, transform, hoveredNode, rect.width, rect.height)
+    if (rect.width === 0 || rect.height === 0) return
+    drawGraph(ctx, nodes, edges, transform, hoveredNode, rect.width, rect.height, dirMap)
   }
 
   function simulationLoop(): void {
@@ -493,7 +520,8 @@ export function mountFsViewer(container: HTMLElement): () => void {
       const stillMoving = tickSimulation(nodes, edges)
       if (!stillMoving && !draggedNode) {
         isSimulating = false
-        statusEl.textContent = `${nodes.length} files, ${edges.length} imports`
+        const totalAssertions = nodes.reduce((sum, n) => sum + n.totalCount, 0)
+        statusEl.textContent = `${nodes.length} files, ${totalAssertions} assertions`
       }
     }
 
@@ -540,7 +568,6 @@ export function mountFsViewer(container: HTMLElement): () => void {
     const rect = container.getBoundingClientRect()
 
     if (draggedNode) {
-      // Move dragged node in simulation space
       const sx = (x - rect.width / 2 - transform.offsetX) / transform.scale
       const sy = (y - rect.height / 2 - transform.offsetY) / transform.scale
       draggedNode.x = sx
@@ -557,7 +584,6 @@ export function mountFsViewer(container: HTMLElement): () => void {
       return
     }
 
-    // Hover detection
     const hit = findNodeAt(nodes, x, y, transform, rect.width, rect.height)
     if (hit !== hoveredNode) {
       hoveredNode = hit
@@ -579,7 +605,6 @@ export function mountFsViewer(container: HTMLElement): () => void {
     const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08
     const newScale = Math.max(0.1, Math.min(5, transform.scale * zoomFactor))
 
-    // Zoom toward mouse position
     const { x, y } = getCanvasCoords(e)
     const rect = container.getBoundingClientRect()
     const cx = x - rect.width / 2
@@ -597,35 +622,29 @@ export function mountFsViewer(container: HTMLElement): () => void {
   canvas.addEventListener('mouseleave', onMouseUp)
   canvas.addEventListener('wheel', onWheel, { passive: false })
 
-  // ── Fetch data and start ──
+  // ── Init from data ──
 
   const resizeObserver = new ResizeObserver(() => resize())
   resizeObserver.observe(container)
 
-  fetch('/__scenetest/fs')
-    .then(r => r.json())
-    .then((data: FsGraphData) => {
-      if (destroyed) return
-      if (data.files.length === 0) {
-        statusEl.textContent = 'No source files found.'
-        return
-      }
+  const { files, dirMap: dm } = buildGraphFromLocations(locations)
+  dirMap = dm
 
-      const sim = initSimulation(data)
-      nodes = sim.nodes
-      edges = sim.edges
-      isSimulating = true
-      statusEl.textContent = `Laying out ${nodes.length} files...`
+  if (files.length === 0) {
+    statusEl.textContent = 'No assertion locations found. Interact with your app to populate the graph.'
+    // Still start the loop so new data can be shown if we're re-mounted
+  } else {
+    const sim = initSimulation(files)
+    nodes = sim.nodes
+    edges = sim.edges
+    isSimulating = true
+    statusEl.textContent = `Laying out ${nodes.length} files...`
+  }
 
-      resize()
-      simulationLoop()
-    })
-    .catch(err => {
-      if (destroyed) return
-      statusEl.textContent = `Error loading filesystem: ${err.message}`
-    })
+  resize()
+  simulationLoop()
 
-  // Cleanup function
+  // Cleanup
   return () => {
     destroyed = true
     if (animationFrame) cancelAnimationFrame(animationFrame)
