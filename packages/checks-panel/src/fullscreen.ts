@@ -10,12 +10,14 @@ import {
   fullscreenWindow,
   filter,
   viewMode,
+  fileViewMode,
   sequenceLocationKey,
   sequenceFromView,
   locationGroups,
   setFullscreenWindow,
   setFilter,
   setViewMode,
+  setFileViewMode,
   setSequenceLocation,
   clearAll,
   panel,
@@ -115,7 +117,6 @@ function getFullscreenHTML(): string {
           <div id="view-modes" class="btn-group">
             <button class="btn active" id="view-grouped" title="Group by time">Timeline</button>
             <button class="btn" id="view-byLocation" title="Group by code location">By Location</button>
-            <button class="btn" id="view-filesystem" title="Filesystem graph">Graph</button>
           </div>
           <div id="filters" class="btn-group">
             <button class="btn active" id="filter-all">All</button>
@@ -291,10 +292,6 @@ export function openFullscreen(groupId?: number): void {
     setFullscreenViewMode('byLocation')
   })
 
-  doc.getElementById('view-filesystem')?.addEventListener('click', () => {
-    setFullscreenViewMode('filesystem')
-  })
-
   // Set up event delegation once on the list element (not on every re-render)
   const listEl = doc.getElementById('list')
   if (listEl) {
@@ -358,24 +355,18 @@ export function updateFullscreenWindow(): void {
   const activeTab = viewMode === 'sequence' ? sequenceFromView : viewMode
   doc.getElementById('view-grouped')?.classList.toggle('active', activeTab === 'grouped')
   doc.getElementById('view-byLocation')?.classList.toggle('active', activeTab === 'byLocation')
-  doc.getElementById('view-filesystem')?.classList.toggle('active', activeTab === 'filesystem')
 
   const listEl = doc.getElementById('list')
   if (!listEl) return
 
-  // Clean up filesystem viewer when switching away
-  if (viewMode !== 'filesystem') {
+  // Clean up filesystem viewer when switching away from byLocation or when file view mode changes to tree
+  if (viewMode !== 'byLocation' || fileViewMode !== 'graph') {
     cleanupFsViewer()
   }
 
   // Render based on view mode
   if (viewMode === 'sequence' && sequenceLocationKey) {
     renderSequenceView(doc, listEl)
-    return
-  }
-
-  if (viewMode === 'filesystem') {
-    renderFilesystemView(doc, listEl)
     return
   }
 
@@ -453,6 +444,11 @@ function renderGroupedView(doc: Document, listEl: HTMLElement): void {
  * Render the "by location" view showing one row per unique code location
  */
 function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
+  // Clean up graph if switching to tree
+  if (fileViewMode !== 'graph') {
+    cleanupFsViewer()
+  }
+
   // Get all location groups and sort by most recent activity
   const locations = Array.from(locationGroups.values())
     .sort((a, b) => b.lastTimestamp - a.lastTimestamp)
@@ -480,37 +476,55 @@ function renderByLocationView(_doc: Document, listEl: HTMLElement): void {
     return
   }
 
-  const tree = buildFileTree(filteredLocations)
+  // File viewer toggle (tree vs graph)
+  const fileViewerToggle = `
+    <div class="file-view-toggle">
+      <button class="btn file-view-btn${fileViewMode === 'tree' ? ' active' : ''}" id="fv-tree" title="File tree view">Tree</button>
+      <button class="btn file-view-btn${fileViewMode === 'graph' ? ' active' : ''}" id="fv-graph" title="Force-directed graph">Graph</button>
+    </div>
+  `
+
+  // Render the file viewer section (tree or graph)
+  let fileViewerHTML: string
+  if (fileViewMode === 'graph') {
+    fileViewerHTML = `<div id="fs-viewer-container" class="fs-viewer-container"></div>`
+  } else {
+    const tree = buildFileTree(filteredLocations)
+    fileViewerHTML = renderFileTree(tree)
+  }
 
   listEl.innerHTML = `
     ${renderPianoRoll(filteredLocations, assertions)}
-    ${renderFileTree(tree)}
+    ${fileViewerToggle}
+    ${fileViewerHTML}
     <div class="location-list">
       ${filteredLocations.map(loc => renderLocationRow(loc)).join('')}
     </div>
   `
 
+  // Wire up tree/graph toggle buttons
+  _doc.getElementById('fv-tree')?.addEventListener('click', () => {
+    cleanupFsViewer()
+    setFileViewMode('tree')
+    updateFullscreenWindow()
+  })
+  _doc.getElementById('fv-graph')?.addEventListener('click', () => {
+    setFileViewMode('graph')
+    updateFullscreenWindow()
+  })
+
+  // Mount graph if in graph mode
+  if (fileViewMode === 'graph') {
+    const container = listEl.querySelector('#fs-viewer-container') as HTMLElement
+    if (container) {
+      cleanupFsViewer()
+      fsViewerCleanup = mountFsViewer(container, filteredLocations)
+    }
+  }
+
   // Set up click handlers for piano roll columns and note badges
   setupPianoRollHandlers(_doc, listEl)
   setupNoteClickHandlers(_doc, listEl)
-}
-
-/**
- * Render the filesystem graph view
- */
-function renderFilesystemView(_doc: Document, listEl: HTMLElement): void {
-  // Clean up any existing viewer first
-  cleanupFsViewer()
-
-  listEl.innerHTML = `
-    <div id="fs-viewer-container" class="fs-viewer-container">
-    </div>
-  `
-
-  const container = listEl.querySelector('#fs-viewer-container') as HTMLElement
-  if (container) {
-    fsViewerCleanup = mountFsViewer(container)
-  }
 }
 
 /**

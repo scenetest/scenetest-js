@@ -16,7 +16,6 @@ import {
 } from './virtual-module.js'
 import { clearConfigCache, isConfigFile } from './config.js'
 import { createScenetestMiddleware } from './middleware.js'
-import { createFsViewerMiddleware } from './fs-middleware.js'
 import type { Connect } from 'vite'
 
 // Virtual module IDs for injected dev panel scripts
@@ -120,13 +119,6 @@ export interface ScenetestPluginOptions {
   recorder?: boolean
 
   /**
-   * Enable the filesystem viewer in the dev panel.
-   * Shows a force-directed graph of project files and their import relationships.
-   * Defaults to false — opt-in via scenetest({ fsViewer: true }).
-   */
-  fsViewer?: boolean
-
-  /**
    * Content Security Policy configuration for dev mode.
    * Adds CSP headers to protect against XSS and other injection attacks.
    * Defaults to disabled — opt in with `csp: true` or `csp: { enabled: true }`.
@@ -177,7 +169,6 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
   let shouldStrip = false
   let showDevPanel = false
   let showRecorder = false
-  let showFsViewer = false
   let cspEnabled = false
   let cspDirectives: CspDirectives = DEFAULT_CSP_DIRECTIVES
   let mode = 'development'
@@ -202,9 +193,6 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
 
       // Recorder: opt-in, only in development
       showRecorder = options.recorder === true && !shouldStrip
-
-      // Filesystem viewer: opt-in, only in development
-      showFsViewer = options.fsViewer === true && !shouldStrip
 
       // CSP configuration: opt-in to avoid breaking external resources
       if (typeof options.csp === 'boolean') {
@@ -234,11 +222,6 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
 
       // Install the scenetest middleware for handling RPC requests
       server.middlewares.use(createScenetestMiddleware(server, root))
-
-      // Install filesystem viewer middleware if enabled
-      if (showFsViewer) {
-        server.middlewares.use(createFsViewerMiddleware(root))
-      }
     },
 
     resolveId(id) {
@@ -377,9 +360,6 @@ import '${OBSERVER_MODULE}';`,
         }
         if (showRecorder) {
           console.log('[vite-plugin-scenetest] Scene recorder enabled - record interactions as DSL')
-        }
-        if (showFsViewer) {
-          console.log('[vite-plugin-scenetest] Filesystem viewer enabled')
         }
         if (cspEnabled) {
           console.log('[vite-plugin-scenetest] CSP headers enabled for dev server')

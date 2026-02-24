@@ -2,7 +2,7 @@
  * Shared state for the dev panel
  */
 
-import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, LocationGroup, CornerPosition } from './types.js'
+import type { AssertionResult, AssertionGroup, FilterMode, HistoryEntry, ViewMode, FileViewMode, LocationGroup, CornerPosition } from './types.js'
 
 // Assertion storage
 export const assertions: AssertionResult[] = []
@@ -52,6 +52,7 @@ export let panelCorner: CornerPosition = loadCorner()
 
 // View mode state (fullscreen only)
 export let viewMode: ViewMode = 'grouped'
+export let fileViewMode: FileViewMode = 'tree'
 export let sequenceLocationKey: string | null = null // Which location to show in sequence view
 export let sequenceFromView: 'grouped' | 'byLocation' = 'byLocation' // Which view we entered sequence from
 
@@ -95,6 +96,10 @@ export function setViewMode(mode: ViewMode): void {
   if (mode !== 'sequence') {
     sequenceLocationKey = null
   }
+}
+
+export function setFileViewMode(mode: FileViewMode): void {
+  fileViewMode = mode
 }
 
 export function setSequenceLocation(key: string | null): void {

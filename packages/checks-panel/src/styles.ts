@@ -1185,15 +1185,49 @@ body {
   transform: scale(0.95);
 }
 
+/* File view toggle (tree/graph) */
+.file-view-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+}
+.file-view-btn {
+  font-size: 11px !important;
+  padding: 3px 10px !important;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid #3a3a5a;
+  color: #8a8aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.file-view-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.file-view-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+.file-view-btn.active {
+  background: #2a2a4a;
+  color: #e0e0e0;
+  border-color: #5a5a8a;
+}
+.file-view-btn:hover:not(.active) {
+  background: #1a1a3a;
+  color: #c0c0d0;
+}
+
 /* Filesystem viewer styles */
 .fs-viewer-container {
   position: relative;
   width: 100%;
-  height: calc(100vh - 80px);
-  min-height: 500px;
+  height: 350px;
   background: #0d1117;
+  border: 1px solid #3a3a5a;
   border-radius: 8px;
   overflow: hidden;
+  margin-bottom: 16px;
 }
 .fs-viewer-canvas {
   position: absolute;
