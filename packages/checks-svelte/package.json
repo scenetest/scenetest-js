@@ -30,10 +30,10 @@
     "@scenetest/checks": "workspace:*"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.53.5"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "svelte": "^5.0.0"
+    "svelte": "^5.53.5"
   }
 }
