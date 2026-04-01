@@ -122,7 +122,7 @@ export function parseAction(line: string): ParsedAction {
   const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up']
 
   // Actions that take a value only (no selector)
-  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice']
+  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice', 'pressKey']
 
   // Actions that take selector + value (everything after first selector word is value)
   const selectorValueActions = ['typeInto', 'select', 'warnIf']
@@ -281,6 +281,11 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
     case 'waitFor':
       if (!value) throw new Error('waitFor requires a message')
       target.waitFor(value)
+      break
+
+    case 'pressKey':
+      if (!value) throw new Error('pressKey requires a key name (e.g. Escape, Enter, Tab)')
+      target.pressKey(value)
       break
 
     default:
