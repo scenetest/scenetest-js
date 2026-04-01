@@ -385,6 +385,12 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
+  pressKey(key: string): ActionChain {
+    return this.addAction('pressKey', key, async () => {
+      await this.page.keyboard.press(key)
+    })
+  }
+
   do(fn: (page: Page) => Promise<void>): ActionChain {
     return this.addAction('do', 'custom', async () => {
       await fn(this.page)
@@ -788,6 +794,10 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
 
   waitFor(message: string): ActionChain {
     return this.createChain().waitFor(message)
+  }
+
+  pressKey(key: string): ActionChain {
+    return this.createChain().pressKey(key)
   }
 
   do(fn: (page: Page) => Promise<void>): ActionChain {

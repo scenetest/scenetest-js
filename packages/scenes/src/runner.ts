@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
 import path from 'path'
-import type { ScenetestConfig, ResolvedTeam, TeamConfig, RunReport, SceneReport, RegisteredScene } from './types.js'
+import type { ScenetestConfig, ResolvedTeam, TeamConfig, TeamMeta, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
 import { NavigationModeRotation } from './keyboard.js'
@@ -158,12 +158,15 @@ export class SceneRunner {
           const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
           console.log(`▶ ${registered.name} (${relativeFile})`)
 
+          const resolvedTeam = this.teamManager.getTeam(teamIndex)
+          const server = this.config.server as Record<string, unknown> | undefined
+          const testStart = new Date().toISOString()
+
           // Run pre-cleanup if configured
-          await runCleanup(
-            registered,
-            this.teamManager.getTeam(teamIndex).actors,
-            this.config.server as Record<string, unknown> | undefined
-          )
+          await runCleanup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart)
+
+          // Run setup if configured (after pre-cleanup, before scene)
+          await runSetup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart)
 
           // Run the scene
           const report = await runScene(registered, session, timeout)
@@ -363,26 +366,51 @@ export class SceneRunner {
 // ---------------------------------------------------------------------------
 
 /**
- * Interpolate `[role.field]` tokens in a cleanup expression with team data.
+ * Interpolate `[role.field]`, `[team.field]`, and `[testStart]` tokens in a
+ * cleanup/setup expression.
  *
- * Replaces tokens like `[learner.key]` with the corresponding value from the
- * team config, yielding a string literal in the expression.
+ * Supported tokens:
+ * - `[role.field]`  — actor field from the team config (e.g. `[learner.key]`)
+ * - `[team.field]`  — team metadata tag (e.g. `[team.lang]`)
+ * - `[testStart]`   — ISO 8601 timestamp of when the scene started
  */
-function interpolateCleanup(expression: string, team: TeamConfig): string {
+function interpolateExpression(
+  expression: string,
+  team: TeamConfig,
+  teamMeta: TeamMeta,
+  testStart: string
+): string {
   return expression.replace(
-    /\[([\w][\w-]*)\.([\w]+)\]/g,
-    (_match, role: string, field: string) => {
-      const actor = team[role]
+    /\[([\w][\w-]*)\.([\w]+)\]|\[testStart\]/g,
+    (match, role?: string, field?: string) => {
+      // [testStart] — ISO timestamp of scene start
+      if (match === '[testStart]') return testStart
+
+      // [team.field] — team metadata tags
+      if (role === 'team') {
+        const tags = teamMeta.tags ?? {}
+        const value = tags[field!] ?? (field === 'name' ? teamMeta.name : undefined)
+        if (value === undefined) {
+          const available = Object.keys(tags).join(', ')
+          throw new Error(
+            `cleanup/setup: [team.${field}] — team has no tag "${field}" (available: ${available || 'none'})`
+          )
+        }
+        return String(value)
+      }
+
+      // [role.field] — actor field
+      const actor = team[role!]
       if (!actor) {
         const available = Object.keys(team).join(', ')
         throw new Error(
-          `cleanup: unknown role "${role}" in [${role}.${field}] — available: ${available}`
+          `cleanup/setup: unknown role "${role}" in [${role}.${field}] — available: ${available}`
         )
       }
-      const value = actor[field]
+      const value = actor[field!]
       if (value === undefined) {
         throw new Error(
-          `cleanup: role "${role}" has no field "${field}"`
+          `cleanup/setup: role "${role}" has no field "${field}"`
         )
       }
       return String(value)
@@ -404,36 +432,73 @@ function evaluateCleanup(expression: string, server: Record<string, unknown>): u
 }
 
 /**
- * Run pre-cleanup for a scene if it has a cleanup expression.
- * Interpolates team data, evaluates with server context, and logs errors.
- * Never throws — cleanup failures are logged but don't prevent the scene.
+ * Run pre-cleanup for a scene if it has cleanup expressions.
+ * Each expression is interpolated, evaluated with server context, and awaited.
+ * Never throws — failures are logged but don't prevent the scene.
  */
 export async function runCleanup(
   registered: RegisteredScene,
   team: TeamConfig,
-  server: Record<string, unknown> | undefined
+  teamMeta: TeamMeta,
+  server: Record<string, unknown> | undefined,
+  testStart: string
 ): Promise<void> {
-  if (!registered.cleanup) return
+  if (!registered.cleanup || registered.cleanup.length === 0) return
 
-  try {
-    const interpolated = interpolateCleanup(registered.cleanup, team)
-
-    if (!server || Object.keys(server).length === 0) {
-      console.warn(`  ⚠ cleanup: expression references server resources but no server config provided`)
-      return
-    }
-
-    const result = evaluateCleanup(interpolated, server)
-    // Await if promise
-    if (result && typeof (result as Promise<unknown>).then === 'function') {
-      await result
-    }
-    console.log(`  ♻ cleanup ran`)
-  } catch (err) {
-    console.warn(
-      `  ⚠ cleanup failed: ${err instanceof Error ? err.message : String(err)}`
-    )
+  if (!server || Object.keys(server).length === 0) {
+    console.warn(`  ⚠ cleanup: expressions present but no server config provided`)
+    return
   }
+
+  for (const expr of registered.cleanup) {
+    try {
+      const interpolated = interpolateExpression(expr, team, teamMeta, testStart)
+      const result = evaluateCleanup(interpolated, server)
+      if (result && typeof (result as Promise<unknown>).then === 'function') {
+        await result
+      }
+    } catch (err) {
+      console.warn(
+        `  ⚠ cleanup failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+  console.log(`  ♻ cleanup ran`)
+}
+
+/**
+ * Run setup expressions for a scene (after pre-cleanup, before scene steps).
+ * Each expression is interpolated, evaluated with server context, and awaited.
+ * Never throws — failures are logged but don't prevent the scene.
+ */
+export async function runSetup(
+  registered: RegisteredScene,
+  team: TeamConfig,
+  teamMeta: TeamMeta,
+  server: Record<string, unknown> | undefined,
+  testStart: string
+): Promise<void> {
+  if (!registered.setup || registered.setup.length === 0) return
+
+  if (!server || Object.keys(server).length === 0) {
+    console.warn(`  ⚠ setup: expressions present but no server config provided`)
+    return
+  }
+
+  for (const expr of registered.setup) {
+    try {
+      const interpolated = interpolateExpression(expr, team, teamMeta, testStart)
+      const result = evaluateCleanup(interpolated, server)
+      if (result && typeof (result as Promise<unknown>).then === 'function') {
+        await result
+      }
+    } catch (err) {
+      console.warn(
+        `  ⚠ setup failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+  console.log(`  ♻ setup ran`)
 }
 
 /**

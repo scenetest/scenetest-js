@@ -647,6 +647,12 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     })
   }
 
+  pressKey(key: string): this {
+    return this.push('pressKey', key, async () => {
+      await this.page.keyboard.press(key)
+    })
+  }
+
   // -----------------------------------------------------------------------
   // Escape hatch
   // -----------------------------------------------------------------------
@@ -904,6 +910,25 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     if (!hasWarnings && !hasMonitors) {
       await action.execute()
       return
+    }
+
+    // Pre-check: fire any conditional monitors whose selector is already visible
+    // before the action starts. This handles elements that were present when
+    // `if()` was registered, not just elements that appear during an action.
+    for (const monitor of this.conditionalMonitors) {
+      if (monitor.triggered) continue
+      try {
+        const locator = resolveSelector(this.page, monitor.selector)
+        const isVisible = await locator.isVisible()
+        if (isVisible) {
+          monitor.triggered = true
+          for (const subAction of monitor.actions) {
+            await subAction.execute()
+          }
+        }
+      } catch {
+        // Ignore errors from isVisible check
+      }
     }
 
     let actionComplete = false
