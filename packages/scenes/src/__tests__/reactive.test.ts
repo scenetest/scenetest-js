@@ -375,6 +375,71 @@ describe('ConcurrentActorHandleImpl', () => {
       // Main queue unaffected
       expect(actor.pending).toBe(0)
     })
+
+    it('fires sub-actions immediately when element is already visible at action start', async () => {
+      // This tests the pre-check path: the element is visible before the action runs.
+      // The monitor should fire at the beginning of executeWithMonitors, not via concurrent polling.
+      const visibleLocator = mockLocator(true) // always visible
+      const page = mockPage()
+      page.locator = vi.fn().mockReturnValue(visibleLocator)
+
+      const { actor } = createTestActor('user', { page: page as any })
+      const order: string[] = []
+
+      actor.if('dismiss-intro', a => {
+        a.do(async () => { order.push('dismissed') })
+      })
+
+      actor.do(async () => { order.push('main-action') })
+
+      await actor.drain()
+
+      // 'dismissed' should appear before 'main-action' because the pre-check
+      // fires the monitor synchronously at the start of the action
+      expect(order).toEqual(['dismissed', 'main-action'])
+    })
+
+    it('monitor fires only once even if element remains visible', async () => {
+      const visibleLocator = mockLocator(true)
+      const page = mockPage()
+      page.locator = vi.fn().mockReturnValue(visibleLocator)
+
+      const { actor } = createTestActor('user', { page: page as any })
+      const fired: number[] = []
+
+      actor.if('persistent-banner', a => {
+        a.do(async () => { fired.push(1) })
+      })
+
+      // Multiple actions — monitor should only fire once (one-shot)
+      actor.do(async () => {})
+      actor.do(async () => {})
+      actor.do(async () => {})
+
+      await actor.drain()
+
+      expect(fired).toHaveLength(1)
+    })
+  })
+
+  describe('pressKey()', () => {
+    it('queues a pressKey action that calls page.keyboard.press', async () => {
+      const { actor, page } = createTestActor()
+      const keyboard = { press: vi.fn().mockResolvedValue(undefined) }
+      ;(page as any).keyboard = keyboard
+
+      actor.pressKey('Escape')
+      await actor.drain()
+
+      expect(keyboard.press).toHaveBeenCalledWith('Escape')
+    })
+
+    it('is chainable and returns this', () => {
+      const { actor } = createTestActor()
+      const result = actor.pressKey('Enter')
+      expect(result).toBe(actor)
+      expect(actor.pending).toBe(1)
+    })
   })
 })
 
