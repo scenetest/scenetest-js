@@ -1,28 +1,28 @@
 {
-  "name": "scenetest-monorepo",
-  "version": "0.3.0",
-  "description": "A local-first testing framework for the Vite ecosystem",
-  "license": "MIT",
-  "private": true,
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/scenetest/scenetest-js.git"
-  },
-  "author": "msnook.xyz",
-  "scripts": {
-    "build": "pnpm --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
-    "dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
-    "docs": "pnpx serve docs",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm test:unit && pnpm test:e2e",
-    "test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/checks-panel --filter @scenetest/eslint-plugin test",
-    "test:e2e": "playwright test",
-    "release": "pnpm build && pnpm typecheck && pnpm -r publish --access public --no-git-checks"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "typescript": "^5.3.3"
-  },
-  "packageManager": "pnpm@10.0.0"
+	"name": "scenetest-monorepo",
+	"version": "0.4.0",
+	"description": "A local-first testing framework for the Vite ecosystem",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/scenetest/scenetest-js.git"
+	},
+	"author": "msnook.xyz",
+	"scripts": {
+		"build": "pnpm --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
+		"dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
+		"docs": "pnpx serve docs",
+		"typecheck": "pnpm -r typecheck",
+		"test": "pnpm test:unit && pnpm test:e2e",
+		"test:unit": "pnpm --filter @scenetest/vite-plugin --filter @scenetest/checks-panel --filter @scenetest/eslint-plugin test",
+		"test:e2e": "playwright test",
+		"release": "pnpm build && pnpm typecheck && pnpm -r publish --access public --no-git-checks"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.40.0",
+		"typescript": "^5.3.3"
+	},
+	"packageManager": "pnpm@10.0.0"
 }
