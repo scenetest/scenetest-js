@@ -6,6 +6,7 @@ import { MessageBus } from './message-bus.js'
 import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { findDevice } from './devices.js'
+import { dashboardSend } from './dashboard-reporter.js'
 
 /**
  * Action to be executed in a chain
@@ -654,9 +655,26 @@ class ActionChainImpl implements ActionChain {
         }
       }, this.warnAfter)
 
+      dashboardSend({
+        type: 'action:start',
+        timestamp: start,
+        actor: this.actor.role,
+        action: action.name,
+        target: action.target,
+      })
+
       try {
         await this.executeWithWatchers(action)
         entry.duration = Date.now() - start
+
+        dashboardSend({
+          type: 'action:end',
+          timestamp: Date.now(),
+          actor: this.actor.role,
+          action: action.name,
+          target: action.target,
+          duration: entry.duration,
+        })
 
         // Log completion if we warned
         if (warned) {
@@ -665,6 +683,17 @@ class ActionChainImpl implements ActionChain {
       } catch (err) {
         entry.duration = Date.now() - start
         entry.error = err instanceof Error ? err.message : String(err)
+
+        dashboardSend({
+          type: 'action:end',
+          timestamp: Date.now(),
+          actor: this.actor.role,
+          action: action.name,
+          target: action.target,
+          duration: entry.duration,
+          error: entry.error,
+        })
+
         this.timeline.push(entry)
         throw err
       } finally {
