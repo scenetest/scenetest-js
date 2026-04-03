@@ -151,7 +151,7 @@ export class SceneRunner {
       try {
         // Create session
         const fuzzyFingers = !!this.config.fuzzyFingers
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel, this.config.consoleErrors)
 
         try {
           // Log which scene is starting
@@ -197,6 +197,17 @@ export class SceneRunner {
           if (report.error) {
             console.log(`    Error: ${report.error}`)
           }
+
+          if (report.consoleErrors.length > 0) {
+            console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
+            for (const ce of report.consoleErrors.slice(0, 5)) {
+              const prefix = ce.type === 'warning' ? 'warn' : 'error'
+              console.log(`      └─ [${ce.actor}] console.${prefix}: ${ce.message.slice(0, 200)}`)
+            }
+            if (report.consoleErrors.length > 5) {
+              console.log(`      └─ ... and ${report.consoleErrors.length - 5} more`)
+            }
+          }
         } finally {
           // Close session
           await session.close()
@@ -220,6 +231,7 @@ export class SceneRunner {
     )
     const failedAssertions = totalAssertions - passedAssertions
     const totalWarnings = sceneReports.reduce((sum, r) => sum + r.warnings.length, 0)
+    const totalConsoleErrors = sceneReports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
 
     const report: RunReport = {
       timestamp: new Date().toISOString(),
@@ -235,6 +247,7 @@ export class SceneRunner {
           failed: failedAssertions,
         },
         warnings: totalWarnings,
+        consoleErrors: totalConsoleErrors,
       },
     }
 
@@ -284,6 +297,7 @@ export class SceneRunner {
           failed: 0,
           assertions: { total: 0, passed: 0, failed: 0 },
           warnings: 0,
+          consoleErrors: 0,
         },
       }
     }
@@ -300,7 +314,8 @@ export class SceneRunner {
       trigger,
       this.config.server as Record<string, unknown> | undefined,
       fuzzyFingers,
-      this.config.noPanel
+      this.config.noPanel,
+      this.config.consoleErrors
     )
 
     // Build a RunReport that includes the swarm results
@@ -314,6 +329,7 @@ export class SceneRunner {
         failed: swarmReport.summary.broken + swarmReport.summary.flaky + swarmReport.summary.seedDataEdgeCase,
         assertions: { total: 0, passed: 0, failed: 0 },
         warnings: 0,
+        consoleErrors: 0,
       },
       swarm: swarmReport,
     }
@@ -337,6 +353,7 @@ export class SceneRunner {
           failed: 0,
           assertions: { total: 0, passed: 0, failed: 0 },
           warnings: 0,
+          consoleErrors: 0,
         },
       }
     }
@@ -547,6 +564,22 @@ export function printSummary(report: RunReport): void {
 
   if (report.summary.assertions.failed > 0) {
     console.log(`\n  ⚠ ${report.summary.assertions.failed} assertion(s) failed`)
+  }
+
+  if (report.summary.consoleErrors > 0) {
+    console.log(`\n  🔴 ${report.summary.consoleErrors} browser console error(s)`)
+    for (const scene of report.scenes) {
+      if (scene.consoleErrors.length > 0) {
+        console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
+        for (const ce of scene.consoleErrors.slice(0, 3)) {
+          const prefix = ce.type === 'warning' ? 'warn' : 'error'
+          console.log(`      └─ [${ce.actor}] console.${prefix}: ${ce.message.slice(0, 150)}`)
+        }
+        if (scene.consoleErrors.length > 3) {
+          console.log(`      └─ ... and ${scene.consoleErrors.length - 3} more`)
+        }
+      }
+    }
   }
 
   if (report.summary.failed > 0) {

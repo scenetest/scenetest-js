@@ -239,6 +239,15 @@ export interface ScenetestConfig extends BaseConfig {
    */
   noPanel?: boolean
 
+  /**
+   * Capture browser console errors and surface them in the CLI output.
+   *
+   * - `true` or `'error'`: capture `console.error` messages only (default: `true`)
+   * - `'warn'`: capture both `console.error` and `console.warn` messages
+   * - `false`: disable console error detection entirely
+   */
+  consoleErrors?: boolean | 'error' | 'warn'
+
   /** Hook: before all scenes run */
   beforeAll?: () => Promise<void>
 
@@ -284,6 +293,24 @@ export interface AssertionResult {
 }
 
 /**
+ * Browser console error captured during a scene.
+ * These surface uncaught exceptions, failed network requests,
+ * and other runtime errors logged by the application under test.
+ */
+export interface ConsoleError {
+  /** The console message text */
+  message: string
+  /** Which actor's browser produced this error */
+  actor: string
+  /** When the error was logged */
+  timestamp: number
+  /** Console message type (error, warning) */
+  type: 'error' | 'warning'
+  /** URL of the page when the error occurred */
+  url?: string
+}
+
+/**
  * Script-level warning (not an assertion failure).
  * These indicate unexpected paths in the test script itself,
  * not failures in the application under test.
@@ -326,6 +353,7 @@ export interface SceneReport {
   actors: Record<string, { key: string; username?: string; device?: string; navigationMode?: string }>
   assertions: AssertionResult[]
   warnings: ScriptWarning[]
+  consoleErrors: ConsoleError[]
   timeline: TimelineEntry[]
   duration: number
   error?: string
@@ -348,6 +376,7 @@ export interface RunReport {
       failed: number
     }
     warnings: number
+    consoleErrors: number
   }
   /** Present when this run was triggered by swarm mode */
   swarm?: SwarmReport

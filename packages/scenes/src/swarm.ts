@@ -149,7 +149,8 @@ export async function runSwarm(
   trigger: 'auto' | 'manual',
   server?: Record<string, unknown>,
   fuzzyFingers: boolean = false,
-  noPanel?: boolean
+  noPanel?: boolean,
+  consoleErrors?: boolean | 'error' | 'warn'
 ): Promise<SwarmReport> {
   const resolved = resolveSwarmConfig(config)
   const totalTeams = teamManager.totalCount
@@ -213,7 +214,8 @@ export async function runSwarm(
             warnAfter,
             baseUrl,
             fuzzyFingers,
-            noPanel
+            noPanel,
+            consoleErrors
           )
 
           try {

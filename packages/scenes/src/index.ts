@@ -49,6 +49,7 @@ export type {
   RunReport,
   AssertionResult,
   ScriptWarning,
+  ConsoleError,
   Selector,
   ConcurrentActorHandle,
   FlowContext,

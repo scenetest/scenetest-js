@@ -16,6 +16,9 @@ function mockPage() {
   return {
     goto: vi.fn().mockResolvedValue(undefined),
     exposeFunction: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+    url: vi.fn().mockReturnValue('http://localhost:3000'),
+    addInitScript: vi.fn().mockResolvedValue(undefined),
     locator: vi.fn().mockReturnValue({
       waitFor: vi.fn().mockResolvedValue(undefined),
       click: vi.fn().mockResolvedValue(undefined),
