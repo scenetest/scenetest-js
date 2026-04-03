@@ -68,6 +68,7 @@ import { resolveSelector } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
+import { dashboardSend } from './dashboard-reporter.js'
 
 // ---------------------------------------------------------------------------
 // Interpolation helpers
@@ -912,9 +913,26 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
           warned = true
         }, this.warnAfter)
 
+        dashboardSend({
+          type: 'action:start',
+          timestamp: start,
+          actor: this.role,
+          action: action.name,
+          target: action.target,
+        })
+
         try {
           await this.executeWithMonitors(action)
           entry.duration = Date.now() - start
+
+          dashboardSend({
+            type: 'action:end',
+            timestamp: Date.now(),
+            actor: this.role,
+            action: action.name,
+            target: action.target,
+            duration: entry.duration,
+          })
 
           if (warned) {
             console.warn(
@@ -924,6 +942,17 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         } catch (err) {
           entry.duration = Date.now() - start
           entry.error = err instanceof Error ? err.message : String(err)
+
+          dashboardSend({
+            type: 'action:end',
+            timestamp: Date.now(),
+            actor: this.role,
+            action: action.name,
+            target: action.target,
+            duration: entry.duration,
+            error: entry.error,
+          })
+
           this.timeline.push(entry)
           throw err
         } finally {

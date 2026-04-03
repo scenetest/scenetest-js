@@ -167,6 +167,7 @@ export const panelStyles = `
   font-size: 11px;
   font-family: inherit;
   transition: all 0.15s;
+  text-decoration: none;
 }
 .scenetest-btn:hover {
   background: #3a3a5a;

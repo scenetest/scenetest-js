@@ -3,6 +3,8 @@ import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, Server
 import { AsyncLocalStorage } from 'async_hooks'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
+import { EventHub } from './event-hub.js'
+import { generateDashboardHtml } from './dashboard.js'
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -54,8 +56,48 @@ export function failed(description: string, context?: Record<string, unknown>): 
  * or networks. See README.md "Security Considerations" for details.
  */
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
+  const eventHub = new EventHub()
+
   return async (req, res, next) => {
-    // Only handle POST /__scenetest/run
+    // ── Dashboard page ──────────────────────────────────────
+    if (req.method === 'GET' && req.url === '/__scenetest/dashboard') {
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.end(generateDashboardHtml())
+      return
+    }
+
+    // ── SSE event stream ────────────────────────────────────
+    if (req.method === 'GET' && req.url === '/__scenetest/events') {
+      eventHub.addClient(res)
+      return
+    }
+
+    // ── Receive events from CLI runner ──────────────────────
+    if (req.method === 'POST' && req.url === '/__scenetest/events') {
+      let body = ''
+      for await (const chunk of req) {
+        body += chunk
+      }
+
+      try {
+        const event = JSON.parse(body)
+        // Clear buffer on new run so the dashboard starts fresh
+        if (event.type === 'run:start') {
+          eventHub.clear()
+        }
+        eventHub.push(event)
+      } catch {
+        // Ignore malformed events
+      }
+
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end('{"ok":true}')
+      return
+    }
+
+    // ── Assertion RPC (existing) ────────────────────────────
     if (req.method !== 'POST' || req.url !== '/__scenetest/run') {
       return next()
     }

@@ -12,6 +12,7 @@ import { importFile } from './loader.js'
 import { loadMarkdownScene } from './markdown-scene.js'
 import { SwarmTrigger, runSwarm } from './swarm.js'
 import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
+import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 
 /**
  * Main scene runner
@@ -137,6 +138,8 @@ export class SceneRunner {
       console.log('')
     }
 
+    dashboardSend({ type: 'run:start', timestamp: Date.now(), sceneCount: sceneRegistry.length })
+
     for (const registered of sceneRegistry) {
       // Run beforeEach hook
       if (this.config.beforeEach) {
@@ -161,6 +164,14 @@ export class SceneRunner {
           const resolvedTeam = this.teamManager.getTeam(teamIndex)
           const server = this.config.server as Record<string, unknown> | undefined
           const testStart = new Date().toISOString()
+
+          dashboardSend({
+            type: 'scene:start',
+            timestamp: Date.now(),
+            name: registered.name,
+            file: relativeFile,
+            actors: registered.roles || [],
+          })
 
           // Run pre-cleanup if configured
           await runCleanup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart)
@@ -189,6 +200,15 @@ export class SceneRunner {
           if (this.config.afterEach) {
             await this.config.afterEach({ name: registered.name, file: registered.file }, report)
           }
+
+          dashboardSend({
+            type: 'scene:end',
+            timestamp: Date.now(),
+            name: registered.name,
+            status: report.status,
+            duration: report.duration,
+            error: report.error,
+          })
 
           // Log progress
           const statusIcon = report.status === 'completed' ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
@@ -250,6 +270,13 @@ export class SceneRunner {
         consoleErrors: totalConsoleErrors,
       },
     }
+
+    dashboardSend({
+      type: 'run:end',
+      timestamp: Date.now(),
+      duration: report.duration,
+      summary: report.summary,
+    })
 
     // Record run for swarm trigger evaluation
     if (this.swarmTrigger) {
@@ -364,6 +391,13 @@ export class SceneRunner {
     await this.loadScenes(sceneFiles)
 
     console.log(`Found ${sceneRegistry.length} scene(s)\n`)
+
+    // Set up live dashboard reporter if we have a baseUrl
+    if (this.config.baseUrl) {
+      const reporter = new DashboardReporter(this.config.baseUrl)
+      setDashboardReporter(reporter)
+      console.log(`Dashboard: ${reporter.dashboardUrl}\n`)
+    }
 
     return this.runAll()
   }
