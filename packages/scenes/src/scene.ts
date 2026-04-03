@@ -134,6 +134,7 @@ export async function runScene(
     actors,
     assertions: session.assertions,
     warnings: session.warnings,
+    consoleErrors: session.consoleErrors,
     timeline: session.timeline,
     duration: Date.now() - start,
     error,

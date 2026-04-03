@@ -23,6 +23,7 @@ function makeSceneReport(
       timestamp: Date.now(),
     })),
     warnings: [],
+    consoleErrors: [],
     timeline: [],
     duration: 100,
   }
@@ -43,6 +44,7 @@ function makeRunReport(scenes: SceneReport[]): RunReport {
         failed: scenes.reduce((sum, s) => sum + s.assertions.filter((a) => !a.result).length, 0),
       },
       warnings: 0,
+      consoleErrors: 0,
     },
   }
 }

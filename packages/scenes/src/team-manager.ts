@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
+import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ConsoleError, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
 import type { DeviceProfile } from './devices.js'
 import type { StorageState } from './warmup.js'
 import { WarmupCache } from './warmup.js'
@@ -190,7 +190,8 @@ export class TeamManager {
     warnAfter: number,
     baseUrl?: string,
     fuzzyFingers: boolean = false,
-    noPanel?: boolean
+    noPanel?: boolean,
+    consoleErrors?: boolean | 'error' | 'warn'
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -208,7 +209,8 @@ export class TeamManager {
       this.warmupCache,
       this.navigationModeRotation,
       fuzzyFingers,
-      noPanel
+      noPanel,
+      consoleErrors
     )
   }
 }
@@ -226,9 +228,13 @@ export class TeamSession {
   readonly timeline: TimelineEntry[] = []
   readonly assertions: AssertionResult[] = []
   readonly warnings: ScriptWarning[] = []
+  readonly consoleErrors: ConsoleError[] = []
 
   /** Team metadata (name, tags) */
   readonly meta: TeamMeta
+
+  /** Which console message types to capture */
+  private consoleErrorMode: false | 'error' | 'warn'
 
   constructor(
     private browser: Browser,
@@ -242,9 +248,33 @@ export class TeamSession {
     private warmupCache: WarmupCache = new WarmupCache(),
     private navigationModeRotation?: NavigationModeRotation | null,
     private fuzzyFingers: boolean = false,
-    private noPanel?: boolean
+    private noPanel?: boolean,
+    consoleErrors?: boolean | 'error' | 'warn'
   ) {
     this.meta = meta
+    // Default: capture errors
+    this.consoleErrorMode = consoleErrors === false ? false : consoleErrors === 'warn' ? 'warn' : 'error'
+  }
+
+  /**
+   * Wire console error listener on a page for a given actor role.
+   */
+  private wireConsoleListener(page: Page, role: string): void {
+    if (this.consoleErrorMode === false) return
+
+    const captureWarnings = this.consoleErrorMode === 'warn'
+    page.on('console', (msg) => {
+      const type = msg.type()
+      if (type === 'error' || (captureWarnings && type === 'warning')) {
+        this.consoleErrors.push({
+          message: msg.text(),
+          actor: role,
+          timestamp: Date.now(),
+          type: type === 'warning' ? 'warning' : 'error',
+          url: page.url(),
+        })
+      }
+    })
   }
 
   /**
@@ -376,6 +406,9 @@ export class TeamSession {
       this.assertions.push(enriched)
     })
 
+    // Wire console error listener
+    this.wireConsoleListener(page, role)
+
     this.contexts.set(role, context)
 
     // Log assignments
@@ -425,6 +458,9 @@ export class TeamSession {
         const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
         this.assertions.push(enriched)
       })
+
+      // Wire console error listener
+      this.wireConsoleListener(page, role)
 
       this.contexts.set(role, context)
 
@@ -487,6 +523,9 @@ export class TeamSession {
       }
       this.assertions.push(enriched)
     })
+
+    // Wire console error listener
+    this.wireConsoleListener(page, role)
 
     // Create page factory for switchDevice support
     const pageFactory = this.createPageFactory(role)
