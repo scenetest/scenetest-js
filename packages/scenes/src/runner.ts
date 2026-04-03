@@ -201,8 +201,8 @@ export class SceneRunner {
           if (report.consoleErrors.length > 0) {
             console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
             for (const ce of report.consoleErrors.slice(0, 5)) {
-              const prefix = ce.type === 'warning' ? 'warn' : 'error'
-              console.log(`      └─ [${ce.actor}] console.${prefix}: ${ce.message.slice(0, 200)}`)
+              const label = ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
+              console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 200)}`)
             }
             if (report.consoleErrors.length > 5) {
               console.log(`      └─ ... and ${report.consoleErrors.length - 5} more`)
@@ -572,8 +572,8 @@ export function printSummary(report: RunReport): void {
       if (scene.consoleErrors.length > 0) {
         console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
         for (const ce of scene.consoleErrors.slice(0, 3)) {
-          const prefix = ce.type === 'warning' ? 'warn' : 'error'
-          console.log(`      └─ [${ce.actor}] console.${prefix}: ${ce.message.slice(0, 150)}`)
+          const label = ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
+          console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 150)}`)
         }
         if (scene.consoleErrors.length > 3) {
           console.log(`      └─ ... and ${scene.consoleErrors.length - 3} more`)
