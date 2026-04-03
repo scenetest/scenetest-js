@@ -306,6 +306,12 @@ export interface ConsoleError {
   timestamp: number
   /** Console message type (error, warning) */
   type: 'error' | 'warning'
+  /**
+   * Where the error originated:
+   * - `'console'` — explicit `console.error()` / `console.warn()` call
+   * - `'pageerror'` — uncaught exception or unhandled promise rejection
+   */
+  source?: 'console' | 'pageerror'
   /** URL of the page when the error occurred */
   url?: string
 }

@@ -257,7 +257,7 @@ export class TeamSession {
   }
 
   /**
-   * Wire console error listener on a page for a given actor role.
+   * Wire console error and uncaught exception listeners on a page.
    */
   private wireConsoleListener(page: Page, role: string): void {
     if (this.consoleErrorMode === false) return
@@ -271,9 +271,22 @@ export class TeamSession {
           actor: role,
           timestamp: Date.now(),
           type: type === 'warning' ? 'warning' : 'error',
+          source: 'console',
           url: page.url(),
         })
       }
+    })
+
+    // Capture uncaught exceptions and unhandled promise rejections
+    page.on('pageerror', (error: Error) => {
+      this.consoleErrors.push({
+        message: error.message,
+        actor: role,
+        timestamp: Date.now(),
+        type: 'error',
+        source: 'pageerror',
+        url: page.url(),
+      })
     })
   }
 
