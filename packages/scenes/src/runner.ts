@@ -423,6 +423,26 @@ function interpolateExpression(
  *
  * The expression is evaluated via `new Function()` with server properties
  * destructured as local variables. The result is awaited if it's a promise.
+ *
+ * ### Security note
+ *
+ * This is intentional eval. The threat model is: cleanup/setup expressions
+ * come from `.spec.md` files that the developer wrote and committed to version
+ * control, alongside `config.server` they defined in `scenetest.config.ts`.
+ * Both inputs are trusted developer-authored code, not user-supplied strings.
+ * This is no more dangerous than running `node -e "<expression>"` directly.
+ *
+ * ### Known limitations
+ *
+ * - TypeScript cannot type-check the expression — typos surface at runtime.
+ * - Stack traces don't point to the spec file line.
+ * - There is no sandbox; the expression can call anything on the server objects.
+ *
+ * ### Future direction
+ *
+ * A registry approach (`config.cleanups: { 'name': (ctx) => ... }`) would give
+ * full type safety and proper stack traces at the cost of moving cleanup logic
+ * out of the spec file. Tracked as a potential 0.x API change.
  */
 function evaluateCleanup(expression: string, server: Record<string, unknown>): unknown {
   const keys = Object.keys(server)
