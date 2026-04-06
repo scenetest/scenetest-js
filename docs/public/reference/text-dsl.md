@@ -30,6 +30,7 @@ Actions:
   wait <ms>                       Wait milliseconds
   emit <message>                  Emit to message bus
   waitFor <message>               Block until bus message arrives
+  pressKey <key>                  Send raw keyboard event (Playwright key name)
   warnIf <selector> <message>     Register script warning
   up [<selector>]                 Navigate scope to ancestor (bare up = reset to page root)
   prev                            Return to previous scope
@@ -118,6 +119,31 @@ returning-user:
 - Bare `click` (no selector) clicks the current scope element
 - Bare `up` (no selector) resets scope to the page root
 
+### Cleanup and setup directives
+
+Scenes can declare `cleanup:` and `setup:` expressions that run server-side code around the scene. Use them when a scene needs specific database state.
+
+**Execution order:** `cleanup (before)` → `setup` → scene steps → `cleanup (after)`.
+
+```scenetest
+## review mode shows 2-buttons
+
+cleanup: supabase.from('user_deck').update({ review_answer_mode: null }).eq('uid', '[learner.key]').eq('lang', '[team.lang]')
+setup: supabase.from('user_deck').update({ review_answer_mode: '2-buttons' }).eq('uid', '[learner.key]').eq('lang', '[team.lang]')
+
+learner:
+
+- openTo /review
+- see 2-buttons-mode
+```
+
+**Multiple directives:** You can declare multiple `cleanup:` and `setup:` lines — they are collected as an array and all execute in order:
+
+```scenetest
+cleanup: supabase.from('request_comment').delete().eq('uid', '[friend.key]')
+cleanup: supabase.from('notification').delete().eq('uid', '[learner.key]')
+```
+
 ### Variable interpolation
 
 Use `[namespace.field]` to interpolate values into action lines:
@@ -125,8 +151,9 @@ Use `[namespace.field]` to interpolate values into action lines:
 ```
 [self.field]         # Current actor's own fields (email, username, id, etc.)
 [role-name.field]    # Another actor's fields by role name
-[team.field]         # Team metadata (language, category, etc.)
+[team.field]         # Team metadata from tags (language, category, etc.)
 [alias.field]        # Aliased role (from macro args)
+[testStart]          # ISO 8601 timestamp captured before cleanup/setup runs
 ```
 
 **Examples:**
@@ -141,6 +168,12 @@ Variables work inside selectors for compound IDs:
 ```
 see user-result-[target.key]             # becomes "see user-result-12345"
 click language-card-[team.language]     # becomes "click language-card-spanish"
+```
+
+`[team.field]` resolves from the team's `tags` metadata defined in `defineTeam()`. `[testStart]` is a built-in token useful for scoping cleanup to rows created during the test:
+
+```scenetest
+cleanup: supabase.from('request_comment').delete().eq('uid', '[friend.key]').gte('created_at', '[testStart]')
 ```
 
 ### Cross-device testing in markdown
@@ -266,7 +299,8 @@ scene('multi-user interaction', ({ actor }) => {
 All namespace types work:
 - `[self.field]` — current actor's own fields
 - `[role.field]` — another actor's fields by role name
-- `[team.field]` — team metadata (when available)
+- `[team.field]` — team metadata from `tags` (when available)
+- `[testStart]` — ISO 8601 timestamp captured before cleanup/setup runs
 
 Interpolated values are automatically escaped to prevent selector injection attacks.
 
