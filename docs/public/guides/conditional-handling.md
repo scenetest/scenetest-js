@@ -57,8 +57,6 @@ There are two phases: **declaration** (when your script runs) and **drain** (whe
 
 **Drain:** As the actor works through its queue (`see('dashboard')`, `click('settings')`, etc.), each action begins with a **synchronous pre-check** of all pending conditional monitors. If the selector is already visible when the action starts, the monitor fires immediately — the sub-actions execute before the main action begins. If not already visible, a polling loop runs alongside the action, checking every 50ms. The monitor is **one-shot**: once it fires, it stops polling. If the modal never appears, the monitor never fires and has zero cost beyond the polling.
 
-> **v0.4.0:** The pre-check was added to handle elements that are already visible when the action starts (e.g. a localStorage-gated intro dialog). Previously, `if` only detected elements appearing *during* the polling window.
-
 ### When does it poll?
 
 The monitor watches during **every action that comes after it** in the actor's queue. It doesn't watch retroactively — only actions declared after the `if()` call are monitored. This is why you typically declare `if()` early, before the actions where the optional UI might appear.
