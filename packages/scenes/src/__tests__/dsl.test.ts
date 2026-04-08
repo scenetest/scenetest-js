@@ -84,6 +84,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     prev() { calls.push('prev'); return this },
     scrollToBottom() { calls.push('scrollToBottom'); return this },
     pressKey(k: string) { calls.push(`pressKey:${k}`); return this },
+    ifClick(s: string) { calls.push(`ifClick:${s}`); return this },
   }
 }
 
@@ -99,7 +100,7 @@ describe('parseAction', () => {
     expect(parseAction('emit user-ready')).toEqual({ action: 'emit', value: 'user-ready' })
   })
 
-  it('parses selector-only actions (see, seeInView, notSee, click, check, seeToast, up)', () => {
+  it('parses selector-only actions (see, seeInView, notSee, click, check, seeToast, up, ifClick)', () => {
     expect(parseAction('see main-content')).toEqual({ action: 'see', selector: 'main-content' })
     expect(parseAction('seeInView hero-section')).toEqual({ action: 'seeInView', selector: 'hero-section' })
     expect(parseAction('notSee spinner')).toEqual({ action: 'notSee', selector: 'spinner' })
@@ -107,6 +108,11 @@ describe('parseAction', () => {
     expect(parseAction('check remember-me')).toEqual({ action: 'check', selector: 'remember-me' })
     expect(parseAction('seeToast success')).toEqual({ action: 'seeToast', selector: 'success' })
     expect(parseAction('up modal')).toEqual({ action: 'up', selector: 'modal' })
+    expect(parseAction('ifClick dismiss-button')).toEqual({ action: 'ifClick', selector: 'dismiss-button' })
+  })
+
+  it('parses ifClick with nested selector', () => {
+    expect(parseAction('ifClick modal close-button')).toEqual({ action: 'ifClick', selector: 'modal close-button' })
   })
 
   it('parses selector+value actions (typeInto, select, warnIf)', () => {
@@ -278,6 +284,17 @@ describe('applyDslAction', () => {
     const target = createSpyTarget()
     expect(() => applyDslAction(target, { action: 'pressKey' }))
       .toThrow('pressKey requires a key name')
+  })
+
+  it('dispatches ifClick', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'ifClick', selector: 'dismiss-btn' })
+    expect(target.calls).toEqual(['ifClick:dismiss-btn'])
+  })
+
+  it('throws when ifClick is missing selector', () => {
+    const target = createSpyTarget()
+    expect(() => applyDslAction(target, { action: 'ifClick' })).toThrow('ifClick requires a selector')
   })
 
   it('throws on unknown action', () => {

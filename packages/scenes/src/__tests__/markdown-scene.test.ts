@@ -219,6 +219,58 @@ see main-content
     expect(actions[2]).toEqual({ type: 'action', line: 'see main-content' })
   })
 
+  it('parses ifClick as a regular action', () => {
+    const content = `
+# test
+
+user:
+openTo /app
+ifClick dismiss-intro
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/ifclick.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(3)
+    expect(actions[1]).toEqual({ type: 'action', line: 'ifClick dismiss-intro' })
+  })
+
+  it('normalizes if-click to ifClick', () => {
+    const content = `
+# test
+
+user:
+openTo /app
+if-click dismiss-intro
+see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/if-click.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(3)
+    expect(actions[1]).toEqual({ type: 'action', line: 'ifClick dismiss-intro' })
+  })
+
+  it('if-click does not interfere with if blocks', () => {
+    const content = `
+# test
+
+user:
+if welcome-modal
+  click dismiss
+if-click optional-banner
+see main-content
+`
+    const scenes = parseMarkdownScenes(content, '/test/if-and-ifclick.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toHaveLength(3)
+    expect(actions[0]).toEqual({
+      type: 'if',
+      selector: 'welcome-modal',
+      actions: ['click dismiss'],
+    })
+    expect(actions[1]).toEqual({ type: 'action', line: 'ifClick optional-banner' })
+    expect(actions[2]).toEqual({ type: 'action', line: 'see main-content' })
+  })
+
   it('strips dash prefix inside if blocks', () => {
     const content = `
 # test

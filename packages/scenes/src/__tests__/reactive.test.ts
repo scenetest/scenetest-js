@@ -858,4 +858,49 @@ describe('switchDevice()', () => {
     expect(newPage.goto).toHaveBeenCalledWith('/dashboard', expect.any(Object))
     expect(originalPage.goto).not.toHaveBeenCalled()
   })
+
+  describe('ifClick', () => {
+    it('clicks when element is visible', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(true)
+      const { actor } = createTestActor('user', { page })
+
+      actor.ifClick('dismiss-btn')
+      await actor.drain()
+
+      expect(page._locator.isVisible).toHaveBeenCalled()
+      expect(page._locator.click).toHaveBeenCalled()
+    })
+
+    it('is a no-op when element is not visible', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(false)
+      const { actor } = createTestActor('user', { page })
+
+      actor.ifClick('dismiss-btn')
+      await actor.drain()
+
+      expect(page._locator.isVisible).toHaveBeenCalled()
+      expect(page._locator.click).not.toHaveBeenCalled()
+    })
+
+    it('records a timeline entry', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(false)
+      const { actor, timeline } = createTestActor('user', { page })
+
+      actor.ifClick('dismiss-btn')
+      await actor.drain()
+
+      const entry = timeline.find(e => e.action === 'ifClick')
+      expect(entry).toBeDefined()
+      expect(entry!.actor).toBe('user')
+    })
+
+    it('is chainable', () => {
+      const { actor } = createTestActor()
+      const returned = actor.ifClick('dismiss-btn')
+      expect(returned).toBe(actor)
+    })
+  })
 })

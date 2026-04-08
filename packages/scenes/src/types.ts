@@ -645,6 +645,13 @@ export interface SequentialActorHandle extends ActorConfig {
   pressKey(key: string): ActionChain
 
   /**
+   * Point-in-time conditional click.
+   * If the element matching the selector is currently visible, click it.
+   * If not visible, skip silently and continue.
+   */
+  ifClick(selector: Selector): ActionChain
+
+  /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
    * Watchers are cleared after each await.
@@ -769,6 +776,13 @@ export interface ActionChain extends PromiseLike<void> {
 
   /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
   pressKey(key: string): ActionChain
+
+  /**
+   * Point-in-time conditional click.
+   * If the element matching the selector is currently visible, click it.
+   * If not visible, skip silently and continue.
+   */
+  ifClick(selector: Selector): ActionChain
 }
 
 /**
@@ -844,6 +858,8 @@ export interface DslTarget {
   waitFor(message: string): unknown
   /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
   pressKey(key: string): unknown
+  /** Click element if currently visible; skip silently if not */
+  ifClick(selector: Selector): unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -954,6 +970,13 @@ export interface ConcurrentActorHandle {
 
   /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
   pressKey(key: string): ConcurrentActorHandle
+
+  /**
+   * Point-in-time conditional click.
+   * If the element matching the selector is currently visible, click it.
+   * If not visible, skip silently and continue to the next action.
+   */
+  ifClick(selector: Selector): ConcurrentActorHandle
 }
 
 /**

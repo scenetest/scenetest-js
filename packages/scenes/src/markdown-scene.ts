@@ -258,9 +258,16 @@ export function parseMarkdownScenes(
     //   send-friend-request role best-friend-1
     //   signup-to-language team language-focus
 
-    const actionLine = stripListPrefix(trimmed)
+    let actionLine = stripListPrefix(trimmed)
     const words = actionLine.split(/\s+/)
-    const firstWord = words[0]
+    let firstWord = words[0]
+
+    // Normalize hyphenated action verbs (if-click → ifClick)
+    if (firstWord === 'if-click') {
+      firstWord = 'ifClick'
+      words[0] = 'ifClick'
+      actionLine = words.join(' ')
+    }
 
     if (firstWord && !KNOWN_ACTIONS.includes(firstWord)) {
       const macroArgs = parseMacroArgs(words.slice(1))
@@ -297,7 +304,7 @@ function stripListPrefix(line: string): string {
 const KNOWN_ACTIONS = [
   'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
   'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
-  'warnIf', 'up', 'prev', 'scrollToBottom', 'if', 'pressKey',
+  'warnIf', 'up', 'prev', 'scrollToBottom', 'if', 'pressKey', 'ifClick',
 ]
 
 /** Check if a line looks like a DSL action or macro invocation */
