@@ -535,6 +535,24 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     })
   }
 
+  ifClick(selector: Selector): this {
+    return this.push('ifClick', selector, async () => {
+      const locator = resolveSelector(this.scope, selector)
+      const visible = await locator.isVisible()
+      if (visible) {
+        if (this.isKeyboard) {
+          await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+          await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+          await pressEnter(this.page)
+        } else if (this.useFuzzyFingers) {
+          await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
+        } else {
+          await locator.click({ timeout: this.actionTimeout })
+        }
+      }
+    })
+  }
+
   typeInto(selector: Selector, value: string): this {
     return this.push('typeInto', `${selector}=${value}`, async () => {
       const locator = resolveSelector(this.scope, selector)

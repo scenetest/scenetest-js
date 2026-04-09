@@ -28,13 +28,14 @@ Actions:
   emit <message>                  Emit to message bus
   waitFor <message>               Block until bus message arrives
   pressKey <key>                  Send raw keyboard event (Playwright key name)
+  ifClick <selector>              Click element if visible, skip silently if not
   warnIf <selector> <message>     Register script warning
   up [<selector>]                 Navigate scope to ancestor (bare up = reset to page root)
   prev                            Return to previous scope
   scrollToBottom                  Scroll current scope to bottom
 ```
 
-> `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions.
+> `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions. `ifClick` (or `if-click`) is available everywhere as a point-in-time shorthand.
 
 `reload`, `goBack`, and `goForward` take no arguments. `switchDevice` optionally takes a device name (e.g., `switchDevice iPhone 14`). If omitted, the next device from the rotation is used.
 

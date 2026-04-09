@@ -4,6 +4,42 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.5.0] — 2026-04-09
+
+### New features
+
+#### `ifClick` — point-in-time conditional click
+
+New action for dismissing optional UI elements (intro dialogs, onboarding overlays, cookie banners) that may or may not be present. Checks element visibility once, clicks if present, silently skips if not:
+
+```markdown
+user:
+- ifClick dismiss-intro-dialog
+- see dashboard
+```
+
+Available in all formats: `.spec.md` (also accepts `if-click` hyphenated form), text DSL, and TypeScript API.
+
+#### Sequential model `if()` pre-check
+
+The sequential model's `if()` watcher now pre-checks element visibility before the action starts, matching the reactive model's existing behavior. Previously it only polled during action execution, which could miss elements that were already visible.
+
+### Bug fixes
+
+#### `@scenetest/checks/runtime` resolution under pnpm strict hoisting
+
+The vite plugin's `serverCheck()` transform injects an import from `@scenetest/checks/runtime`, but consumer apps may only depend on `@scenetest/checks-react` (a transitive dependency). Under pnpm strict hoisting, the bare specifier couldn't resolve. Fixed by adding a `resolveId` hook using the same pattern already used for observer/recorder panel modules.
+
+### Infrastructure
+
+- **CI: parallel unit + e2e jobs** — Unit tests and Playwright e2e tests now run as independent parallel jobs for clearer pass/fail visibility
+- **CI: Playwright e2e added** — `pnpm test:e2e` now runs in CI with Chromium, with HTML report uploaded as artifact on failure
+- **CI: full unit test coverage** — `test:unit` now runs `pnpm -r test` (all 6 packages, 647 tests) instead of filtering to 3 packages
+- **CI: Node.js 24 actions** — Opted into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` to silence deprecation warnings
+- **CI: workflow renamed** — `vitest.yml` → `tests.yml`
+
+---
+
 ## [0.4.0] — 2026-04-02
 
 Minor release addressing field feedback from the [sunlo.app](https://sunlo.app) team.

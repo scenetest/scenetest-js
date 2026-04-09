@@ -237,6 +237,12 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       if (id === OBSERVER_MODULE || id === RECORDER_MODULE) {
         return resolveFromPlugin(id)
       }
+      // Resolve @scenetest/checks/runtime for serverCheck() transform injection
+      // (the transform injects this import, but the consumer may not have
+      // @scenetest/checks as a direct dependency under pnpm strict hoisting)
+      if (id === '@scenetest/checks/runtime') {
+        return resolveFromPlugin(id)
+      }
       return null
     },
 

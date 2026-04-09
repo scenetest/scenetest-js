@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks-vue",
-  "version": "0.3.1",
+  "version": "0.5.0",
   "description": "Vue bindings for scenetest inline assertions",
   "type": "module",
   "license": "MIT",

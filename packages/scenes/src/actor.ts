@@ -317,6 +317,24 @@ class ActionChainImpl implements ActionChain {
     })
   }
 
+  ifClick(selector: Selector): ActionChain {
+    const target = formatSelector(selector)
+    return this.addAction('ifClick', target, async () => {
+      const locator = resolveSelector(this.getScope(), selector)
+      const visible = await locator.isVisible()
+      if (visible) {
+        if (this.isKeyboard) {
+          await tabToElement(this.page, locator, { timeout: this.actionTimeout })
+          await pressEnter(this.page)
+        } else if (this.useFuzzyFingers) {
+          await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
+        } else {
+          await locator.click({ timeout: this.actionTimeout })
+        }
+      }
+    })
+  }
+
   typeInto(selector: Selector, value: string): ActionChain {
     const target = `${formatSelector(selector)}=${value}`
     return this.addAction('typeInto', target, async () => {
@@ -487,6 +505,23 @@ class ActionChainImpl implements ActionChain {
     if (watchers.length === 0 && warningTriggers.length === 0) {
       await action.execute()
       return
+    }
+
+    // Pre-check: fire any watchers whose selector is already visible
+    // before the action starts. This handles elements that were present when
+    // `if()` was registered, not just elements that appear during an action.
+    for (const watcher of watchers) {
+      if (watcher.triggered) continue
+      try {
+        const locator = resolveSelector(this.page, watcher.selector)
+        const isVisible = await locator.isVisible()
+        if (isVisible) {
+          watcher.triggered = true
+          await watcher.callback()
+        }
+      } catch {
+        // Ignore errors from isVisible check
+      }
     }
 
     let actionComplete = false
@@ -770,6 +805,10 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
 
   click(selector?: Selector): ActionChain {
     return this.createChain().click(selector)
+  }
+
+  ifClick(selector: Selector): ActionChain {
+    return this.createChain().ifClick(selector)
   }
 
   typeInto(selector: Selector, value: string): ActionChain {
