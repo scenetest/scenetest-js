@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/playwright",
-  "version": "0.3.1",
+  "version": "0.5.0",
   "description": "Playwright fixtures for scenetest inline assertions",
   "type": "module",
   "license": "MIT",
