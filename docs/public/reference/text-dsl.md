@@ -4,11 +4,6 @@ Markdown scenes are the primary way to write Scenetest specs. It's a simple line
 
 > New to Scenetest? Start with the [Writing Scene Specs](/guides/writing-scene-specs) guide for best practices and workflow. This page is the complete grammar reference.
 
-There are two ways to use it:
-
-1. **Markdown scene files** (`.spec.md`) — standalone files that compile to `scene()` registrations (the main authoring format)
-2. **`dsl()` method** — inline multiline strings on actor handles in TypeScript specs
-
 ## Grammar
 
 ```
@@ -162,7 +157,7 @@ Use `[namespace.field]` to interpolate values into action lines:
 ```scenetest
 alice:
 - typeInto email [self.email]           # alice's own email
-- see user-card-[bob.key]                # bob's id embedded in selector
+- see user-card [bob.key]                # nested selector: user-card narrowed by bob's key
 - click [team.language]-section         # team metadata in selector
 ```
 
@@ -212,99 +207,6 @@ receiver:
 - openTo /inbox
 - seeText New message
 ```
-
----
-
-## Inline `dsl()` Method
-
-Both `scene()` and `test()` actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
-
-```ts [TypeScript scene]
-import { scene } from '@scenetest/scenes'
-
-scene('onboarding flow', ({ actor }) => {
-  const user = actor('user')
-
-  user.dsl(`
-    openTo /
-    see welcome-box
-    click continue-button
-    see onboarding-step
-    typeInto name-input Alice
-    click finish-button
-  `)
-
-  user.see('dashboard')
-})
-```
-
-```ts [Playwright spec]
-import { test } from '@scenetest/scenes'
-
-test('onboarding flow', async ({ actor }) => {
-  const user = await actor('user')
-
-  await user.dsl(`
-    openTo /
-    see welcome-box
-    click continue-button
-    see onboarding-step
-    typeInto name-input Alice
-    click finish-button
-  `)
-
-  await user.see('dashboard')
-})
-```
-
-`dsl()` returns the actor (`scene()`) or an `ActionChain` (`test()`), so it chains with other methods:
-
-```typescript
-// TypeScript scene — all chaining, no await
-user
-  .openTo('/login')
-  .dsl(`
-    see login-form
-    typeInto email alice@test.com
-    typeInto password secret
-    click submit
-  `)
-  .see('dashboard')
-```
-
-### Variable interpolation in dsl()
-
-The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
-
-```typescript
-scene('multi-user interaction', ({ actor }) => {
-  const alice = actor('alice')
-  const bob = actor('bob')
-
-  alice.dsl(`
-    openTo /login
-    typeInto email [self.email]
-    typeInto password [self.password]
-    click submit
-    see dashboard
-  `)
-
-  bob.dsl(`
-    openTo /search
-    typeInto search-input [alice.username]
-    see user-card-[alice.key]
-    click add-friend-button
-  `)
-})
-```
-
-All namespace types work:
-- `[self.field]` — current actor's own fields
-- `[role.field]` — another actor's fields by role name
-- `[team.field]` — team metadata from `tags` (when available)
-- `[testStart]` — ISO 8601 timestamp captured before cleanup/setup runs
-
-Interpolated values are automatically escaped to prevent selector injection attacks.
 
 ---
 

@@ -8,7 +8,7 @@ Scenetest has three authoring surfaces, at increasing distance from the core sce
 
 Surfaces 1 and 2 are inside the Scenetest scene runtime — they build per-actor queues that drain concurrently. Surface 3 is the familiar await-driven sequential model.
 
-This page documents surfaces 2 and 3. All three surfaces use the same [actor methods](/reference/actor-api), [selector resolution](/reference/selectors), configuration, and team management.
+This page documents surfaces 2 and 3. All three surfaces use the same [actor methods](/reference/text-dsl), [selector resolution](/reference/selectors), configuration, and team management.
 
 ---
 
@@ -99,6 +99,25 @@ scene('user updates their profile', ({ actor }) => {
 **How it works:** The entire function body is **synchronous declaration**. `actor()` returns a handle immediately (config is resolved, browser launches later). Method calls push to a persistent queue on the actor and return the actor itself. Nothing executes during the function body. After it returns, browsers launch in parallel, then all actors drain their queues concurrently. Each actor advances through its own queue as fast as the DOM allows.
 
 **When to use:** When you need custom setup/teardown logic, TypeScript variables, or anything the Markdown format can't express. `scene()` is a direct 1:1 translation from the Markdown format — they produce identical results at runtime.
+
+### Code-only methods
+
+These methods are only available in TypeScript specs (both `scene()` and `test()`), not in Markdown.
+
+#### do()
+
+Executes a custom function with access to the actor's Playwright `Page`. Use this as an escape hatch when built-in methods don't cover your needs.
+
+```typescript [scene()]
+user.do(async (page) => {
+  await page.evaluate(() => localStorage.clear())
+})
+```
+```typescript [test()]
+await user.do(async (page) => {
+  await page.evaluate(() => localStorage.clear())
+})
+```
 
 ---
 

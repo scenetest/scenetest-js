@@ -43,6 +43,14 @@ function GuidesIndex() {
 					title="Building Teams of Actors"
 					description="Design teams that mirror your seed data, scale concurrency, and keep scenes reliable."
 				/>
+
+				<p>For advanced multi-actor scenes, you may want a detailed understanding of how the actor-scene runtime works under the hood:</p>
+
+				<LinkCard
+					to="/faq/scene-runtime"
+					title="How the Scene Runtime Works"
+					description="Declaration vs. drain, concurrent actor queues, scope management, conditional monitors, and the Playwright layer underneath."
+				/>
         </li>
         <li>
           	<p><strong>Integrity Checks</strong> — assertion functions like <code>should()</code>
@@ -60,14 +68,14 @@ function GuidesIndex() {
       <h2>API References</h2>
 
       <p>
-        For complete documentation on the spec format, selector syntax, and the actor API:
+        For complete documentation on the spec format, selector syntax, and authoring modes:
       </p>
 
       <div className="link-card-grid">
         <LinkCard
-          to="/reference/actor-api"
-          title="Actor API"
-          description="Navigation, visibility, interaction, scope, conditionals, and coordination."
+          to="/reference/concurrent-and-classic"
+          title="TypeScript Scenes & Playwright Specs"
+          description="Writing scenes in TypeScript with scene(), dropping to Playwright with test(), and when to use each."
         />
         <LinkCard
           to="/reference/selectors"

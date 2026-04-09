@@ -1,8 +1,7 @@
 
 # Scenetest JS
 
-> Scenetest is a Markdown spec language for writing browser test scenes, and a Vite plugin
-that runs your assertions as server actions.
+> Scenetest is a testing framework for modern, client-first apps that splits end-to-end testing into two parts: simple markdown specs to run through your features, and a Vite plugin that executes integrity checks across the server-client boundary to validate your mental model for how it all works.
 
 ## Intro
 
@@ -13,11 +12,10 @@ This _middle layer_ is taking on more and more of the app logic and UX managemen
 But generally the idea of an &ldquo;E2E test&rdquo; is rooted firmly in what we can see on the DOM or grab off the window object &mdash;
 it's still somewhere between annoying and impossible to test changes in the _middle layer_
 like my query cache or Zustand store, where we're actually building.
-So we started thinking of &ldquo;End to End&rdquo; as a bit of a misnomer, describing two very different domains:
+So we started thinking of &ldquo;End to End&rdquo; as describing two very different conceptual domains:
 
-1. **Scene Specs** (Markdown scenes): Driving the test user's browser from beginning of a task/journey/scene to the end e.g.: _user logs in,
-sees the form, submits the form, expects a toast and a redirect._
-2. **Inline Checks** (the Vite plugin): Validating that state agrees across different computers/contexts, e.g.: _by the time my `onSettled` callback fires, my local collection and database record should match._
+1. **Scene orchestration** &mdash; how your test user traverses your app: what they click, what they type, what they expect to see. _User logs in, sees the form, submits, expects a toast and a redirect._
+2. **Integrity checks** &mdash; how you know it's actually working under the hood: that server state got updated, that your cache is consistent, that client and server agree. _By the time my `onSettled` callback fires, my local collection and database record should match._
 
 ## Scenes You Can Read, Write and Reason About
 
@@ -68,13 +66,11 @@ That's because the scene is not running these actions and awaiting their consequ
 it's time to run the scene, each actor will advance as far as the DOM allows, and then wait and poll for their next step.
 We just have to write who does what and what they expect, roughly in order.
 
-The difference is just how you prefer to read and organize your scenes. As your test suite grows &mdash; specs become more complex, actors get added &mdash; you can freely re-arrange the layout as long as each actor's own queue stays in order. Teams can adopt their own conventions: interleave actors for readability, group by actor for code review, or mix styles across different files. The runtime doesn't care.
-
 > If you need full TypeScript control, the same spec can be written as a `.spec.ts` file &mdash; see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic).
 
 ## Inline Checks to Validate the Mental Picture
 
-With the precision and confidence we get from simple scene scripts, we can focus on the other domain: **testing the things that don't show up in the DOM.**
+With the precision and confidence we get from simple scene specs, we can focus on the other domain: **testing our mental model for how the moving pieces fit together while our actors are using the app.**
 
 We wrote little logging functions `should` and `failed` that you place directly in your components, callbacks, and effects. They report
 data to an observer panel, and feel a bit like `console.log('local DB should match server record:', booleanExpr)`.
@@ -144,4 +140,4 @@ Below are the guides and references to get you going, starting with [the Getting
 - [Writing Inline Assertions](/guides/writing-inline-assertions) &mdash; `should()`, `failed()`, `serverCheck()`, and framework-specific hooks like `useServerCheck` and `createServerCheck`.
 - [Building Good Teams of Actors](/guides/building-teams) &mdash; designing teams that mirror your seed data, scaling concurrency
 
-Or find detailed references on the [Actor handle](/reference/actor-api), [DOM selectors](/reference/selectors), [Markdown Spec Reference](/reference/text-dsl), [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic), and the full [CLI Reference](/reference/cli).
+Or find detailed references on [DOM selectors](/reference/selectors), the [Markdown Spec Reference](/reference/text-dsl), [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic), and the full [CLI Reference](/reference/cli).

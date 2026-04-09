@@ -27,7 +27,7 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 
 ## Authoring Models
 
-There are three ways to write spec files. All use the same [actor DSL methods](/reference/actor-api), the same [selector resolution](/reference/selectors), the same configuration, and the same team management. They differ in syntax and execution model.
+There are three ways to write spec files. All use the same [actor methods](/reference/text-dsl), the same [selector resolution](/reference/selectors), the same configuration, and the same team management. They differ in syntax and execution model.
 
 | Style | File | Function | Best for |
 |-------|------|----------|----------|
@@ -72,7 +72,7 @@ test('user completes onboarding', async ({ actor }) => {
 
 For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [TypeScript Scenes & Playwright Specs reference](/reference/concurrent-and-classic).
 
-For the complete `.spec.md` format rules, interpolation, cleanup/setup directives, macros, and `dsl()` method — see the [Markdown Spec Reference](/reference/text-dsl).
+For the complete `.spec.md` format rules, interpolation, cleanup/setup directives, and macros — see the [Markdown Spec Reference](/reference/text-dsl).
 
 > **STATUS:** Both `scene()` and `test()` execution models are implemented. `.spec.md` files compile to `scene()`.
 
@@ -97,7 +97,7 @@ For the full guide on `should()`, `failed()`, multi-context `serverCheck()`, fra
 
 ## Actor DSL Methods
 
-For the complete method reference (navigation, visibility, interaction, scope navigation, conditionals, utilities), see the [Actor API Reference](/reference/actor-api).
+For the complete method reference (navigation, visibility, interaction, scope navigation, conditionals, utilities), see the [Markdown Spec Reference](/reference/text-dsl) and the [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic) page.
 
 ## Selector Resolution
 

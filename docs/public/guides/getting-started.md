@@ -80,7 +80,7 @@ visitor:
 - seeText Welcome
 ```
 
-That's a complete, runnable scene spec. `visitor` is an **actor** -- a named role representing a user. `openTo`, `see`, and `seeText` are actions from the [Actor API](/reference/actor-api).
+That's a complete, runnable scene spec. `visitor` is an **actor** -- a named role representing a user. `openTo`, `see`, and `seeText` are actions from the [Markdown Spec Reference](/reference/text-dsl).
 
 ### Define your first actor
 
@@ -436,4 +436,4 @@ When your test suite grows, add more actor teams to run scenes in parallel. Each
 - [Building Good Teams of Actors](/guides/building-teams) -- designing teams, seed data, and scaling concurrency
 - [Selectors Reference](/reference/selectors) -- attribute matching, nesting, key selectors, aliases
 - [Markdown Spec Reference](/reference/text-dsl) -- full Markdown spec grammar, interpolation, macros
-- [Actor API Reference](/reference/actor-api) -- complete method list for actor handles
+- [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic) -- writing scenes in TypeScript or dropping to Playwright

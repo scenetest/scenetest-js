@@ -45,12 +45,7 @@ export const reference: SectionItem[] = [
 	  description:
 		 'Complete grammar for .spec.md scene files: actions, selectors, variable interpolation, macros, cleanup, and setup.',
 	},
-	{
-	  slug: 'actor-api',
-	  title: 'Actor API',
-	  description:
-		 'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
-	},
+	// actor-api: consolidated into /reference/concurrent-and-classic (route redirect)
 	{
 	  slug: 'selectors',
 	  title: 'Selectors',
@@ -74,6 +69,12 @@ export const reference: SectionItem[] = [
 export const faqs: SectionItem[] = [
 
   // concurrent-vs-classic: consolidated into /reference/concurrent-and-classic (route redirect)
+  {
+    slug: 'scene-runtime',
+    title: 'How the Scene Runtime Works',
+    description:
+      'What happens when a scene runs: declaration vs. drain, concurrent actor queues, scope management, conditional monitors, and the Playwright layer underneath.',
+  },
   {
 	  slug: 'security',
 	  title: 'Is Scenetest Safe?',

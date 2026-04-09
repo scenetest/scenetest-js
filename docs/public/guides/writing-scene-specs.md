@@ -27,9 +27,9 @@ We recommend you start off just writing in markdown specs, and see how far you g
 
 ## Actor Methods
 
-The `actor()` function returns an actor handle representing a user or role. Actors can navigate pages, assert visibility, interact with elements (click, type, check, select), navigate scope, coordinate with other actors via the message bus, and run custom Playwright actions. They also support conditionals, warnings, and inline text DSL via `dsl()`.
+The `actor()` function returns an actor handle representing a user or role. Actors can navigate pages, assert visibility, interact with elements (click, type, check, select), navigate scope, coordinate with other actors via the message bus, and run custom Playwright actions. They also support conditionals and warnings.
 
-For the complete method list including all navigation, visibility, interaction, scope, and control flow methods, see the [Actor API Reference](/reference/actor-api).
+For the complete method list including all navigation, visibility, interaction, scope, and control flow methods, see the [Markdown Spec Reference](/reference/text-dsl).
 
 ## Selectors
 
@@ -280,4 +280,4 @@ For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#clean
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
 
-For the complete list of actor methods, see the [Actor API Reference](/reference/actor-api). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [guides overview](/guides).
+For the complete list of actor methods, see the [Markdown Spec Reference](/reference/text-dsl). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [guides overview](/guides).
