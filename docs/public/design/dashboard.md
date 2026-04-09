@@ -14,7 +14,7 @@ A local-first report viewer that scales from "drop a file" to "org-wide dashboar
 
 ## File Structure
 
-```
+```text
 scenetest/
 ├── .reports/
 │   ├── 2026-01-25T103000-a762c2b-main.jsonl
@@ -61,7 +61,7 @@ A future server version might store these in a database, but the filesystem is g
 
 The fullscreen viewer uses the small floating panel as a sidebar - like an email inbox view. List of assertions on the left, expanded detail view on the right.
 
-```
+```text
 ┌──────────────────────┬─────────────────────────────────────────────┐
 │ ✓ cart.updates    12 │                                             │
 │ ✓ checkout.valid   8 │  checkout.validates                         │
@@ -91,7 +91,7 @@ Side-by-side diff showing:
 - **Fixed** - Fail → Pass
 - **Timing** - Significant duration changes
 
-```
+```text
 ┌─────────────────────────────────┬─────────────────────────────────┐
 │ main @ a762c2b                  │ feat/checkout @ f69279b         │
 ├─────────────────────────────────┼─────────────────────────────────┤

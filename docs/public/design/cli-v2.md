@@ -115,7 +115,7 @@ await user.openTo('/dashboard')
 ### Output
 
 Warnings show in the summary:
-```
+```text
 ⚡ 2 script warning(s)
   └─ [user] welcome-modal: user should have dismiss flag set
      during: openTo(/dashboard)
@@ -127,7 +127,7 @@ Warnings show in the summary:
 
 Every action emits console warnings if it exceeds the `warnAfter` threshold (default: 500ms):
 
-```
+```text
 ⏱ 523ms - see('dashboard') - still waiting...
 ⏱ 1247ms - see('dashboard') - still waiting...
 ✓ 1892ms - see('dashboard') - completed

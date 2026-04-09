@@ -26,7 +26,7 @@ user:
 
 When this spec is parsed (or when a `scene()` function body executes), the runtime creates an actor handle for `user` and pushes six actions onto its internal queue:
 
-```
+```javascript
 user.queue = [
   openTo('/login'),
   typeInto('email-input', ...),
@@ -43,7 +43,7 @@ No browser has launched. No page has loaded. The spec is just data at this point
 
 After declaration completes, the runtime launches a browser context for each actor, then **drains all queues concurrently**. Each actor walks through its queue one action at a time, advancing as fast as the DOM allows.
 
-```
+```text
 user:  openTo → typeInto → typeInto → click → see → click
        ▸ executing...
 ```
@@ -81,7 +81,7 @@ receiver:
 
 At drain time, both actors execute simultaneously:
 
-```
+```text
 sender:    openTo → typeInto → typeInto → click → see → click → typeInto → click
 receiver:  openTo → typeInto → typeInto → click → see → see → seeText
            ▸ both executing in parallel...
@@ -176,7 +176,7 @@ For the full guide on conditional handling, see [Conditional Handling](/guides/c
 
 Here's how all the pieces connect:
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  .spec.md file  or  scene() function                │  ← you write this
 ├─────────────────────────────────────────────────────┤

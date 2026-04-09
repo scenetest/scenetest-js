@@ -124,7 +124,7 @@ export default teams
 
 **Directory** — `actors/*.ts` with one team per file (sorted alphabetically):
 
-```
+```text
 actors/
 ├── team-alpha.ts   → team 0
 ├── team-beta.ts    → team 1
@@ -164,7 +164,7 @@ Actors don't choose their device — it rotates globally across the run. This su
 
 Device assignments appear in reports:
 
-```
+```text
 ✓ user logs in (1523ms)
     [user] assigned device: iPhone 14 (mobile)
     [admin] assigned device: Desktop 1920x1080 (desktop)
@@ -185,7 +185,7 @@ This rotation is **ON by default**. In the default pool `['pointer', 'keyboard']
 
 **What shows in reports:**
 
-```
+```text
 ✓ user logs in (1523ms)
     [user] navigationMode: keyboard
     [admin] (pointer, default)
@@ -222,7 +222,7 @@ When enabled, pointer-mode actors simulate imprecise human touch input. Approxim
 
 **`FuzzyFingerError` details:**
 
-```
+```text
 FuzzyFingerError: Fuzzy-finger failure on "close-btn":
   target too close to neighbor (mis-click 3px outside edge activated adjacent element)
 ```
@@ -247,7 +247,7 @@ scenetest --swarm
 
 Reports are written to `./scenetest-reports/` by default with timestamped filenames:
 
-```
+```text
 scenetest-reports/
 ├── report-2024-01-15T10-30-45-123Z.html
 └── report-2024-01-15T10-30-45-123Z.json

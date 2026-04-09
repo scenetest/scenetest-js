@@ -43,14 +43,6 @@ function GuidesIndex() {
 					title="Building Teams of Actors"
 					description="Design teams that mirror your seed data, scale concurrency, and keep scenes reliable."
 				/>
-
-				<p>For advanced multi-actor scenes, you may want a detailed understanding of how the actor-scene runtime works under the hood:</p>
-
-				<LinkCard
-					to="/faq/scene-runtime"
-					title="How the Scene Runtime Works"
-					description="Declaration vs. drain, concurrent actor queues, scope management, conditional monitors, and the Playwright layer underneath."
-				/>
         </li>
         <li>
           	<p><strong>Integrity Checks</strong> — assertion functions like <code>should()</code>

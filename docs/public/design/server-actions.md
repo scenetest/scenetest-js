@@ -52,7 +52,7 @@ The `withData` function runs in the browser (has access to React state, cache, e
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         VITE DEV SERVER                              │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -339,7 +339,7 @@ declare module '@scenetest/checks' {
 
 Results from `serverFn` flow through the existing infrastructure:
 
-```
+```text
 serverFn runs on server
     ↓
 should()/failed() collect results
@@ -371,7 +371,7 @@ This means:
 
 Multi-context assertions show additional info:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ ⚡ Profile update persisted                    [server]     │
 ├─────────────────────────────────────────────────────────────┤
@@ -526,7 +526,7 @@ If `withData()` throws, catch and report as a failed assertion. Server checks sh
 
 ## File Changes
 
-```
+```text
 packages/
 ├── checks/
 │   └── src/

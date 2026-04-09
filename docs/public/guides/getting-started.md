@@ -52,7 +52,7 @@ export default defineConfig({
 
 Your project should now look like this:
 
-```
+```text
 your-project/
 ├── scenetest/
 │   ├── config.ts
@@ -257,7 +257,7 @@ Your specs target elements by semantic names like `login-form` or `submit-button
 
 Adding these markers is mechanical work, and LLMs are very good at it. Copy the prompt below into a conversation with your codebase:
 
-````
+````markdown
 You are adding semantic DOM markers to a web application so that end-to-end tests can target elements by intent rather than by CSS class or DOM structure.
 
 ## Rules
@@ -302,7 +302,7 @@ This step gets easier over time. Once you're in the habit of adding `data-testid
 
 If you have existing Playwright or Cypress tests, you can get an LLM to convert them to Scenetest Markdown specs. Copy this prompt:
 
-````
+````markdown
 You are converting existing end-to-end test files into Scenetest Markdown scene specs (.spec.md files).
 
 ## Background

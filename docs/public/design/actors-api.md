@@ -220,7 +220,7 @@ Seed data creates users that match the credentials in actor files. It's your
 responsibility as a dev team to create seed data that makes sense for the roles the different
 actors/personas will play in your scenes.
 
-```
+```text
 seed-data.sql:
   INSERT INTO users (email, password_hash, ...) VALUES ('maria@test.com', ...);
   INSERT INTO users (email, password_hash, ...) VALUES ('carlos@test.com', ...);

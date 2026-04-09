@@ -6,7 +6,7 @@ Markdown scenes are the primary way to write Scenetest specs. It's a simple line
 
 ## Grammar
 
-```
+```text
 <action> [<selector>] [<value>]
 
 Actions:
@@ -42,7 +42,7 @@ Actions:
 
 For actions that take both selector and value (`typeInto`, `select`, `warnIf`), the selector can be **multi-word** (nested). The **last token** is the value:
 
-```
+```scenetest
 typeInto modal search-input hello     # selector="modal search-input", value="hello"
 select form dropdown option1          # selector="form dropdown", value="option1"
 ```
@@ -51,7 +51,7 @@ select form dropdown option1          # selector="form dropdown", value="option1
 
 Use single or double quotes for values with spaces:
 
-```
+```scenetest
 typeInto search-input 'hello world'           # value="hello world"
 typeInto modal search-input "hello world"     # nested selector + quoted value
 warnIf popup 'unexpected dialog appeared'     # multi-word warning message
@@ -145,7 +145,7 @@ cleanup: supabase.from('notification').delete().eq('uid', '[learner.key]')
 
 Use `[namespace.field]` to interpolate values into action lines:
 
-```
+```scenetest
 [self.field]         # Current actor's own fields (email, username, id, etc.)
 [role-name.field]    # Another actor's fields by role name
 [team.field]         # Team metadata from tags (language, category, etc.)
@@ -162,7 +162,7 @@ alice:
 ```
 
 Variables work inside selectors for compound IDs:
-```
+```scenetest
 see user-result-[target.key]             # becomes "see user-result-12345"
 click language-card-[team.language]     # becomes "click language-card-spanish"
 ```
