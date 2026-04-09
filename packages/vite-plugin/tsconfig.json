@@ -5,5 +5,5 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/dev-panel"]
+  "exclude": ["src/dev-panel", "src/__tests__"]
 }
