@@ -55,7 +55,7 @@ There are two phases: **declaration** (when your script runs) and **drain** (whe
 
 **Declaration:** When the runner hits `user.if('welcome-modal', ...)`, nothing happens in the browser. The callback runs immediately, but the actor's internal queue is temporarily redirected — so `a.click('dismiss')` pushes to a *separate sub-action list* attached to the monitor, not to the actor's main queue. Your main action sequence is unaffected.
 
-**Drain:** As the actor works through its queue (`see('dashboard')`, `click('settings')`, etc.), a polling loop runs alongside each action. Every 50ms it checks: is `welcome-modal` visible? If yes, the monitor fires — the sub-actions (`click('dismiss')`) execute inline, pausing the current action, then the action resumes. The monitor is **one-shot**: once it fires, it stops polling. If the modal never appears, the monitor never fires and has zero cost beyond the polling.
+**Drain:** As the actor works through its queue (`see('dashboard')`, `click('settings')`, etc.), each action begins with a **synchronous pre-check** of all pending conditional monitors. If the selector is already visible when the action starts, the monitor fires immediately — the sub-actions execute before the main action begins. If not already visible, a polling loop runs alongside the action, checking every 50ms. The monitor is **one-shot**: once it fires, it stops polling. If the modal never appears, the monitor never fires and has zero cost beyond the polling.
 
 ### When does it poll?
 

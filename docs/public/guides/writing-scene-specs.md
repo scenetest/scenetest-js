@@ -350,6 +350,27 @@ This separation means:
 
 For configuration, see the [guides overview](/guides).
 
+## Cleanup and Setup Directives
+
+Markdown scenes can declare `cleanup:` and `setup:` expressions for managing database state around a scene. These run server-side before and after scene steps.
+
+**Execution order:** `cleanup (before)` → `setup` → scene steps → `cleanup (after)`.
+
+```scenetest
+## review mode shows 2-buttons
+
+cleanup: supabase.from('user_deck').update({ review_answer_mode: null }).eq('uid', '[learner.key]')
+setup: supabase.from('user_deck').update({ review_answer_mode: '2-buttons' }).eq('uid', '[learner.key]')
+
+learner:
+- openTo /review
+- see 2-buttons-mode
+```
+
+Multiple `cleanup:` and `setup:` lines are supported — all execute in order. Use `[team.field]` to interpolate team metadata (from `tags` in `defineTeam()`), and `[testStart]` to scope cleanup to rows created during the test.
+
+For the full syntax, see the [Text DSL reference](/reference/text-dsl#cleanup-and-setup-directives).
+
 ## Summary
 
 - Scene specs describe **user journeys** — write them as concurrent TypeScript, text DSL markdown, or classic driver-style TypeScript
@@ -360,6 +381,8 @@ For configuration, see the [guides overview](/guides).
 - Use `seeInView()` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
 - Use `seeToast()` for transient notifications
+- Use `pressKey()` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
+- Use `cleanup:` and `setup:` directives in markdown specs for database state management
 - Use `if()` for conditional handling and `warnIf()` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development

@@ -552,9 +552,9 @@ learner:
 `
     const scenes = parseMarkdownScenes(content, '/test/cleanup.spec.md')
     expect(scenes).toHaveLength(1)
-    expect(scenes[0].cleanup).toBe(
+    expect(scenes[0].cleanup).toEqual([
       "supabase.from('user_deck').delete().eq('uid', '[learner.key]').eq('lang', 'spa')"
-    )
+    ])
     expect(scenes[0].blocks).toHaveLength(1)
     expect(scenes[0].blocks[0].role).toBe('learner')
   })
@@ -569,7 +569,7 @@ cleanup: something
 - see dashboard
 `
     const scenes = parseMarkdownScenes(content, '/test/cleanup-late.spec.md')
-    expect(scenes[0].cleanup).toBeUndefined()
+    expect(scenes[0].cleanup).toEqual([])
     // cleanup: is treated as a macro since it's inside an actor block
   })
 
@@ -584,7 +584,7 @@ learner:
 `
     const scenes = parseMarkdownScenes(content, '/test/cleanup-h1.spec.md')
     expect(scenes).toHaveLength(1)
-    expect(scenes[0].cleanup).toBe('db.clear()')
+    expect(scenes[0].cleanup).toEqual(['db.clear()'])
   })
 
   it('supports cleanup: per scene in multi-scene file', () => {
@@ -607,8 +607,91 @@ learner:
 `
     const scenes = parseMarkdownScenes(content, '/test/cleanup-multi.spec.md')
     expect(scenes).toHaveLength(2)
-    expect(scenes[0].cleanup).toBe("supabase.from('decks').delete().eq('uid', '[learner.key]')")
-    expect(scenes[1].cleanup).toBeUndefined()
+    expect(scenes[0].cleanup).toEqual(["supabase.from('decks').delete().eq('uid', '[learner.key]')"])
+    expect(scenes[1].cleanup).toEqual([])
+  })
+
+  it('supports multiple cleanup: lines per scene (all collected as array)', () => {
+    const content = `
+## comment with notification
+
+cleanup: supabase.from('request_comment').delete().eq('uid', '[friend.key]')
+cleanup: supabase.from('notification').delete().eq('uid', '[learner.key]')
+
+friend:
+- openTo /requests
+learner:
+- openTo /notifications
+`
+    const scenes = parseMarkdownScenes(content, '/test/multi-cleanup.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].cleanup).toEqual([
+      "supabase.from('request_comment').delete().eq('uid', '[friend.key]')",
+      "supabase.from('notification').delete().eq('uid', '[learner.key]')",
+    ])
+  })
+
+  it('parses setup: directive before actor cues', () => {
+    const content = `
+## review mode shows 2-buttons
+
+cleanup: supabase.from('user_deck').update({ review_answer_mode: null }).eq('uid', '[learner.key]')
+setup: supabase.from('user_deck').update({ review_answer_mode: '2-buttons' }).eq('uid', '[learner.key]')
+
+learner:
+- openTo /review
+- see review-setup-page
+`
+    const scenes = parseMarkdownScenes(content, '/test/setup.spec.md')
+    expect(scenes).toHaveLength(1)
+    expect(scenes[0].cleanup).toEqual([
+      "supabase.from('user_deck').update({ review_answer_mode: null }).eq('uid', '[learner.key]')",
+    ])
+    expect(scenes[0].setup).toEqual([
+      "supabase.from('user_deck').update({ review_answer_mode: '2-buttons' }).eq('uid', '[learner.key]')",
+    ])
+    expect(scenes[0].blocks[0].role).toBe('learner')
+  })
+
+  it('supports multiple setup: lines per scene', () => {
+    const content = `
+## multi-table setup
+
+setup: supabase.from('table_a').insert({ uid: '[user.key]' })
+setup: supabase.from('table_b').insert({ uid: '[user.key]' })
+
+user:
+- openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/multi-setup.spec.md')
+    expect(scenes[0].setup).toEqual([
+      "supabase.from('table_a').insert({ uid: '[user.key]' })",
+      "supabase.from('table_b').insert({ uid: '[user.key]' })",
+    ])
+  })
+
+  it('setup: defaults to empty array when not specified', () => {
+    const content = `
+# plain scene
+user:
+- openTo /
+`
+    const scenes = parseMarkdownScenes(content, '/test/no-setup.spec.md')
+    expect(scenes[0].setup).toEqual([])
+  })
+
+  it('ignores setup: after actor cues have started', () => {
+    const content = `
+# test
+
+user:
+- openTo /
+setup: something
+- see dashboard
+`
+    const scenes = parseMarkdownScenes(content, '/test/setup-late.spec.md')
+    // setup: inside an actor block is treated as a macro invocation, not a directive
+    expect(scenes[0].setup).toEqual([])
   })
 })
 

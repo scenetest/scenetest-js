@@ -384,6 +384,32 @@ await user.select('settings timezone-select', 'America/New_York')
 ```
 
 
+### pressKey
+
+```typescript
+user.pressKey(key: string): ConcurrentActorHandle | ActionChain
+```
+
+Sends a raw keyboard event via `page.keyboard.press()`. Accepts any [Playwright key name](https://playwright.dev/docs/api/class-keyboard) (`Escape`, `Enter`, `Tab`, `ArrowDown`, etc.). Use this when you need to send a key press that isn't tied to a specific element interaction.
+
+```typescript [concurrent]
+user.see('intro-dialog')
+user.pressKey('Escape')
+user.see('main-page')
+```
+```typescript [driver]
+await user.see('intro-dialog')
+await user.pressKey('Escape')
+await user.see('main-page')
+```
+
+```scenetest [markdown]
+user:
+- see intro-dialog
+- pressKey Escape
+- see main-page
+```
+
 ## Timing & Coordination
 
 ### wait

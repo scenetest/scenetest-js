@@ -72,7 +72,7 @@ test('user completes onboarding', async ({ actor }) => {
 
 For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic).
 
-For the complete `.spec.md` format rules, interpolation, macros, and `dsl()` method — see the [Text DSL Format reference](/reference/text-dsl).
+For the complete `.spec.md` format rules, interpolation, cleanup/setup directives, macros, and `dsl()` method — see the [Text DSL Format reference](/reference/text-dsl).
 
 > **STATUS:** Both `scene()` (concurrent) and `test()` (classic driver) execution models are implemented. We are evaluating which to keep long-term. See [Concurrent vs Classic — Two Execution Models](/design/scene-vs-flow) for the trade-off analysis. Before 1.0, one will be removed. Text DSL `.spec.md` files compile to `scene()`.
 

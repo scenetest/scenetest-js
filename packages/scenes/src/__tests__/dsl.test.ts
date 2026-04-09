@@ -166,6 +166,12 @@ describe('parseAction', () => {
     expect(parseAction('waitFor data-ready')).toEqual({ action: 'waitFor', value: 'data-ready' })
   })
 
+  it('parses pressKey as value-only action', () => {
+    expect(parseAction('pressKey Escape')).toEqual({ action: 'pressKey', value: 'Escape' })
+    expect(parseAction('pressKey Enter')).toEqual({ action: 'pressKey', value: 'Enter' })
+    expect(parseAction('pressKey Tab')).toEqual({ action: 'pressKey', value: 'Tab' })
+  })
+
   it('throws on empty input', () => {
     expect(() => parseAction('')).toThrow('Empty action line')
     expect(() => parseAction('   ')).toThrow('Empty action line')
@@ -260,6 +266,18 @@ describe('applyDslAction', () => {
     ;(target as any).waitFor = (m: string) => { target.calls.push(`waitFor:${m}`) }
     applyDslAction(target, { action: 'waitFor', value: 'setup-done' })
     expect(target.calls).toEqual(['waitFor:setup-done'])
+  })
+
+  it('dispatches pressKey', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'pressKey', value: 'Escape' })
+    expect(target.calls).toEqual(['pressKey:Escape'])
+  })
+
+  it('throws when pressKey is missing key name', () => {
+    const target = createSpyTarget()
+    expect(() => applyDslAction(target, { action: 'pressKey' }))
+      .toThrow('pressKey requires a key name')
   })
 
   it('throws on unknown action', () => {
