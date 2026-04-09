@@ -137,7 +137,7 @@ If you need an admin for a test, the role should reflect their purpose in the st
 
 Use the `actor()` function to get an actor by role:
 
-```ts [Concurrent (ts)]
+```ts [TypeScript scene]
 import { scene } from '@scenetest/scenes'
 
 scene('learner completes first lesson', ({ actor }) => {
@@ -153,7 +153,7 @@ scene('learner completes first lesson', ({ actor }) => {
 })
 ```
 
-```ts [Classic Driver (ts)]
+```ts [Playwright spec]
 import { test } from '@scenetest/scenes'
 
 test('learner completes first lesson', async ({ actor }) => {
@@ -171,7 +171,7 @@ test('learner completes first lesson', async ({ actor }) => {
 
 ### Multi-actor scenes
 
-```ts [Concurrent (ts)]
+```ts [TypeScript scene]
 scene('friend request flow', ({ actor }) => {
   const learner = actor('primary-learner')
   const friend = actor('existing-friend')
@@ -193,7 +193,7 @@ scene('friend request flow', ({ actor }) => {
 })
 ```
 
-```ts [Classic Driver (ts)]
+```ts [Playwright spec]
 test('friend request flow', async ({ actor }) => {
   const learner = await actor('primary-learner')
   const friend = await actor('existing-friend')
@@ -220,7 +220,7 @@ Seed data creates users that match the credentials in actor files. It's your
 responsibility as a dev team to create seed data that makes sense for the roles the different
 actors/personas will play in your scenes.
 
-```
+```text
 seed-data.sql:
   INSERT INTO users (email, password_hash, ...) VALUES ('maria@test.com', ...);
   INSERT INTO users (email, password_hash, ...) VALUES ('carlos@test.com', ...);

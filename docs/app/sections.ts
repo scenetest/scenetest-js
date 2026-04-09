@@ -9,13 +9,13 @@ export const guides: SectionItem[] = [
     slug: 'getting-started',
     title: 'Getting Started',
     description:
-      'Simple steps for setting up your first actors, scenes and checks, converting old specs, and more.',
+      'Install Scenetest, write your first .spec.md scene, add inline checks, and start testing.',
   },
   {
     slug: 'writing-scene-specs',
     title: 'Scene Specs',
     description:
-      'Learn how to write scene specs that describe user journeys and orchestrate browser interactions.',
+      'Write scene specs in Markdown: scope navigation, coordination, conditional handling, and the collaboration loop.',
   },
   {
     slug: 'writing-inline-assertions',
@@ -41,16 +41,11 @@ export const guides: SectionItem[] = [
 export const reference: SectionItem[] = [
 	{
 	  slug: 'text-dsl',
-	  title: 'Text DSL Format',
+	  title: 'Markdown Spec Reference',
 	  description:
-		 'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
+		 'Complete grammar for .spec.md scene files: actions, selectors, variable interpolation, macros, cleanup, and setup.',
 	},
-	{
-	  slug: 'actor-api',
-	  title: 'Actor API',
-	  description:
-		 'Complete reference for actor methods: navigation, visibility, interaction, scope, conditionals, and coordination.',
-	},
+	// actor-api: consolidated into /reference/concurrent-and-classic (route redirect)
 	{
 	  slug: 'selectors',
 	  title: 'Selectors',
@@ -65,19 +60,20 @@ export const reference: SectionItem[] = [
   },
   {
     slug: 'concurrent-and-classic',
-    title: 'Concurrent and Classic Mode',
+    title: 'TypeScript Scenes & Playwright Specs',
     description:
-      'Side-by-side comparison of scene() (concurrent) and test() (classic driver): syntax, multi-actor concurrency, coordination, and conditional monitors.',
+      'Writing scenes in TypeScript with scene(), dropping to Playwright with test(), and when to use each.',
   },
 ]
 
 export const faqs: SectionItem[] = [
 
+  // concurrent-vs-classic: consolidated into /reference/concurrent-and-classic (route redirect)
   {
-    slug: 'concurrent-vs-classic',
-    title: "Concurrent Flow and Classic Driver",
+    slug: 'scene-runtime',
+    title: 'How the Scene Runtime Works',
     description:
-      'How the concurrent drain model is built on the classic async driver, and why support both (for now).',
+      'What happens when a scene runs: declaration vs. drain, concurrent actor queues, scope management, conditional monitors, and the Playwright layer underneath.',
   },
   {
 	  slug: 'security',
@@ -95,7 +91,7 @@ export const faqs: SectionItem[] = [
 		slug: 'vscode-extension',
 		title: 'Did You Say "spec.md syntax highlighting"?',
 		description:
-		 "Yes, we made a VSCode extension to make the markdown DSL feel more like writing Javascript.",
+		 "Yes, we made a VSCode extension to make markdown specs feel more like writing JavaScript.",
 	},
 	{
 	  slug: 'vs-playwright',

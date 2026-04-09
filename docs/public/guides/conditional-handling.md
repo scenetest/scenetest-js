@@ -8,36 +8,7 @@ Real applications have UI that doesn't always appear. A welcome modal shows up o
 
 `if()` registers a **conditional monitor**. You give it a selector and a set of actions. If that selector becomes visible while the actor is doing something else, the monitor fires: it pauses the current action, runs the sub-actions, then resumes.
 
-```typescript [concurrent]
-scene('user reaches dashboard', ({ actor }) => {
-  const user = actor('user')
-
-  user.openTo('/app')
-
-  // If a welcome modal pops up at any point, dismiss it
-  user.if('welcome-modal', a => a.click('dismiss'))
-
-  user.see('dashboard')
-  user.see('sidebar').click('settings')
-})
-```
-
-```typescript [classic driver]
-test('user reaches dashboard', async ({ actor }) => {
-  const user = await actor('user')
-
-  await user.openTo('/app')
-
-  // If a welcome modal pops up during the next action, dismiss it
-  user.if('welcome-modal', async () => {
-    await user.click('dismiss')
-  })
-
-  await user.see('dashboard')
-})
-```
-
-```scenetest [markdown]
+```scenetest
 # user reaches dashboard
 
 user:
@@ -48,6 +19,8 @@ user:
 - see sidebar
 - click settings
 ```
+
+In TypeScript, `if()` is available on the actor handle — see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic).
 
 ### What happens at runtime
 
@@ -63,39 +36,26 @@ The monitor watches during **every action that comes after it** in the actor's q
 
 ### Lifecycle difference between models
 
-In the **concurrent model** (`scene()`), the monitor is persistent — it polls during every subsequent action until it fires or the scene ends.
+In **TypeScript scenes** (`scene()`), the monitor is persistent — it polls during every subsequent action until it fires or the scene ends.
 
-In the **classic driver** (`test()`), watchers are cleared after each `await`. So `if()` only watches during the *immediately next* awaited action. If you need it to watch across multiple actions, re-register it.
+In **Playwright specs** (`test()`), watchers are cleared after each `await`. So `if()` only watches during the *immediately next* awaited action. If you need it to watch across multiple actions, re-register it.
 
-For a full side-by-side comparison, see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic#conditional-monitors-if).
+For a full side-by-side comparison, see the [TypeScript Scenes & Playwright Specs reference](/reference/concurrent-and-classic#conditional-monitors-if).
 
 ## warnIf() — Flag It, Don't Fix It
 
 Sometimes you don't want to handle the optional UI — you want to know it appeared. `warnIf()` records a warning but doesn't intervene:
 
-```typescript [concurrent]
-scene('returning user sees dashboard', ({ actor }) => {
-  const user = actor('user')
+```scenetest
+# returning user sees dashboard
 
-  // This user's seed data has dismiss_welcome=true,
-  // so the modal shouldn't appear. Warn if it does.
-  user.warnIf('welcome-modal', 'user should have dismiss flag set')
-
-  user.openTo('/app')
-  user.see('dashboard')
-})
+user:
+- warnIf welcome-modal 'user should have dismiss flag set'
+- openTo /app
+- see dashboard
 ```
 
-```typescript [classic driver]
-test('returning user sees dashboard', async ({ actor }) => {
-  const user = await actor('user')
-
-  user.warnIf('welcome-modal', 'user should have dismiss flag set')
-
-  await user.openTo('/app')
-  await user.see('dashboard')
-})
-```
+In TypeScript, `warnIf()` is available on the actor handle — see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic).
 
 Unlike `if()`, warnings **persist for the entire scene** in both models. They're recorded in `SceneReport.warnings` and show up in reports, but they don't fail the test.
 

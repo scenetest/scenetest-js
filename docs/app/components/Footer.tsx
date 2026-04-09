@@ -11,7 +11,7 @@ export function Footer() {
       <br />
       <Link to="/guides">Guides</Link> &ndash; writing good specs, casting, assertions
 		<br />
-      <Link to="/reference">References</Link> &ndash; API refs, CLI, DSL, selectors, run-modes
+      <Link to="/reference">References</Link> &ndash; API refs, CLI, specs, selectors, authoring modes
       <p className="copyright">
         <span className="footer-logo">🎬</span> &copy; m snook 2026 &bull;{' '}
         <a href="https://github.com/scenetest/scenetest-js">github</a> &bull;{' '}

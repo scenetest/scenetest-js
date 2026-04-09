@@ -1,14 +1,14 @@
 # Writing Scene Specs
 
-> **Note:** This guide shows all three authoring styles side by side. For the full execution model comparison and "do not mix" rules, see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic). For the `.spec.md` format, see the [Text DSL reference](/reference/text-dsl).
+> **Note:** This guide covers writing scene specs in Markdown. For TypeScript syntax, see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic). For the complete `.spec.md` grammar, see the [Markdown Spec Reference](/reference/text-dsl).
 
-Scene specs describe **user journeys** — the flows a person takes through your application. They live in separate spec files (`.spec.ts` or `.spec.md`) and orchestrate browser interactions without touching component internals.
+Scene specs describe **user journeys** — the flows a person takes through your application. They live in `.spec.md` files and orchestrate browser interactions without touching component internals.
 
-## The Markdown DSL
+## Writing in Markdown
 
-The primary and most-advised way to write scenes is with the Markdown DSL, which is basically Javascript without the punctuation. The following Markdown and Typescript produce the same scene output:
+The Markdown format is basically JavaScript without the punctuation. You write your specs as `.spec.md` files — human-readable, GitHub-renderable, and executable:
 
-```scenetest [markdown]
+```scenetest
 // scenes/user-onboarding.spec.md
 # user completes onboarding
 
@@ -21,101 +21,15 @@ best-friend:
 - openTo /friends/search
 - typeInto search-input [new-user.username]
 - see results-box [new-user.key]
-
-
-
-```
-```ts [javascript]
-// scenes/user-onboarding.spec.ts
-import { scene } from '@scenetest/scenes'
-
-scene('user completes onboarding', ({ actor }) => {
-  const user = actor('new-user')
-  const friend = actor('best-friend')
-
-  user.openTo('/')
-      .see('welcome-box')
-      .click('continue-button')
-  friend.openTo('/friends/search')
-      .typeInto('search-input', user.username)
-      .see(`results-box ${user.key}`)
-})
 ```
 
-We recommend you start off just writing in markdown specs, and see how far you get with it. We think you'll love it (and it will look _so_ nice in your GitHub repo). But you always have the typescript approach available to you, if you need it.
-
-## A Secret Third Thing (Classic Mode)
-
-There is a secret third way to author specs, using the same classic `await actor.action()` driver model that you
-might be used to from Playwright/Cypress world. In single-actor scenes, there is functionally no difference between
-classic mode and the native "concurrent" mode, but if for some reason you
-really want to write async/await style specs, see the docs on [Concurrent Flow & Classic Driver](/faq/concurrent-vs-classic).
-
-- **Markdown DSL** — human-readable `.spec.md` files that compile to concurrent actor scripts.
-- **Concurrent Flow (TS)** — full TypeScript control over your scene spec. Actions queue up per actor and drain concurrently. No promises, no race conditions flaking your tests.
-- **Classic Driver (TS)** — the async/await model you know from Cypress/Playwright, with access to the Scenetest message bus and our document selectors.
-
-Click the tabs to compare:
-
-
-```scenetest [concurrent md]
-# user completes onboarding
-
-new-user:
-- openTo /
-- see welcome-box
-- click continue-button
-
-best-friend:
-- openTo /friends/search
-- typeInto search-input [new-user.username]
-- see results-box [new-user.key]
-
-
-
-```
-
-```ts [concurrent ts]
-import { scene } from '@scenetest/scenes'
-
-scene('user completes onboarding', ({ actor }) => {
-  const user = actor('new-user')
-  const friend = actor('best-friend')
-
-  user.openTo('/')
-      .see('welcome-box')
-      .click('continue-button')
-  friend.openTo('/friends/search')
-      .typeInto('search-input', user.username)
-      .see(`results-box ${user.key}`)
-})
-```
-
-```ts [classic driver ts]
-import { test } from '@scenetest/scenes'
-
-test('user completes onboarding', async ({ actor }) => {
-  const user = await actor('new-user')
-  const friend = await actor('best-friend')
-
-  await user.openTo('/')
-  await user.see('welcome-box')
-            .click('continue-button')
-  await friend.openTo('/friends/search')
-  await friend.typeInto('search-input', user.username)
-  await friend.see(`results-box ${user.key}`)
-})
-```
-
-**Concurrent** is the native model — actor creation is synchronous, actions queue up, and all actors drain concurrently when the function returns. **Text DSL** is the most minimal format — plain `.spec.md` files that are human-readable, GitHub-renderable, and executable. They compile to concurrent scripts. **Classic Driver** is the async/await model for those coming from Playwright or Cypress — you `await` each action and control the timeline yourself.
-
-The test writer focuses on **what** should happen. Engineers then add the necessary hooks (test IDs, data attributes) to make the tests pass.
+We recommend you start off just writing in markdown specs, and see how far you get with it. We think you'll love it (and it will look _so_ nice in your GitHub repo). If you hit a case Markdown can't express, you can drop into TypeScript — see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic).
 
 ## Actor Methods
 
-The `actor()` function returns an actor handle representing a user or role. Actors can navigate pages, assert visibility, interact with elements (click, type, check, select), navigate scope, coordinate with other actors via the message bus, and run custom Playwright actions. They also support conditionals, warnings, and inline text DSL via `dsl()`.
+The `actor()` function returns an actor handle representing a user or role. Actors can navigate pages, assert visibility, interact with elements (click, type, check, select), navigate scope, coordinate with other actors via the message bus, and run custom Playwright actions. They also support conditionals and warnings.
 
-For the complete method list including all navigation, visibility, interaction, scope, and control flow methods, see the [Actor API Reference](/reference/actor-api).
+For the complete method list including all navigation, visibility, interaction, scope, and control flow methods, see the [Markdown Spec Reference](/reference/text-dsl).
 
 ## Selectors
 
@@ -123,42 +37,49 @@ All selector methods support space-separated test IDs for targeting nested eleme
 
 ## Toast/Notification Testing
 
-Use `seeToast()` to wait for transient UI elements that appear and then disappear:
+Use `seeToast` to wait for transient UI elements that appear and then disappear:
 
-```typescript
-user.click('save-button')
-user.seeToast('success-notification')  // Waits for appear AND disappear
+```scenetest
+user:
+- click save-button
+- seeToast success-notification
 ```
+
+`seeToast` waits for the element to appear _and then disappear_ — perfect for toast notifications that auto-dismiss.
 
 ## Scope Navigation
 
-`see()` updates the actor's **current scope** -- subsequent actions search within the matched element. Use `prev()` and `up()` to navigate scope without drilling deeper:
+`see` updates the actor's **current scope** — subsequent actions search within the matched element. Use `prev` and `up` to navigate scope without drilling deeper:
 
-```typescript
-await user
-  .see('settings-modal')       // scope -> modal
-  .see('profile-form')         // scope -> form inside modal
-  .typeInto('input', 'Alice')  // types within form
-  .prev()                      // scope -> back to modal
-  .click('close-button')       // clicks modal's close button
+```scenetest
+user:
+- see settings-modal
+- see profile-form
+- typeInto input Alice
+- prev
+- click close-button
 ```
 
-`up(selector)` navigates to an ancestor matching the selector. Works well with aliases. `up()` with no selector resets scope to the page root:
+In this example, `prev` returns scope to `settings-modal` so `click close-button` finds the modal's close button, not one inside the form.
 
-```typescript
-await user
-  .see('nested-item')
-  .up('~container')           // navigate up to a named container
-  .click('action-button')
+`up` with a selector navigates to an ancestor matching that selector. `up` with no selector resets scope to the page root:
 
-// Reset to page root
-await user.up()               // scope -> page (clears all scope)
-await user.see('other-section')
+```scenetest
+user:
+- see nested-item
+- up ~container
+- click action-button
+```
+
+```scenetest
+user:
+- up
+- see other-section
 ```
 
 ## Conditional Handling
 
-Use `if()` to handle optional UI (modals, banners, announcements) that may or may not appear, and `warnIf()` to flag unexpected paths without failing the test. See the [Conditional Handling guide](/guides/conditional-handling) for a full walkthrough of when and how to use each.
+Use `if` to handle optional UI (modals, banners, announcements) that may or may not appear, and `warnIf` to flag unexpected paths without failing the test. See the [Conditional Handling guide](/guides/conditional-handling) for a full walkthrough of when and how to use each.
 
 ## Writing Effective Scene Specs
 
@@ -166,22 +87,9 @@ Use `if()` to handle optional UI (modals, banners, announcements) that may or ma
 
 Write specs from the user's perspective. Each scene should tell a story:
 
-```ts [concurrent.spec.ts]
-scene('user can complete checkout', ({ actor }) => {
-  const customer = actor('customer')
-
-  customer.openTo('/cart')
-     .see('cart-items')
-     .click('checkout-button')
-  customer.see('payment-form')
-     .typeInto('card-number', '4242424242424242')
-     .click('pay-button')
-  customer.seeText('Order confirmed!')
-})
-```
-
-```scenetest [text-dsl.spec.md]
+```scenetest
 # user can complete checkout
+
 customer:
 - openTo /cart
 - see cart-items
@@ -190,21 +98,6 @@ customer:
 - typeInto card-number 4242424242424242
 - click pay-button
 - seeText Order confirmed!
-```
-
-
-```ts [classic.spec.ts]
-test('user can complete checkout', async ({ actor }) => {
-  const customer = await actor('customer')
-
-  await customer.openTo('/cart')
-  await customer.see('cart-items')
-  await customer.click('checkout-button')
-  await customer.see('payment-form')
-  await customer.typeInto('card-number', '4242424242424242')
-  await customer.click('pay-button')
-  await customer.seeText('Order confirmed!')
-})
 ```
 
 ### Choosing the Right Attribute
@@ -369,22 +262,22 @@ learner:
 
 Multiple `cleanup:` and `setup:` lines are supported — all execute in order. Use `[team.field]` to interpolate team metadata (from `tags` in `defineTeam()`), and `[testStart]` to scope cleanup to rows created during the test.
 
-For the full syntax, see the [Text DSL reference](/reference/text-dsl#cleanup-and-setup-directives).
+For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#cleanup-and-setup-directives).
 
 ## Summary
 
-- Scene specs describe **user journeys** — write them as concurrent TypeScript, text DSL markdown, or classic driver-style TypeScript
+- Scene specs describe **user journeys** — write them as `.spec.md` Markdown files
 - Write specs in **plain language** from the user's perspective
-- Choose your format: concurrent `scene()` for simplicity, `.spec.md` for maximum readability, classic `test()` for async/await compatibility
+- For TypeScript syntax when you need it, see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic)
 - Use stable `data-testid` attributes on containers, `data-key` on list items, and `aria-label` on interactive elements as the contract with engineers
-- Use **scope navigation** (`prev()`, `up()`, bare `up`) to move between scoped contexts
-- Use `seeInView()` to check viewport visibility without scrolling
+- Use **scope navigation** (`prev`, `up`, bare `up`) to move between scoped contexts
+- Use `seeInView` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
-- Use `seeToast()` for transient notifications
-- Use `pressKey()` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
+- Use `seeToast` for transient notifications
+- Use `pressKey` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
 - Use `cleanup:` and `setup:` directives in markdown specs for database state management
-- Use `if()` for conditional handling and `warnIf()` for flagging unexpected paths
+- Use `if` for conditional handling and `warnIf` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
 
-For the complete list of actor methods, see the [Actor API Reference](/reference/actor-api). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [guides overview](/guides).
+For the complete list of actor methods, see the [Markdown Spec Reference](/reference/text-dsl). For selector syntax, see the [Selectors Reference](/reference/selectors). For configuration options, see the [guides overview](/guides).

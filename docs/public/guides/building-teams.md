@@ -2,13 +2,13 @@
 
 Teams are the foundation of Scenetest's concurrency model. A **team** is a complete, internally-consistent set of actors where every relationship holds. Get your teams right, and your scenes run reliably, concurrently, and without shared-state bugs.
 
-This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams. For the full actor method reference, see the [Actor API Reference](/reference/actor-api).
+This guide covers how to design teams, how they relate to seed data, and how to scale concurrency by adding more teams. For the full actor method reference, see the [Markdown Spec Reference](/reference/text-dsl).
 
 ## Core Principle: Teams Mirror Your Seed Data
 
 Every team is a self-contained world. The actors in a team map 1:1 to users in your seed data, and the relationships between them (friendships, org memberships, permissions) must already exist in that seed data.
 
-```
+```text
 seed-data.sql:
   INSERT INTO users (email, password_hash) VALUES ('maria@test.com', ...);
   INSERT INTO users (email, password_hash) VALUES ('carlos@test.com', ...);
@@ -158,7 +158,7 @@ export default defineConfig({
 
 ### Project layout
 
-```
+```text
 your-project/
 ├── scenetest/
 │   ├── config.ts
@@ -294,11 +294,11 @@ For B2B SaaS with organizations:
 
 Before running scenes, verify:
 
-- [ ] Every role referenced by `actor('role-name')` in any scene exists in every team
-- [ ] Every actor's email/password in team files matches a user in seed data
-- [ ] All relationships between actors (friendships, permissions, org membership) exist in seed data
-- [ ] Each team is self-contained -- no actor appears in multiple teams
-- [ ] Anonymous actors (no credentials) are only used in scenes that don't require login
+- Every role referenced by `actor('role-name')` in any scene exists in every team
+- Every actor's email/password in team files matches a user in seed data
+- All relationships between actors (friendships, permissions, org membership) exist in seed data
+- Each team is self-contained -- no actor appears in multiple teams
+- Anonymous actors (no credentials) are only used in scenes that don't require login
 
 ---
 
@@ -306,7 +306,7 @@ Before running scenes, verify:
 
 Copy the following instruction block and paste it into an LLM conversation along with your project's seed data, scene specs, and actor files. The LLM will analyze alignment between the three and recommend changes.
 
-````
+````markdown
 You are a Scenetest team auditor. Your job is to analyze a project's seed data, scene specs, and actor team definitions to find mismatches and recommend improvements.
 
 ## Background

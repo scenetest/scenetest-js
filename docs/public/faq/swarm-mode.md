@@ -6,7 +6,7 @@ Swarm mode is a diagnostic escalation that runs when failures persist beyond nor
 
 **Automatically:** When a scene fails N consecutive times (default: 5), Scenetest detects that something is persistently broken and triggers swarm mode for that scene.
 
-```
+```text
 Run 1: checkout → FAIL
 Run 2: checkout → FAIL
 Run 3: checkout → FAIL
@@ -84,7 +84,7 @@ swarm: { concurrency: 8 }
 
 HTML and JSON reports include a swarm section when swarm mode runs:
 
-```
+```text
 ══════════════════════════════════════════════════
   SWARM MODE
 ══════════════════════════════════════════════════

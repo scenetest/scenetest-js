@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
 import Markdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
+import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 import { TabbedCode } from './TabbedCode'
 
@@ -170,6 +171,7 @@ function makeHeading(level: number) {
 // -- rehype plugins -------------------------------------------------------
 
 const rehypePlugins = [rehypeRaw]
+const remarkPlugins = [remarkGfm]
 
 // -- Main component -------------------------------------------------------
 
@@ -294,6 +296,7 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
         ) : (
           <Markdown
             key={i}
+            remarkPlugins={remarkPlugins}
             rehypePlugins={rehypePlugins}
             components={components}
           >

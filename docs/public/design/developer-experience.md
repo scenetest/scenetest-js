@@ -43,7 +43,7 @@ This document outlines a phased approach to improving the developer experience.
 
 ### Grammar Structure
 
-```
+```text
 scenetest-spec.tmLanguage.json
 ├── patterns
 │   ├── heading (# or ##)

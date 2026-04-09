@@ -558,6 +558,31 @@ figure.screenshot figcaption {
   margin: 0;
 }
 
+/* Markdown tables */
+.markdown-section table {
+  width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.markdown-section th,
+.markdown-section td {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.markdown-section th {
+  background: var(--code-bg);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.markdown-section tr:nth-child(even) {
+  background: var(--code-bg);
+}
+
 /* Comparison table */
 .comparison-table {
   width: 100%;

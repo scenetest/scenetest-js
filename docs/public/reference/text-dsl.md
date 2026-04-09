@@ -1,15 +1,12 @@
-# Text DSL Format
+# Markdown Spec Reference
 
-The text DSL lets you write scene actions as plain strings — useful for simple flows, non-engineer-authored specs, code generation, and natural-language-to-test pipelines.
+Markdown scenes are the primary way to write Scenetest specs. It's a simple line-based format for describing user journeys — human-readable, GitHub-renderable, and executable.
 
-There are two ways to use the text DSL:
-
-1. **Markdown scene files** (`.spec.md`) — standalone files that compile to `scene()` registrations
-2. **`dsl()` method** — inline multiline strings on actor handles
+> New to Scenetest? Start with the [Writing Scene Specs](/guides/writing-scene-specs) guide for best practices and workflow. This page is the complete grammar reference.
 
 ## Grammar
 
-```
+```text
 <action> [<selector>] [<value>]
 
 Actions:
@@ -45,7 +42,7 @@ Actions:
 
 For actions that take both selector and value (`typeInto`, `select`, `warnIf`), the selector can be **multi-word** (nested). The **last token** is the value:
 
-```
+```scenetest
 typeInto modal search-input hello     # selector="modal search-input", value="hello"
 select form dropdown option1          # selector="form dropdown", value="option1"
 ```
@@ -54,7 +51,7 @@ select form dropdown option1          # selector="form dropdown", value="option1
 
 Use single or double quotes for values with spaces:
 
-```
+```scenetest
 typeInto search-input 'hello world'           # value="hello world"
 typeInto modal search-input "hello world"     # nested selector + quoted value
 warnIf popup 'unexpected dialog appeared'     # multi-word warning message
@@ -68,7 +65,7 @@ For full selector syntax, see the [Selectors reference](/reference/selectors).
 
 ## Markdown Scene Files (.spec.md)
 
-Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` (concurrent) registrations.
+Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` registrations.
 
 ### Example
 
@@ -148,7 +145,7 @@ cleanup: supabase.from('notification').delete().eq('uid', '[learner.key]')
 
 Use `[namespace.field]` to interpolate values into action lines:
 
-```
+```scenetest
 [self.field]         # Current actor's own fields (email, username, id, etc.)
 [role-name.field]    # Another actor's fields by role name
 [team.field]         # Team metadata from tags (language, category, etc.)
@@ -160,12 +157,12 @@ Use `[namespace.field]` to interpolate values into action lines:
 ```scenetest
 alice:
 - typeInto email [self.email]           # alice's own email
-- see user-card-[bob.key]                # bob's id embedded in selector
+- see user-card [bob.key]                # nested selector: user-card narrowed by bob's key
 - click [team.language]-section         # team metadata in selector
 ```
 
 Variables work inside selectors for compound IDs:
-```
+```scenetest
 see user-result-[target.key]             # becomes "see user-result-12345"
 click language-card-[team.language]     # becomes "click language-card-spanish"
 ```
@@ -210,99 +207,6 @@ receiver:
 - openTo /inbox
 - seeText New message
 ```
-
----
-
-## Inline `dsl()` Method
-
-Both concurrent and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
-
-```ts [Concurrent (ts)]
-import { scene } from '@scenetest/scenes'
-
-scene('onboarding flow', ({ actor }) => {
-  const user = actor('user')
-
-  user.dsl(`
-    openTo /
-    see welcome-box
-    click continue-button
-    see onboarding-step
-    typeInto name-input Alice
-    click finish-button
-  `)
-
-  user.see('dashboard')
-})
-```
-
-```ts [Classic Driver (ts)]
-import { test } from '@scenetest/scenes'
-
-test('onboarding flow', async ({ actor }) => {
-  const user = await actor('user')
-
-  await user.dsl(`
-    openTo /
-    see welcome-box
-    click continue-button
-    see onboarding-step
-    typeInto name-input Alice
-    click finish-button
-  `)
-
-  await user.see('dashboard')
-})
-```
-
-`dsl()` returns the actor (concurrent) or an `ActionChain` (classic driver), so it chains with other methods:
-
-```typescript
-// concurrent model — all chaining, no await
-user
-  .openTo('/login')
-  .dsl(`
-    see login-form
-    typeInto email alice@test.com
-    typeInto password secret
-    click submit
-  `)
-  .see('dashboard')
-```
-
-### Variable interpolation in dsl()
-
-The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
-
-```typescript
-scene('multi-user interaction', ({ actor }) => {
-  const alice = actor('alice')
-  const bob = actor('bob')
-
-  alice.dsl(`
-    openTo /login
-    typeInto email [self.email]
-    typeInto password [self.password]
-    click submit
-    see dashboard
-  `)
-
-  bob.dsl(`
-    openTo /search
-    typeInto search-input [alice.username]
-    see user-card-[alice.key]
-    click add-friend-button
-  `)
-})
-```
-
-All namespace types work:
-- `[self.field]` — current actor's own fields
-- `[role.field]` — another actor's fields by role name
-- `[team.field]` — team metadata from `tags` (when available)
-- `[testStart]` — ISO 8601 timestamp captured before cleanup/setup runs
-
-Interpolated values are automatically escaped to prevent selector injection attacks.
 
 ---
 

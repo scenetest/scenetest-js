@@ -27,17 +27,17 @@ Scenes test **user journeys**. Inline assertions test **the developer's mental m
 
 ## Authoring Models
 
-There are three ways to write spec files. All use the same [actor DSL methods](/reference/actor-api), the same [selector resolution](/reference/selectors), the same configuration, and the same team management. They differ in syntax and execution model.
+There are three ways to write spec files. All use the same [actor methods](/reference/text-dsl), the same [selector resolution](/reference/selectors), the same configuration, and the same team management. They differ in syntax and execution model.
 
 | Style | File | Function | Best for |
 |-------|------|----------|----------|
-| **Text DSL (md)** | `.spec.md` | Compiles to `scene()` | Simplest way to write a concurrent spec with as many actors as you want |
-| **Concurrent (ts)** | `.spec.ts` | `scene()` — reactive concurrent | When macros aren't enough: full TypeScript control over your scene spec |
-| **Classic Driver (ts)** | `.spec.ts` | `test()` — sequential | Same async actor model you know from Cypress/Playwright |
+| **Markdown scenes** | `.spec.md` | Compiles to `scene()` | Simplest way to write a spec with as many actors as you want |
+| **TypeScript scenes** | `.spec.ts` | `scene()` — reactive | When macros aren't enough: full TypeScript control over your scene spec |
+| **Playwright specs** | `.spec.ts` | `test()` — sequential | Same async actor model you know from Cypress/Playwright |
 
 Click the tabs to compare:
 
-```ts [Concurrent (ts)]
+```ts [TypeScript scene]
 import { scene } from '@scenetest/scenes'
 
 scene('user completes onboarding', ({ actor }) => {
@@ -49,7 +49,7 @@ scene('user completes onboarding', ({ actor }) => {
 })
 ```
 
-```scenetest [Text DSL (md)]
+```scenetest [Markdown scene]
 # user completes onboarding
 new-user:
 - openTo /
@@ -58,7 +58,7 @@ new-user:
 - see onboarding-step
 ```
 
-```ts [Classic Driver (ts)]
+```ts [Playwright spec]
 import { test } from '@scenetest/scenes'
 
 test('user completes onboarding', async ({ actor }) => {
@@ -70,11 +70,11 @@ test('user completes onboarding', async ({ actor }) => {
 })
 ```
 
-For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [Concurrent and Classic Mode reference](/reference/concurrent-and-classic).
+For the full comparison between the two TypeScript models — how to tell them apart, multi-actor concurrency, coordination, conditional monitors, and action chains vs reactive actors — see the [TypeScript Scenes & Playwright Specs reference](/reference/concurrent-and-classic).
 
-For the complete `.spec.md` format rules, interpolation, cleanup/setup directives, macros, and `dsl()` method — see the [Text DSL Format reference](/reference/text-dsl).
+For the complete `.spec.md` format rules, interpolation, cleanup/setup directives, and macros — see the [Markdown Spec Reference](/reference/text-dsl).
 
-> **STATUS:** Both `scene()` (concurrent) and `test()` (classic driver) execution models are implemented. We are evaluating which to keep long-term. See [Concurrent vs Classic — Two Execution Models](/design/scene-vs-flow) for the trade-off analysis. Before 1.0, one will be removed. Text DSL `.spec.md` files compile to `scene()`.
+> **STATUS:** Both `scene()` and `test()` execution models are implemented. `.spec.md` files compile to `scene()`.
 
 ---
 
@@ -97,7 +97,7 @@ For the full guide on `should()`, `failed()`, multi-context `serverCheck()`, fra
 
 ## Actor DSL Methods
 
-For the complete method reference (navigation, visibility, interaction, scope navigation, conditionals, utilities), see the [Actor API Reference](/reference/actor-api).
+For the complete method reference (navigation, visibility, interaction, scope navigation, conditionals, utilities), see the [Markdown Spec Reference](/reference/text-dsl) and the [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic) page.
 
 ## Selector Resolution
 

@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through adding Scenetest to an existing Vite project. By the end you'll have inline checks running inside your components, a markdown scene spec driving a browser, and semantic DOM markers that make your whole test surface easy to target.
+This guide walks you through adding Scenetest to an existing Vite project. By the end you'll have a markdown scene spec driving a browser, inline checks running inside your components, and semantic DOM markers that make your whole test surface easy to target.
 
 ## 1. Install and Set Up
 
@@ -52,7 +52,7 @@ export default defineConfig({
 
 Your project should now look like this:
 
-```
+```text
 your-project/
 ├── scenetest/
 │   ├── config.ts
@@ -65,7 +65,86 @@ your-project/
 
 Start your dev server. You should see a small floating panel in the corner of your app -- that's the Scenetest observer. It collects assertion results in real time. Nothing to report yet, so let's give it something.
 
-## 2. Add Your First Inline Check
+## 2. Write Your First Spec
+
+Now that your dev server is running with the Scenetest panel, let's give it a scene to run. Scene specs describe user journeys -- what does the user see, what do they click, what do they expect. Create a `.spec.md` file:
+
+```scenetest
+<!-- scenetest/scenes/hello.spec.md -->
+
+# user can view the home page
+
+visitor:
+- openTo /
+- see main-content
+- seeText Welcome
+```
+
+That's a complete, runnable scene spec. `visitor` is an **actor** -- a named role representing a user. `openTo`, `see`, and `seeText` are actions from the [Markdown Spec Reference](/reference/text-dsl).
+
+### Define your first actor
+
+Actors need credentials. Create an actors file in `scenetest/actors/`:
+
+```typescript
+// scenetest/actors/default.ts
+import type { TeamConfig } from '@scenetest/scenes'
+
+export default [
+  {
+    'visitor': {},                                    // no credentials = fresh browser
+    'logged-in-user': {
+      email: 'testuser@example.com',
+      password: 'test123',
+    },
+  },
+] satisfies TeamConfig[]
+```
+
+Each entry in the array is a **team** -- a self-contained set of actors with credentials matching your seed data. Start with one team. For the full guide on designing teams, see [Building Good Teams of Actors](/guides/building-teams).
+
+### A more realistic spec
+
+Here's a spec with a logged-in user and some interaction:
+
+```scenetest
+<!-- scenetest/scenes/profile.spec.md -->
+
+# user can update their profile
+
+logged-in-user:
+- openTo /login
+- see login-form
+- typeInto email-input [self.email]
+- typeInto password-input [self.password]
+- click submit-button
+- see dashboard
+- click profile-link
+- see profile-form
+- typeInto display-name-input 'New Display Name'
+- click save-button
+- seeToast save-confirmation
+```
+
+A few things to notice:
+
+- `[self.email]` interpolates the actor's own email from the team config
+- `seeToast` waits for an element to appear _and then disappear_ (perfect for toast notifications)
+- Actions are space-separated tokens that resolve against `data-testid`, `aria-label`, `id`, `data-name`, `data-key`, and `name` attributes. See the [Selectors reference](/reference/selectors)
+
+Run it:
+
+```bash
+pnpm scenetest
+```
+
+The runner discovers `.spec.md` files, launches a browser for each actor, and runs through the action queues. If a selector can't be found, the test fails with a clear message about what it was looking for.
+
+For the full Markdown spec syntax (nesting, quoting, conditionals, macros, variable interpolation), see the [Markdown Spec Reference](/reference/text-dsl).
+
+## 3. Add Your First Inline Check
+
+Your scene spec drives the browser through user journeys. Now let's add checks that validate what's happening inside the app.
 
 Inline checks are `should()` and `failed()` calls that you place directly in your application code. They run every time the component renders (or the callback fires, or the effect runs) and report to the observer panel.
 
@@ -172,90 +251,13 @@ All of this gets stripped from your production bundle by the Vite plugin. Zero p
 
 For the full inline assertions guide, see [Writing Inline Assertions](/guides/writing-inline-assertions).
 
-## 3. Write Your First Spec
-
-Scene specs describe user journeys -- what does the user see, what do they click, what do they expect. The simplest way to write a spec is with the Markdown DSL. Create a `.spec.md` file:
-
-```scenetest
-<!-- scenetest/scenes/hello.spec.md -->
-
-# user can view the home page
-
-visitor:
-- openTo /
-- see main-content
-- seeText Welcome
-```
-
-That's a complete, runnable scene spec. `visitor` is an **actor** -- a named role representing a user. `openTo`, `see`, and `seeText` are actions from the [Actor API](/reference/actor-api).
-
-### Define your first actor
-
-Actors need credentials. Create an actors file in `scenetest/actors/`:
-
-```typescript
-// scenetest/actors/default.ts
-import type { TeamConfig } from '@scenetest/scenes'
-
-export default [
-  {
-    'visitor': {},                                    // no credentials = fresh browser
-    'logged-in-user': {
-      email: 'testuser@example.com',
-      password: 'test123',
-    },
-  },
-] satisfies TeamConfig[]
-```
-
-Each entry in the array is a **team** -- a self-contained set of actors with credentials matching your seed data. Start with one team. For the full guide on designing teams, see [Building Good Teams of Actors](/guides/building-teams).
-
-### A more realistic spec
-
-Here's a spec with a logged-in user and some interaction:
-
-```scenetest
-<!-- scenetest/scenes/profile.spec.md -->
-
-# user can update their profile
-
-logged-in-user:
-- openTo /login
-- see login-form
-- typeInto email-input [self.email]
-- typeInto password-input [self.password]
-- click submit-button
-- see dashboard
-- click profile-link
-- see profile-form
-- typeInto display-name-input 'New Display Name'
-- click save-button
-- seeToast save-confirmation
-```
-
-A few things to notice:
-
-- `[self.email]` interpolates the actor's own email from the team config
-- `seeToast` waits for an element to appear _and then disappear_ (perfect for toast notifications)
-- Actions are space-separated tokens that resolve against `data-testid`, `aria-label`, `id`, `data-name`, `data-key`, and `name` attributes. See the [Selectors reference](/reference/selectors)
-
-Run it:
-
-```bash
-pnpm scenetest
-```
-
-The runner discovers `.spec.md` files, launches a browser for each actor, and runs through the action queues. If a selector can't be found, the test fails with a clear message about what it was looking for.
-
-For the full Markdown DSL syntax (nesting, quoting, conditionals, macros, variable interpolation), see the [Text DSL reference](/reference/text-dsl).
-
 ## 4. Add Semantic DOM Markers
 
 Your specs target elements by semantic names like `login-form` or `submit-button`. These need to exist in your markup as `data-testid`, `aria-label`, or one of the other [supported attributes](/reference/selectors). For guidance on which attribute to use when, see [Choosing the Right Attribute](/guides/writing-scene-specs#choosing-the-right-attribute). For the container + `data-key` pattern for list items, see the [Selectors Reference](/reference/selectors#container--data-key-pattern).
 
 Adding these markers is mechanical work, and LLMs are very good at it. Copy the prompt below into a conversation with your codebase:
 
-````
+````markdown
 You are adding semantic DOM markers to a web application so that end-to-end tests can target elements by intent rather than by CSS class or DOM structure.
 
 ## Rules
@@ -298,10 +300,10 @@ This step gets easier over time. Once you're in the habit of adding `data-testid
 
 ## 5. Convert Existing Tests to Markdown Specs
 
-If you have existing Playwright or Cypress tests, you can get an LLM to convert them to Scenetest's Markdown DSL. Copy this prompt:
+If you have existing Playwright or Cypress tests, you can get an LLM to convert them to Scenetest Markdown specs. Copy this prompt:
 
-````
-You are converting existing end-to-end test files into Scenetest Markdown DSL scene specs (.spec.md files).
+````markdown
+You are converting existing end-to-end test files into Scenetest Markdown scene specs (.spec.md files).
 
 ## Background
 
@@ -369,7 +371,7 @@ Produce one `.spec.md` file per test file, with `## scene name` sections for eac
 
 ## 6. Build Out Your Scenes
 
-At this point you have the foundations: inline checks validating your mental model from inside the app, and scene specs driving the browser from outside. Now build out coverage.
+At this point you have the foundations: scene specs driving the browser from outside, and inline checks validating your mental model from inside the app. Now build out coverage.
 
 ### Add more actors
 
@@ -399,7 +401,7 @@ receiver:
 - seeText 'Hello from the test!'
 ```
 
-In the concurrent model, both actors run simultaneously. `emit` and `waitFor` synchronize them when one needs to wait for the other. See [Writing Scene Specs](/guides/writing-scene-specs) for the full guide.
+Both actors run simultaneously. `emit` and `waitFor` synchronize them when one needs to wait for the other. See [Writing Scene Specs](/guides/writing-scene-specs) for the full guide.
 
 ### Add more inline checks
 
@@ -429,9 +431,9 @@ When your test suite grows, add more actor teams to run scenes in parallel. Each
 ## What's Next
 
 - [Choosing the Right Attribute](/guides/writing-scene-specs#choosing-the-right-attribute) -- which attributes to use, common mistakes, and the ESLint plugin
-- [Writing Scene Specs](/guides/writing-scene-specs) -- the full guide to all three authoring styles
+- [Writing Scene Specs](/guides/writing-scene-specs) -- the full guide to scene orchestration
 - [Writing Inline Assertions](/guides/writing-inline-assertions) -- deep dive into `should()`, `failed()`, `serverCheck()`, and framework hooks
 - [Building Good Teams of Actors](/guides/building-teams) -- designing teams, seed data, and scaling concurrency
 - [Selectors Reference](/reference/selectors) -- attribute matching, nesting, key selectors, aliases
-- [Text DSL Reference](/reference/text-dsl) -- full Markdown DSL grammar, interpolation, macros
-- [Actor API Reference](/reference/actor-api) -- complete method list for actor handles
+- [Markdown Spec Reference](/reference/text-dsl) -- full Markdown spec grammar, interpolation, macros
+- [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic) -- writing scenes in TypeScript or dropping to Playwright
