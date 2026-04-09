@@ -69,8 +69,10 @@ import { sceneRegistry, setCurrentFile } from './scene.js'
 export interface MarkdownScene {
   name: string
   group?: string
-  /** Pre-cleanup expression from `cleanup:` directive */
-  cleanup?: string
+  /** Pre/post-cleanup expressions from `cleanup:` directives (one per line) */
+  cleanup: string[]
+  /** Setup expressions from `setup:` directives — run after pre-cleanup, before scene */
+  setup: string[]
   blocks: ActorBlock[]
 }
 
@@ -136,7 +138,7 @@ export function parseMarkdownScenes(
       // # = group, ## = scene
       if (/^## /.test(trimmed)) {
         const name = trimmed.slice(3).trim()
-        currentScene = { name, group: currentGroup, blocks: [] }
+        currentScene = { name, group: currentGroup, cleanup: [], setup: [], blocks: [] }
         scenes.push(currentScene)
         currentBlock = null
         continue
@@ -149,19 +151,26 @@ export function parseMarkdownScenes(
       // No ## headings — # = scene
       if (/^# /.test(trimmed)) {
         const name = trimmed.slice(2).trim()
-        currentScene = { name, group: undefined, blocks: [] }
+        currentScene = { name, group: undefined, cleanup: [], setup: [], blocks: [] }
         scenes.push(currentScene)
         currentBlock = null
         continue
       }
     }
 
-    // ── Cleanup directive ─────────────────────────────────────────────
-    // `cleanup: <expression>` — one per scene, before actor cues
+    // ── Cleanup / setup directives ────────────────────────────────────
+    // `cleanup: <expression>` — multiple allowed, run before AND after scene
+    // `setup: <expression>`   — multiple allowed, run after pre-cleanup, before scene
 
     const cleanupMatch = trimmed.match(/^cleanup:\s+(.+)$/)
     if (cleanupMatch && currentScene && !currentBlock) {
-      currentScene.cleanup = cleanupMatch[1]
+      currentScene.cleanup.push(cleanupMatch[1])
+      continue
+    }
+
+    const setupMatch = trimmed.match(/^setup:\s+(.+)$/)
+    if (setupMatch && currentScene && !currentBlock) {
+      currentScene.setup.push(setupMatch[1])
       continue
     }
 
@@ -173,6 +182,8 @@ export function parseMarkdownScenes(
       currentScene = {
         name: path.basename(filePath, '.spec.md'),
         group: undefined,
+        cleanup: [],
+        setup: [],
         blocks: [],
       }
       scenes.push(currentScene)
@@ -286,7 +297,7 @@ function stripListPrefix(line: string): string {
 const KNOWN_ACTIONS = [
   'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
   'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
-  'warnIf', 'up', 'prev', 'scrollToBottom', 'if',
+  'warnIf', 'up', 'prev', 'scrollToBottom', 'if', 'pressKey',
 ]
 
 /** Check if a line looks like a DSL action or macro invocation */
@@ -565,9 +576,11 @@ export function registerMarkdownScenes(
       }
     })
 
-    // Propagate cleanup expression to the registered scene
-    if (mdScene.cleanup && sceneRegistry.length > 0) {
-      sceneRegistry[sceneRegistry.length - 1].cleanup = mdScene.cleanup
+    // Propagate cleanup/setup expressions to the registered scene
+    if (sceneRegistry.length > 0) {
+      const registered = sceneRegistry[sceneRegistry.length - 1]
+      if (mdScene.cleanup.length > 0) registered.cleanup = mdScene.cleanup
+      if (mdScene.setup.length > 0) registered.setup = mdScene.setup
     }
   }
 }

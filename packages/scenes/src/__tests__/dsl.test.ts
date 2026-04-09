@@ -83,6 +83,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     up(s?: string) { calls.push(`up:${s ?? '(root)'}`); return this },
     prev() { calls.push('prev'); return this },
     scrollToBottom() { calls.push('scrollToBottom'); return this },
+    pressKey(k: string) { calls.push(`pressKey:${k}`); return this },
   }
 }
 

@@ -641,6 +641,9 @@ export interface SequentialActorHandle extends ActorConfig {
    */
   dsl(text: string): ActionChain
 
+  /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
+  pressKey(key: string): ActionChain
+
   /**
    * Register a conditional watcher. If the selector becomes visible during
    * the next awaited action, the callback will be executed.
@@ -763,6 +766,9 @@ export interface ActionChain extends PromiseLike<void> {
    * ```
    */
   dsl(text: string): ActionChain
+
+  /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
+  pressKey(key: string): ActionChain
 }
 
 /**
@@ -785,8 +791,16 @@ export interface RegisteredScene {
   name: string
   fn: SceneFn
   file: string
-  /** Pre-cleanup expression from `cleanup:` directive in .spec.md files */
-  cleanup?: string
+  /**
+   * Pre/post-cleanup expressions from `cleanup:` directives in .spec.md files.
+   * Each entry is evaluated independently. Multiple `cleanup:` lines are supported.
+   */
+  cleanup?: string[]
+  /**
+   * Setup expressions from `setup:` directives in .spec.md files.
+   * Run after pre-cleanup but before scene steps. Multiple `setup:` lines supported.
+   */
+  setup?: string[]
   /** Roles required by this scene — used for team matching */
   roles?: string[]
 }
@@ -828,6 +842,8 @@ export interface DslTarget {
   scrollToBottom(): unknown
   /** Block until message arrives on the bus */
   waitFor(message: string): unknown
+  /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
+  pressKey(key: string): unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -935,6 +951,9 @@ export interface ConcurrentActorHandle {
    * ```
    */
   dsl(text: string): ConcurrentActorHandle
+
+  /** Press a keyboard key (e.g. 'Escape', 'Enter', 'Tab') */
+  pressKey(key: string): ConcurrentActorHandle
 }
 
 /**

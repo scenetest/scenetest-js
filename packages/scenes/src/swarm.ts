@@ -10,7 +10,7 @@ import type {
 } from './types.js'
 import type { TeamManager } from './team-manager.js'
 import { runScene } from './scene.js'
-import { runCleanup } from './runner.js'
+import { runCleanup, runSetup } from './runner.js'
 
 /**
  * Default swarm configuration values
@@ -217,8 +217,11 @@ export async function runSwarm(
           )
 
           try {
-            // Run pre-cleanup if configured
-            await runCleanup(scene, teamManager.getTeam(task.teamIndex).actors, server)
+            // Run pre-cleanup and setup if configured
+            const swarmTeam = teamManager.getTeam(task.teamIndex)
+            const swarmTestStart = new Date().toISOString()
+            await runCleanup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart)
+            await runSetup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart)
 
             const report = await runScene(scene, session, timeout)
 
