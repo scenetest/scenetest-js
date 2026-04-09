@@ -12,7 +12,8 @@
 	"author": "msnook.xyz",
 	"scripts": {
 		"build": "pnpm --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
-		"dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
+		"dev": "pnpm --filter @scenetest/checks --filter @scenetest/checks-react --filter @scenetest/checks-panel --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
+		"dev:rebuild": "pnpm --filter @scenetest/checks --filter @scenetest/checks-react --filter @scenetest/checks-panel --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
 		"docs": "pnpx serve docs",
 		"typecheck": "pnpm -r typecheck",
 		"test": "pnpm test:unit && pnpm test:e2e",

@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import { execSync } from 'child_process'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import { stripScenetest } from './strip.js'
@@ -28,7 +28,11 @@ const RECORDER_MODULE = '@scenetest/scenes-panel/auto'
 
 function resolveFromPlugin(specifier: string): string | null {
   try {
-    return fileURLToPath(import.meta.resolve(specifier))
+    const resolved = fileURLToPath(import.meta.resolve(specifier))
+    // import.meta.resolve returns a URL even if the file doesn't exist (it resolves
+    // from the exports map). Verify the file actually exists to avoid load-time errors.
+    if (!existsSync(resolved)) return null
+    return resolved
   } catch {
     return null
   }
@@ -241,7 +245,19 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       // (the transform injects this import, but the consumer may not have
       // @scenetest/checks as a direct dependency under pnpm strict hoisting)
       if (id === '@scenetest/checks/runtime') {
-        return resolveFromPlugin(id)
+        const resolved = resolveFromPlugin(id)
+        if (resolved) return resolved
+        // Fallback: if @scenetest/checks hasn't been built yet (no dist/runtime.js),
+        // resolve directly to the source TypeScript file. Vite can process .ts natively.
+        // This handles the common case of running `pnpm dev` without a prior `pnpm build`.
+        const candidates = [
+          resolve(__dirname, '../node_modules/@scenetest/checks/src/runtime.ts'),
+          resolve(__dirname, '../../checks/src/runtime.ts'),
+        ]
+        for (const candidate of candidates) {
+          if (existsSync(candidate)) return candidate
+        }
+        return null
       }
       return null
     },
