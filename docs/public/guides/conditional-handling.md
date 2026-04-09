@@ -42,6 +42,39 @@ In **Playwright specs** (`test()`), watchers are cleared after each `await`. So 
 
 For a full side-by-side comparison, see the [TypeScript Scenes & Playwright Specs reference](/reference/concurrent-and-classic#conditional-monitors-if).
 
+## ifClick — Dismiss It and Move On
+
+Most conditional handling boils down to one pattern: dismiss an optional dialog if it's there. `ifClick` is a shorthand for exactly this — check if the element is visible right now, click it if so, skip it if not:
+
+```scenetest
+# user reaches dashboard
+
+user:
+- openTo /app
+- ifClick dismiss-intro-dialog
+- see dashboard
+```
+
+Unlike `if()`, this is a **point-in-time check** — it doesn't monitor during subsequent actions. It checks visibility once, acts or skips, and moves on. This makes it predictable and cheap.
+
+In `.spec.md` files you can also write `if-click` (hyphenated):
+
+```scenetest
+user:
+- if-click dismiss-deck-settings-intro
+- see deck-settings
+```
+
+Use `ifClick` when:
+- You need to dismiss an optional modal, banner, or overlay
+- A single click is enough to clear it
+- You don't need to wait for it to appear — it's either there or it isn't
+
+Use `if()` instead when:
+- The optional UI might appear *during* a subsequent action (not just at the start)
+- You need multiple sub-actions (dismiss, wait for animation, verify it's gone)
+- The conditional handling is more complex than a single click
+
 ## warnIf() — Flag It, Don't Fix It
 
 Sometimes you don't want to handle the optional UI — you want to know it appeared. `warnIf()` records a warning but doesn't intervene:

@@ -276,7 +276,7 @@ For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#clean
 - Use `seeToast` for transient notifications
 - Use `pressKey` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
 - Use `cleanup:` and `setup:` directives in markdown specs for database state management
-- Use `if` for conditional handling and `warnIf` for flagging unexpected paths
+- Use `if` for conditional handling, `ifClick` to dismiss optional elements, and `warnIf` for flagging unexpected paths
 - Generate **handoff reports** listing needed test IDs
 - Let the collaboration loop guide development
 
