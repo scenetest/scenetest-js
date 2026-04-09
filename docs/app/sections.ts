@@ -9,13 +9,13 @@ export const guides: SectionItem[] = [
     slug: 'getting-started',
     title: 'Getting Started',
     description:
-      'Simple steps for setting up your first actors, scenes and checks, converting old specs, and more.',
+      'Install Scenetest, write your first .spec.md scene, add inline checks, and start testing.',
   },
   {
     slug: 'writing-scene-specs',
     title: 'Scene Specs',
     description:
-      'Learn how to write scene specs that describe user journeys and orchestrate browser interactions.',
+      'Write scene specs in Markdown: scope navigation, coordination, conditional handling, and the collaboration loop.',
   },
   {
     slug: 'writing-inline-assertions',
@@ -41,9 +41,9 @@ export const guides: SectionItem[] = [
 export const reference: SectionItem[] = [
 	{
 	  slug: 'text-dsl',
-	  title: 'Text DSL Format',
+	  title: 'Markdown Spec Reference',
 	  description:
-		 'Grammar for the text DSL, .spec.md markdown scenes, the dsl() method, and macros.',
+		 'Complete grammar for .spec.md scene files: actions, selectors, variable interpolation, macros, cleanup, and setup.',
 	},
 	{
 	  slug: 'actor-api',
@@ -65,20 +65,15 @@ export const reference: SectionItem[] = [
   },
   {
     slug: 'concurrent-and-classic',
-    title: 'Concurrent and Classic Mode',
+    title: 'TypeScript Scenes & Playwright Specs',
     description:
-      'Side-by-side comparison of scene() (concurrent) and test() (classic driver): syntax, multi-actor concurrency, coordination, and conditional monitors.',
+      'Writing scenes in TypeScript with scene(), dropping to Playwright with test(), and when to use each.',
   },
 ]
 
 export const faqs: SectionItem[] = [
 
-  {
-    slug: 'concurrent-vs-classic',
-    title: "Concurrent Flow and Classic Driver",
-    description:
-      'How the concurrent drain model is built on the classic async driver, and why support both (for now).',
-  },
+  // concurrent-vs-classic: consolidated into /reference/concurrent-and-classic (route redirect)
   {
 	  slug: 'security',
 	  title: 'Is Scenetest Safe?',
@@ -95,7 +90,7 @@ export const faqs: SectionItem[] = [
 		slug: 'vscode-extension',
 		title: 'Did You Say "spec.md syntax highlighting"?',
 		description:
-		 "Yes, we made a VSCode extension to make the markdown DSL feel more like writing Javascript.",
+		 "Yes, we made a VSCode extension to make markdown specs feel more like writing JavaScript.",
 	},
 	{
 	  slug: 'vs-playwright',

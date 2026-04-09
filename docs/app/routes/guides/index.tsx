@@ -60,7 +60,7 @@ function GuidesIndex() {
       <h2>API References</h2>
 
       <p>
-        For complete documentation on actor methods, selectors, and the text DSL format:
+        For complete documentation on the spec format, selector syntax, and the actor API:
       </p>
 
       <div className="link-card-grid">
@@ -76,8 +76,8 @@ function GuidesIndex() {
         />
         <LinkCard
           to="/reference/text-dsl"
-          title="Text DSL Format"
-          description="Grammar, .spec.md files, the dsl() method, and macros."
+          title="Markdown Spec Reference"
+          description="Complete grammar for .spec.md scene files: actions, selectors, interpolation, macros, and more."
         />
 		  <LinkCard
           to="/reference/cli"

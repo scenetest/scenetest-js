@@ -1,11 +1,13 @@
-# Text DSL Format
+# Markdown Spec Reference
 
-The text DSL lets you write scene actions as plain strings — useful for simple flows, non-engineer-authored specs, code generation, and natural-language-to-test pipelines.
+Markdown scenes are the primary way to write Scenetest specs. It's a simple line-based format for describing user journeys — human-readable, GitHub-renderable, and executable.
 
-There are two ways to use the text DSL:
+> New to Scenetest? Start with the [Writing Scene Specs](/guides/writing-scene-specs) guide for best practices and workflow. This page is the complete grammar reference.
 
-1. **Markdown scene files** (`.spec.md`) — standalone files that compile to `scene()` registrations
-2. **`dsl()` method** — inline multiline strings on actor handles
+There are two ways to use it:
+
+1. **Markdown scene files** (`.spec.md`) — standalone files that compile to `scene()` registrations (the main authoring format)
+2. **`dsl()` method** — inline multiline strings on actor handles in TypeScript specs
 
 ## Grammar
 
@@ -68,7 +70,7 @@ For full selector syntax, see the [Selectors reference](/reference/selectors).
 
 ## Markdown Scene Files (.spec.md)
 
-Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` (concurrent) registrations.
+Write specs as **human-readable markdown** — GitHub-renderable, readable by non-engineers, and executable. The runner auto-discovers `.spec.md` files alongside `.spec.ts` files and compiles each one into `scene()` registrations.
 
 ### Example
 
@@ -215,9 +217,9 @@ receiver:
 
 ## Inline `dsl()` Method
 
-Both concurrent and classic driver actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
+Both `scene()` and `test()` actors have a `dsl()` method that accepts a multiline string. The `dsl()` method supports the same `[namespace.field]` interpolation as `.spec.md` files:
 
-```ts [Concurrent (ts)]
+```ts [TypeScript scene]
 import { scene } from '@scenetest/scenes'
 
 scene('onboarding flow', ({ actor }) => {
@@ -236,7 +238,7 @@ scene('onboarding flow', ({ actor }) => {
 })
 ```
 
-```ts [Classic Driver (ts)]
+```ts [Playwright spec]
 import { test } from '@scenetest/scenes'
 
 test('onboarding flow', async ({ actor }) => {
@@ -255,10 +257,10 @@ test('onboarding flow', async ({ actor }) => {
 })
 ```
 
-`dsl()` returns the actor (concurrent) or an `ActionChain` (classic driver), so it chains with other methods:
+`dsl()` returns the actor (`scene()`) or an `ActionChain` (`test()`), so it chains with other methods:
 
 ```typescript
-// concurrent model — all chaining, no await
+// TypeScript scene — all chaining, no await
 user
   .openTo('/login')
   .dsl(`

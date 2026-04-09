@@ -42,34 +42,21 @@ function ItemList({ items }) {
 And you use scene specs to orchestrate user journeys:
 
 
-```ts [classic.spec.ts]
-// Classic driver, 'test' function
-test('user sees items', async ({ actor }) => {
-  const user = await actor('user')
-  await user.openTo('/items')
-  await user.see('item-list')
-})
-```
-```ts [Concurrent style]
-// Concurrent 'scene'
-scene('user sees items', ({ actor }) => {
-  const user = actor('user-main-1')
-  user.openTo('/items')
-      .see('item-list')
-})
-```
-```scenetest [Markdown style]
+```scenetest
 # user sees items
+
 user-main-1:
 - openTo /items
 - see item-list
 ```
 
+This can also be written in TypeScript — see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic).
+
 **Key differences:**
 
 - **Inline assertions** run every render, catching regressions immediately
 - **Full access to framework state** - no DOM querying needed
-- **Scene specs** use actors (`actor()`) instead of raw Playwright APIs — write `test()` for familiar async style or `scene()` for concurrent draining
+- **Scene specs** use a Markdown spec format with actors instead of raw Playwright APIs
 - **Real-time observer** shows assertions as you develop
 
 Scenetest is inspired by `page.evaluate` but takes the "code in browser" idea further.
