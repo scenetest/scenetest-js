@@ -1,6 +1,6 @@
 # Scenetest Dashboard & Reports
 
-**STATUS: Design Stage**
+**STATUS: Partially Implemented** — Live dashboard with swim-lane timeline is shipped. See [Live Dashboard reference](/reference/live-dashboard). The JSONL format, comparison view, and CI integration below are still design-stage.
 
 ---
 

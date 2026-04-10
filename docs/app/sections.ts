@@ -64,6 +64,12 @@ export const reference: SectionItem[] = [
     description:
       'Writing scenes in TypeScript with scene(), dropping to Playwright with test(), and when to use each.',
   },
+  {
+    slug: 'live-dashboard',
+    title: 'Live Dashboard',
+    description:
+      'Real-time swim-lane timeline at /__scenetest/dashboard showing actor actions, assertions, and timing as scenes run.',
+  },
 ]
 
 export const faqs: SectionItem[] = [
