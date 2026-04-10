@@ -35,12 +35,15 @@ export function generateDashboardHtml(): string {
     }
 
     header {
+      position: sticky;
+      top: 0;
       padding: 16px 24px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 16px;
       background: var(--bg2);
+      z-index: 100;
     }
 
     header h1 {
@@ -151,7 +154,6 @@ export function generateDashboardHtml(): string {
       border: 1px solid var(--border);
       border-top: none;
       border-radius: 0 0 8px 8px;
-      overflow: hidden;
     }
 
     .lane {
@@ -183,7 +185,6 @@ export function generateDashboardHtml(): string {
       position: relative;
       padding: 6px 8px;
       min-height: 48px;
-      overflow: hidden;
     }
 
     .action-bar {
@@ -242,8 +243,9 @@ export function generateDashboardHtml(): string {
       padding: 4px 8px;
       font-size: 11px;
       white-space: nowrap;
-      z-index: 10;
+      z-index: 50;
       color: var(--text);
+      pointer-events: none;
     }
 
     /* ─── Assertion markers ───────────────────────────── */
