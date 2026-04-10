@@ -24,10 +24,15 @@ export type PageFactory = (device: DeviceProfile | null) => Promise<{ page: Page
  * Special behavior: after matching a token, if the SAME element has a data-key
  * matching the NEXT token, that token is consumed without descending.
  *
+ * A `#N` token (1-based) narrows the current matches to the Nth element.
+ * This avoids brittle selectors that hardcode dynamic values like UUIDs.
+ *
  * @example
- * 'button'                        // Simple selector
- * 'modal form submit-button'      // Nested: modal > form > submit-button
+ * 'button'                         // Simple selector
+ * 'modal form submit-button'       // Nested: modal > form > submit-button
  * 'playlist-row 12345 like-button' // If playlist-row has data-key="12345", stays on same element
+ * 'feed-phrase-link #1'            // Click the first feed-phrase-link
+ * 'table-row #2 delete-button'     // Delete button inside the 2nd table-row
  */
 export type Selector = string
 

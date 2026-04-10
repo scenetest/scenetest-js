@@ -213,4 +213,66 @@ describe('resolveSelector', () => {
       expect(firstCalls).toHaveLength(0)
     })
   })
+
+  describe('#N nth-element narrowing', () => {
+    it('#1 calls .nth(0) on the current locator', () => {
+      const { page, calls } = createMockPage()
+
+      resolveSelector(page, 'feed-phrase-link #1')
+
+      // Step 1: page.locator(token1CSS)
+      expect(calls[0]).toMatchObject({ method: 'locator', on: 'page' })
+      expect(calls[0].args[0]).toContain('[aria-label="feed-phrase-link"]')
+
+      // Step 2: .nth(0) — 1-based #1 maps to 0-based nth(0)
+      const nthCalls = calls.filter((c) => c.method === 'nth')
+      expect(nthCalls).toHaveLength(1)
+      expect(nthCalls[0].args[0]).toBe(0)
+
+      // No .first() or .or() calls
+      expect(calls.filter((c) => c.method === 'first')).toHaveLength(0)
+      expect(calls.filter((c) => c.method === 'or')).toHaveLength(0)
+    })
+
+    it('#3 calls .nth(2)', () => {
+      const { page, calls } = createMockPage()
+
+      resolveSelector(page, 'list-item #3')
+
+      const nthCalls = calls.filter((c) => c.method === 'nth')
+      expect(nthCalls).toHaveLength(1)
+      expect(nthCalls[0].args[0]).toBe(2)
+    })
+
+    it('#N in the middle narrows then continues descending', () => {
+      const { page, calls } = createMockPage()
+
+      resolveSelector(page, 'table-row #2 delete-button')
+
+      // Step 1: page.locator(table-row CSS)
+      expect(calls[0]).toMatchObject({ method: 'locator', on: 'page' })
+
+      // Step 2: .nth(1) for #2
+      const nthCalls = calls.filter((c) => c.method === 'nth')
+      expect(nthCalls).toHaveLength(1)
+      expect(nthCalls[0].args[0]).toBe(1)
+
+      // Step 3: descendant lookup for delete-button (xpath + CSS + .or())
+      const orCalls = calls.filter((c) => c.method === 'or')
+      expect(orCalls).toHaveLength(1)
+    })
+
+    it('#N does not trigger data-key or descendant matching', () => {
+      const { page, calls } = createMockPage()
+
+      resolveSelector(page, 'item #1')
+
+      // Should only have: locator (token1), nth — no xpath self-match, no descendant locator
+      const locatorCalls = calls.filter((c) => c.method === 'locator')
+      expect(locatorCalls).toHaveLength(1) // just the initial token
+
+      const nthCalls = calls.filter((c) => c.method === 'nth')
+      expect(nthCalls).toHaveLength(1)
+    })
+  })
 })

@@ -79,6 +79,12 @@ function resolveToken(base: Page | Locator, token: string): Locator {
 }
 
 /**
+ * Match a `#N` nth-element token (1-based index).
+ * Returns the parsed index (1-based) or null if the token doesn't match.
+ */
+const NTH_RE = /^#(\d+)$/
+
+/**
  * Resolve a space-separated selector string.
  *
  * Algorithm:
@@ -87,6 +93,10 @@ function resolveToken(base: Page | Locator, token: string): Locator {
  * 3. After matching, check if SAME element has data-key matching NEXT token
  *    - If yes: consume that token (it's a key match), continue with token after
  *    - If no: descend into children for next token
+ *
+ * Special token `#N` (e.g. `#1`, `#3`) narrows the current locator to the
+ * Nth match (1-based).  This avoids brittle selectors that hardcode dynamic
+ * values like UUIDs from seed data.
  *
  * @example
  * ```ts
@@ -100,6 +110,12 @@ function resolveToken(base: Page | Locator, token: string): Locator {
  * resolveSelector(page, 'playlist-row 12345 like-button')
  * // Finds playlist-row, checks if it has data-key="12345",
  * // if yes stays on same element, then finds like-button child
+ *
+ * // Nth element — click the first feed-phrase-link
+ * resolveSelector(page, 'feed-phrase-link #1')
+ *
+ * // Nth element with nesting — click delete in the 2nd row
+ * resolveSelector(page, 'table-row #2 delete-button')
  * ```
  */
 export function resolveSelector(base: Page | Locator, selector: string): Locator {
@@ -114,6 +130,18 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
 
   while (i < tokens.length) {
     const nextToken = tokens[i]
+
+    // Nth-element narrowing: #1, #2, etc. (1-based)
+    const nthMatch = NTH_RE.exec(nextToken)
+    if (nthMatch) {
+      const n = parseInt(nthMatch[1], 10)
+      if (n < 1) {
+        throw new Error(`#N index must be >= 1, got #${n}`)
+      }
+      locator = locator.nth(n - 1)
+      i++
+      continue
+    }
 
     // Same-element match: current element has data-key=nextToken (stay on it)
     const sameElement = locator.locator(`xpath=self::*[@data-key="${nextToken}"]`)
