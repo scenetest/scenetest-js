@@ -60,10 +60,21 @@ export default defineConfig({
 
 CLI output labels these as `error-selector(...)` alongside `console.error`, `console.warn`, and `uncaught` entries.
 
+#### Live dashboard at `/__scenetest/dashboard`
+
+The CLI runner now streams real-time events to the Vite dev server, which fans them out to browser clients via SSE. Open `/__scenetest/dashboard` while scenes are running to see a swim-lane timeline with per-actor action bars, assertion markers, and durations — all updating live.
+
+- **DashboardReporter** in the runner posts events (scene start/end, action start/end, assertions, warnings) to Vite via fire-and-forget HTTP
+- **EventHub** in the Vite plugin manages SSE connections with a ring buffer so late-joining clients catch up
+- **Dashboard page** is self-contained HTML served by the plugin middleware
+- **Dev panel** now includes a "dashboard" link next to the fullscreen button
+- Graceful degradation: silently no-ops if the Vite server is unavailable
+
 ### Types
 
 - New `ConsoleError` type with `message`, `actor`, `timestamp`, `type` (`'error'` | `'warning'`), `source` (`'console'` | `'pageerror'` | `'selector'`), `url`, and optional `selector` fields
 - New `ErrorSelector` type (`{ selector, message }`)
+- New `DashboardEvent` union type for runner-to-dashboard event streaming
 - `SceneReport` and `RunReport` now include `consoleErrors` arrays and summary counts
 
 ---
