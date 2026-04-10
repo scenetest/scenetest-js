@@ -45,9 +45,25 @@ export default defineConfig({
 
 Uncaught exceptions and unhandled promise rejections (`page.on('pageerror')`) are now captured alongside console errors. A `source` field (`'console'` | `'pageerror'`) distinguishes them in reports so the CLI can label them distinctly (e.g. `"uncaught: TypeError: ..."`).
 
+#### `errorSelectors` config — detect error toasts via selectors
+
+New config option watches for visible error elements (toasts, alert banners) across all scenes and actors. When a matching element appears during action execution, a `ConsoleError` with `source: 'selector'` is recorded through the same reporting pipeline as console errors and uncaught exceptions:
+
+```ts
+export default defineConfig({
+  errorSelectors: [
+    { selector: '[role="alert"]', message: 'Unexpected error toast' },
+    { selector: '.toast-error',   message: 'Error toast appeared' },
+  ],
+})
+```
+
+CLI output labels these as `error-selector(...)` alongside `console.error`, `console.warn`, and `uncaught` entries.
+
 ### Types
 
-- New `ConsoleError` type with `message`, `actor`, `timestamp`, `type` (`'error'` | `'warning'`), `source` (`'console'` | `'pageerror'`), and `url` fields
+- New `ConsoleError` type with `message`, `actor`, `timestamp`, `type` (`'error'` | `'warning'`), `source` (`'console'` | `'pageerror'` | `'selector'`), `url`, and optional `selector` fields
+- New `ErrorSelector` type (`{ selector, message }`)
 - `SceneReport` and `RunReport` now include `consoleErrors` arrays and summary counts
 
 ---
