@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Inline assertions for end-to-end testing",
   "type": "module",
   "license": "MIT",

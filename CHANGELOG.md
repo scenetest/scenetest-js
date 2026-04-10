@@ -4,6 +4,54 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.6.0] — 2026-04-10
+
+### New features
+
+#### `#N` nth-element selector syntax
+
+Selectors can now include a `#N` token (1-based) to pick the Nth matching element instead of relying on brittle identifiers like UUIDs from seed data:
+
+```markdown
+user:
+- click feed-phrase-link #1
+```
+
+Works mid-chain too — narrow first, then descend:
+
+```markdown
+user:
+- see table-row #2
+- click delete-button
+```
+
+Or inline: `click table-row #2 delete-button`.
+
+Available everywhere selectors are used: `.spec.md`, text DSL, and TypeScript API.
+
+#### Browser console error detection
+
+`console.error` messages (and optionally `console.warn`) from the browser are now captured during scene execution and surfaced in the CLI output per-scene and in the run summary. Controlled via the `consoleErrors` config option:
+
+```ts
+export default defineConfig({
+  consoleErrors: true,       // capture console.error (default)
+  consoleErrors: 'warn',    // also capture console.warn
+  consoleErrors: false,      // disable entirely
+})
+```
+
+#### Uncaught JS exception capture
+
+Uncaught exceptions and unhandled promise rejections (`page.on('pageerror')`) are now captured alongside console errors. A `source` field (`'console'` | `'pageerror'`) distinguishes them in reports so the CLI can label them distinctly (e.g. `"uncaught: TypeError: ..."`).
+
+### Types
+
+- New `ConsoleError` type with `message`, `actor`, `timestamp`, `type` (`'error'` | `'warning'`), `source` (`'console'` | `'pageerror'`), and `url` fields
+- `SceneReport` and `RunReport` now include `consoleErrors` arrays and summary counts
+
+---
+
 ## [0.5.0] — 2026-04-09
 
 ### New features
