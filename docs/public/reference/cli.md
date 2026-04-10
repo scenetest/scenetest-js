@@ -261,6 +261,14 @@ scenetest-reports/
 
 **JSON reports** include the full `RunReport` object for programmatic analysis.
 
+## Live Dashboard
+
+When running against a Vite dev server with the scenetest plugin, a live dashboard is available at `/__scenetest/dashboard`. It shows a real-time swim-lane timeline with per-actor action bars, assertion markers, and timing data as scenes execute.
+
+The URL is printed when the runner starts. You can also open it from the floating dev panel's **dashboard** button.
+
+See [Live Dashboard](/reference/live-dashboard) for full details.
+
 ## Exit Codes
 
 | Code | Meaning |

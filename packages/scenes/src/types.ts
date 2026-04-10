@@ -426,6 +426,22 @@ export interface ErrorSelector {
   message: string
 }
 
+// ─── Dashboard Event Types ──────────────────────────────────────────
+
+/**
+ * Events streamed from the CLI runner to the Vite dev server
+ * for the live dashboard at /__scenetest/dashboard.
+ */
+export type DashboardEvent =
+  | { type: 'run:start'; timestamp: number; sceneCount: number }
+  | { type: 'scene:start'; timestamp: number; name: string; file: string; actors: string[] }
+  | { type: 'action:start'; timestamp: number; actor: string; action: string; target?: string }
+  | { type: 'action:end'; timestamp: number; actor: string; action: string; target?: string; duration: number; error?: string }
+  | { type: 'assertion'; timestamp: number; actor?: string; description: string; result: boolean }
+  | { type: 'warning'; timestamp: number; actor: string; selector: string; message: string }
+  | { type: 'scene:end'; timestamp: number; name: string; status: string; duration: number; error?: string }
+  | { type: 'run:end'; timestamp: number; duration: number; summary: RunReport['summary'] }
+
 // ─── Swarm Mode Types ────────────────────────────────────────────────
 
 /**

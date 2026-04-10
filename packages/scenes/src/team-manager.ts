@@ -8,6 +8,7 @@ import { NavigationModeRotation } from './keyboard.js'
 import { DeviceRotation } from './devices.js'
 import { SequentialActorHandleImpl } from './actor.js'
 import { MessageBus } from './message-bus.js'
+import { dashboardSend } from './dashboard-reporter.js'
 
 /**
  * Manages team assignment and lifecycle.
@@ -432,6 +433,14 @@ export class TeamSession {
         ...(navigationMode ? { navigationMode } : {}),
       }
       this.assertions.push(enriched)
+
+      dashboardSend({
+        type: 'assertion',
+        timestamp: result.timestamp || Date.now(),
+        actor: role,
+        description: result.description,
+        result: result.result,
+      })
     })
 
     // Wire console error listener
@@ -485,6 +494,14 @@ export class TeamSession {
       await page.exposeFunction('__scenetest_report', (result: AssertionResult) => {
         const enriched = { ...result, actor: role, ...(deviceName ? { device: deviceName } : {}) }
         this.assertions.push(enriched)
+
+        dashboardSend({
+          type: 'assertion',
+          timestamp: result.timestamp || Date.now(),
+          actor: role,
+          description: result.description,
+          result: result.result,
+        })
       })
 
       // Wire console error listener

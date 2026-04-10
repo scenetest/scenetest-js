@@ -363,6 +363,7 @@ import '${OBSERVER_MODULE}';`,
         console.log(`[vite-plugin-scenetest] ${mode} mode - scenetest assertions active`)
         if (showDevPanel) {
           console.log('[vite-plugin-scenetest] Dev panel enabled - open your app to see assertions')
+          console.log('[vite-plugin-scenetest] Live dashboard available at /__scenetest/dashboard')
         }
         if (showRecorder) {
           console.log('[vite-plugin-scenetest] Scene recorder enabled - record interactions as DSL')
