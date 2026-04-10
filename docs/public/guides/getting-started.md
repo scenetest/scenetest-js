@@ -434,6 +434,7 @@ When your test suite grows, add more actor teams to run scenes in parallel. Each
 - [Writing Scene Specs](/guides/writing-scene-specs) -- the full guide to scene orchestration
 - [Writing Inline Assertions](/guides/writing-inline-assertions) -- deep dive into `should()`, `failed()`, `serverCheck()`, and framework hooks
 - [Building Good Teams of Actors](/guides/building-teams) -- designing teams, seed data, and scaling concurrency
+- [Live Dashboard](/reference/live-dashboard) -- real-time swim-lane timeline of actor actions and assertions
 - [Selectors Reference](/reference/selectors) -- attribute matching, nesting, key selectors, aliases
 - [Markdown Spec Reference](/reference/text-dsl) -- full Markdown spec grammar, interpolation, macros
 - [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic) -- writing scenes in TypeScript or dropping to Playwright
