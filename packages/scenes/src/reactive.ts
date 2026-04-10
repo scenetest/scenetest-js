@@ -52,6 +52,8 @@ import type {
   Selector,
   TimelineEntry,
   ScriptWarning,
+  ConsoleError,
+  ErrorSelector,
   FlowContext,
   FlowFn,
   SceneOptions,
@@ -108,6 +110,16 @@ interface WarningTrigger {
 }
 
 // ---------------------------------------------------------------------------
+// Error selector trigger (from config.errorSelectors, pushes to consoleErrors)
+// ---------------------------------------------------------------------------
+
+interface ErrorSelectorTrigger {
+  selector: Selector
+  message: string
+  triggered: boolean
+}
+
+// ---------------------------------------------------------------------------
 // Conditional monitor — the flow model's answer to if()
 // ---------------------------------------------------------------------------
 
@@ -156,6 +168,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   private currentScope: Page | Locator | null
   private scopeStack: Array<Page | Locator> = []
   private warningTriggers: WarningTrigger[] = []
+  private errorSelectorTriggers: ErrorSelectorTrigger[] = []
   private conditionalMonitors: ConditionalMonitor[] = []
 
   // URL when scope was last set (for detecting navigation-induced staleness)
@@ -181,10 +194,12 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     private bus: MessageBus,
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
+    private consoleErrors: ConsoleError[],
     private actionTimeout: number,
     private warnAfter: number,
     navigationMode: NavigationMode = 'pointer',
-    fuzzyFingers: boolean = false
+    fuzzyFingers: boolean = false,
+    errorSelectors?: ErrorSelector[]
   ) {
     this.role = role
     this._page = page
@@ -192,6 +207,17 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     this.key = config.key
     this.navigationMode = navigationMode
     this.fuzzyFingers = fuzzyFingers
+
+    // Seed error selector triggers from config
+    if (errorSelectors) {
+      for (const es of errorSelectors) {
+        this.errorSelectorTriggers.push({
+          selector: es.selector,
+          message: es.message,
+          triggered: false,
+        })
+      }
+    }
 
     // Forward all config properties
     for (const [k, value] of Object.entries(config)) {
@@ -923,9 +949,10 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     await this.validateScope()
 
     const hasWarnings = this.warningTriggers.some((t) => !t.triggered)
+    const hasErrorSelectors = this.errorSelectorTriggers.some((t) => !t.triggered)
     const hasMonitors = this.conditionalMonitors.some((m) => !m.triggered)
 
-    if (!hasWarnings && !hasMonitors) {
+    if (!hasWarnings && !hasErrorSelectors && !hasMonitors) {
       await action.execute()
       return
     }
@@ -979,6 +1006,29 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
                 timestamp: Date.now(),
                 actor: this.role,
                 duringAction: `${action.name}(${action.target ?? ''})`,
+              })
+            }
+          } catch {
+            // Ignore errors from isVisible check
+          }
+        }
+
+        // Poll error selector triggers (from config.errorSelectors)
+        for (const trigger of this.errorSelectorTriggers) {
+          if (trigger.triggered) continue
+          try {
+            const locator = resolveSelector(this.page, trigger.selector)
+            const isVisible = await locator.isVisible()
+            if (isVisible) {
+              trigger.triggered = true
+              this.consoleErrors.push({
+                message: trigger.message,
+                actor: this.role,
+                timestamp: Date.now(),
+                type: 'error',
+                source: 'selector',
+                selector: trigger.selector,
+                url: this.page.url(),
               })
             }
           } catch {
@@ -1165,10 +1215,12 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
           session.getMessageBus(),
           session.timeline,
           session.warnings,
+          session.consoleErrors,
           session.actionTimeout,
           session.warnAfter,
           navMode,
-          fuzzyFingers
+          fuzzyFingers,
+          session.getErrorSelectors()
         )
 
         reactiveActors.push(reactive)

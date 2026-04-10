@@ -151,7 +151,7 @@ export class SceneRunner {
       try {
         // Create session
         const fuzzyFingers = !!this.config.fuzzyFingers
-        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel, this.config.consoleErrors)
+        const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel, this.config.consoleErrors, this.config.errorSelectors)
 
         try {
           // Log which scene is starting
@@ -201,7 +201,7 @@ export class SceneRunner {
           if (report.consoleErrors.length > 0) {
             console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
             for (const ce of report.consoleErrors.slice(0, 5)) {
-              const label = ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
+              const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
               console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 200)}`)
             }
             if (report.consoleErrors.length > 5) {
@@ -315,7 +315,8 @@ export class SceneRunner {
       this.config.server as Record<string, unknown> | undefined,
       fuzzyFingers,
       this.config.noPanel,
-      this.config.consoleErrors
+      this.config.consoleErrors,
+      this.config.errorSelectors
     )
 
     // Build a RunReport that includes the swarm results
@@ -572,7 +573,7 @@ export function printSummary(report: RunReport): void {
       if (scene.consoleErrors.length > 0) {
         console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
         for (const ce of scene.consoleErrors.slice(0, 3)) {
-          const label = ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
+          const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
           console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 150)}`)
         }
         if (scene.consoleErrors.length > 3) {

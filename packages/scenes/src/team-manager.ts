@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
-import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ConsoleError, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
+import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ConsoleError, ErrorSelector, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
 import type { DeviceProfile } from './devices.js'
 import type { StorageState } from './warmup.js'
 import { WarmupCache } from './warmup.js'
@@ -191,7 +191,8 @@ export class TeamManager {
     baseUrl?: string,
     fuzzyFingers: boolean = false,
     noPanel?: boolean,
-    consoleErrors?: boolean | 'error' | 'warn'
+    consoleErrors?: boolean | 'error' | 'warn',
+    errorSelectors?: ErrorSelector[]
   ): Promise<TeamSession> {
     if (!this.browser) {
       throw new Error('Browser not set. Call setBrowser() first.')
@@ -210,7 +211,8 @@ export class TeamManager {
       this.navigationModeRotation,
       fuzzyFingers,
       noPanel,
-      consoleErrors
+      consoleErrors,
+      errorSelectors
     )
   }
 }
@@ -236,6 +238,9 @@ export class TeamSession {
   /** Which console message types to capture */
   private consoleErrorMode: false | 'error' | 'warn'
 
+  /** Error selectors from config — injected into every actor */
+  private errorSelectors?: ErrorSelector[]
+
   constructor(
     private browser: Browser,
     private team: TeamConfig,
@@ -249,11 +254,13 @@ export class TeamSession {
     private navigationModeRotation?: NavigationModeRotation | null,
     private fuzzyFingers: boolean = false,
     private noPanel?: boolean,
-    consoleErrors?: boolean | 'error' | 'warn'
+    consoleErrors?: boolean | 'error' | 'warn',
+    errorSelectors?: ErrorSelector[]
   ) {
     this.meta = meta
     // Default: capture errors
     this.consoleErrorMode = consoleErrors === false ? false : consoleErrors === 'warn' ? 'warn' : 'error'
+    this.errorSelectors = errorSelectors
   }
 
   /**
@@ -372,6 +379,14 @@ export class TeamSession {
    */
   getFuzzyFingers(): boolean {
     return this.fuzzyFingers
+  }
+
+  /**
+   * Get global error selectors for this session.
+   * Used by flow() to pass to ConcurrentActorHandleImpl.
+   */
+  getErrorSelectors(): ErrorSelector[] | undefined {
+    return this.errorSelectors
   }
 
   /**
@@ -552,11 +567,13 @@ export class TeamSession {
       this.bus,
       this.timeline,
       this.warnings,
+      this.consoleErrors,
       this.actionTimeout,
       this.warnAfter,
       navMode,
       this.fuzzyFingers,
-      pageFactory
+      pageFactory,
+      this.errorSelectors
     )
 
     this.contexts.set(role, context)
