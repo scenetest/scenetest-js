@@ -57,6 +57,7 @@ function createTestActor(
     bus,
     timeline,
     warnings,
+    /* consoleErrors */ [],
     /* actionTimeout */ 5000,
     /* warnAfter */ 60000 // high so warnings don't fire during tests
   )
@@ -81,6 +82,7 @@ function createDeferredActor(role = 'user') {
     bus,
     timeline,
     warnings,
+    [],
     5000,
     60000
   )

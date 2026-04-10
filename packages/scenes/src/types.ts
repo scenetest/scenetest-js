@@ -248,6 +248,22 @@ export interface ScenetestConfig extends BaseConfig {
    */
   consoleErrors?: boolean | 'error' | 'warn'
 
+  /**
+   * Global error selectors — watched across all scenes and actors.
+   * When any selector matches a visible element during action execution,
+   * a ConsoleError with `source: 'selector'` is recorded alongside
+   * console errors and uncaught exceptions.
+   *
+   * @example
+   * ```ts
+   * errorSelectors: [
+   *   { selector: '[role="alert"]', message: 'Unexpected error toast' },
+   *   { selector: '.toast-error',   message: 'Error toast appeared' },
+   * ]
+   * ```
+   */
+  errorSelectors?: ErrorSelector[]
+
   /** Hook: before all scenes run */
   beforeAll?: () => Promise<void>
 
@@ -310,10 +326,13 @@ export interface ConsoleError {
    * Where the error originated:
    * - `'console'` — explicit `console.error()` / `console.warn()` call
    * - `'pageerror'` — uncaught exception or unhandled promise rejection
+   * - `'selector'` — a config-level error selector matched a visible element
    */
-  source?: 'console' | 'pageerror'
+  source?: 'console' | 'pageerror' | 'selector'
   /** URL of the page when the error occurred */
   url?: string
+  /** The CSS selector that matched (only present when source is 'selector') */
+  selector?: string
 }
 
 /**
@@ -386,6 +405,20 @@ export interface RunReport {
   }
   /** Present when this run was triggered by swarm mode */
   swarm?: SwarmReport
+}
+
+// ─── Error Selector Types ────────────────────────────────────────────
+
+/**
+ * A global error selector watched across all scenes.
+ * When the selector matches a visible element during action execution,
+ * a ConsoleError with `source: 'selector'` is recorded.
+ */
+export interface ErrorSelector {
+  /** CSS selector, aria-label, or alias (~name) to watch for */
+  selector: Selector
+  /** Message recorded when the selector matches */
+  message: string
 }
 
 // ─── Swarm Mode Types ────────────────────────────────────────────────
