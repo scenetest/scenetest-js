@@ -1,5 +1,5 @@
 import type { Page, BrowserContext, Locator } from 'playwright'
-import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, Selector, PageFactory } from './types.js'
+import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, TimelineEntry, ScriptWarning, ConsoleError, ErrorSelector, Selector, PageFactory } from './types.js'
 import type { NavigationMode } from './keyboard.js'
 import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
@@ -29,6 +29,16 @@ interface Watcher {
  * Registered warning trigger - fires when selector becomes visible
  */
 interface WarningTrigger {
+  selector: Selector
+  message: string
+  triggered: boolean
+}
+
+/**
+ * Error selector trigger - fires when selector becomes visible,
+ * records a ConsoleError with source: 'selector'
+ */
+interface ErrorSelectorTrigger {
   selector: Selector
   message: string
   triggered: boolean
@@ -501,8 +511,9 @@ class ActionChainImpl implements ActionChain {
 
     const watchers = this.actor.getWatchers()
     const warningTriggers = this.actor.getWarningTriggers()
+    const errorSelectorTriggers = this.actor.getErrorSelectorTriggers()
 
-    if (watchers.length === 0 && warningTriggers.length === 0) {
+    if (watchers.length === 0 && warningTriggers.length === 0 && errorSelectorTriggers.length === 0) {
       await action.execute()
       return
     }
@@ -572,6 +583,29 @@ class ActionChainImpl implements ActionChain {
                 timestamp: Date.now(),
                 actor: this.actor.role,
                 duringAction: `${action.name}(${action.target ?? ''})`,
+              })
+            }
+          } catch {
+            // Ignore errors from isVisible check
+          }
+        }
+
+        // Check error selector triggers (from config.errorSelectors)
+        for (const trigger of errorSelectorTriggers) {
+          if (trigger.triggered) continue
+          try {
+            const locator = resolveSelector(this.page, trigger.selector)
+            const isVisible = await locator.isVisible()
+            if (isVisible) {
+              trigger.triggered = true
+              this.actor.pushConsoleError({
+                message: trigger.message,
+                actor: this.actor.role,
+                timestamp: Date.now(),
+                type: 'error',
+                source: 'selector',
+                selector: formatSelector(trigger.selector),
+                url: this.page.url(),
               })
             }
           } catch {
@@ -674,6 +708,9 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   // Registered warning triggers
   private warningTriggers: WarningTrigger[] = []
 
+  // Error selector triggers (from config.errorSelectors)
+  private errorSelectorTriggers: ErrorSelectorTrigger[] = []
+
   // Page factory for switchDevice support
   private _pageFactory: PageFactory | null
 
@@ -692,11 +729,13 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     private bus: MessageBus,
     private timeline: TimelineEntry[],
     private warnings: ScriptWarning[],
+    private consoleErrors: ConsoleError[],
     private actionTimeout: number,
     private warnAfter: number,
     navigationMode: NavigationMode = 'pointer',
     fuzzyFingers: boolean = false,
-    pageFactory?: PageFactory | null
+    pageFactory?: PageFactory | null,
+    errorSelectors?: ErrorSelector[]
   ) {
     this.role = role
     this._page = page
@@ -705,6 +744,17 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
     this.key = config.key
     this.navigationMode = navigationMode
     this.fuzzyFingers = fuzzyFingers
+
+    // Seed error selector triggers from config
+    if (errorSelectors) {
+      for (const es of errorSelectors) {
+        this.errorSelectorTriggers.push({
+          selector: es.selector,
+          message: es.message,
+          triggered: false,
+        })
+      }
+    }
 
     // Copy all config properties to this instance
     for (const [k, value] of Object.entries(config)) {
@@ -749,6 +799,20 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
    */
   getWarningTriggers(): WarningTrigger[] {
     return this.warningTriggers
+  }
+
+  /**
+   * Get registered error selector triggers (used by ActionChainImpl)
+   */
+  getErrorSelectorTriggers(): ErrorSelectorTrigger[] {
+    return this.errorSelectorTriggers
+  }
+
+  /**
+   * Push a console error (used by ActionChainImpl for error selector matches)
+   */
+  pushConsoleError(error: ConsoleError): void {
+    this.consoleErrors.push(error)
   }
 
   /**

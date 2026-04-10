@@ -59,5 +59,6 @@ export type {
   SwarmSceneResult,
   SwarmRunDetail,
   SwarmClassification,
+  ErrorSelector,
   PageFactory,
 } from './types.js'

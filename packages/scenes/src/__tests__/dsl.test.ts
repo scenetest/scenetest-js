@@ -50,6 +50,7 @@ function createTestActor(role = 'user') {
     bus,
     timeline,
     warnings,
+    [],
     5000,
     60000
   )
@@ -425,6 +426,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
       bus,
       timeline,
       warnings,
+      [],
       5000,
       60000
     )
@@ -438,6 +440,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
       bus,
       timeline,
       warnings,
+      [],
       5000,
       60000
     )
@@ -477,6 +480,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
       bus,
       timeline,
       warnings,
+      [],
       5000,
       60000
     )
@@ -520,6 +524,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
       bus,
       timeline,
       warnings,
+      [],
       5000,
       60000
     )
@@ -547,6 +552,7 @@ describe('ConcurrentActorHandleImpl.dsl()', () => {
       bus,
       timeline,
       warnings,
+      [],
       5000,
       60000
     )
