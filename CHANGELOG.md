@@ -35,6 +35,12 @@ Failed scenes now show a persistent error summary below the swim lanes — the a
 
 The dashboard header is now `position: sticky` so stats, replay controls, and the progress bar remain visible while scrolling through scenes.
 
+### Improvements
+
+#### `[role.field]` interpolation works for any team member
+
+Previously, referencing `[learner2.key]` in a `.spec.md` step required declaring an empty `learner2:` block in the scene just to bring the credentials into scope. Now interpolation falls back to the full team config, so any team member's fields are available without declaring them as actors. This applies to both `.spec.md` scenes and the TypeScript `flow()` API.
+
 ### Bug fixes
 
 #### Tooltip z-index on dashboard
