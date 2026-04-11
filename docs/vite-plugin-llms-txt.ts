@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs'
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import type { Plugin } from 'vite'
 
@@ -145,9 +145,11 @@ export function llmsTxt(): Plugin {
     },
 
     closeBundle() {
-      // Write to Nitro output directory after build
+      // Write to Nitro output directory after build.
+      // Use mkdirSync to ensure the directory exists — our closeBundle may
+      // fire before Nitro's plugin has created .output/public/.
       const outDir = join(process.cwd(), '.output/public')
-      if (!existsSync(outDir)) return
+      mkdirSync(outDir, { recursive: true })
 
       const base = join(process.cwd(), PUBLIC_DIR)
       llmsTxtContent ??= buildLlmsTxt(base)
