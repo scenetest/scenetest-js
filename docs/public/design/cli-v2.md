@@ -65,13 +65,13 @@ For selector priority order, nested selectors, implicit key matching, sigil pref
 
 ### Scope Propagation
 
-`see()` updates the current scope. Subsequent actions operate within that scope:
+`scope()` sets the current scope. Subsequent actions operate within that scope. `see()` is a pure assertion — it checks visibility but does not change scope.
 
 ```typescript
 await user
-  .see('playlist-row 12345')   // Scope → this playlist row (key matched on same element)
-  .click('like-button')        // Click within that row
-  .see('liked-indicator')      // Verify within that row
+  .scope('playlist-row 12345')  // Scope → this playlist row (key matched on same element)
+  .click('like-button')         // Click within that row
+  .see('liked-indicator')       // Verify within that row (assertion only, no scope change)
 ```
 
 ### Navigation Methods
@@ -81,8 +81,8 @@ await user
 
 ```typescript
 await user
-  .see('modal')
-  .see('form')
+  .scope('modal')
+  .scope('form')
   .typeInto('name', 'Test')
   .prev()              // Back to modal scope
   .click('close')      // Click modal's close button

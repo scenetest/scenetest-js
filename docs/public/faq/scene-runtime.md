@@ -117,26 +117,26 @@ If any actor fails (an element never appears, an action times out), the runtime 
 
 ## Scope
 
-`see()` does double duty: it waits for an element to be visible _and_ narrows the actor's scope to that element. Subsequent actions resolve selectors relative to the current scope, not the entire page.
+`scope` narrows the actor's current scope — subsequent actions resolve selectors relative to the scoped element, not the entire page. `see` is a pure assertion that checks visibility but does **not** change scope.
 
 ```scenetest
 user:
-- see sidebar              # scope → sidebar element
+- scope sidebar            # scope → sidebar element
 - click settings-link      # looks for settings-link inside sidebar
-- see settings-panel       # scope → settings-panel (inside sidebar)
+- scope settings-panel     # scope → settings-panel (inside sidebar)
 - click save-button        # looks for save-button inside settings-panel
 ```
 
-Scope is managed as a stack. Each `see()` pushes the current scope onto the stack and sets the new one. You can navigate the stack with `prev` and `up`:
+Scope is managed as a stack. Each `scope` pushes the current scope onto the stack and sets the new one. You can navigate the stack with `prev` and `up`:
 
 - **`prev`** — pops back to the previous scope (like "undo")
 - **`up`** — with no argument, resets scope to the page root. With a selector, sets scope to a matching ancestor element.
 
 ```scenetest
 user:
-- see sidebar
+- scope sidebar
 - click settings-link
-- see settings-panel
+- scope settings-panel
 - prev                     # scope → sidebar (back one level)
 - click another-link
 - up                        # scope → page root
@@ -228,5 +228,5 @@ export default defineConfig({
 - **Actors drain concurrently.** Each actor works through its queue at its own pace, limited only by the DOM.
 - **Every action waits.** Playwright's `waitFor` is built into every action, so explicit waits are almost never needed.
 - **Actors synchronize through the app.** Most of the time, DOM state is enough. For cases where it isn't, `emit`/`waitFor` provides explicit coordination.
-- **Scope flows through the queue.** `see()` narrows scope, `prev`/`up` widen it. Scope is validated automatically after navigation.
+- **Scope flows through the queue.** `scope` narrows scope, `prev`/`up` widen it. `see` asserts visibility without changing scope. Scope is validated automatically after navigation.
 - **Conditional monitors poll alongside actions.** `if()` watches every 50ms during subsequent actions. One-shot, zero cost if it doesn't fire.

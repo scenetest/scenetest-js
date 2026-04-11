@@ -5,30 +5,39 @@ import type { DslTarget, Selector } from './types.js'
  *
  * <action> <selector> [<value>]
  *
- * Actions:
+ * Navigation (resets scope to page root):
  *   openTo <url>                    - Navigate to URL
  *   reload                          - Reload the current page
  *   goBack                          - Navigate back in browser history
  *   goForward                       - Navigate forward in browser history
  *   switchDevice [<name>]           - Switch to new device (new browser context)
- *   see <selector>                  - Wait for element visible
+ *
+ * Assertions (do NOT change scope):
+ *   see <selector>                  - Wait for element visible (with fallback to root)
+ *   seeInView <selector>            - Wait for element visible AND in viewport (no scroll)
  *   notSee <selector>               - Wait for element hidden
  *   seeText <text>                  - Wait for text visible
  *   seeToast <selector>             - Wait for element appear then disappear
- *   click [<selector>]              - Click element (or current scope if no selector)
- *   typeInto <selector> <value>     - Fill input
- *   check <selector>                - Check checkbox
- *   select <selector> <value>       - Select dropdown option
+ *
+ * Scope (changes current scope):
+ *   scope <selector>                - Wait for element visible and SET as current scope
+ *   up [<selector>]                 - Navigate to ancestor (bare up = page root)
+ *   prev                            - Return to previous scope
+ *
+ * Interactions (resolve within current scope):
+ *   click [<selector>]              - Click element; resets scope if URL changes (with fallback to root)
+ *   typeInto <selector> <value>     - Fill input (strict scope, no fallback)
+ *   check <selector>                - Check checkbox (strict scope, no fallback)
+ *   select <selector> <value>       - Select dropdown option (strict scope, no fallback)
+ *   ifClick <selector>              - Click if visible; resets scope if URL changes (with fallback to root)
+ *   pressKey <key>                  - Send raw keyboard event (Playwright key name)
+ *
+ * Control:
  *   wait <ms>                       - Wait milliseconds
  *   emit <message>                  - Emit to message bus
  *   waitFor <message>               - Block until message arrives on the bus
  *   warnIf <selector> <message>     - Register script warning
- *   up [<selector>]                 - Navigate scope to ancestor (or page root if no selector)
- *   prev                            - Return to previous scope
- *   scrollToBottom                   - Scroll current scope to bottom
- *   seeInView <selector>            - Wait for element visible AND in viewport (no scroll)
- *   ifClick <selector>               - Click element if currently visible (no-op if hidden)
- *   scope <selector>                 - Wait for element visible and set as current scope
+ *   scrollToBottom                  - Scroll current scope to bottom
  *
  * Selectors can be:
  *   - Simple: 'button'
@@ -38,6 +47,7 @@ import type { DslTarget, Selector } from './types.js'
  * Examples:
  *   'openTo /dashboard'
  *   'see main-content'
+ *   'scope settings-modal'
  *   'click modal close-button'
  *   'typeInto username-input testuser'
  *   'warnIf welcome-modal should not see welcome - user has dismiss flag'
