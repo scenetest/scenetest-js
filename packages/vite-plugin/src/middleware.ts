@@ -1,6 +1,8 @@
 import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
 import { AsyncLocalStorage } from 'async_hooks'
+import { spawn, type ChildProcess } from 'child_process'
+import path from 'path'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
@@ -57,6 +59,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
  */
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   const eventHub = new EventHub()
+  let activeReplay: ChildProcess | null = null
 
   return async (req, res, next) => {
     // ── Dashboard page ──────────────────────────────────────
@@ -94,6 +97,50 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
       res.end('{"ok":true}')
+      return
+    }
+
+    // ── Replay endpoint ──────────────────────────────────────
+    if (req.method === 'POST' && req.url === '/__scenetest/replay') {
+      let body = ''
+      for await (const chunk of req) {
+        body += chunk
+      }
+
+      let file: string | undefined
+      try {
+        const parsed = JSON.parse(body)
+        file = parsed.file
+      } catch {
+        // No body or invalid JSON — replay all
+      }
+
+      // If a replay is already running, kill it first
+      if (activeReplay && activeReplay.exitCode === null) {
+        activeReplay.kill()
+      }
+
+      // Build the CLI args
+      const args: string[] = []
+      if (file) {
+        // file is relative to scenetest/scenes/, resolve to full path
+        args.push(path.resolve(root, 'scenetest', 'scenes', file))
+      }
+
+      // Spawn the scenetest CLI as a child process
+      activeReplay = spawn('npx', ['scenetest', ...args], {
+        cwd: root,
+        stdio: 'ignore',
+        shell: true,
+      })
+
+      activeReplay.on('error', () => {
+        // Silently ignore spawn errors
+      })
+
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: true }))
       return
     }
 

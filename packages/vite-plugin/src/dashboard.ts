@@ -94,6 +94,51 @@ export function generateDashboardHtml(): string {
     .connection.connected { background: var(--green); }
     .connection.disconnected { background: var(--red); }
 
+    /* ─── Replay buttons ─────────────────────────────── */
+    .replay-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .replay-btn:hover {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .replay-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .replay-btn:disabled:hover {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text2);
+    }
+
+    .replay-btn .play-icon {
+      font-size: 10px;
+    }
+
+    .replay-all-btn {
+      margin-left: 12px;
+    }
+
+    .scene-replay-btn {
+      margin-left: auto;
+    }
+
     main {
       padding: 24px;
     }
@@ -346,6 +391,9 @@ export function generateDashboardHtml(): string {
 <body>
   <header>
     <h1><span class="logo">S</span> Scenetest Dashboard</h1>
+    <button class="replay-btn replay-all-btn" id="replay-all" onclick="replayAll()">
+      <span class="play-icon">&#9654;</span> Replay All
+    </button>
     <div class="status-bar">
       <div class="stat scenes">
         <span class="label">Scenes:</span>
@@ -422,6 +470,7 @@ export function generateDashboardHtml(): string {
           state.sceneCount = event.sceneCount
           document.getElementById('waiting').style.display = 'none'
           document.getElementById('scenes').innerHTML = ''
+          setReplayButtonsDisabled(true)
           updateStats()
           break
 
@@ -521,6 +570,7 @@ export function generateDashboardHtml(): string {
           state.passCount = event.summary?.assertions?.passed || state.passCount
           state.failCount = event.summary?.assertions?.failed || state.failCount
           document.getElementById('elapsed').textContent = event.duration + 'ms'
+          setReplayButtonsDisabled(false)
           updateStats()
           break
       }
@@ -632,12 +682,19 @@ export function generateDashboardHtml(): string {
           '</div>'
       }
 
+      const replayDisabled = state.scenes.some(s => s.status === 'running') ? ' disabled' : ''
+      const replayFileAttr = scene.file ? ' data-file="' + escapeHtml(scene.file) + '"' : ''
+
       el.innerHTML =
         '<div class="scene-header">' +
           '<span class="icon" style="color:' + statusColor + '">' + statusIcon + '</span>' +
           '<span class="name">' + escapeHtml(scene.name) + '</span>' +
           '<span class="file">' + escapeHtml(scene.file || '') + '</span>' +
           '<span class="duration">' + durationStr + '</span>' +
+          '<button class="replay-btn scene-replay-btn"' + replayFileAttr + replayDisabled +
+            ' onclick="replayScene(this)">' +
+            '<span class="play-icon">&#9654;</span> Replay' +
+          '</button>' +
         '</div>' +
         '<div class="swim-lanes">' +
           '<div class="time-ruler">' +
@@ -656,6 +713,37 @@ export function generateDashboardHtml(): string {
     function escapeHtml(str) {
       if (!str) return ''
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    // ─── Replay controls ─────────────────────────────
+    function setReplayButtonsDisabled(disabled) {
+      document.querySelectorAll('.replay-btn').forEach(function(btn) {
+        btn.disabled = disabled
+      })
+    }
+
+    function replayAll() {
+      setReplayButtonsDisabled(true)
+      fetch('/__scenetest/replay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }).catch(function() {
+        setReplayButtonsDisabled(false)
+      })
+    }
+
+    function replayScene(btn) {
+      var file = btn.getAttribute('data-file')
+      if (!file) return
+      setReplayButtonsDisabled(true)
+      fetch('/__scenetest/replay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: file }),
+      }).catch(function() {
+        setReplayButtonsDisabled(false)
+      })
     }
   </script>
 </body>
