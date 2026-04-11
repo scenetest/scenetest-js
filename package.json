@@ -5,6 +5,7 @@
 	"license": "MIT",
 	"private": true,
 	"type": "module",
+	"homepage": "https://scenetest.msnook.xyz",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/scenetest/scenetest-js.git"
