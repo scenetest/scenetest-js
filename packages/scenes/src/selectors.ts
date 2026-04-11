@@ -157,6 +157,52 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
 }
 
 /**
+ * Resolve a selector with scope fallback.
+ *
+ * Tries to resolve within the given scope first.  If the scope is not the
+ * page root and no matches are found, retries from the page root.  When the
+ * fallback succeeds a warning is logged so spec authors know the element
+ * was found outside the expected scope.
+ *
+ * @param scope   Current scope (Page or Locator)
+ * @param page    The Page root (used as fallback)
+ * @param selector  Selector string
+ * @param context   Human-readable action description for the warning (e.g. "click(submit)")
+ */
+export async function resolveSelectorWithFallback(
+  scope: Page | Locator,
+  page: Page,
+  selector: string,
+  context?: string
+): Promise<Locator> {
+  // If scope is already the page, no fallback needed
+  if (scope === page) {
+    return resolveSelector(page, selector)
+  }
+
+  // Try within current scope first
+  const scopedLocator = resolveSelector(scope, selector)
+  const count = await scopedLocator.count()
+  if (count > 0) {
+    return scopedLocator
+  }
+
+  // Fall back to page root
+  const rootLocator = resolveSelector(page, selector)
+  const rootCount = await rootLocator.count()
+  if (rootCount > 0) {
+    if (context) {
+      console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
+    }
+    return rootLocator
+  }
+
+  // Not found anywhere — return the scoped locator so the caller gets
+  // the normal Playwright timeout error with the original scope context
+  return scopedLocator
+}
+
+/**
  * Get debugging info about what a selector would match.
  * Useful for the debug selector explorer.
  */

@@ -28,6 +28,7 @@ import type { DslTarget, Selector } from './types.js'
  *   scrollToBottom                   - Scroll current scope to bottom
  *   seeInView <selector>            - Wait for element visible AND in viewport (no scroll)
  *   ifClick <selector>               - Click element if currently visible (no-op if hidden)
+ *   scope <selector>                 - Wait for element visible and set as current scope
  *
  * Selectors can be:
  *   - Simple: 'button'
@@ -120,7 +121,7 @@ export function parseAction(line: string): ParsedAction {
   const rest = trimmed.slice(firstSpace + 1).trim()
 
   // Actions that take only a selector
-  const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up', 'ifClick']
+  const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up', 'ifClick', 'scope']
 
   // Actions that take a value only (no selector)
   const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice', 'pressKey']
@@ -226,6 +227,11 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
     case 'seeToast':
       if (!selector) throw new Error('seeToast requires a selector')
       target.seeToast(selector)
+      break
+
+    case 'scope':
+      if (!selector) throw new Error('scope requires a selector')
+      target.scope(selector)
       break
 
     case 'click':

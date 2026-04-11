@@ -65,7 +65,7 @@ import type {
 import type { NavigationMode } from './keyboard.js'
 import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
-import { resolveSelector } from './selectors.js'
+import { resolveSelector, resolveSelectorWithFallback } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
@@ -325,7 +325,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   // Scope helper — scope is always set during drain (page is initialized)
   // -----------------------------------------------------------------------
 
-  private get scope(): Page | Locator {
+  private get activeScope(): Page | Locator {
     return this.currentScope ?? this.page
   }
 
@@ -446,7 +446,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   scrollToBottom(): this {
     return this.push('scrollToBottom', undefined, async () => {
-      const scope = this.scope
+      const scope = this.activeScope
       if (scope === this.page) {
         await this.page.evaluate(() => {
           window.scrollTo(0, document.body.scrollHeight)
@@ -477,18 +477,16 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   see(selector: Selector): this {
     return this.push('see', selector, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = await resolveSelectorWithFallback(
+        this.activeScope, this.page, selector, `see(${selector})`
+      )
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      this.scopeStack.push(this.scope)
-      this.scopeStackUrls.push(this.scopeSetUrl)
-      this.currentScope = locator
-      this.scopeSetUrl = this.page.url()
     })
   }
 
   seeInView(selector: Selector): this {
     return this.push('seeInView', selector, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = resolveSelector(this.activeScope, selector)
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       // Verify element is within the viewport without scrolling
       const inViewport = await locator.evaluate((el) => {
@@ -502,16 +500,12 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
           `Element "${selector}" is visible but not in the viewport (requires scrolling)`
         )
       }
-      this.scopeStack.push(this.scope)
-      this.scopeStackUrls.push(this.scopeSetUrl)
-      this.currentScope = locator
-      this.scopeSetUrl = this.page.url()
     })
   }
 
   notSee(selector: Selector): this {
     return this.push('notSee', selector, async () => {
-      await resolveSelector(this.scope, selector).waitFor({
+      await resolveSelector(this.activeScope, selector).waitFor({
         state: 'hidden',
         timeout: this.actionTimeout,
       })
@@ -522,7 +516,20 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     return this.push('seeText', text, async () => {
       const locator = this.page.getByText(text).first()
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      this.scopeStack.push(this.scope)
+    })
+  }
+
+  /**
+   * Wait for element to be visible and set it as the current scope.
+   * Tries current scope first; falls back to page root with a warning.
+   */
+  scope(selector: Selector): this {
+    return this.push('scope', selector, async () => {
+      const locator = await resolveSelectorWithFallback(
+        this.activeScope, this.page, selector, `scope(${selector})`
+      )
+      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      this.scopeStack.push(this.activeScope)
       this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
       this.scopeSetUrl = this.page.url()
@@ -546,7 +553,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   click(selector?: Selector): this {
     if (!selector) {
       return this.push('click', '(scope)', async () => {
-        const scope = this.scope
+        const scope = this.activeScope
         if (scope === this.page) {
           throw new Error('click with no selector requires a scope (use see() first)')
         }
@@ -570,7 +577,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     }
     return this.push('click', selector, async () => {
       const urlBefore = this.page.url()
-      const locator = resolveSelector(this.scope, selector)
+      const locator = await resolveSelectorWithFallback(
+        this.activeScope, this.page, selector, `click(${selector})`
+      )
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
@@ -592,7 +601,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   ifClick(selector: Selector): this {
     return this.push('ifClick', selector, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = await resolveSelectorWithFallback(
+        this.activeScope, this.page, selector, `ifClick(${selector})`
+      )
       const visible = await locator.isVisible()
       if (visible) {
         const urlBefore = this.page.url()
@@ -618,7 +629,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   typeInto(selector: Selector, value: string): this {
     return this.push('typeInto', `${selector}=${value}`, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = resolveSelector(this.activeScope, selector)
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
@@ -633,7 +644,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   check(selector: Selector): this {
     return this.push('check', selector, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = resolveSelector(this.activeScope, selector)
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
@@ -648,7 +659,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   select(selector: Selector, value: string): this {
     return this.push('select', `${selector}=${value}`, async () => {
-      const locator = resolveSelector(this.scope, selector)
+      const locator = resolveSelector(this.activeScope, selector)
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
@@ -681,7 +692,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         state: 'visible',
         timeout: this.actionTimeout,
       })
-      this.scopeStack.push(this.scope)
+      this.scopeStack.push(this.activeScope)
       this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = ancestorLocator
       this.scopeSetUrl = this.page.url()

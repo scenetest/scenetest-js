@@ -73,6 +73,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     notSee(s: string) { calls.push(`notSee:${s}`); return this },
     seeText(t: string) { calls.push(`seeText:${t}`); return this },
     seeToast(s: string) { calls.push(`seeToast:${s}`); return this },
+    scope(s: string) { calls.push(`scope:${s}`); return this },
     click(s?: string) { calls.push(`click:${s ?? '(scope)'}`); return this },
     typeInto(s: string, v: string) { calls.push(`typeInto:${s}=${v}`); return this },
     check(s: string) { calls.push(`check:${s}`); return this },
