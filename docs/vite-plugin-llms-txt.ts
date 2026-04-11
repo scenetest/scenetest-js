@@ -128,7 +128,7 @@ export function llmsTxt(): Plugin {
       const base = join(process.cwd(), PUBLIC_DIR)
 
       server.middlewares.use((req, res, next) => {
-        if (req.url === '/llms.txt' || req.url === '/llm.txt') {
+        if (req.url === '/llms.txt') {
           llmsTxtContent ??= buildLlmsTxt(base)
           res.setHeader('Content-Type', 'text/plain; charset=utf-8')
           res.end(llmsTxtContent)
@@ -156,7 +156,6 @@ export function llmsTxt(): Plugin {
       llmsFullTxtContent ??= buildLlmsFullTxt(base)
 
       writeFileSync(join(outDir, 'llms.txt'), llmsTxtContent)
-      writeFileSync(join(outDir, 'llm.txt'), llmsTxtContent)
       writeFileSync(join(outDir, 'llms-full.txt'), llmsFullTxtContent)
     },
   }
