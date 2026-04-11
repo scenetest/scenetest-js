@@ -167,7 +167,7 @@ function generateHtmlReport(report: RunReport): string {
   const warnColor = '#f59e0b'
 
   const sceneRows = report.scenes
-    .map((scene) => {
+    .map((scene, i) => {
       const statusIcon =
         scene.status === 'completed' ? '✓' : scene.status === 'timeout' ? '⏱' : '✗'
       const statusColor = scene.status === 'completed' ? passedColor : failedColor
@@ -188,11 +188,14 @@ function generateHtmlReport(report: RunReport): string {
         .join(' ')
 
       return `
-        <div class="scene">
-          <h3 style="color: ${statusColor}">${statusIcon} ${escapeHtml(scene.name)}</h3>
+        <div class="scene" id="scene-${i}">
+          <div class="scene-header">
+            <h3 style="color: ${statusColor}">${statusIcon} ${escapeHtml(scene.name)}</h3>
+            <button class="copy-btn" onclick="copyScene(${i})" title="Copy this test result">Copy</button>
+          </div>
           <p class="meta">File: ${escapeHtml(scene.file)} | Duration: ${scene.duration}ms | Team: ${scene.team?.name ? escapeHtml(scene.team.name) : String(scene.teamIndex)}</p>
           ${actorDevices ? `<p class="devices">${actorDevices}</p>` : ''}
-          ${scene.error ? `<p class="error">Error: ${escapeHtml(scene.error)}</p>` : ''}
+          ${scene.error ? `<p class="error" title="Click to expand">Error: ${escapeHtml(scene.error)}</p>` : ''}
           <h4>Assertions (${scene.assertions.length})</h4>
           <ul>${assertionList || '<li>No assertions</li>'}</ul>
         </div>
@@ -258,19 +261,35 @@ function generateHtmlReport(report: RunReport): string {
     .summary-card h2 { margin: 0; font-size: 2rem; }
     .summary-card p { margin: 0.5rem 0 0; color: #666; }
     .scene { border: 1px solid #ddd; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
-    .scene h3 { margin-top: 0; }
+    .scene-header { display: flex; align-items: flex-start; justify-content: space-between; }
+    .scene-header h3 { margin-top: 0; flex: 1; }
     .meta { color: #666; font-size: 0.9rem; }
-    .error { color: ${failedColor}; background: #fef2f2; padding: 0.5rem; border-radius: 4px; }
+    .error {
+      color: ${failedColor}; background: #fef2f2; padding: 0.5rem; border-radius: 4px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      cursor: pointer; white-space: pre-wrap; word-break: break-word;
+    }
+    .error.expanded { -webkit-line-clamp: unset; }
     .devices { margin: 0.5rem 0; }
     .device-badge { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-right: 4px; }
     .device-tag { color: #6366f1; font-size: 0.85em; }
     ul { list-style: none; padding-left: 0; }
     li { padding: 0.25rem 0; }
+    .copy-btn {
+      background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 4px 12px;
+      font-size: 0.8rem; color: #555; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+    .copy-btn:hover { background: #e5e5e5; }
+    .copy-btn.copied { background: ${passedColor}; color: white; border-color: ${passedColor}; }
+    .report-actions { display: flex; gap: 0.5rem; margin: 1rem 0; }
   </style>
 </head>
 <body>
   <h1><span class="logo">🎬</span> Scenetest Report</h1>
   <p>Generated: ${report.timestamp}</p>
+  <div class="report-actions">
+    <button class="copy-btn" onclick="copyFullReport()" id="copy-all-btn">Copy Full Report</button>
+  </div>
 
   <div class="summary">
     <div class="summary-card">
@@ -291,6 +310,80 @@ function generateHtmlReport(report: RunReport): string {
 
   ${sceneRows ? `<h2>Scenes</h2>${sceneRows}` : ''}
   ${swarmSection}
+
+  <script>
+    var reportData = ${JSON.stringify(report)};
+
+    function formatScene(scene) {
+      var status = scene.status === 'completed' ? 'PASSED' : scene.status === 'timeout' ? 'TIMEOUT' : 'FAILED';
+      var icon = scene.status === 'completed' ? '✓' : scene.status === 'timeout' ? '⏱' : '✗';
+      var lines = [];
+      lines.push(icon + ' ' + scene.name + ' — ' + status);
+      lines.push('  File: ' + scene.file + ' | Duration: ' + scene.duration + 'ms | Team: ' + (scene.team && scene.team.name ? scene.team.name : String(scene.teamIndex)));
+      var actors = Object.entries(scene.actors).filter(function(e) { return e[1].device; });
+      if (actors.length) {
+        lines.push('  Devices: ' + actors.map(function(e) { return e[0] + ': ' + e[1].device; }).join(', '));
+      }
+      if (scene.error) {
+        lines.push('  Error: ' + scene.error);
+      }
+      if (scene.assertions.length) {
+        lines.push('  Assertions (' + scene.assertions.length + '):');
+        scene.assertions.forEach(function(a) {
+          var aIcon = a.result ? '✓' : '✗';
+          var device = a.device ? ' [' + a.device + ']' : '';
+          lines.push('    ' + aIcon + ' ' + a.description + device);
+        });
+      }
+      return lines.join('\\n');
+    }
+
+    function formatFullReport() {
+      var r = reportData;
+      var lines = [];
+      lines.push('Scenetest Report');
+      lines.push('Generated: ' + r.timestamp);
+      lines.push('Scenes: ' + r.summary.completed + '/' + r.summary.scenes + ' completed | Assertions: ' + r.summary.assertions.passed + '/' + r.summary.assertions.total + ' passed | Duration: ' + r.duration + 'ms');
+      lines.push('');
+      r.scenes.forEach(function(scene) {
+        lines.push(formatScene(scene));
+        lines.push('');
+      });
+      if (r.swarm) {
+        lines.push('Swarm Results (' + r.swarm.trigger + ')');
+        lines.push('Broken: ' + r.swarm.summary.broken + ' | Flaky: ' + r.swarm.summary.flaky + ' | Seed Data Edge: ' + r.swarm.summary.seedDataEdgeCase + ' | Healthy: ' + r.swarm.summary.healthy);
+        r.swarm.results.forEach(function(s) {
+          lines.push('  ' + s.name + ' — ' + s.classification.toUpperCase() + ' (' + s.passed + '/' + s.runs + ' passed' + (s.failingTeams.length ? ', failing: ' + s.failingTeams.join(', ') : '') + ')');
+        });
+      }
+      return lines.join('\\n').trim();
+    }
+
+    function flashCopied(btn) {
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    }
+
+    function copyFullReport() {
+      navigator.clipboard.writeText(formatFullReport()).then(function() {
+        flashCopied(document.getElementById('copy-all-btn'));
+      });
+    }
+
+    function copyScene(index) {
+      var text = formatScene(reportData.scenes[index]);
+      var btn = document.querySelector('#scene-' + index + ' .copy-btn');
+      navigator.clipboard.writeText(text).then(function() {
+        flashCopied(btn);
+      });
+    }
+
+    document.querySelectorAll('.error').forEach(function(el) {
+      el.addEventListener('click', function() { el.classList.toggle('expanded'); });
+    });
+  </script>
 </body>
 </html>
 `
