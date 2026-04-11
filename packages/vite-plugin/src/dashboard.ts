@@ -139,6 +139,41 @@ export function generateDashboardHtml(): string {
       margin-left: auto;
     }
 
+    .stop-btn, .pause-btn {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .stop-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .pause-btn:hover {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .stop-btn .btn-icon, .pause-btn .btn-icon {
+      font-size: 10px;
+    }
+
+    .running .stop-btn, .running .pause-btn {
+      display: inline-flex;
+    }
+
     main {
       padding: 24px;
     }
@@ -394,6 +429,12 @@ export function generateDashboardHtml(): string {
     <button class="replay-btn replay-all-btn" id="replay-all" onclick="replayAll()">
       <span class="play-icon">&#9654;</span> Replay All
     </button>
+    <button class="pause-btn" id="pause-btn" onclick="togglePause()">
+      <span class="btn-icon" id="pause-icon">&#9646;&#9646;</span> <span id="pause-label">Pause</span>
+    </button>
+    <button class="stop-btn" id="stop-btn" onclick="stopRun()">
+      <span class="btn-icon">&#9632;</span> Stop
+    </button>
     <div class="status-bar">
       <div class="stat scenes">
         <span class="label">Scenes:</span>
@@ -470,7 +511,7 @@ export function generateDashboardHtml(): string {
           state.sceneCount = event.sceneCount
           document.getElementById('waiting').style.display = 'none'
           document.getElementById('scenes').innerHTML = ''
-          setReplayButtonsDisabled(true)
+          setRunning(true)
           updateStats()
           break
 
@@ -570,7 +611,7 @@ export function generateDashboardHtml(): string {
           state.passCount = event.summary?.assertions?.passed || state.passCount
           state.failCount = event.summary?.assertions?.failed || state.failCount
           document.getElementById('elapsed').textContent = event.duration + 'ms'
-          setReplayButtonsDisabled(false)
+          setRunning(false)
           updateStats()
           break
       }
@@ -715,35 +756,65 @@ export function generateDashboardHtml(): string {
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     }
 
-    // ─── Replay controls ─────────────────────────────
-    function setReplayButtonsDisabled(disabled) {
+    // ─── Run controls ─────────────────────────────────
+    var isPaused = false
+
+    function setRunning(running) {
       document.querySelectorAll('.replay-btn').forEach(function(btn) {
-        btn.disabled = disabled
+        btn.disabled = running
       })
+      if (running) {
+        document.querySelector('header').classList.add('running')
+      } else {
+        document.querySelector('header').classList.remove('running')
+        isPaused = false
+        updatePauseButton()
+      }
+    }
+
+    function updatePauseButton() {
+      document.getElementById('pause-icon').innerHTML = isPaused ? '&#9654;' : '&#9646;&#9646;'
+      document.getElementById('pause-label').textContent = isPaused ? 'Resume' : 'Pause'
     }
 
     function replayAll() {
-      setReplayButtonsDisabled(true)
+      setRunning(true)
       fetch('/__scenetest/replay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
       }).catch(function() {
-        setReplayButtonsDisabled(false)
+        setRunning(false)
       })
     }
 
     function replayScene(btn) {
       var file = btn.getAttribute('data-file')
       if (!file) return
-      setReplayButtonsDisabled(true)
+      setRunning(true)
       fetch('/__scenetest/replay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file: file }),
       }).catch(function() {
-        setReplayButtonsDisabled(false)
+        setRunning(false)
       })
+    }
+
+    function stopRun() {
+      fetch('/__scenetest/stop', { method: 'POST' })
+        .then(function() { setRunning(false) })
+        .catch(function() { setRunning(false) })
+    }
+
+    function togglePause() {
+      fetch('/__scenetest/pause', { method: 'POST' })
+        .then(function(r) { return r.json() })
+        .then(function(data) {
+          isPaused = data.paused
+          updatePauseButton()
+        })
+        .catch(function() {})
     }
   </script>
 </body>

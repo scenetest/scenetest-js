@@ -60,6 +60,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
 export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
   const eventHub = new EventHub()
   let activeReplay: ChildProcess | null = null
+  let paused = false
 
   return async (req, res, next) => {
     // ── Dashboard page ──────────────────────────────────────
@@ -138,9 +139,40 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
         // Silently ignore spawn errors
       })
 
+      paused = false
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ ok: true }))
+      return
+    }
+
+    // ── Stop running tests ──────────────────────────────────
+    if (req.method === 'POST' && req.url === '/__scenetest/stop') {
+      if (activeReplay && activeReplay.exitCode === null) {
+        activeReplay.kill()
+        activeReplay = null
+      }
+      paused = false
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: true }))
+      return
+    }
+
+    // ── Pause / resume running tests ────────────────────────
+    if (req.method === 'POST' && req.url === '/__scenetest/pause') {
+      if (activeReplay && activeReplay.exitCode === null && activeReplay.pid) {
+        if (paused) {
+          process.kill(activeReplay.pid, 'SIGCONT')
+          paused = false
+        } else {
+          process.kill(activeReplay.pid, 'SIGSTOP')
+          paused = true
+        }
+      }
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: true, paused }))
       return
     }
 
