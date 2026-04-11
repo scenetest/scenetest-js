@@ -169,9 +169,10 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
  * @param selector  Selector string
  * @param context   Human-readable action description for the warning (e.g. "click(submit)")
  * @param timeout   When provided, waits for the element to become visible in
- *                  either scope or page root (using locator.or()) instead of a
- *                  point-in-time count() check.  This prevents race conditions
- *                  where the element hasn't appeared yet when resolution runs.
+ *                  scope first (full timeout).  If the scoped wait times out,
+ *                  falls back to the page root with the same timeout.  This
+ *                  sequential approach avoids the strict-mode violation that
+ *                  racing with .or() caused.
  */
 export async function resolveSelectorWithFallback(
   scope: Page | Locator,
@@ -189,21 +190,21 @@ export async function resolveSelectorWithFallback(
   const rootLocator = resolveSelector(page, selector)
 
   if (timeout != null) {
-    // Wait for the element to appear in either scope or page root.
-    // This avoids the race where a point-in-time count() returns 0 for both,
-    // causing the wrong locator to be returned and a subsequent waitFor to
-    // look in the wrong subtree.
-    const combined = scopedLocator.or(rootLocator)
-    await combined.waitFor({ state: 'visible', timeout })
-
-    // Prefer the scoped locator when the element is within scope
-    if (await scopedLocator.isVisible()) {
+    // Try scoped first with full timeout commitment.  Only fall back to page
+    // root if the scoped wait fully times out.  This avoids the strict-mode
+    // violation that .or() caused — racing both locators meant Playwright saw
+    // every match on the page, not just the scoped one.
+    try {
+      await scopedLocator.waitFor({ state: 'visible', timeout })
       return scopedLocator
+    } catch {
+      // Scoped element never appeared — fall through to page root
     }
 
     if (context) {
       console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
     }
+    await rootLocator.waitFor({ state: 'visible', timeout })
     return rootLocator
   }
 
