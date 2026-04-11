@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks-svelte",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Svelte bindings for scenetest inline assertions",
   "type": "module",
   "license": "MIT",
