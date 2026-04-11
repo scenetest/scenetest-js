@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { resolveSelector, setAliases, clearAliases } from '../selectors.js'
+import { resolveSelector, resolveSelectorWithFallback, setAliases, clearAliases } from '../selectors.js'
 
 // ---------------------------------------------------------------------------
 // Helpers — chainable Playwright locator mock
@@ -273,6 +273,162 @@ describe('resolveSelector', () => {
 
       const nthCalls = calls.filter((c) => c.method === 'nth')
       expect(nthCalls).toHaveLength(1)
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveSelectorWithFallback tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a mock locator with waitFor / isVisible / count support.
+ * `visible` controls whether the locator resolves or rejects.
+ */
+function createAsyncMockLocator(visible: boolean) {
+  return {
+    _visible: visible,
+    waitFor: vi.fn(async () => {
+      if (!visible) throw new Error('Timeout waiting for element')
+    }),
+    isVisible: vi.fn(async () => visible),
+    count: vi.fn(async () => (visible ? 1 : 0)),
+    // Needed so resolveSelector can chain on it (unused in fallback tests)
+    locator: vi.fn(() => createAsyncMockLocator(visible)),
+    or: vi.fn(() => createAsyncMockLocator(visible)),
+    nth: vi.fn(() => createAsyncMockLocator(visible)),
+  }
+}
+
+/**
+ * Build a mock page + scope pair.  The page always resolves selectors into
+ * the provided mock locators so we can control visibility per-test.
+ */
+function createFallbackMocks(scopedVisible: boolean, rootVisible: boolean) {
+  const scopedLocator = createAsyncMockLocator(scopedVisible)
+  const rootLocator = createAsyncMockLocator(rootVisible)
+
+  // We can't easily intercept resolveSelector inside the module, so we
+  // construct a scope and page whose .locator() returns our mocks directly.
+  // resolveSelectorWithFallback calls resolveSelector(scope, sel) and
+  // resolveSelector(page, sel) — for a single-token selector that's just
+  // scope.locator(css) and page.locator(css).
+  const scope: any = {
+    locator: vi.fn(() => scopedLocator),
+  }
+  const page: any = {
+    locator: vi.fn(() => rootLocator),
+  }
+
+  return { scope, page, scopedLocator, rootLocator }
+}
+
+describe('resolveSelectorWithFallback', () => {
+  describe('with timeout (sequential fallback)', () => {
+    it('returns scoped locator when element is visible in scope', async () => {
+      const { scope, page, scopedLocator } = createFallbackMocks(true, true)
+
+      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
+
+      // Scoped waitFor should be called with the timeout
+      expect(scopedLocator.waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 5000 })
+      // Should return the scoped locator (identity check)
+      expect(result).toBe(scopedLocator)
+    })
+
+    it('falls back to root when scoped locator times out', async () => {
+      const { scope, page, scopedLocator, rootLocator } = createFallbackMocks(false, true)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
+
+      // Scoped waitFor should have been attempted and failed
+      expect(scopedLocator.waitFor).toHaveBeenCalled()
+      // Root waitFor should be called as fallback
+      expect(rootLocator.waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 5000 })
+      expect(result).toBe(rootLocator)
+      // Warning should fire
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not found in current scope')
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('does not call root waitFor when scoped succeeds', async () => {
+      const { scope, page, rootLocator } = createFallbackMocks(true, true)
+
+      await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
+
+      // Root locator's waitFor should NOT be called
+      expect(rootLocator.waitFor).not.toHaveBeenCalled()
+    })
+
+    it('throws when element is not found in either scope', async () => {
+      const { scope, page } = createFallbackMocks(false, false)
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await expect(
+        resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
+      ).rejects.toThrow()
+
+      vi.mocked(console.warn).mockRestore()
+    })
+
+    it('suppresses warning when context is undefined', async () => {
+      const { scope, page } = createFallbackMocks(false, true)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await resolveSelectorWithFallback(scope, page, 'btn', undefined, 5000)
+
+      expect(warnSpy).not.toHaveBeenCalled()
+      warnSpy.mockRestore()
+    })
+  })
+
+  describe('without timeout (point-in-time fallback)', () => {
+    it('returns scoped locator when count > 0', async () => {
+      const { scope, page, scopedLocator } = createFallbackMocks(true, true)
+
+      const result = await resolveSelectorWithFallback(scope, page, 'btn')
+
+      expect(scopedLocator.count).toHaveBeenCalled()
+      expect(result).toBe(scopedLocator)
+    })
+
+    it('falls back to root when scoped count is 0', async () => {
+      const { scope, page, rootLocator } = createFallbackMocks(false, true)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)')
+
+      expect(result).toBe(rootLocator)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not found in current scope')
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('returns scoped locator when neither has matches (for Playwright error)', async () => {
+      const { scope, page, scopedLocator } = createFallbackMocks(false, false)
+
+      const result = await resolveSelectorWithFallback(scope, page, 'btn')
+
+      // Returns scoped so Playwright gives the error with scope context
+      expect(result).toBe(scopedLocator)
+    })
+  })
+
+  describe('scope === page (no fallback needed)', () => {
+    it('resolves directly from page without fallback logic', async () => {
+      const page: any = {
+        locator: vi.fn(() => createAsyncMockLocator(true)),
+      }
+
+      const result = await resolveSelectorWithFallback(page, page, 'btn', 'click(btn)', 5000)
+
+      // Should have called page.locator once (not twice for scope + root)
+      expect(page.locator).toHaveBeenCalledTimes(1)
+      expect(result).toBeDefined()
     })
   })
 })

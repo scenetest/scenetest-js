@@ -32,7 +32,7 @@ The docs site Vite config now includes a plugin that generates `/llms.txt` (stru
 
 `scope()`, `see()`, and `click()` used a point-in-time `count()` check to decide whether to resolve within the current scope or fall back to page root. If the target element hadn't appeared yet, `count()` returned 0 for both locators, causing the fallback to pick the wrong subtree and subsequent `waitFor` to time out.
 
-Now `resolveSelectorWithFallback` uses Playwright's `locator.or()` to race both candidates with a proper timeout, returning whichever locator matches first. `ifClick()` retains the instant `count()` path since it needs non-blocking behavior.
+Now `resolveSelectorWithFallback` waits for the scoped locator first (full timeout), then falls back to page root only if the scoped wait fully times out. This sequential approach replaces the previous `locator.or()` race which broke Playwright's strict mode — racing both locators meant Playwright saw every match on the page, not just the scoped one. The tradeoff: out-of-scope resolution is intentionally slow, paying the full timeout before fallback. `ifClick()` retains the instant `count()` path since it needs non-blocking behavior.
 
 #### Scope reset after click-induced navigation
 
