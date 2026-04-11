@@ -174,6 +174,36 @@ export function generateDashboardHtml(): string {
       display: inline-flex;
     }
 
+    /* ─── Progress bar ───────────────────────────────── */
+    .progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border);
+      display: none;
+    }
+
+    .progress-bar.visible {
+      display: block;
+    }
+
+    .progress-bar .progress-fill {
+      height: 100%;
+      background: var(--blue);
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .progress-bar.done .progress-fill {
+      background: var(--green);
+    }
+
+    .progress-bar.has-failures .progress-fill {
+      background: var(--red);
+    }
+
     main {
       padding: 24px;
     }
@@ -229,11 +259,44 @@ export function generateDashboardHtml(): string {
       font-size: 12px;
     }
 
+    /* ─── Scene errors ────────────────────────────────── */
+    .scene-errors {
+      border: 1px solid var(--border);
+      border-top: none;
+      background: rgba(239, 68, 68, 0.05);
+      padding: 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .scene-error-line {
+      font-size: 12px;
+      color: var(--red);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .scene-error-line .error-icon {
+      flex-shrink: 0;
+      font-size: 10px;
+    }
+
+    .scene-error-line .error-action {
+      color: var(--text2);
+      flex-shrink: 0;
+    }
+
+    .scene-error-line .error-msg {
+      word-break: break-word;
+    }
+
     /* ─── Swim lanes ──────────────────────────────────── */
     .swim-lanes {
       border: 1px solid var(--border);
       border-top: none;
-      border-radius: 0 0 8px 8px;
     }
 
     .lane {
@@ -454,6 +517,7 @@ export function generateDashboardHtml(): string {
       </div>
       <div class="connection" id="connection" title="SSE connection"></div>
     </div>
+    <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   </header>
 
   <main id="main">
@@ -533,6 +597,9 @@ export function generateDashboardHtml(): string {
           state.scenes.push(scene)
           state.currentScene = scene
           renderScene(scene)
+          // Auto-scroll to keep the running scene visible
+          var sceneEl = document.getElementById('scene-' + (state.scenes.length - 1))
+          if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
           break
         }
 
@@ -628,6 +695,17 @@ export function generateDashboardHtml(): string {
       if (state.runStartTime && state.scenes.some(s => s.status === 'running')) {
         document.getElementById('elapsed').textContent =
           (Date.now() - state.runStartTime) + 'ms'
+      }
+
+      // Progress bar
+      var bar = document.getElementById('progress-bar')
+      var fill = document.getElementById('progress-fill')
+      if (state.sceneCount > 0) {
+        bar.classList.add('visible')
+        var pct = Math.round((completed / state.sceneCount) * 100)
+        fill.style.width = pct + '%'
+        bar.classList.toggle('done', completed === state.sceneCount && state.failCount === 0)
+        bar.classList.toggle('has-failures', state.failCount > 0)
       }
     }
 
@@ -726,6 +804,37 @@ export function generateDashboardHtml(): string {
       const replayDisabled = state.scenes.some(s => s.status === 'running') ? ' disabled' : ''
       const replayFileAttr = scene.file ? ' data-file="' + escapeHtml(scene.file) + '"' : ''
 
+      // Collect errors from failed actions and scene-level error
+      var errors = []
+      for (var _a of scene.actions.values()) {
+        for (var _act of _a) {
+          if (_act.error) {
+            errors.push({ action: _act.action, target: _act.target, msg: _act.error })
+          }
+        }
+      }
+      if (scene.error && !errors.some(function(e) { return e.msg === scene.error })) {
+        errors.push({ action: null, target: null, msg: scene.error })
+      }
+
+      var errorsHtml = ''
+      if (errors.length > 0) {
+        var lines = ''
+        for (var _e of errors) {
+          var actionLabel = _e.action
+            ? '<span class="error-action">' + escapeHtml(_e.action + (_e.target ? '(' + _e.target + ')' : '')) + '</span> '
+            : ''
+          lines += '<div class="scene-error-line">' +
+            '<span class="error-icon">\\u2717</span> ' +
+            actionLabel +
+            '<span class="error-msg">' + escapeHtml(_e.msg) + '</span>' +
+            '</div>'
+        }
+        errorsHtml = '<div class="scene-errors" style="border-radius: 0 0 8px 8px;">' + lines + '</div>'
+      }
+
+      var lanesRadius = errors.length > 0 ? '' : ' style="border-radius: 0 0 8px 8px;"'
+
       el.innerHTML =
         '<div class="scene-header">' +
           '<span class="icon" style="color:' + statusColor + '">' + statusIcon + '</span>' +
@@ -737,13 +846,14 @@ export function generateDashboardHtml(): string {
             '<span class="play-icon">&#9654;</span> Replay' +
           '</button>' +
         '</div>' +
-        '<div class="swim-lanes">' +
+        '<div class="swim-lanes"' + lanesRadius + '>' +
           '<div class="time-ruler">' +
             '<div class="lane-label" style="font-size:10px;color:var(--text2)">time</div>' +
             '<div class="ruler-track">' + rulerHtml + '</div>' +
           '</div>' +
           lanesHtml +
-        '</div>'
+        '</div>' +
+        errorsHtml
     }
 
     function formatMs(ms) {
