@@ -319,7 +319,8 @@ actor-role-name:
 
 Available actions:
   openTo <url>              — navigate to URL
-  see <selector>            — wait for element visible (sets scope)
+  see <selector>            — assert element visible (does not change scope)
+  scope <selector>          — wait for element visible and set as scope
   seeInView <selector>      — visible AND in viewport
   notSee <selector>         — wait for element hidden
   seeText <text>            — wait for text visible

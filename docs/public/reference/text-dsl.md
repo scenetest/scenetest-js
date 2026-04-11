@@ -9,35 +9,59 @@ Markdown scenes are the primary way to write Scenetest specs. It's a simple line
 ```text
 <action> [<selector>] [<value>]
 
-Actions:
+Navigation:
   openTo <url>                    Navigate to URL
-  reload                          Reload the current page (resets scope)
-  goBack                          Navigate back in browser history (resets scope)
-  goForward                       Navigate forward in browser history (resets scope)
+  reload                          Reload the current page
+  goBack                          Navigate back in browser history
+  goForward                       Navigate forward in browser history
   switchDevice [<name>]           Switch to a new browser context (new device)
-  see <selector>                  Wait for element visible (updates scope)
+
+Assertions (do NOT change scope):
+  see <selector>                  Wait for element visible
   seeInView <selector>            Wait for element visible in the viewport
   notSee <selector>               Wait for element hidden
   seeText <text>                  Wait for text visible
   seeToast <selector>             Wait for element appear then disappear
-  click [<selector>]              Click element within scope (bare click = click current scope)
+
+Scope:
+  scope <selector>                Wait for element visible and SET it as scope
+  up [<selector>]                 Navigate scope to ancestor (bare up = page root)
+  prev                            Return to previous scope
+
+Interactions (resolve within current scope):
+  click [<selector>]              Click element (bare click = click current scope)
   typeInto <selector> <value>     Fill input
   check <selector>                Check checkbox
   select <selector> <value>       Select dropdown option
+  ifClick <selector>              Click element if visible, skip silently if not
+  pressKey <key>                  Send raw keyboard event (Playwright key name)
+
+Control:
   wait <ms>                       Wait milliseconds
   emit <message>                  Emit to message bus
   waitFor <message>               Block until bus message arrives
-  pressKey <key>                  Send raw keyboard event (Playwright key name)
-  ifClick <selector>              Click element if visible, skip silently if not
   warnIf <selector> <message>     Register script warning
-  up [<selector>]                 Navigate scope to ancestor (bare up = reset to page root)
-  prev                            Return to previous scope
   scrollToBottom                  Scroll current scope to bottom
 ```
 
 > `do()` and `if()` are code-only methods not available in the text DSL grammar. However, `if` is available in `.spec.md` files with indented sub-actions. `ifClick` (or `if-click`) is available everywhere as a point-in-time shorthand.
 
 `reload`, `goBack`, and `goForward` take no arguments. `switchDevice` optionally takes a device name (e.g., `switchDevice iPhone 14`). If omitted, the next device from the rotation is used.
+
+### How actions affect scope
+
+Every action falls into one of four categories:
+
+| Category | Actions | What happens |
+|----------|---------|--------------|
+| **Sets scope** | `scope`, `up` | Narrows subsequent interactions to within the matched element. `scope` pushes onto a stack; `up` navigates to an ancestor or resets to page root. |
+| **Resets scope** | `openTo`, `reload`, `goBack`, `goForward`, `switchDevice` | Clears scope entirely — back to page root. |
+| **Resets scope on navigation** | `click`, `ifClick` | If the click triggers a URL change, scope resets to page root. Otherwise scope is unchanged. |
+| **Does not change scope** | `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom`, `prev` | Scope stays where it is. (`prev` pops the scope stack, returning to the previous scope.) |
+
+**`see` vs `scope`:** `see` is a pure assertion — it checks that an element is visible but does not narrow scope. Use `scope` when you need subsequent actions (like `typeInto` or `check`) to resolve within a specific container.
+
+**Fallback resolution:** `see`, `click`, and `scope` try the current scope first. If no match is found, they retry from the page root and log a warning. This prevents silent failures when an element exists outside the expected scope. Form interactions (`typeInto`, `check`, `select`) do **not** fall back — they resolve strictly within the current scope so you can be sure which form you're interacting with.
 
 ### Nested selectors
 
@@ -88,9 +112,9 @@ primary-user:
 
 new-user:
 - seeToast friend-request
-- see navbar notifications-badge
+- scope navbar notifications-badge
 - click
-- see notifications-menu-expanded new-friend-request
+- scope notifications-menu-expanded new-friend-request
 - click
 
 ## old user re-activates account

@@ -49,24 +49,33 @@ user:
 
 ## Scope Navigation
 
-`see` updates the actor's **current scope** — subsequent actions search within the matched element. Use `prev` and `up` to navigate scope without drilling deeper:
+`scope` narrows the actor's **current scope** — subsequent actions search within the matched element. `see` is a pure assertion that checks visibility but does **not** change scope.
 
 ```scenetest
 user:
-- see settings-modal
-- see profile-form
+- scope settings-modal
+- scope profile-form
 - typeInto input Alice
 - prev
 - click close-button
 ```
 
-In this example, `prev` returns scope to `settings-modal` so `click close-button` finds the modal's close button, not one inside the form.
+In this example, `scope settings-modal` narrows to the modal, then `scope profile-form` narrows further to the form inside it. `prev` returns scope to `settings-modal` so `click close-button` finds the modal's close button, not one inside the form.
+
+**`see` vs `scope`:** Use `see` when you only need to assert an element is visible. Use `scope` when you need subsequent actions to resolve within that element:
+
+```scenetest
+user:
+- see welcome-banner          # just checks it's visible — scope unchanged
+- scope settings-modal        # narrows scope to the modal
+- typeInto search-input foo   # searches within settings-modal
+```
 
 `up` with a selector navigates to an ancestor matching that selector. `up` with no selector resets scope to the page root:
 
 ```scenetest
 user:
-- see nested-item
+- scope nested-item
 - up ~container
 - click action-button
 ```
@@ -76,6 +85,8 @@ user:
 - up
 - see other-section
 ```
+
+**Fallback resolution:** `see`, `click`, and `scope` try the current scope first. If no match is found, they retry from the page root and log a warning. This prevents silent failures when an element exists outside the expected scope. Form interactions (`typeInto`, `check`, `select`) do **not** fall back — they resolve strictly within the current scope so you can be sure which form you're interacting with.
 
 ## Conditional Handling
 
@@ -270,7 +281,8 @@ For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#clean
 - Write specs in **plain language** from the user's perspective
 - For TypeScript syntax when you need it, see [TypeScript Scenes & Playwright Specs](/reference/concurrent-and-classic)
 - Use stable `data-testid` attributes on containers, `data-key` on list items, and `aria-label` on interactive elements as the contract with engineers
-- Use **scope navigation** (`prev`, `up`, bare `up`) to move between scoped contexts
+- Use `scope` to narrow context, `see` to assert visibility without changing scope
+- Use **scope navigation** (`scope`, `prev`, `up`, bare `up`) to move between scoped contexts
 - Use `seeInView` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
 - Use `seeToast` for transient notifications
