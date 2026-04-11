@@ -10,7 +10,8 @@ const SECTIONS = [
 
 const PUBLIC_DIR = 'public'
 
-const SITE = 'https://scenetest.dev'
+/** Production site URL — the canonical home for Scenetest docs. */
+const SITE = 'https://scenetest.msnook.xyz'
 
 /** Read the first `# Heading` from a markdown file. */
 function getTitle(filePath: string): string {
