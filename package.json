@@ -1,6 +1,6 @@
 {
 	"name": "scenetest-monorepo",
-	"version": "0.7.0",
+	"version": "0.7.2",
 	"description": "A local-first testing framework for the Vite ecosystem",
 	"license": "MIT",
 	"private": true,

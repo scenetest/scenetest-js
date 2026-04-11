@@ -4,7 +4,7 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## [0.7.1] — 2026-04-11
+## [0.7.2] — 2026-04-11
 
 ### New features
 
@@ -22,7 +22,17 @@ user:
 
 `scope()`, `see()`, and `click()` use a fallback resolver — they try the current scope first, then fall back to page root with a warning, so existing tests continue to pass even if they relied on `see()` setting scope. Form interactions (`typeInto`, `check`, `select`) remain strict and only resolve within the current scope to avoid ambiguity across multiple forms on the same page.
 
+#### `llms.txt` / `llms-full.txt` for docs site
+
+The docs site Vite config now includes a plugin that generates `/llms.txt` (structured index with descriptions) and `/llms-full.txt` (all page content concatenated) following the [llmstxt.org](https://llmstxt.org) convention. Since the docs site is a React SPA, LLMs fetching pages would only get the JavaScript shell — these static text files give them the actual content.
+
 ### Bug fixes
+
+#### `scope()` waits for visibility before resolving
+
+`scope()`, `see()`, and `click()` used a point-in-time `count()` check to decide whether to resolve within the current scope or fall back to page root. If the target element hadn't appeared yet, `count()` returned 0 for both locators, causing the fallback to pick the wrong subtree and subsequent `waitFor` to time out.
+
+Now `resolveSelectorWithFallback` uses Playwright's `locator.or()` to race both candidates with a proper timeout, returning whichever locator matches first. `ifClick()` retains the instant `count()` path since it needs non-blocking behavior.
 
 #### Scope reset after click-induced navigation
 
