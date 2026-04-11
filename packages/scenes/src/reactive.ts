@@ -477,10 +477,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   see(selector: Selector): this {
     return this.push('see', selector, async () => {
-      const locator = await resolveSelectorWithFallback(
-        this.activeScope, this.page, selector, `see(${selector})`
+      await resolveSelectorWithFallback(
+        this.activeScope, this.page, selector, `see(${selector})`, this.actionTimeout
       )
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
     })
   }
 
@@ -526,9 +525,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   scope(selector: Selector): this {
     return this.push('scope', selector, async () => {
       const locator = await resolveSelectorWithFallback(
-        this.activeScope, this.page, selector, `scope(${selector})`
+        this.activeScope, this.page, selector, `scope(${selector})`, this.actionTimeout
       )
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.scopeStack.push(this.activeScope)
       this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
@@ -578,10 +576,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     return this.push('click', selector, async () => {
       const urlBefore = this.page.url()
       const locator = await resolveSelectorWithFallback(
-        this.activeScope, this.page, selector, `click(${selector})`
+        this.activeScope, this.page, selector, `click(${selector})`, this.actionTimeout
       )
       if (this.isKeyboard) {
-        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressEnter(this.page)
       } else if (this.useFuzzyFingers) {
