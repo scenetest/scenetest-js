@@ -125,7 +125,7 @@ PR comment:
 > | Regression | checkout.validates | was 8ms/pass, now 92ms/fail |
 > | New | checkout.applyCoupon | 5ms pass |
 >
-> [View full comparison →](https://scenetest.dev/compare/...)
+> [View full comparison →](https://scenetest.msnook.xyz/compare/...)
 
 ## Live DSL Playground (Future)
 
