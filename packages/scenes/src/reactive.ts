@@ -58,6 +58,7 @@ import type {
   FlowFn,
   SceneOptions,
   ConcurrentActorHandle,
+  TeamConfig,
   TeamMeta,
   PageFactory,
 } from './types.js'
@@ -187,6 +188,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   private _actorRegistry: Map<string, ConcurrentActorHandle> | null = null
   /** Team metadata for [team.field] interpolation */
   private _teamMetadata: Record<string, string> | null = null
+  /** Full team config — fallback for [role.field] when role isn't a scene actor */
+  private _teamConfig: TeamConfig | null = null
 
   constructor(
     role: string,
@@ -263,6 +266,13 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    */
   _setTeamMetadata(metadata: Record<string, string>): void {
     this._teamMetadata = metadata
+  }
+
+  /**
+   * Set full team config for [role.field] fallback interpolation.
+   */
+  _setTeamConfig(config: TeamConfig): void {
+    this._teamConfig = config
   }
 
   /**
@@ -772,15 +782,15 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
           return escapeForSelector(String(value))
         }
 
-        // [role.field] — another actor's fields
+        // [role.field] — another actor's fields (scene actors first, then full team)
         if (!this._actorRegistry) {
           throw new Error(
             `[${namespace}.${field}] — cannot reference other actors outside a scene context`
           )
         }
-        const actor = this._actorRegistry.get(namespace)
+        const actor = this._actorRegistry.get(namespace) ?? this._teamConfig?.[namespace]
         if (!actor) {
-          const available = [...this._actorRegistry.keys()].join(', ')
+          const available = [...new Set([...this._actorRegistry.keys(), ...Object.keys(this._teamConfig ?? {})])].join(', ')
           throw new Error(
             `[${namespace}.${field}] — unknown actor "${namespace}" (available: ${available})`
           )
@@ -1268,9 +1278,11 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
       await result
     }
 
-    // Set actor registry and team metadata on all actors for interpolation
+    // Set actor registry, team metadata, and full team config on all actors for interpolation
+    const teamConfig = session.getTeamConfig()
     for (const actor of reactiveActors) {
       actor._setActorRegistry(actorRegistry)
+      actor._setTeamConfig(teamConfig)
       if (Object.keys(teamMetadataForInterpolation).length > 0) {
         actor._setTeamMetadata(teamMetadataForInterpolation)
       }
