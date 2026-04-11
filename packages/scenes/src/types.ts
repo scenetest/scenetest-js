@@ -632,15 +632,14 @@ export interface SequentialActorHandle extends ActorConfig {
   switchDevice(device?: string): ActionChain
 
   /**
-   * Wait for element to be visible and set it as the current scope.
-   * Supports nested selectors: 'parent child'
-   * Supports tuple selectors: ['playlist-row', '12345'] for name + key
+   * Wait for element to be visible (assertion only, does not change scope).
+   * Use scope() to explicitly narrow the search context for subsequent actions.
    */
   see(selector: Selector): ActionChain
 
   /**
-   * Wait for element to be visible, in the viewport (no scroll), and set it as scope.
-   * Like see() but additionally verifies the element is within the current viewport bounds.
+   * Wait for element to be visible AND in the viewport (no scroll).
+   * Assertion only — does not change scope.
    * Fails if the element exists but requires scrolling to reach.
    */
   seeInView(selector: Selector): ActionChain
@@ -648,15 +647,21 @@ export interface SequentialActorHandle extends ActorConfig {
   /** Wait for element to NOT be visible (hidden or detached) */
   notSee(selector: Selector): ActionChain
 
-  /** Wait for text to be visible */
+  /** Wait for text to be visible (assertion only, does not change scope) */
   seeText(text: string): ActionChain
 
   /** Wait for element to appear AND disappear (for toasts/notifications) */
   seeToast(selector: Selector): ActionChain
 
   /**
+   * Wait for element to be visible and set it as the current scope.
+   * Subsequent actions (click, typeInto, etc.) resolve within this scope.
+   */
+  scope(selector: Selector): ActionChain
+
+  /**
    * Click element within current scope.
-   * If no selector is given, clicks the current scope itself (the element from the last see()).
+   * If no selector is given, clicks the current scope itself.
    * Supports nested selectors: 'parent child'
    * Supports tuple selectors: ['button', '12345'] for name + key
    */
@@ -697,8 +702,8 @@ export interface SequentialActorHandle extends ActorConfig {
    *
    * @example
    * ```ts
-   * user.see('button').up('~container').see('other-element')
-   * user.see('deep nested thing').up() // back to page root
+   * user.scope('button').up('~container').scope('other-element')
+   * user.scope('deep nested thing').up() // back to page root
    * ```
    */
   up(selector?: Selector): ActionChain
@@ -786,26 +791,23 @@ export interface ActionChain extends PromiseLike<void> {
    */
   switchDevice(device?: string): ActionChain
 
-  /**
-   * Wait for element to be visible and set it as the current scope.
-   * Subsequent actions (click, typeInto, etc.) will look within this scope.
-   */
+  /** Wait for element to be visible (assertion only, does not change scope) */
   see(selector: Selector): ActionChain
 
-  /**
-   * Wait for element to be visible AND in the viewport (no scroll), and set it as scope.
-   * Fails if the element exists but requires scrolling to reach.
-   */
+  /** Wait for element to be visible AND in the viewport (assertion only, does not change scope) */
   seeInView(selector: Selector): ActionChain
 
   /** Wait for element to NOT be visible (hidden or detached) */
   notSee(selector: Selector): ActionChain
 
-  /** Wait for text to be visible */
+  /** Wait for text to be visible (assertion only, does not change scope) */
   seeText(text: string): ActionChain
 
   /** Wait for element to appear AND disappear (for toasts/notifications) */
   seeToast(selector: Selector): ActionChain
+
+  /** Wait for element to be visible and set it as the current scope */
+  scope(selector: Selector): ActionChain
 
   /** Click element within current scope, or click current scope if no selector given */
   click(selector?: Selector): ActionChain
@@ -843,7 +845,7 @@ export interface ActionChain extends PromiseLike<void> {
    *
    * @example
    * ```ts
-   * user.see('parent').see('child').prev().click('sibling')
+   * user.scope('parent').scope('child').prev().click('sibling')
    * ```
    */
   prev(): ActionChain
@@ -854,7 +856,7 @@ export interface ActionChain extends PromiseLike<void> {
    *
    * @example
    * ```ts
-   * await user.see('form').dsl(`
+   * await user.scope('form').dsl(`
    *   typeInto email alice@test.com
    *   typeInto password secret
    *   click submit
@@ -933,6 +935,7 @@ export interface DslTarget {
   notSee(selector: Selector): unknown
   seeText(text: string): unknown
   seeToast(selector: Selector): unknown
+  scope(selector: Selector): unknown
   click(selector?: Selector): unknown
   typeInto(selector: Selector, value: string): unknown
   check(selector: Selector): unknown
@@ -1000,12 +1003,16 @@ export interface ConcurrentActorHandle {
   switchDevice(device?: string): ConcurrentActorHandle
   scrollToBottom(): ConcurrentActorHandle
 
-  // -- Observation --
+  // -- Observation (assertions only, do not change scope) --
   see(selector: Selector): ConcurrentActorHandle
   seeInView(selector: Selector): ConcurrentActorHandle
   notSee(selector: Selector): ConcurrentActorHandle
   seeText(text: string): ConcurrentActorHandle
   seeToast(selector: Selector): ConcurrentActorHandle
+
+  // -- Scope --
+  /** Wait for element to be visible and set it as the current scope */
+  scope(selector: Selector): ConcurrentActorHandle
 
   // -- Interaction --
   click(selector?: Selector): ConcurrentActorHandle
