@@ -60,7 +60,7 @@ import path from 'path'
 import type { ConcurrentActorHandle } from './types.js'
 import { parseAction, applyDslAction, getMacro } from './dsl.js'
 import { flow } from './reactive.js'
-import { sceneRegistry, setCurrentFile } from './scene.js'
+import { sceneRegistry, setCurrentFile, getCurrentSession } from './scene.js'
 
 // ---------------------------------------------------------------------------
 // Intermediate representation
@@ -386,6 +386,8 @@ interface InterpolationContext {
   team?: Record<string, string>
   /** Alias mappings from macros (alias -> role name) */
   aliases?: Map<string, string>
+  /** Full team actor configs — fallback for [role.field] when role isn't declared in scene */
+  teamActors?: Record<string, import('./types.js').ActorConfig>
 }
 
 /**
@@ -433,10 +435,11 @@ function interpolate(line: string, ctx: InterpolationContext): string {
       // Check for alias mapping first
       const resolvedRole = ctx.aliases?.get(namespace) ?? namespace
 
-      // Look up the actor
+      // Look up the actor — first from scene actors, then from full team
       const actor = ctx.actors.get(resolvedRole)
-      if (!actor) {
-        const available = [...ctx.actors.keys()].join(', ')
+      const config = actor ?? ctx.teamActors?.[resolvedRole]
+      if (!config) {
+        const available = [...new Set([...ctx.actors.keys(), ...Object.keys(ctx.teamActors ?? {})])].join(', ')
         const aliasNote = ctx.aliases?.has(namespace)
           ? ` (alias "${namespace}" -> "${resolvedRole}")`
           : ''
@@ -445,7 +448,7 @@ function interpolate(line: string, ctx: InterpolationContext): string {
         )
       }
 
-      const value = (actor as Record<string, unknown>)[field]
+      const value = (config as Record<string, unknown>)[field]
       if (value === undefined) {
         throw new Error(
           `Actor "${resolvedRole}" has no field "${field}" (available: id, username, email, password, ...)`
@@ -489,6 +492,11 @@ export function registerMarkdownScenes(
         }
       }
 
+      // Get full team config so [role.field] works for any team member,
+      // even actors not declared as blocks in this scene
+      const session = getCurrentSession()
+      const teamActors = session?.getTeamConfig()
+
       // ── Phase 2: apply actions to each actor block ──────────────────
       for (const block of mdScene.blocks) {
         const a = actors.get(block.alias || block.role)!
@@ -503,6 +511,7 @@ export function registerMarkdownScenes(
           actors,
           self: a,
           team: Object.keys(teamInterpolation).length > 0 ? teamInterpolation : undefined,
+          teamActors,
         }
 
         for (const action of block.actions) {

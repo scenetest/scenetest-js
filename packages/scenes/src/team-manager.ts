@@ -359,6 +359,15 @@ export class TeamSession {
   }
 
   /**
+   * Get the full team config (all actor roles and their configs).
+   * Used for interpolation so `[role.field]` can reference any team
+   * member, not just actors declared in the scene.
+   */
+  getTeamConfig(): TeamConfig {
+    return this.team
+  }
+
+  /**
    * Get the navigation mode assigned to an actor role.
    * If rotation is enabled, assigns and caches a mode for this role.
    * If rotation is not enabled, returns 'pointer'.
