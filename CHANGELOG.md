@@ -4,6 +4,45 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.7.0] — 2026-04-11
+
+### Dashboard improvements
+
+#### Replay buttons — restart tests from the dashboard
+
+The dashboard now has a **Replay All** button in the header and a per-scene **Replay** button on each scene card. Clicking either triggers a new `scenetest` run via the Vite plugin middleware (`POST /__scenetest/replay`). Single-scene replay passes the scene's file path so only that test re-runs. Buttons are disabled while a run is in progress to prevent concurrent runs.
+
+#### Stop & Pause/Resume controls
+
+While tests are running, **Pause** and **Stop** buttons appear in the header:
+
+- **Pause** suspends the runner process (`SIGSTOP`) and toggles to **Resume** (`SIGCONT`)
+- **Stop** kills the runner process and resets the dashboard to idle
+
+#### Progress bar
+
+A thin 3px progress bar sits at the bottom edge of the sticky header, filling left-to-right as scenes complete. Blue while running, green on all-pass, red if any scene fails. Encodes the same information as the "Scenes: 2/5" counter but provides peripheral awareness without reading numbers.
+
+#### Auto-scroll to running scene
+
+When a new scene starts, the dashboard smoothly scrolls it into view so the active timeline stays visible without manual scrolling.
+
+#### Inline error messages
+
+Failed scenes now show a persistent error summary below the swim lanes — the action name and error message are always visible without hovering. The error block shares the bottom border-radius with the swim lanes so the card shape stays clean.
+
+#### Sticky header
+
+The dashboard header is now `position: sticky` so stats, replay controls, and the progress bar remain visible while scrolling through scenes.
+
+### Bug fixes
+
+#### Tooltip z-index on dashboard
+
+Action bar tooltips were clipped behind the time-ruler header row because both `.swim-lanes` and `.lane-track` had `overflow: hidden`. Removed the overflow clipping and bumped tooltip z-index so they render above sibling rows.
+
+---
+
 ## [0.6.0] — 2026-04-10
 
 ### New features
