@@ -282,18 +282,16 @@ describe('resolveSelector', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a mock locator with waitFor / isVisible / count support.
+ * Create a mock locator with waitFor / count support.
  * `visible` controls whether the locator resolves or rejects.
  */
 function createAsyncMockLocator(visible: boolean) {
   return {
-    _visible: visible,
     waitFor: vi.fn(async () => {
       if (!visible) throw new Error('Timeout waiting for element')
     }),
-    isVisible: vi.fn(async () => visible),
     count: vi.fn(async () => (visible ? 1 : 0)),
-    // Needed so resolveSelector can chain on it (unused in fallback tests)
+    // resolveSelector chains through these for multi-token selectors
     locator: vi.fn(() => createAsyncMockLocator(visible)),
     or: vi.fn(() => createAsyncMockLocator(visible)),
     nth: vi.fn(() => createAsyncMockLocator(visible)),
