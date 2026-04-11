@@ -4,6 +4,47 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.7.1] — 2026-04-11
+
+### New features
+
+#### `scope()` — explicit scope narrowing
+
+`see()` is now a pure visibility assertion and no longer changes scope. A new `scope()` directive narrows the search context for subsequent actions (`typeInto`, `check`, `select`, bare `click`, etc.):
+
+```markdown
+user:
+- scope login-form
+- typeInto username-input alice@example.com
+- typeInto password-input hunter2
+- click submit-button
+```
+
+`scope()`, `see()`, and `click()` use a fallback resolver — they try the current scope first, then fall back to page root with a warning, so existing tests continue to pass even if they relied on `see()` setting scope. Form interactions (`typeInto`, `check`, `select`) remain strict and only resolve within the current scope to avoid ambiguity across multiple forms on the same page.
+
+### Bug fixes
+
+#### Scope reset after click-induced navigation
+
+`click()` and `ifClick()` now detect URL changes and reset scope to page root when navigation occurs, matching the existing behaviour of `openTo`, `goBack`, etc. `seeToast()` always resolves from page root since toasts render as portals outside any scoped container.
+
+This fixes tests where `see()` timed out searching within a stale scope after a click navigated to a new route.
+
+### Migration
+
+#### `see` → `scope` codemod
+
+A codemod is available to update `.spec.md` files that used `see` for scope narrowing:
+
+```bash
+node scripts/codemod-see-to-scope.mjs          # dry-run
+node scripts/codemod-see-to-scope.mjs --write   # apply
+```
+
+The script converts `see` → `scope` where `see` is followed by scope-dependent actions (`typeInto`, `check`, `select`, bare `click`, `prev`, etc.). Pure visibility assertions are left untouched.
+
+---
+
 ## [0.7.0] — 2026-04-11
 
 ### Dashboard improvements
