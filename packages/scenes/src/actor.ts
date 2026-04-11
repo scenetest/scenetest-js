@@ -242,10 +242,9 @@ class ActionChainImpl implements ActionChain {
   see(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('see', target, async () => {
-      const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `see(${selector})`
+      await resolveSelectorWithFallback(
+        this.getScope(), this.page, selector, `see(${selector})`, this.actionTimeout
       )
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
     })
   }
 
@@ -287,9 +286,8 @@ class ActionChainImpl implements ActionChain {
     const target = formatSelector(selector)
     return this.addAction('scope', target, async () => {
       const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `scope(${selector})`
+        this.getScope(), this.page, selector, `scope(${selector})`, this.actionTimeout
       )
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.pushScope(locator)
     })
   }
@@ -335,10 +333,9 @@ class ActionChainImpl implements ActionChain {
     return this.addAction('click', target, async () => {
       const urlBefore = this.page.url()
       const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `click(${selector})`
+        this.getScope(), this.page, selector, `click(${selector})`, this.actionTimeout
       )
       if (this.isKeyboard) {
-        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressEnter(this.page)
       } else if (this.useFuzzyFingers) {

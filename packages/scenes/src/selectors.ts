@@ -168,27 +168,51 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
  * @param page    The Page root (used as fallback)
  * @param selector  Selector string
  * @param context   Human-readable action description for the warning (e.g. "click(submit)")
+ * @param timeout   When provided, waits for the element to become visible in
+ *                  either scope or page root (using locator.or()) instead of a
+ *                  point-in-time count() check.  This prevents race conditions
+ *                  where the element hasn't appeared yet when resolution runs.
  */
 export async function resolveSelectorWithFallback(
   scope: Page | Locator,
   page: Page,
   selector: string,
-  context?: string
+  context?: string,
+  timeout?: number
 ): Promise<Locator> {
   // If scope is already the page, no fallback needed
   if (scope === page) {
     return resolveSelector(page, selector)
   }
 
-  // Try within current scope first
   const scopedLocator = resolveSelector(scope, selector)
+  const rootLocator = resolveSelector(page, selector)
+
+  if (timeout != null) {
+    // Wait for the element to appear in either scope or page root.
+    // This avoids the race where a point-in-time count() returns 0 for both,
+    // causing the wrong locator to be returned and a subsequent waitFor to
+    // look in the wrong subtree.
+    const combined = scopedLocator.or(rootLocator)
+    await combined.waitFor({ state: 'visible', timeout })
+
+    // Prefer the scoped locator when the element is within scope
+    if (await scopedLocator.isVisible()) {
+      return scopedLocator
+    }
+
+    if (context) {
+      console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
+    }
+    return rootLocator
+  }
+
+  // Point-in-time fallback (for callers that don't need to wait, e.g. ifClick)
   const count = await scopedLocator.count()
   if (count > 0) {
     return scopedLocator
   }
 
-  // Fall back to page root
-  const rootLocator = resolveSelector(page, selector)
   const rootCount = await rootLocator.count()
   if (rootCount > 0) {
     if (context) {
