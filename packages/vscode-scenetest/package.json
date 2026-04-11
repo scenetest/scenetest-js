@@ -2,7 +2,7 @@
   "name": "vscode-scenetest",
   "displayName": "Scenetest",
   "description": "Syntax highlighting for Scenetest scene specs (.spec.md)",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "publisher": "scenetest",
   "license": "MIT",
   "repository": {
