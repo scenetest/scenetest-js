@@ -46,17 +46,6 @@ packages/
 
 **For writing scene specs and inline assertions, see [`docs/public/design/writing-tests.md`](docs/public/design/writing-tests.md).** That guide covers both authoring models (`scene()` concurrent and `test()` classic driver), the actor DSL, and links to canonical references for selectors, text DSL format, and execution models. It is designed to be self-contained — copy it into your application repo's CLAUDE.md or reference it directly.
 
-**For the design rationale behind the two execution models, see [`docs/public/design/scene-vs-flow.md`](docs/public/design/scene-vs-flow.md).**
-
-### Architecture note for contributors
-
-There are two scene-authoring models with separate implementations:
-
-- **`test()`** — await-driven sequential orchestration (classic driver). Implemented in `actor.ts` (`SequentialActorHandleImpl`, `ActionChainImpl`).
-- **`scene()`** — reactive concurrent draining (concurrent model). Implemented in `reactive.ts` (`ConcurrentActorHandleImpl`, `drainAll()`).
-
-Both register through the same `sceneRegistry` in `scene.ts`. The runner (`runner.ts`) does not know which model a scene uses. Before 1.0, one model will be removed — see `scene-vs-flow.md` for the decision criteria and what needs to be ripped out for each path.
-
 ---
 
 ## Key Source Files
