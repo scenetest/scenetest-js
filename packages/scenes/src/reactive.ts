@@ -65,7 +65,7 @@ import type {
 import type { NavigationMode } from './keyboard.js'
 import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
-import { resolveSelector, resolveSelectorWithFallback } from './selectors.js'
+import { resolveSelector, resolveSelectorWithFallback, buildScopeMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { scene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
@@ -519,14 +519,19 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   /**
-   * Wait for element to be visible and set it as the current scope.
-   * Tries current scope first; falls back to page root with a warning.
+   * Wait for element to be visible in the current scope and set it as the
+   * new scope.  Strict — does NOT fall back to page root.  On miss, throws
+   * a diagnostic error that tells the developer whether the element exists
+   * elsewhere on the page (= scope is wrong) or nowhere (= selector is wrong).
    */
   scope(selector: Selector): this {
     return this.push('scope', selector, async () => {
-      const locator = await resolveSelectorWithFallback(
-        this.activeScope, this.page, selector, `scope(${selector})`, this.actionTimeout
-      )
+      const locator = resolveSelector(this.activeScope, selector)
+      try {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      } catch (err) {
+        throw await buildScopeMissError(this.activeScope, this.page, selector, err)
+      }
       this.scopeStack.push(this.activeScope)
       this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = locator
