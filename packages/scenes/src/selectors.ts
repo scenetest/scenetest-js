@@ -157,74 +157,39 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
 }
 
 /**
- * Resolve a selector with scope fallback.
+ * Build a diagnostic error for a strict-resolution miss.
  *
- * Tries to resolve within the given scope first.  If the scope is not the
- * page root and no matches are found, retries from the page root.  When the
- * fallback succeeds a warning is logged so spec authors know the element
- * was found outside the expected scope.
+ * Selector resolution is strict: an action like `see("X")` or `scope("X")`
+ * must find X in the current scope.  When it doesn't, this helper runs a
+ * quick page-root check and crafts an immediately actionable error message
+ * — telling the developer whether their *scope* is wrong (X exists somewhere
+ * else on the page) or their *selector* is wrong (X exists nowhere).
  *
- * @param scope   Current scope (Page or Locator)
- * @param page    The Page root (used as fallback)
- * @param selector  Selector string
- * @param context   Human-readable action description for the warning (e.g. "click(submit)")
- * @param timeout   When provided, waits for the element to become visible in
- *                  scope first (full timeout).  If the scoped wait times out,
- *                  falls back to the page root with the same timeout.  This
- *                  sequential approach avoids the strict-mode violation that
- *                  racing with .or() caused.
+ * Replaces Playwright's generic "Timeout exceeded" with concrete next steps.
  */
-export async function resolveSelectorWithFallback(
+export async function buildSelectorMissError(
   scope: Page | Locator,
   page: Page,
+  action: string,
   selector: string,
-  context?: string,
-  timeout?: number
-): Promise<Locator> {
-  // If scope is already the page, no fallback needed
-  if (scope === page) {
-    return resolveSelector(page, selector)
+  cause: unknown
+): Promise<Error> {
+  let rootCount = 0
+  try {
+    rootCount = await resolveSelector(page, selector).count()
+  } catch {
+    // diagnostic best-effort — don't mask the original timeout
   }
-
-  const scopedLocator = resolveSelector(scope, selector)
-  const rootLocator = resolveSelector(page, selector)
-
-  if (timeout != null) {
-    // Try scoped first with full timeout commitment.  Only fall back to page
-    // root if the scoped wait fully times out.  This avoids the strict-mode
-    // violation that .or() caused — racing both locators meant Playwright saw
-    // every match on the page, not just the scoped one.
-    try {
-      await scopedLocator.waitFor({ state: 'visible', timeout })
-      return scopedLocator
-    } catch {
-      // Scoped element never appeared — fall through to page root
-    }
-
-    if (context) {
-      console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
-    }
-    await rootLocator.waitFor({ state: 'visible', timeout })
-    return rootLocator
-  }
-
-  // Point-in-time fallback (for callers that don't need to wait, e.g. ifClick)
-  const count = await scopedLocator.count()
-  if (count > 0) {
-    return scopedLocator
-  }
-
-  const rootCount = await rootLocator.count()
-  if (rootCount > 0) {
-    if (context) {
-      console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
-    }
-    return rootLocator
-  }
-
-  // Not found anywhere — return the scoped locator so the caller gets
-  // the normal Playwright timeout error with the original scope context
-  return scopedLocator
+  const base = `${action}(${selector}) timed out — not visible in current scope.`
+  const hint =
+    scope === page
+      ? '' // scope was already page — no narrowing to blame
+      : rootCount > 0
+        ? `\n  Found ${rootCount} match${rootCount === 1 ? '' : 'es'} at document root. Your scope may be too narrow — adjust scope or use the full selector path.`
+        : `\n  Not found anywhere on the page. Check the selector spelling.`
+  const err = new Error(base + hint)
+  ;(err as Error & { cause?: unknown }).cause = cause
+  return err
 }
 
 /**

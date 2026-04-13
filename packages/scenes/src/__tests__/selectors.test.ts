@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { resolveSelector, resolveSelectorWithFallback, setAliases, clearAliases } from '../selectors.js'
+import { resolveSelector, buildSelectorMissError, setAliases, clearAliases } from '../selectors.js'
 
 // ---------------------------------------------------------------------------
 // Helpers — chainable Playwright locator mock
@@ -278,155 +278,98 @@ describe('resolveSelector', () => {
 })
 
 // ---------------------------------------------------------------------------
-// resolveSelectorWithFallback tests
+// buildSelectorMissError tests
 // ---------------------------------------------------------------------------
 
 /**
- * Create a mock locator with waitFor / count support.
- * `visible` controls whether the locator resolves or rejects.
+ * Create a mock locator that supports the `count()` calls used by
+ * buildSelectorMissError's diagnostic check.
  */
-function createAsyncMockLocator(visible: boolean) {
+function createCountingLocator(count: number) {
   return {
-    waitFor: vi.fn(async () => {
-      if (!visible) throw new Error('Timeout waiting for element')
-    }),
-    count: vi.fn(async () => (visible ? 1 : 0)),
+    count: vi.fn(async () => count),
     // resolveSelector chains through these for multi-token selectors
-    locator: vi.fn(() => createAsyncMockLocator(visible)),
-    or: vi.fn(() => createAsyncMockLocator(visible)),
-    nth: vi.fn(() => createAsyncMockLocator(visible)),
+    locator: vi.fn(() => createCountingLocator(count)),
+    or: vi.fn(() => createCountingLocator(count)),
+    nth: vi.fn(() => createCountingLocator(count)),
   }
 }
 
-/**
- * Build a mock page + scope pair.  The page always resolves selectors into
- * the provided mock locators so we can control visibility per-test.
- */
-function createFallbackMocks(scopedVisible: boolean, rootVisible: boolean) {
-  const scopedLocator = createAsyncMockLocator(scopedVisible)
-  const rootLocator = createAsyncMockLocator(rootVisible)
+describe('buildSelectorMissError', () => {
+  it('says "scope may be too narrow" when element exists at document root', async () => {
+    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(1)) }
+    const cause = new Error('Timeout 5000ms exceeded')
 
-  // We can't easily intercept resolveSelector inside the module, so we
-  // construct a scope and page whose .locator() returns our mocks directly.
-  // resolveSelectorWithFallback calls resolveSelector(scope, sel) and
-  // resolveSelector(page, sel) — for a single-token selector that's just
-  // scope.locator(css) and page.locator(css).
-  const scope: any = {
-    locator: vi.fn(() => scopedLocator),
-  }
-  const page: any = {
-    locator: vi.fn(() => rootLocator),
-  }
+    const err = await buildSelectorMissError(scope, page, 'click', 'deck-link', cause)
 
-  return { scope, page, scopedLocator, rootLocator }
-}
-
-describe('resolveSelectorWithFallback', () => {
-  describe('with timeout (sequential fallback)', () => {
-    it('returns scoped locator when element is visible in scope', async () => {
-      const { scope, page, scopedLocator } = createFallbackMocks(true, true)
-
-      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
-
-      // Scoped waitFor should be called with the timeout
-      expect(scopedLocator.waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 5000 })
-      // Should return the scoped locator (identity check)
-      expect(result).toBe(scopedLocator)
-    })
-
-    it('falls back to root when scoped locator times out', async () => {
-      const { scope, page, scopedLocator, rootLocator } = createFallbackMocks(false, true)
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
-
-      // Scoped waitFor should have been attempted and failed
-      expect(scopedLocator.waitFor).toHaveBeenCalled()
-      // Root waitFor should be called as fallback
-      expect(rootLocator.waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 5000 })
-      expect(result).toBe(rootLocator)
-      // Warning should fire
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not found in current scope')
-      )
-      warnSpy.mockRestore()
-    })
-
-    it('does not call root waitFor when scoped succeeds', async () => {
-      const { scope, page, rootLocator } = createFallbackMocks(true, true)
-
-      await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
-
-      // Root locator's waitFor should NOT be called
-      expect(rootLocator.waitFor).not.toHaveBeenCalled()
-    })
-
-    it('throws when element is not found in either scope', async () => {
-      const { scope, page } = createFallbackMocks(false, false)
-      vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-      await expect(
-        resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)', 5000)
-      ).rejects.toThrow()
-
-      vi.mocked(console.warn).mockRestore()
-    })
-
-    it('suppresses warning when context is undefined', async () => {
-      const { scope, page } = createFallbackMocks(false, true)
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-      await resolveSelectorWithFallback(scope, page, 'btn', undefined, 5000)
-
-      expect(warnSpy).not.toHaveBeenCalled()
-      warnSpy.mockRestore()
-    })
+    expect(err.message).toContain('click(deck-link) timed out')
+    expect(err.message).toContain('not visible in current scope')
+    expect(err.message).toContain('Found 1 match at document root')
+    expect(err.message).toContain('scope may be too narrow')
+    expect((err as Error & { cause?: unknown }).cause).toBe(cause)
   })
 
-  describe('without timeout (point-in-time fallback)', () => {
-    it('returns scoped locator when count > 0', async () => {
-      const { scope, page, scopedLocator } = createFallbackMocks(true, true)
+  it('uses the action name in the message', async () => {
+    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(0)) }
 
-      const result = await resolveSelectorWithFallback(scope, page, 'btn')
+    const seeErr = await buildSelectorMissError(scope, page, 'see', 'btn', new Error())
+    const scopeErr = await buildSelectorMissError(scope, page, 'scope', 'btn', new Error())
 
-      expect(scopedLocator.count).toHaveBeenCalled()
-      expect(result).toBe(scopedLocator)
-    })
-
-    it('falls back to root when scoped count is 0', async () => {
-      const { scope, page, rootLocator } = createFallbackMocks(false, true)
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-      const result = await resolveSelectorWithFallback(scope, page, 'btn', 'click(btn)')
-
-      expect(result).toBe(rootLocator)
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not found in current scope')
-      )
-      warnSpy.mockRestore()
-    })
-
-    it('returns scoped locator when neither has matches (for Playwright error)', async () => {
-      const { scope, page, scopedLocator } = createFallbackMocks(false, false)
-
-      const result = await resolveSelectorWithFallback(scope, page, 'btn')
-
-      // Returns scoped so Playwright gives the error with scope context
-      expect(result).toBe(scopedLocator)
-    })
+    expect(seeErr.message).toContain('see(btn) timed out')
+    expect(scopeErr.message).toContain('scope(btn) timed out')
   })
 
-  describe('scope === page (no fallback needed)', () => {
-    it('resolves directly from page without fallback logic', async () => {
-      const page: any = {
-        locator: vi.fn(() => createAsyncMockLocator(true)),
-      }
+  it('pluralizes when multiple matches exist at root', async () => {
+    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(3)) }
 
-      const result = await resolveSelectorWithFallback(page, page, 'btn', 'click(btn)', 5000)
+    const err = await buildSelectorMissError(scope, page, 'click', 'deck-link', new Error('timeout'))
 
-      // Should have called page.locator once (not twice for scope + root)
-      expect(page.locator).toHaveBeenCalledTimes(1)
-      expect(result).toBeDefined()
-    })
+    expect(err.message).toContain('Found 3 matches at document root')
+  })
+
+  it('says "check spelling" when element exists nowhere', async () => {
+    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(0)) }
+
+    const err = await buildSelectorMissError(scope, page, 'see', 'typoed-name', new Error('timeout'))
+
+    expect(err.message).toContain('Not found anywhere on the page')
+    expect(err.message).toContain('Check the selector spelling')
+  })
+
+  it('omits hint when scope was already page root', async () => {
+    // If scope === page, there's no narrowing to blame
+    const page: any = { locator: vi.fn(() => createCountingLocator(0)) }
+
+    const err = await buildSelectorMissError(page, page, 'see', 'btn', new Error('timeout'))
+
+    expect(err.message).toContain('see(btn) timed out')
+    // Should NOT include either hint — there's no scope narrowing to be wrong about
+    expect(err.message).not.toContain('document root')
+    expect(err.message).not.toContain('Check the selector spelling')
+  })
+
+  it('does not mask the original error if diagnostic count() throws', async () => {
+    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const page: any = {
+      locator: vi.fn(() => ({
+        count: vi.fn(async () => {
+          throw new Error('diagnostic blew up')
+        }),
+        locator: vi.fn(() => createCountingLocator(0)),
+        or: vi.fn(() => createCountingLocator(0)),
+        nth: vi.fn(() => createCountingLocator(0)),
+      })),
+    }
+    const cause = new Error('original timeout')
+
+    const err = await buildSelectorMissError(scope, page, 'scope', 'btn', cause)
+
+    // Should still produce an error with the original cause attached
+    expect(err.message).toContain('scope(btn) timed out')
+    expect((err as Error & { cause?: unknown }).cause).toBe(cause)
   })
 })

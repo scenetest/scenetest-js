@@ -3,7 +3,7 @@ import type { ActorConfig, SequentialActorHandle, ActionChain, AssertionResult, 
 import type { NavigationMode } from './keyboard.js'
 import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOption, fuzzyFingerClick, fuzzyFingerFill, fuzzyFingerCheck } from './keyboard.js'
 import { MessageBus } from './message-bus.js'
-import { resolveSelector, resolveSelectorWithFallback } from './selectors.js'
+import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
@@ -242,9 +242,12 @@ class ActionChainImpl implements ActionChain {
   see(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('see', target, async () => {
-      await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `see(${selector})`, this.actionTimeout
-      )
+      const locator = resolveSelector(this.getScope(), selector)
+      try {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      } catch (err) {
+        throw await buildSelectorMissError(this.getScope(), this.page, 'see', selector, err)
+      }
     })
   }
 
@@ -285,9 +288,12 @@ class ActionChainImpl implements ActionChain {
   scope(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('scope', target, async () => {
-      const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `scope(${selector})`, this.actionTimeout
-      )
+      const locator = resolveSelector(this.getScope(), selector)
+      try {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      } catch (err) {
+        throw await buildSelectorMissError(this.getScope(), this.page, 'scope', selector, err)
+      }
       this.pushScope(locator)
     })
   }
@@ -332,9 +338,12 @@ class ActionChainImpl implements ActionChain {
     const target = formatSelector(selector)
     return this.addAction('click', target, async () => {
       const urlBefore = this.page.url()
-      const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `click(${selector})`, this.actionTimeout
-      )
+      const locator = resolveSelector(this.getScope(), selector)
+      try {
+        await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
+      } catch (err) {
+        throw await buildSelectorMissError(this.getScope(), this.page, 'click', selector, err)
+      }
       if (this.isKeyboard) {
         await tabToElement(this.page, locator, { timeout: this.actionTimeout })
         await pressEnter(this.page)
@@ -356,9 +365,9 @@ class ActionChainImpl implements ActionChain {
   ifClick(selector: Selector): ActionChain {
     const target = formatSelector(selector)
     return this.addAction('ifClick', target, async () => {
-      const locator = await resolveSelectorWithFallback(
-        this.getScope(), this.page, selector, `ifClick(${selector})`
-      )
+      // Strict: only check current scope.  Conditional by design — if the
+      // element isn't here, silently skip.  No fallback to page root.
+      const locator = resolveSelector(this.getScope(), selector)
       const visible = await locator.isVisible()
       if (visible) {
         const urlBefore = this.page.url()
