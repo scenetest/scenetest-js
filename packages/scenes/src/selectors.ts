@@ -157,108 +157,20 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
 }
 
 /**
- * Resolve a selector with scope fallback (forgiving — for see/click).
+ * Build a diagnostic error for a strict-resolution miss.
  *
- * Polls within a single timeout budget: each cycle checks the current scope
- * first, then falls back to the page root.  Returns as soon as the element
- * appears in either location.  Prefers scope, but widens to root quickly
- * (POLL_MS, default 200ms) without burning the full timeout on a doomed
- * scoped wait.  When the page-root fallback fires, a warning is logged so
- * spec authors know the element was found outside the expected scope.
+ * Selector resolution is strict: an action like `see("X")` or `scope("X")`
+ * must find X in the current scope.  When it doesn't, this helper runs a
+ * quick page-root check and crafts an immediately actionable error message
+ * — telling the developer whether their *scope* is wrong (X exists somewhere
+ * else on the page) or their *selector* is wrong (X exists nowhere).
  *
- * Why polling instead of `.or()`?  The old `.or()` race broke Playwright's
- * strict mode when the root selector matched multiple elements — the union
- * saw every match on the page.  Polling checks each locator's `.count()`
- * independently, never combining them, so strict mode is unaffected.
- *
- * Why polling instead of sequential waitFor?  Sequential committed the full
- * timeout to scope, then another full timeout to root — worst case 2x.  A
- * single budget keeps the worst case at 1x.
- *
- * @param scope     Current scope (Page or Locator)
- * @param page      The Page root (used as fallback)
- * @param selector  Selector string
- * @param context   Human-readable action description for the warning (e.g. "click(submit)")
- * @param timeout   When provided, polls within this budget.  When null,
- *                  performs a point-in-time check (used by `ifClick`).
+ * Replaces Playwright's generic "Timeout exceeded" with concrete next steps.
  */
-export async function resolveSelectorWithFallback(
+export async function buildSelectorMissError(
   scope: Page | Locator,
   page: Page,
-  selector: string,
-  context?: string,
-  timeout?: number
-): Promise<Locator> {
-  // No scope narrowing — resolve from page directly
-  if (scope === page) {
-    const locator = resolveSelector(page, selector)
-    if (timeout != null) {
-      await locator.waitFor({ state: 'visible', timeout })
-    }
-    return locator
-  }
-
-  const scopedLocator = resolveSelector(scope, selector)
-  const rootLocator = resolveSelector(page, selector)
-
-  // Point-in-time fallback (for callers that don't need to wait, e.g. ifClick)
-  if (timeout == null) {
-    if ((await scopedLocator.count()) > 0) return scopedLocator
-    if ((await rootLocator.count()) > 0) {
-      if (context) {
-        console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
-      }
-      return rootLocator
-    }
-    // Not found anywhere — return scoped locator for the normal Playwright
-    // error with the original scope context
-    return scopedLocator
-  }
-
-  // Progressive resolution: single timeout budget, prefer scope each cycle
-  const POLL_MS = 200
-  const deadline = Date.now() + timeout
-
-  while (Date.now() < deadline) {
-    if ((await scopedLocator.count()) > 0) {
-      await scopedLocator.waitFor({
-        state: 'visible',
-        timeout: Math.max(deadline - Date.now(), 1),
-      })
-      return scopedLocator
-    }
-    if ((await rootLocator.count()) > 0) {
-      if (context) {
-        console.warn(`⚠ ${context} — not found in current scope, resolved from page root`)
-      }
-      await rootLocator.waitFor({
-        state: 'visible',
-        timeout: Math.max(deadline - Date.now(), 1),
-      })
-      return rootLocator
-    }
-    const sleep = Math.min(POLL_MS, deadline - Date.now())
-    if (sleep > 0) {
-      await new Promise((r) => setTimeout(r, sleep))
-    }
-  }
-
-  // Timeout expired — throw with scoped context for a useful error message
-  await scopedLocator.waitFor({ state: 'visible', timeout: 1 })
-  return scopedLocator // unreachable; waitFor above throws
-}
-
-/**
- * Build a diagnostic error for a `scope()` that timed out.
- *
- * Quickly checks the page root to tell the developer whether the element
- * exists somewhere else on the page (= scope is wrong) or nowhere (= selector
- * is wrong).  Either way the message is immediately actionable, replacing
- * Playwright's generic "Timeout exceeded" with concrete next steps.
- */
-export async function buildScopeMissError(
-  scope: Page | Locator,
-  page: Page,
+  action: string,
   selector: string,
   cause: unknown
 ): Promise<Error> {
@@ -268,12 +180,12 @@ export async function buildScopeMissError(
   } catch {
     // diagnostic best-effort — don't mask the original timeout
   }
-  const base = `scope(${selector}) timed out — not visible in current scope.`
+  const base = `${action}(${selector}) timed out — not visible in current scope.`
   const hint =
     scope === page
       ? '' // scope was already page — no narrowing to blame
       : rootCount > 0
-        ? `\n  Found ${rootCount} match${rootCount === 1 ? '' : 'es'} at document root. Your scope is too narrow — call up() first, or scope from page root.`
+        ? `\n  Found ${rootCount} match${rootCount === 1 ? '' : 'es'} at document root. Your scope may be too narrow — adjust scope or use the full selector path.`
         : `\n  Not found anywhere on the page. Check the selector spelling.`
   const err = new Error(base + hint)
   ;(err as Error & { cause?: unknown }).cause = cause
