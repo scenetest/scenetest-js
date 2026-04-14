@@ -139,6 +139,73 @@ export function generateDashboardHtml(): string {
       margin-left: auto;
     }
 
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-left: 6px;
+    }
+
+    .copy-btn:hover {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+
+    .copy-btn.copied {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .copy-btn .copy-icon {
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    /* ─── Follow-output toggle ──────────────────────── */
+    .follow-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .follow-toggle:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .follow-toggle input {
+      margin: 0;
+      cursor: pointer;
+      accent-color: var(--cyan);
+    }
+
+    .follow-toggle.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.08);
+    }
+
     .stop-btn, .pause-btn {
       display: none;
       align-items: center;
@@ -291,6 +358,29 @@ export function generateDashboardHtml(): string {
 
     .scene-error-line .error-msg {
       word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .scene-error-line.expanded .error-msg {
+      display: block;
+      -webkit-line-clamp: unset;
+      line-clamp: unset;
+      overflow: visible;
+    }
+
+    .scene-error-line .expand-hint {
+      color: var(--text2);
+      font-size: 10px;
+      flex-shrink: 0;
+      opacity: 0.6;
+      margin-left: 4px;
     }
 
     /* ─── Swim lanes ──────────────────────────────────── */
@@ -498,6 +588,10 @@ export function generateDashboardHtml(): string {
     <button class="stop-btn" id="stop-btn" onclick="stopRun()">
       <span class="btn-icon">&#9632;</span> Stop
     </button>
+    <label class="follow-toggle active" id="follow-toggle" title="Auto-scroll to the newest scene. Scrolling up manually turns this off.">
+      <input type="checkbox" id="follow-checkbox" checked>
+      <span>Follow output</span>
+    </label>
     <div class="status-bar">
       <div class="stat scenes">
         <span class="label">Scenes:</span>
@@ -537,7 +631,52 @@ export function generateDashboardHtml(): string {
       passCount: 0,
       failCount: 0,
       sceneCount: 0,
+      followOutput: true,
     }
+
+    // ─── Follow-output toggle ────────────────────────
+    var followToggleEl = document.getElementById('follow-toggle')
+    var followCheckboxEl = document.getElementById('follow-checkbox')
+
+    function setFollowOutput(enabled, opts) {
+      state.followOutput = enabled
+      followCheckboxEl.checked = enabled
+      followToggleEl.classList.toggle('active', enabled)
+      if (enabled && !(opts && opts.skipScroll)) {
+        scrollToLatestScene()
+      }
+    }
+
+    followToggleEl.addEventListener('click', function(e) {
+      // The label's default click also toggles the checkbox; intercept both paths.
+      if (e.target !== followCheckboxEl) {
+        e.preventDefault()
+        setFollowOutput(!state.followOutput)
+      } else {
+        // checkbox was clicked directly; sync state after browser toggles it
+        setTimeout(function() { setFollowOutput(followCheckboxEl.checked) }, 0)
+      }
+    })
+
+    function scrollToLatestScene() {
+      if (state.scenes.length === 0) return
+      var idx = state.scenes.length - 1
+      var el = document.getElementById('scene-' + idx)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
+    // User-initiated scroll disables follow. We only listen to events that
+    // come from direct user input (wheel, touch, scroll-keys) — programmatic
+    // scrollIntoView() does not fire these, so it won't accidentally toggle.
+    function onUserScrollIntent() {
+      if (state.followOutput) setFollowOutput(false, { skipScroll: true })
+    }
+    window.addEventListener('wheel', onUserScrollIntent, { passive: true })
+    window.addEventListener('touchmove', onUserScrollIntent, { passive: true })
+    window.addEventListener('keydown', function(e) {
+      var scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']
+      if (scrollKeys.indexOf(e.key) !== -1) onUserScrollIntent()
+    })
 
     // ─── SSE Connection ───────────────────────────────
     const evtSource = new EventSource('/__scenetest/events')
@@ -597,9 +736,12 @@ export function generateDashboardHtml(): string {
           state.scenes.push(scene)
           state.currentScene = scene
           renderScene(scene)
-          // Auto-scroll to keep the running scene visible
-          var sceneEl = document.getElementById('scene-' + (state.scenes.length - 1))
-          if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Auto-scroll to keep the running scene visible, only when the
+          // user has follow-output enabled. Scrolling up manually turns it off.
+          if (state.followOutput) {
+            var sceneEl = document.getElementById('scene-' + (state.scenes.length - 1))
+            if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
           break
         }
 
@@ -824,7 +966,7 @@ export function generateDashboardHtml(): string {
           var actionLabel = _e.action
             ? '<span class="error-action">' + escapeHtml(_e.action + (_e.target ? '(' + _e.target + ')' : '')) + '</span> '
             : ''
-          lines += '<div class="scene-error-line">' +
+          lines += '<div class="scene-error-line" onclick="toggleErrorExpand(this)" title="Click to expand/collapse">' +
             '<span class="error-icon">\\u2717</span> ' +
             actionLabel +
             '<span class="error-msg">' + escapeHtml(_e.msg) + '</span>' +
@@ -844,6 +986,10 @@ export function generateDashboardHtml(): string {
           '<button class="replay-btn scene-replay-btn"' + replayFileAttr + replayDisabled +
             ' onclick="replayScene(this)">' +
             '<span class="play-icon">&#9654;</span> Replay' +
+          '</button>' +
+          '<button class="copy-btn scene-copy-btn" data-scene-idx="' + idx + '"' +
+            ' onclick="copyScene(this)" title="Copy scene name, file, and errors">' +
+            '<span class="copy-icon">&#128203;</span>' +
           '</button>' +
         '</div>' +
         '<div class="swim-lanes"' + lanesRadius + '>' +
@@ -915,6 +1061,80 @@ export function generateDashboardHtml(): string {
       fetch('/__scenetest/stop', { method: 'POST' })
         .then(function() { setRunning(false) })
         .catch(function() { setRunning(false) })
+    }
+
+    function toggleErrorExpand(el) {
+      el.classList.toggle('expanded')
+    }
+
+    function copyScene(btn) {
+      var idx = parseInt(btn.getAttribute('data-scene-idx'), 10)
+      var scene = state.scenes[idx]
+      if (!scene) return
+
+      var lines = []
+      lines.push('Scene: ' + scene.name)
+      if (scene.file) lines.push('File: ' + scene.file)
+      if (scene.status) lines.push('Status: ' + scene.status)
+      if (scene.duration != null) lines.push('Duration: ' + scene.duration + 'ms')
+
+      var errs = []
+      for (var actionsArr of scene.actions.values()) {
+        for (var a of actionsArr) {
+          if (a.error) {
+            errs.push('  \\u2717 ' + a.action + (a.target ? '(' + a.target + ')' : '') + ' \\u2014 ' + a.error)
+          }
+        }
+      }
+      if (scene.error && !errs.some(function(l) { return l.indexOf(scene.error) !== -1 })) {
+        errs.push('  \\u2717 ' + scene.error)
+      }
+      if (errs.length > 0) {
+        lines.push('')
+        lines.push('Errors:')
+        for (var line of errs) lines.push(line)
+      }
+
+      var failedAssertions = scene.assertions.filter(function(a) { return !a.result })
+      if (failedAssertions.length > 0) {
+        lines.push('')
+        lines.push('Failed assertions:')
+        for (var fa of failedAssertions) {
+          lines.push('  \\u2717 [' + fa.actor + '] ' + fa.description)
+        }
+      }
+
+      var text = lines.join('\\n')
+      var done = function() {
+        btn.classList.add('copied')
+        var icon = btn.querySelector('.copy-icon')
+        var prev = icon.innerHTML
+        icon.innerHTML = '&#10003;'
+        setTimeout(function() {
+          btn.classList.remove('copied')
+          icon.innerHTML = prev
+        }, 1200)
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function() {
+          fallbackCopy(text, done)
+        })
+      } else {
+        fallbackCopy(text, done)
+      }
+    }
+
+    function fallbackCopy(text, done) {
+      var ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch (_) {}
+      document.body.removeChild(ta)
+      done()
     }
 
     function togglePause() {
