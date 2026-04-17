@@ -65,9 +65,9 @@ packages/
 - `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
 
 ### Scenes (`packages/scenes/src/`)
-- `scene.ts` — `scene()` and `test()` registration, `runScene()`
-- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (classic driver model)
-- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (declarative model)
+- `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors
+- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (await-driven `test()` model)
+- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (reactive queue-building model)
 - `selectors.ts` — `resolveSelector()`, `explainSelector()`, alias registry
 - `dsl.ts` — `runDsl()`, `defineMacro()`, `runMacro()`, text DSL parser
 - `message-bus.ts` — `MessageBus` with sticky messages

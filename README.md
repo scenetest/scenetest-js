@@ -57,9 +57,9 @@ Choose your style — TypeScript or plain markdown:
 
 ```typescript
 // scenes/profile.spec.ts
-import { flow } from '@scenetest/scenes'
+import { scene } from '@scenetest/scenes'
 
-flow('user can update their name', ({ actor }) => {
+scene('user can update their name', ({ actor }) => {
   const user = actor('user')
 
   user.openTo('/')
@@ -108,7 +108,7 @@ pnpm scenetest
 - [Note on Security](./docs/public/faq/security.md)
 
 **Design Docs**
-- [Declarative Flow vs Classic Driver](./docs/public/design/scene-vs-flow.md) — execution model comparison and decision criteria
+- [TypeScript Scenes & Playwright Specs](./docs/public/reference/concurrent-and-classic.md) — the two TypeScript execution models side-by-side
 - [Actors API Design](./docs/public/design/actors-api.md)
 - [CLI Design](./docs/public/design/cli-v2.md) — text DSL grammar, selector resolution, warnings
 - [Server Actions Design](./docs/public/design/server-actions.md)
