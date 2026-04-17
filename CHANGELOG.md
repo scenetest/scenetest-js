@@ -4,6 +4,77 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.8.0] — 2026-04-17
+
+Security-focused maintenance release. Resolves all open dependabot alerts (41 → 0) and adds a runtime nudge for consumers on outdated vite.
+
+### Security
+
+#### Runtime warning for vite versions below the known-patched floor
+
+`@scenetest/vite-plugin` now checks the consumer's resolved vite version at `configResolved` against a per-major "minimum secure" floor and logs a one-time `console.warn` if it falls below it. The peer range stays wide (`^5 || ^6 || ^7 || ^8`) so consumers on older majors can still install, but they'll see:
+
+```
+[vite-plugin-scenetest] Heads up: vite@X.Y.Z is below the known-patched floor
+for the N.x line (>=N.P.Q). Vite has published security advisories that may
+affect your app — run `pnpm audit` (or `npm audit`) for specifics, or see
+https://github.com/vitejs/vite/security/advisories
+```
+
+Current floors (`MIN_SECURE_VITE_BY_MAJOR` in `packages/vite-plugin/src/index.ts`, last reviewed 2026-04):
+
+| Major | Floor |
+|-------|-------|
+| 5.x   | 5.4.21 |
+| 6.x   | 6.4.2 |
+| 7.x   | 7.3.2 |
+| 8.x   | 8.0.5 |
+
+Maintenance cadence and review process are documented in `CLAUDE.md` under "Tracking vite security advisories".
+
+#### Dependency upgrades to clear security alerts
+
+- **vitest** `^2.0.0` → `^4.1.4` across all test packages
+- **eslint** dev-dep `^9.39.4` in `@scenetest/eslint-plugin`
+- **glob** `^10.3.10` → `^11.1.0` in `@scenetest/scenes` (v10 was deprecated; v11 uses `minimatch@^10`)
+- **@tanstack/react-router** and **@tanstack/react-start** `^1.156.0` → `^1.167.0` in docs
+- **vite** `^5.4.0` → `^6.4.2` in all example apps (`react`, `vue`, `solid`, `svelte`) and in `@scenetest/vite-plugin`'s dev-dep
+- **vite** `^7.0.0` → `^7.3.2` in docs (required by TanStack Start + Nitro 3 for `.output/` generation)
+- **@sveltejs/vite-plugin-svelte** `^4.0.0` → `^5.0.0` in `example-app-svelte` for vite 6 peer compatibility
+- **svelte** `5.49.1` → `5.53.5` (dependabot PR #141)
+
+Remaining transitive vulnerabilities that direct upgrades couldn't reach are resolved via root-level `pnpm.overrides`:
+
+```json
+"pnpm": {
+  "overrides": {
+    "devalue@<5.6.4": "5.7.1",
+    "nitro>h3": "2.0.1-rc.20",
+    "srvx@<0.11.13": "0.11.15"
+  }
+}
+```
+
+### Improvements
+
+#### Strict selector resolution with diagnostic errors (#144)
+
+`see()`, `click()`, `scope()`, and `ifClick()` no longer fall back to page-root when a scoped locator fails — scope is now strict. Failures produce a diagnostic error naming the action, the selector, and the current scope rather than silently resolving against the wrong subtree. `resolveSelectorWithFallback` has been removed from `selectors.ts`; sequential scope-then-root polling is replaced with progressive resolution within the declared scope.
+
+This is a behavior change for scenes that relied on implicit fallback — if a scoped element can't be found, the test now fails fast with actionable context instead of timing out against the wrong element.
+
+#### Dashboard: follow-output toggle, copy button, line-clamped errors
+
+- **Follow-output toggle** (checked by default): any wheel / touch / scroll-key input turns off auto-scroll so users can inspect a failing test without getting yanked back to the newest scene. Re-checking snaps to the latest.
+- **Copy button** next to each scene's Replay: copies scene name, file, status, duration, and failure details to the clipboard.
+- **Error line-clamp**: error messages are clamped to 2 lines with click-to-expand.
+
+#### `llms.txt` endpoint output-directory handling
+
+The docs-site `vite-plugin-llms-txt` plugin now writes into the resolved build `outDir` rather than a hardcoded path, so `pnpm build` produces the `llms.txt` / `llms-full.txt` files in the right place for all output modes.
+
+---
+
 ## [0.7.3] — 2026-04-11
 
 ### Improvements
