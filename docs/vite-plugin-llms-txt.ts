@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readdirSync, readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import type { Plugin } from 'vite'
 
@@ -144,19 +144,19 @@ export function llmsTxt(): Plugin {
       })
     },
 
-    closeBundle() {
-      // Write to Nitro output directory after build.
-      // Use mkdirSync to ensure the directory exists — our closeBundle may
-      // fire before Nitro's plugin has created .output/public/.
-      const outDir = join(process.cwd(), '.output/public')
-      mkdirSync(outDir, { recursive: true })
+    // Emit during the client build so the files land in whatever static output
+    // directory the active Nitro preset uses (e.g. .vercel/output/static for
+    // the vercel preset, .output/public for node-server). Writing to a fixed
+    // path breaks in production because the preset's static dir differs.
+    generateBundle() {
+      if (this.environment?.name !== 'client') return
 
       const base = join(process.cwd(), PUBLIC_DIR)
       llmsTxtContent ??= buildLlmsTxt(base)
       llmsFullTxtContent ??= buildLlmsFullTxt(base)
 
-      writeFileSync(join(outDir, 'llms.txt'), llmsTxtContent)
-      writeFileSync(join(outDir, 'llms-full.txt'), llmsFullTxtContent)
+      this.emitFile({ type: 'asset', fileName: 'llms.txt', source: llmsTxtContent })
+      this.emitFile({ type: 'asset', fileName: 'llms-full.txt', source: llmsFullTxtContent })
     },
   }
 }
