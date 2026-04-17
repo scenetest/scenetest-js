@@ -1,9 +1,16 @@
-import type { SceneFn, SceneOptions, RegisteredScene, SceneContext, SceneReport } from './types.js'
+import type { TestFn, SceneOptions, RegisteredScene, TestContext, SceneReport } from './types.js'
 import { TeamSession } from './team-manager.js'
 
 /**
  * Global registry of scenes.
  * Populated when scene files are imported.
+ *
+ * Both authoring entry points register here:
+ *   - `test()` — await-driven sequential driver (this file)
+ *   - `scene()` — reactive queue-building (see `reactive.ts`)
+ *
+ * The reactive `scene()` wraps its user fn into an async function so that
+ * the runner sees a uniform `TestFn` shape regardless of authoring model.
  */
 export const sceneRegistry: RegisteredScene[] = []
 
@@ -20,36 +27,50 @@ export function setCurrentFile(file: string): void {
 }
 
 /**
- * Define a scene spec.
+ * Internal registration helper used by both `test()` and the reactive `scene()`.
  *
- * @example
- * ```ts
- * import { scene } from '@scenetest/scenes'
- *
- * scene('user updates their profile', async ({ actor }) => {
- *   const user = await actor('primary-user')
- *   await user.openTo('/settings/profile')
- *   await user.see('profile-form')
- * })
- *
- * // With roles for team matching:
- * scene('admin promotes user', { roles: ['admin', 'user'] }, async ({ actor }) => {
- *   const admin = await actor('admin')
- *   const user = await actor('user')
- * })
- * ```
+ * Not part of the public API — authors should use `test()` or `scene()`.
  */
-export function scene(name: string, fn: SceneFn): void
-export function scene(name: string, options: SceneOptions, fn: SceneFn): void
-export function scene(name: string, fnOrOptions: SceneFn | SceneOptions, maybeFn?: SceneFn): void {
-  const fn = typeof fnOrOptions === 'function' ? fnOrOptions : maybeFn!
-  const options = typeof fnOrOptions === 'function' ? undefined : fnOrOptions
+export function registerScene(name: string, fn: TestFn, options?: SceneOptions): void {
   sceneRegistry.push({
     name,
     fn,
     file: currentFile,
     ...(options?.roles ? { roles: options.roles } : {}),
   })
+}
+
+/**
+ * Define an await-driven test (Playwright-style sequential orchestration).
+ *
+ * Each DSL call is awaited in order — the mental model is "first this, then
+ * that."  Use this when you want explicit, linear control flow.  For the
+ * reactive queue-building model (scenetest's unique approach), use `scene()`
+ * from `./reactive.ts`.
+ *
+ * @example
+ * ```ts
+ * import { test } from '@scenetest/scenes'
+ *
+ * test('user updates their profile', async ({ actor }) => {
+ *   const user = await actor('primary-user')
+ *   await user.openTo('/settings/profile')
+ *   await user.see('profile-form')
+ * })
+ *
+ * // With roles for team matching:
+ * test('admin promotes user', { roles: ['admin', 'user'] }, async ({ actor }) => {
+ *   const admin = await actor('admin')
+ *   const user = await actor('user')
+ * })
+ * ```
+ */
+export function test(name: string, fn: TestFn): void
+export function test(name: string, options: SceneOptions, fn: TestFn): void
+export function test(name: string, fnOrOptions: TestFn | SceneOptions, maybeFn?: TestFn): void {
+  const fn = typeof fnOrOptions === 'function' ? fnOrOptions : maybeFn!
+  const options = typeof fnOrOptions === 'function' ? undefined : fnOrOptions
+  registerScene(name, fn, options)
 }
 
 /**
@@ -65,8 +86,8 @@ export function setCurrentSession(session: TeamSession | null): void {
 }
 
 /**
- * Get the current session. Used by flow() to access session internals
- * during reactive scene execution.
+ * Get the current session. Used by `scene()` (reactive) to access session
+ * internals during execution.
  */
 export function getCurrentSession(): TeamSession | null {
   return currentSession
@@ -83,7 +104,7 @@ export async function runScene(
   const start = Date.now()
 
   // Create scene context
-  const context: SceneContext = {
+  const context: TestContext = {
     actor: async (role: string) => {
       return session.getActor(role)
     },
@@ -91,7 +112,7 @@ export async function runScene(
     team: session.meta,
   }
 
-  // Set current session for when() calls
+  // Set current session for reactive scene() calls
   setCurrentSession(session)
 
   let status: SceneReport['status'] = 'completed'

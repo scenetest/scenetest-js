@@ -348,7 +348,7 @@ export class TeamSession {
 
   /**
    * Get the actor config for a role (sync — no browser setup).
-   * Used by flow() to create reactive handles before browser init.
+   * Used by scene() (reactive) to create reactive handles before browser init.
    */
   getActorConfig(role: string): ActorConfig {
     const config = this.team[role]
@@ -371,7 +371,7 @@ export class TeamSession {
    * Get the navigation mode assigned to an actor role.
    * If rotation is enabled, assigns and caches a mode for this role.
    * If rotation is not enabled, returns 'pointer'.
-   * Used by flow() to pass the mode to ConcurrentActorHandleImpl.
+   * Used by scene() (reactive) to pass the mode to ConcurrentActorHandleImpl.
    */
   getNavigationMode(role: string): NavigationMode {
     // Return cached mode if already assigned
@@ -385,7 +385,7 @@ export class TeamSession {
 
   /**
    * Get whether fuzzy-finger touch behavior is enabled.
-   * Used by flow() to pass to ConcurrentActorHandleImpl.
+   * Used by scene() (reactive) to pass to ConcurrentActorHandleImpl.
    */
   getFuzzyFingers(): boolean {
     return this.fuzzyFingers
@@ -393,7 +393,7 @@ export class TeamSession {
 
   /**
    * Get global error selectors for this session.
-   * Used by flow() to pass to ConcurrentActorHandleImpl.
+   * Used by scene() (reactive) to pass to ConcurrentActorHandleImpl.
    */
   getErrorSelectors(): ErrorSelector[] | undefined {
     return this.errorSelectors
@@ -401,7 +401,7 @@ export class TeamSession {
 
   /**
    * Create a browser context + page for a role and wire up assertion collection.
-   * Returns the Page. Used by flow() to initialize actors after declaration.
+   * Returns the Page. Used by scene() (reactive) to initialize actors after declaration.
    */
   async createPage(role: string): Promise<Page> {
     const config = this.team[role]

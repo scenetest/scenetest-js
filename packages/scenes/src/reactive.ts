@@ -1,15 +1,16 @@
 /**
- * Reactive flow execution model.
+ * Reactive `scene()` execution model — scenetest's signature queue-building
+ * authoring surface.
  *
- * In the standard `scene()` model, `await` is the trigger — actions queue
+ * In the await-driven `test()` model, `await` is the trigger: actions queue
  * on a chain and execute only when awaited.  The test writer carries a
  * mental timeline: "has this happened yet?  do I need to wait?"
  *
- * In the reactive `flow()` model:
+ * In the reactive `scene()` model:
  *
  *   1. Actor DSL calls are **declarations** — they push to a persistent
  *      per-actor queue and return immediately.
- *   2. After the flow function returns, all actors **drain their queues
+ *   2. After the scene function returns, all actors **drain their queues
  *      concurrently** — each actor advances through its own queue as fast
  *      as the DOM allows.
  *   3. `see()`, `seeText()`, and friends already poll/wait for DOM state,
@@ -25,9 +26,9 @@
  *
  * @example
  * ```ts
- * import { flow } from '@scenetest/scenes'
+ * import { scene } from '@scenetest/scenes'
  *
- * flow('two users chat', ({ actor }) => {
+ * scene('two users chat', ({ actor }) => {
  *   const alice = actor('alice')
  *   const bob   = actor('bob')
  *
@@ -54,8 +55,9 @@ import type {
   ScriptWarning,
   ConsoleError,
   ErrorSelector,
-  FlowContext,
-  FlowFn,
+  SceneContext,
+  SceneFn,
+  TestContext,
   SceneOptions,
   ConcurrentActorHandle,
   TeamConfig,
@@ -67,7 +69,7 @@ import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOptio
 import { MessageBus } from './message-bus.js'
 import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
-import { scene, getCurrentSession } from './scene.js'
+import { registerScene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 
@@ -122,7 +124,7 @@ interface ErrorSelectorTrigger {
 }
 
 // ---------------------------------------------------------------------------
-// Conditional monitor — the flow model's answer to if()
+// Conditional monitor — the reactive model's answer to if()
 // ---------------------------------------------------------------------------
 
 /**
@@ -149,7 +151,7 @@ interface ConditionalMonitor {
 // ---------------------------------------------------------------------------
 
 /**
- * Concurrent actor handle implementation (declarative / flow model).
+ * Concurrent actor handle implementation (declarative / reactive scene model).
  *
  * Unlike `SequentialActorHandleImpl`, every DSL method pushes to a single
  * persistent queue on the actor itself and returns `this`.  Scope lives on
@@ -246,7 +248,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   /**
    * Set the Playwright page for this actor.
-   * Called by the flow runner after declaration, before drain.
+   * Called by the scene runner after declaration, before drain.
    */
   _setPage(page: Page): void {
     this._page = page
@@ -255,7 +257,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   /**
    * Set the actor registry for [actor.field] interpolation.
-   * Called by the flow runner after all actors are created.
+   * Called by the scene runner after all actors are created.
    */
   _setActorRegistry(registry: Map<string, ConcurrentActorHandle>): void {
     this._actorRegistry = registry
@@ -277,7 +279,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
 
   /**
    * Set the page factory for switchDevice support.
-   * Called by the flow runner after page initialization.
+   * Called by the scene runner after page initialization.
    */
   _setPageFactory(factory: PageFactory): void {
     this._pageFactory = factory
@@ -852,8 +854,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   /**
    * Register a persistent warning trigger.
    * If the selector becomes visible during any action, a warning is recorded.
-   * Unlike the `scene()` model, there are no watchers that clear after
-   * each await — warnings are the right primitive for reactive flows.
+   * Unlike the `test()` await-driven model, there are no watchers that clear
+   * after each await — warnings are the right primitive for reactive scenes.
    */
   warnIf(selector: Selector, message: string): void {
     this.warningTriggers.push({ selector, message, triggered: false })
@@ -921,7 +923,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
    * Drain the action queue.
    *
    * Executes all queued actions sequentially.  Called automatically by the
-   * flow runner after the declaration phase completes.
+   * scene runner after the declaration phase completes.
    *
    * Each action is executed with concurrent warning-trigger polling (same
    * approach as `ActionChainImpl.executeWithWatchers`).
@@ -1192,21 +1194,24 @@ export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<voi
 }
 
 // ---------------------------------------------------------------------------
-// flow() — reactive scene registration
+// scene() — reactive scene registration
 // ---------------------------------------------------------------------------
 
 /**
- * Define a reactive flow.
+ * Define a reactive scene — scenetest's signature queue-building model.
  *
- * Inside the flow function, actor DSL calls just queue actions — nothing
+ * Inside the scene function, actor DSL calls just queue actions — nothing
  * executes.  After the function returns, all actors drain their queues
  * concurrently through the application.
  *
+ * For the await-driven Playwright-style authoring model, use `test()` from
+ * `./scene.js` instead.
+ *
  * @example
  * ```ts
- * import { flow } from '@scenetest/scenes'
+ * import { scene } from '@scenetest/scenes'
  *
- * flow('user updates profile', ({ actor }) => {
+ * scene('user updates profile', ({ actor }) => {
  *   const user = actor('user')
  *
  *   user.openTo('/login')
@@ -1229,7 +1234,7 @@ export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<voi
  *
  * @example Multi-actor
  * ```ts
- * flow('two users chat', ({ actor }) => {
+ * scene('two users chat', ({ actor }) => {
  *   const alice = actor('alice')
  *   const bob   = actor('bob')
  *
@@ -1241,18 +1246,19 @@ export async function drainAll(actors: ConcurrentActorHandleImpl[]): Promise<voi
  * })
  * ```
  */
-export function flow(name: string, fn: FlowFn): void
-export function flow(name: string, options: SceneOptions, fn: FlowFn): void
-export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?: FlowFn): void {
+export function scene(name: string, fn: SceneFn): void
+export function scene(name: string, options: SceneOptions, fn: SceneFn): void
+export function scene(name: string, fnOrOptions: SceneFn | SceneOptions, maybeFn?: SceneFn): void {
   const fn = typeof fnOrOptions === 'function' ? fnOrOptions : maybeFn!
   const options = typeof fnOrOptions === 'function' ? undefined : fnOrOptions
 
-  // Register as a normal scene — the runner doesn't need to know it's
-  // reactive.  The wrapping scene fn handles the three-phase execution.
-  const wrappedFn = async (context: import('./types.js').SceneContext) => {
+  // Register through the shared helper — the runner doesn't need to know
+  // this scene is reactive.  The wrapper handles the three-phase execution
+  // and presents a uniform TestFn shape to the registry.
+  const wrappedFn = async (context: TestContext) => {
     const session = getCurrentSession()
     if (!session) {
-      throw new Error('flow() must be run inside the scene runner')
+      throw new Error('scene() must be run inside the scene runner')
     }
 
     const reactiveActors: ConcurrentActorHandleImpl[] = []
@@ -1268,7 +1274,7 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
       ...(teamMeta.name ? { name: teamMeta.name } : {}),
     }
 
-    const flowContext: FlowContext = {
+    const sceneContext: SceneContext = {
       actor: (role: string) => {
         // Check if already created (re-referencing an actor)
         const existing = actorRegistry.get(role)
@@ -1311,8 +1317,8 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
     }
 
     // Phase 1: Declaration — user code queues actions, nothing executes.
-    //          actor() is synchronous so the flow body can be sync too.
-    const result = fn(flowContext)
+    //          actor() is synchronous so the scene body can be sync too.
+    const result = fn(sceneContext)
     if (result && typeof (result as Promise<void>).then === 'function') {
       await result
     }
@@ -1342,9 +1348,5 @@ export function flow(name: string, fnOrOptions: FlowFn | SceneOptions, maybeFn?:
     await drainAll(reactiveActors)
   }
 
-  if (options) {
-    scene(name, options, wrappedFn)
-  } else {
-    scene(name, wrappedFn)
-  }
+  registerScene(name, wrappedFn, options)
 }

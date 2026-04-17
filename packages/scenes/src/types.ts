@@ -574,13 +574,17 @@ export interface Actor {
 }
 
 /**
- * Context passed to scene function
+ * Context passed to a `test()` function.
+ *
+ * `test()` is the await-driven authoring model — each DSL call is awaited
+ * in sequence, like Playwright's `test()`.  `actor()` returns a promise
+ * because the actor's browser context is created lazily.
  */
-export interface SceneContext {
+export interface TestContext {
   /** Get an actor by role from the current team */
   actor: (role: string) => Promise<SequentialActorHandle>
 
-  /** The team index assigned to this scene */
+  /** The team index assigned to this test */
   teamIndex: number
 
   /** Team metadata (name, tags) */
@@ -877,9 +881,9 @@ export interface ActionChain extends PromiseLike<void> {
 }
 
 /**
- * Scene definition function
+ * `test()` definition function — await-driven sequential orchestration.
  */
-export type SceneFn = (context: SceneContext) => Promise<void>
+export type TestFn = (context: TestContext) => Promise<void>
 
 /**
  * Options for scene/flow registration.
@@ -890,11 +894,16 @@ export interface SceneOptions {
 }
 
 /**
- * Registered scene
+ * Registered scene — internal runner representation.
+ *
+ * Both `test()` (await-driven) and `scene()` (reactive queue-building)
+ * register here.  The runner is agnostic: the reactive `scene()` wraps
+ * its user fn into an async function so everything in the registry has
+ * the same shape.
  */
 export interface RegisteredScene {
   name: string
-  fn: SceneFn
+  fn: TestFn
   file: string
   /**
    * Pre/post-cleanup expressions from `cleanup:` directives in .spec.md files.
@@ -1076,32 +1085,34 @@ export interface ConcurrentActorHandle {
 }
 
 /**
- * Context passed to a flow function.
+ * Context passed to a `scene()` function.
  *
- * `actor()` is synchronous — it returns a reactive handle immediately.
- * Browser contexts are created in parallel after the declaration phase,
- * before actors begin draining their queues.
+ * `scene()` is the reactive queue-building model — DSL calls are
+ * declarations that push onto each actor's persistent queue and return
+ * immediately.  `actor()` is therefore synchronous: it returns a handle
+ * straight away.  Browser contexts are created in parallel after the
+ * declaration phase, before actors begin draining their queues.
  */
-export interface FlowContext {
+export interface SceneContext {
   /** Get or create a concurrent actor by role (synchronous — no await needed) */
   actor: (role: string) => ConcurrentActorHandle
-  /** The team index assigned to this flow */
+  /** The team index assigned to this scene */
   teamIndex: number
   /** Team metadata (name, tags) */
   team: TeamMeta
 }
 
 /**
- * Flow definition function.
+ * `scene()` definition function — reactive / declarative.
  *
  * The function body is the *declaration phase* — actor creation and DSL
  * calls are all synchronous.  After it returns, browsers launch in parallel,
  * then all actors drain their queues concurrently.
  *
- * The function may be async (for backward compatibility or if you need
- * top-level await for non-actor reasons), but it doesn't need to be.
+ * The function may be async if you need top-level await for non-actor
+ * reasons, but it doesn't need to be.
  */
-export type FlowFn = (context: FlowContext) => void | Promise<void>
+export type SceneFn = (context: SceneContext) => void | Promise<void>
 
 /**
  * CLI options

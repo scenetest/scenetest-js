@@ -1,9 +1,11 @@
 // Public API for scene specs
-export { scene } from './scene.js'
+//
+// Two authoring entry points:
+//   - `scene()` — reactive queue-building (scenetest's unique approach)
+//   - `test()`  — await-driven sequential orchestration (Playwright-style)
+export { test } from './scene.js'
+export { scene } from './reactive.js'
 export { defineConfig, defineTeam } from './config.js'
-
-// Reactive flow API
-export { flow } from './reactive.js'
 
 // Text DSL for declarative scenes
 export { defineMacro, getMacro, clearMacros } from './dsl.js'
@@ -43,6 +45,9 @@ export type {
   ActorConfig,
   SceneOptions,
   SceneContext,
+  SceneFn,
+  TestContext,
+  TestFn,
   SequentialActorHandle,
   ActionChain,
   SceneReport,
@@ -52,8 +57,6 @@ export type {
   ConsoleError,
   Selector,
   ConcurrentActorHandle,
-  FlowContext,
-  FlowFn,
   SwarmConfig,
   SwarmReport,
   SwarmSceneResult,

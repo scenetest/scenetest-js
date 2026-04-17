@@ -1,6 +1,6 @@
-import { scene } from '@scenetest/scenes'
+import { test } from '@scenetest/scenes'
 
-scene('user can see the welcome page', async ({ actor }) => {
+test('user can see the welcome page', async ({ actor }) => {
   const user = await actor('user')
 
   // Navigate to the app
@@ -11,7 +11,7 @@ scene('user can see the welcome page', async ({ actor }) => {
   await user.see('name-input')
 })
 
-scene('user can update their name', async ({ actor }) => {
+test('user can update their name', async ({ actor }) => {
   const user = await actor('user')
 
   await user.openTo('/')
