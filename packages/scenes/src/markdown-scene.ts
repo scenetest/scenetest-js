@@ -1,7 +1,7 @@
 /**
  * Markdown scene parser and loader.
  *
- * Parses `.spec.md` files into reactive flow registrations.  The format is
+ * Parses `.spec.md` files into reactive `scene()` registrations.  The format is
  * natural markdown — human-readable, GitHub-renderable, and executable:
  *
  * ```markdown
@@ -37,7 +37,7 @@
  * ## Format rules
  *
  * - `#` headings are **group names** (optional hierarchy/context)
- * - `##` headings are **scene names** (each becomes a `flow()` registration)
+ * - `##` headings are **scene names** (each becomes a reactive `scene()` registration)
  * - If no `##` headings exist, `#` headings are promoted to scene names
  * - `role-name:` switches the active actor for subsequent lines (like a screenplay cue)
  * - `role-name: action args` is inline shorthand for a one-line actor block
@@ -59,7 +59,7 @@
 import path from 'path'
 import type { ConcurrentActorHandle } from './types.js'
 import { parseAction, applyDslAction, getMacro } from './dsl.js'
-import { flow } from './reactive.js'
+import { scene as registerReactiveScene } from './reactive.js'
 import { sceneRegistry, setCurrentFile, getCurrentSession } from './scene.js'
 
 // ---------------------------------------------------------------------------
@@ -461,13 +461,13 @@ function interpolate(line: string, ctx: InterpolationContext): string {
 }
 
 // ---------------------------------------------------------------------------
-// Registration — convert parsed scenes into flow() registrations
+// Registration — convert parsed scenes into reactive scene() registrations
 // ---------------------------------------------------------------------------
 
 /**
- * Register parsed markdown scenes as reactive flows.
+ * Register parsed markdown scenes as reactive `scene()` calls.
  *
- * Each scene becomes a `flow()` call.  Actors are created upfront so
+ * Each markdown scene becomes a reactive `scene()` registration.  Actors are created upfront so
  * `[actor.field]` interpolation can reference any actor regardless of
  * declaration order.
  */
@@ -479,7 +479,7 @@ export function registerMarkdownScenes(
     // Extract unique roles from actor blocks for team matching
     const roles = [...new Set(mdScene.blocks.map(b => b.role))]
 
-    flow(mdScene.name, { roles }, ({ actor, team: teamMeta }) => {
+    registerReactiveScene(mdScene.name, { roles }, ({ actor, team: teamMeta }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
       const actors = new Map<string, ConcurrentActorHandle>()
 
@@ -579,7 +579,7 @@ export function registerMarkdownScenes(
                 aliases,
               }
 
-              // Apply macro actions inline (no await — flow model)
+              // Apply macro actions inline (no await — reactive scene model)
               // Uses unified [namespace.field] syntax — no {{var}} substitution
               for (const actionLine of macro) {
                 const interpolated = interpolate(actionLine, macroCtx)
@@ -607,7 +607,7 @@ export function registerMarkdownScenes(
 // ---------------------------------------------------------------------------
 
 /**
- * Load a `.spec.md` file: parse it and register all scenes as flows.
+ * Load a `.spec.md` file: parse it and register all scenes as reactive scenes.
  *
  * Called by the runner when it discovers `.spec.md` files alongside
  * `.spec.ts` files.

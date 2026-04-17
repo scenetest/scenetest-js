@@ -67,7 +67,7 @@ function createTestActor(
 
 /**
  * Create a ConcurrentActorHandleImpl with deferred page (null).
- * Simulates how flow() creates actors before browser init.
+ * Simulates how the reactive scene() runner creates actors before browser init.
  */
 function createDeferredActor(role = 'user') {
   const bus = new MessageBus()
@@ -329,7 +329,7 @@ describe('ConcurrentActorHandleImpl', () => {
       actor.do(async () => { order.push('after') })
 
       // The mock locator returns isVisible=false by default, so the
-      // monitor won't fire.  This test verifies the flow completes
+      // monitor won't fire.  This test verifies the scene completes
       // without the monitor firing (selector not visible).
       await actor.drain()
 
@@ -484,7 +484,7 @@ describe('deferred page initialization', () => {
     actor.do(async () => { order.push('first') })
     actor.do(async () => { order.push('second') })
 
-    // Set page — simulates flow runner phase 2
+    // Set page — simulates scene runner phase 2
     actor._setPage(page as any)
 
     await actor.drain()
