@@ -6,6 +6,8 @@
 
 _Evaluate your product, not your tests. A Javascript testing framework with inline assertions and scene-based browser orchestration._
 
+**Note: Scenetest is currently quite experimental. You're welcome to check it out, but until version 1.0, the API will be breaking every once in a while. We'll include notices of breaking changes in release notes and often include instructions for LLMs to update your scenes/specs, but until we get to 1.0, I'd consider it a working experiment.**
+
 ---
 
 ## Installation
