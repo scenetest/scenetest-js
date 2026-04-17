@@ -1,4 +1,5 @@
 import type { Plugin, ViteDevServer } from 'vite'
+import { version as viteVersion } from 'vite'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
@@ -69,6 +70,39 @@ function createCspMiddleware(directives: CspDirectives): Connect.NextHandleFunct
     }
     next()
   }
+}
+
+// Minimum vite version per major known to patch currently-disclosed advisories.
+// Review against https://github.com/vitejs/vite/security/advisories roughly every
+// few months; see "Tracking vite security advisories" in CLAUDE.md.
+const MIN_SECURE_VITE_BY_MAJOR: Record<number, string> = {
+  5: '5.4.20',
+  6: '6.3.6',
+}
+
+function compareSemver(a: string, b: string): number {
+  const pa = a.split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = b.split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] !== pb[i]) return pa[i] - pb[i]
+  }
+  return 0
+}
+
+let warnedInsecureVite = false
+function warnIfInsecureVite(version: string): void {
+  if (warnedInsecureVite) return
+  const major = parseInt(version.split('.')[0], 10)
+  const minSecure = MIN_SECURE_VITE_BY_MAJOR[major]
+  if (!minSecure) return
+  if (compareSemver(version, minSecure) >= 0) return
+  warnedInsecureVite = true
+  console.warn(
+    `[vite-plugin-scenetest] vite@${version} has known security advisories. ` +
+      `Upgrade to >=${minSecure} (or a newer major). ` +
+      `If you only run scenetest locally this likely doesn't affect you, but you should still upgrade. ` +
+      `See https://github.com/vitejs/vite/security/advisories`
+  )
 }
 
 // Get git commit hash at plugin load time
@@ -210,6 +244,7 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
 
     configResolved(config) {
       root = config.root
+      warnIfInsecureVite(viteVersion)
     },
 
     configureServer(devServer) {
