@@ -4,6 +4,30 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.8.1] — 2026-04-17
+
+### API
+
+#### Authoring entry points renamed to match their semantics
+
+We had always intended for the scenetest typescript files to use the semantics of `scene()` and `test()`
+for the two different ways to author specs, with `scene` being the scenetest reactive runtime, while `test`
+would be for the async/await approach that is a very thin wrapper on the Playwright browser driver.
+
+But along the way something got confused, and we didn't figure it out until we actually started using all
+three methods in our project that uses the Scenetest library, so this change actually just brings the API
+code into alignment with the way documentation has claimed things worked all along.
+
+**Migration:** rename `flow` → `scene`, and rename any `scene(..., async ({ actor }) => await ...)` call to `test(..., async ({ actor }) => await ...)`. Markdown `.spec.md` files need no changes — they already compile through the reactive path.
+
+### Fixes
+
+#### Remove root-level `pnpm.overrides`
+
+The `devalue`, `nitro>h3`, and `srvx` overrides added in 0.8.0 were breaking the docs site build (TanStack Start + Nitro pulled in an `srvx`/`h3` combination that no longer resolved cleanly once pinned). The overrides are removed; the lockfile now resolves transitive deps naturally. If fresh dependabot alerts appear against `devalue`/`h3`/`srvx` we'll re-evaluate on a per-dep basis rather than pinning wholesale.
+
+---
+
 ## [0.8.0] — 2026-04-17
 
 Security-focused maintenance release. Resolves all open dependabot alerts (41 → 0) and adds a runtime nudge for consumers on outdated vite.
