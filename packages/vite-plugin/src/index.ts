@@ -101,10 +101,10 @@ function warnIfInsecureVite(version: string): void {
   if (compareSemver(version, minSecure) >= 0) return
   warnedInsecureVite = true
   console.warn(
-    `[vite-plugin-scenetest] vite@${version} has known security advisories. ` +
-      `Upgrade to >=${minSecure} (or a newer major). ` +
-      `If you only run scenetest locally this likely doesn't affect you, but you should still upgrade. ` +
-      `See https://github.com/vitejs/vite/security/advisories`
+    `[vite-plugin-scenetest] Heads up: vite@${version} is below the known-patched floor ` +
+      `for the ${major}.x line (>=${minSecure}). Vite has published security advisories ` +
+      `that may affect your app — run \`pnpm audit\` (or \`npm audit\`) for specifics, or see ` +
+      `https://github.com/vitejs/vite/security/advisories`
   )
 }
 
