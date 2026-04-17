@@ -75,9 +75,12 @@ function createCspMiddleware(directives: CspDirectives): Connect.NextHandleFunct
 // Minimum vite version per major known to patch currently-disclosed advisories.
 // Review against https://github.com/vitejs/vite/security/advisories roughly every
 // few months; see "Tracking vite security advisories" in CLAUDE.md.
+// Last reviewed: 2026-04.
 const MIN_SECURE_VITE_BY_MAJOR: Record<number, string> = {
-  5: '5.4.20',
-  6: '6.3.6',
+  5: '5.4.21',
+  6: '6.4.2',
+  7: '7.3.2',
+  8: '8.0.5',
 }
 
 function compareSemver(a: string, b: string): number {
