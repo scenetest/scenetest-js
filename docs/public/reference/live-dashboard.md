@@ -51,8 +51,8 @@ If the Vite dev server isn't running or doesn't have the scenetest plugin, event
 Shows run-level stats updated in real-time:
 
 - **Scenes** — completed / total
-- **Pass** — assertion pass count
-- **Fail** — assertion fail count
+- **Pass** — scenes that completed successfully
+- **Fail** — scenes that failed or timed out
 - **Time** — elapsed duration
 - **Connection indicator** — green (connected), amber (connecting), red (disconnected)
 

@@ -795,9 +795,6 @@ export function generateDashboardHtml(): string {
             result: event.result,
             timestamp: event.timestamp,
           })
-          if (event.result) state.passCount++
-          else state.failCount++
-          updateStats()
           renderScene(scene)
           break
         }
@@ -809,6 +806,8 @@ export function generateDashboardHtml(): string {
           scene.status = event.status
           scene.duration = event.duration
           scene.error = event.error
+          if (event.status === 'completed') state.passCount++
+          else state.failCount++
           state.currentScene = null
           renderScene(scene)
           updateStats()
@@ -817,8 +816,10 @@ export function generateDashboardHtml(): string {
 
         case 'run:end':
           state.sceneCount = event.summary?.scenes || state.sceneCount
-          state.passCount = event.summary?.assertions?.passed || state.passCount
-          state.failCount = event.summary?.assertions?.failed || state.failCount
+          if (event.summary) {
+            state.passCount = event.summary.completed ?? state.passCount
+            state.failCount = event.summary.failed ?? state.failCount
+          }
           document.getElementById('elapsed').textContent = event.duration + 'ms'
           setRunning(false)
           updateStats()
