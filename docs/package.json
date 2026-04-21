@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm --filter @scenetest/checks --filter @scenetest/checks-react --filter @scenetest/checks-panel build && vite build",
-    "start": "node .output/server/index.mjs"
+    "build:cloudflare": "pnpm --filter @scenetest/checks --filter @scenetest/checks-react --filter @scenetest/checks-panel build && NITRO_PRESET=cloudflare_module vite build",
+    "start": "node .output/server/index.mjs",
+    "preview": "pnpm build:cloudflare && wrangler dev",
+    "deploy": "pnpm build:cloudflare && wrangler deploy"
   },
   "dependencies": {
     "@scenetest/checks": "workspace:*",
@@ -29,6 +32,7 @@
     "nitro": "^3.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.3.2",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "wrangler": "^4.0.0"
   }
 }
