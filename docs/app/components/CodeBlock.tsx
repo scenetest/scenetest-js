@@ -1,44 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
-import hljs from 'highlight.js/lib/core'
-import bash from 'highlight.js/lib/languages/bash'
-import json from 'highlight.js/lib/languages/json'
-import markdown from 'highlight.js/lib/languages/markdown'
-import typescript from 'highlight.js/lib/languages/typescript'
-import xml from 'highlight.js/lib/languages/xml'
-import yaml from 'highlight.js/lib/languages/yaml'
-import scenetestSpec from '../lib/hljs-scenetest'
-import 'highlight.js/styles/github.css'
-
-hljs.registerLanguage('typescript', typescript)
-hljs.registerLanguage('ts', typescript)
-hljs.registerLanguage('javascript', typescript)
-hljs.registerLanguage('js', typescript)
-hljs.registerLanguage('tsx', typescript)
-hljs.registerLanguage('bash', bash)
-hljs.registerLanguage('json', json)
-hljs.registerLanguage('jsonl', json)
-hljs.registerLanguage('markdown', markdown)
-hljs.registerLanguage('yaml', yaml)
-hljs.registerLanguage('html', xml)
-hljs.registerLanguage('scenetest', scenetestSpec)
+import { Children, useState, type ReactNode } from 'react'
 
 interface CodeBlockProps {
   language?: string
-  children: string
+  children: ReactNode
+}
+
+function extractText(children: ReactNode): string {
+  let out = ''
+  Children.forEach(children, (child) => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      out += child
+    } else if (child && typeof child === 'object' && 'props' in child) {
+      out += extractText((child.props as { children?: ReactNode }).children)
+    }
+  })
+  return out
 }
 
 export function CodeBlock({ language = 'typescript', children }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
-  const codeRef = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    if (codeRef.current && language !== 'text') {
-      hljs.highlightElement(codeRef.current)
-    }
-  }, [children, language])
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(children)
+    navigator.clipboard.writeText(extractText(children))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -49,9 +32,7 @@ export function CodeBlock({ language = 'typescript', children }: CodeBlockProps)
         {copied ? 'Copied!' : 'Copy'}
       </button>
       <pre>
-        <code ref={codeRef} className={`language-${language}`}>
-          {children}
-        </code>
+        <code className={`hljs language-${language}`}>{children}</code>
       </pre>
     </div>
   )
