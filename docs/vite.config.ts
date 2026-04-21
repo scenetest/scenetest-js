@@ -6,7 +6,6 @@ import { nitro } from 'nitro/vite'
 import { execSync } from 'child_process'
 import { markdownNav } from './vite-plugin-md-nav'
 import { llmsTxt } from './vite-plugin-llms-txt'
-import { markdownContent } from './vite-plugin-md-content'
 
 const gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
 
@@ -27,7 +26,6 @@ export default defineConfig(({ command }) => ({
     viteReact(),
     markdownNav(),
     llmsTxt(),
-    markdownContent(),
     command === 'build' ? nitro() : null,
   ],
 }))
