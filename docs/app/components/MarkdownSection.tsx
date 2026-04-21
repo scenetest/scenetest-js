@@ -8,7 +8,8 @@ import { CodeBlock } from './CodeBlock'
 import { TabbedCode } from './TabbedCode'
 
 interface MarkdownSectionProps {
-  src: string
+  /** Markdown source, loaded server-side so it renders into the SSR HTML. */
+  content: string | null
   className?: string
 }
 
@@ -175,30 +176,12 @@ const remarkPlugins = [remarkGfm]
 
 // -- Main component -------------------------------------------------------
 
-export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
-  const [rawMarkdown, setRawMarkdown] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+export function MarkdownSection({ content, className = '' }: MarkdownSectionProps) {
+  const rawMarkdown = content
   const [copied, setCopied] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { hash } = useLocation()
   const router = useRouter()
-
-  // Fetch markdown
-  useEffect(() => {
-    fetch(src, { headers: { 'X-Raw': '1' } })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to fetch ${src}: ${res.status}`)
-        return res.text()
-      })
-      .then((md) => {
-        setRawMarkdown(md)
-        setError(null)
-      })
-      .catch((err) => {
-        console.error('Error loading markdown:', err)
-        setError(`Error loading content from ${src}`)
-      })
-  }, [src])
 
   // Scroll to hash target after content renders or hash changes.
   // Delay slightly so the view transition animation doesn't reset scroll.
@@ -273,14 +256,6 @@ export function MarkdownSection({ src, className = '' }: MarkdownSectionProps) {
     navigator.clipboard.writeText(rawMarkdown)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  if (error) {
-    return (
-      <div className={`markdown-section ${className}`}>
-        <p className="error">{error}</p>
-      </div>
-    )
   }
 
   return (
