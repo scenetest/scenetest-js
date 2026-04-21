@@ -8,6 +8,7 @@ dist/
 .nitro/
 .tanstack/
 .vercel/
+.wrangler/
 
 # Playwright
 test-results/
