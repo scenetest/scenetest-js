@@ -7,7 +7,7 @@ import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 import { TabbedCode } from './TabbedCode'
-import { highlightLanguages } from '../lib/highlight'
+import { highlightLanguages, rehypeStashCodeSource } from '../lib/highlight'
 import 'highlight.js/styles/github.css'
 
 interface MarkdownSectionProps {
@@ -176,6 +176,7 @@ function makeHeading(level: number) {
 
 const rehypePlugins: Options['rehypePlugins'] = [
   rehypeRaw,
+  rehypeStashCodeSource,
   [rehypeHighlight, { languages: highlightLanguages, detect: false, plainText: ['text'] }],
 ]
 const remarkPlugins: Options['remarkPlugins'] = [remarkGfm]
@@ -235,16 +236,23 @@ export function MarkdownSection({ content, className = '' }: MarkdownSectionProp
       code({
         className: codeClassName,
         children,
+        node,
       }: {
         className?: string
         children?: ReactNode
+        node?: { data?: { codeSource?: string } }
       }) {
         // Inline code — no language class set by react-markdown
         if (!codeClassName?.includes('language-')) return <code>{children}</code>
         // Fenced block — rehype-highlight has already wrapped the source in
         // hljs-* spans; CodeBlock just adds chrome (pre, copy button).
         const lang = codeClassName.match(/language-(\S+)/)?.[1] ?? 'text'
-        return <CodeBlock language={lang}>{children}</CodeBlock>
+        const source = node?.data?.codeSource ?? ''
+        return (
+          <CodeBlock language={lang} source={source}>
+            {children}
+          </CodeBlock>
+        )
       },
       // CodeBlock already wraps in <pre>, so unwrap the default <pre>
       pre({ children }: { children?: ReactNode }) {
