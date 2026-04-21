@@ -1,11 +1,14 @@
 import { Children, createElement, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import Markdown from 'react-markdown'
+import Markdown, { type Options } from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
+import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 import { TabbedCode } from './TabbedCode'
+import { highlightLanguages } from '../lib/highlight'
+import 'highlight.js/styles/github.css'
 
 interface MarkdownSectionProps {
   /** Markdown source, loaded server-side so it renders into the SSR HTML. */
@@ -171,8 +174,11 @@ function makeHeading(level: number) {
 
 // -- rehype plugins -------------------------------------------------------
 
-const rehypePlugins = [rehypeRaw]
-const remarkPlugins = [remarkGfm]
+const rehypePlugins: Options['rehypePlugins'] = [
+  rehypeRaw,
+  [rehypeHighlight, { languages: highlightLanguages, detect: false, plainText: ['text'] }],
+]
+const remarkPlugins: Options['remarkPlugins'] = [remarkGfm]
 
 // -- Main component -------------------------------------------------------
 
@@ -233,15 +239,12 @@ export function MarkdownSection({ content, className = '' }: MarkdownSectionProp
         className?: string
         children?: ReactNode
       }) {
-        // Inline code — no className set by react-markdown
-        if (!codeClassName) return <code>{children}</code>
-        // Fenced block — render via CodeBlock
-        const lang = codeClassName.replace('language-', '')
-        return (
-          <CodeBlock language={lang}>
-            {String(children).replace(/\n$/, '')}
-          </CodeBlock>
-        )
+        // Inline code — no language class set by react-markdown
+        if (!codeClassName?.includes('language-')) return <code>{children}</code>
+        // Fenced block — rehype-highlight has already wrapped the source in
+        // hljs-* spans; CodeBlock just adds chrome (pre, copy button).
+        const lang = codeClassName.match(/language-(\S+)/)?.[1] ?? 'text'
+        return <CodeBlock language={lang}>{children}</CodeBlock>
       },
       // CodeBlock already wraps in <pre>, so unwrap the default <pre>
       pre({ children }: { children?: ReactNode }) {
