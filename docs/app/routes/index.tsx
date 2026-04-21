@@ -2,21 +2,24 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Footer } from '../components/Footer'
 import { useCheckAssertions } from '../useCheckAssertions'
 import { MarkdownSection } from '../components/MarkdownSection'
+import { getMarkdown } from '../lib/markdown'
 
 
 export const Route = createFileRoute('/')({
+  loader: () => ({ content: getMarkdown('/main.md') }),
   component: Home,
 })
 
 function Home() {
   // Enable interactive test assertions for the demo
   useCheckAssertions()
+  const { content } = Route.useLoaderData()
 
   return (
     <article>
       <div className="hero-logo">🎬</div>
 
-      <MarkdownSection src='/main.md' />
+      <MarkdownSection content={content} />
 
       <p>
         <em>

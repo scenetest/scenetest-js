@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound, redirect } from '@tanstack/react-route
 import { Footer } from '../../components/Footer'
 import { MarkdownSection } from '../../components/MarkdownSection'
 import { guides } from '../../sections'
+import { getMarkdown } from '../../lib/markdown'
 
 // Consolidated pages — redirect old URLs to their new homes
 const guideRedirects: Record<string, string> = {
@@ -16,17 +17,20 @@ export const Route = createFileRoute('/guides/$pageName')({
     if (!guides.some((g) => g.slug === params.pageName)) {
       throw notFound()
     }
+    const content = getMarkdown(`/guides/${params.pageName}.md`)
+    if (content === null) throw notFound()
+    return { content }
   },
   component: GuidePage,
 })
 
 function GuidePage() {
-  const { pageName } = Route.useParams()
+  const { content } = Route.useLoaderData()
   return (
     <article>
       <Link to="/guides" className="back">&larr; Back</Link>
 
-      <MarkdownSection src={`/guides/${pageName}.md`} />
+      <MarkdownSection content={content} />
 
       <Footer />
     </article>
