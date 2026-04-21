@@ -144,10 +144,10 @@ export function llmsTxt(): Plugin {
       })
     },
 
-    // Emit during the client build so the files land in whatever static output
-    // directory the active Nitro preset uses (e.g. .vercel/output/static for
-    // the vercel preset, .output/public for node-server). Writing to a fixed
-    // path breaks in production because the preset's static dir differs.
+    // Emit during the client build so the files land in Nitro's static output
+    // dir (`.output/public` for the cloudflare_module preset). Emitting via
+    // Rollup assets instead of writing to a fixed path keeps this correct if
+    // the preset changes.
     generateBundle() {
       if (this.environment?.name !== 'client') return
 

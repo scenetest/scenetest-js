@@ -1,6 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter @scenetest/checks --filter @scenetest/checks-react --filter @scenetest/checks-panel build && NITRO_PRESET=vercel pnpm --filter @scenetest/docs build",
-  "installCommand": "pnpm install",
-  "outputDirectory": "docs/.output"
-}

@@ -7,7 +7,6 @@ dist/
 .output/
 .nitro/
 .tanstack/
-.vercel/
 .wrangler/
 
 # Playwright
