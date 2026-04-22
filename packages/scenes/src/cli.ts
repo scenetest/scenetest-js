@@ -72,6 +72,8 @@ program
       // Initialize browser
       await runner.init()
 
+      let exitCode = 0
+
       try {
         // Resolve scene file paths
         let sceneFiles: string[] | undefined
@@ -92,12 +94,14 @@ program
             const report = await runner.runSwarmMode('manual')
             printSummary(report)
             await writeReport(report, config.reportDir!, config.reportFormat!)
+            if (reportFailed(report)) exitCode = 1
           }
         } else {
           // ── Normal run ──
           const report = await runner.run(sceneFiles)
           printSummary(report)
           await writeReport(report, config.reportDir!, config.reportFormat!)
+          if (reportFailed(report)) exitCode = 1
 
           // Check if swarm should auto-trigger
           const triggeringScenes = runner.checkSwarmTrigger()
@@ -122,11 +126,23 @@ program
           await runner.close()
         }
       }
+
+      if (exitCode !== 0) {
+        process.exit(exitCode)
+      }
     } catch (err) {
       console.error('Error:', err instanceof Error ? err.message : err)
       process.exit(1)
     }
   })
+
+function reportFailed(report: RunReport): boolean {
+  return (
+    report.summary.failed > 0 ||
+    report.summary.completed < report.summary.scenes ||
+    report.summary.assertions.failed > 0
+  )
+}
 
 /**
  * Write report to files
