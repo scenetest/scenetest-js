@@ -1,16 +1,16 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 
 interface CodeBlockProps {
   language?: string
-  source: string
   children: ReactNode
 }
 
-export function CodeBlock({ language = 'typescript', source, children }: CodeBlockProps) {
+export function CodeBlock({ language = 'typescript', children }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const codeRef = useRef<HTMLElement>(null)
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(source)
+    navigator.clipboard.writeText(codeRef.current?.textContent ?? '')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -21,7 +21,7 @@ export function CodeBlock({ language = 'typescript', source, children }: CodeBlo
         {copied ? 'Copied!' : 'Copy'}
       </button>
       <pre>
-        <code className={`hljs language-${language}`}>{children}</code>
+        <code ref={codeRef} className={`hljs language-${language}`}>{children}</code>
       </pre>
     </div>
   )
