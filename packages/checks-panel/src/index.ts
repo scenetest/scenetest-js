@@ -123,8 +123,8 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
   // Add to group
   addToGroup(result)
 
-  // Create panel on first assertion if not exists
-  if (!panel && document.body) {
+  // Create panel on first assertion if not exists (skip under automation)
+  if (!panel && document.body && !navigator.webdriver) {
     createPanel()
   }
 
@@ -185,10 +185,12 @@ export function initObserver(): void {
     handleAssertion(result, existingReport)
   }
 
-  // Create panel when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createPanel)
-  } else {
-    createPanel()
+  // Create panel when DOM is ready (skip under automation)
+  if (!navigator.webdriver) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', createPanel)
+    } else {
+      createPanel()
+    }
   }
 }
