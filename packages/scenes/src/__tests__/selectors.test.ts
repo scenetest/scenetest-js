@@ -128,7 +128,7 @@ describe('resolveSelector', () => {
         (c) => c.method === 'locator' && String(c.args[0]).includes('xpath=self')
       )
       expect(xpathCall).toBeTruthy()
-      expect(String(xpathCall!.args[0])).toContain('data-key="review-link"')
+      expect(String(xpathCall!.args[0])).toContain('@data-key="review-link"')
 
       // Step 3: descendant = locator.locator(token2CSS)
       const descendantCall = calls.find(
@@ -166,23 +166,47 @@ describe('resolveSelector', () => {
       expect(firstCalls).toHaveLength(0)
     })
 
-    it('data-key same-element pattern: uses xpath self-match', () => {
+    it('data-key same-element pattern: uses xpath self-match with all attributes', () => {
       const { page, calls } = createMockPage()
 
       resolveSelector(page, 'playlist-row 12345 like-button')
 
-      // For token "12345", should have xpath self::*[@data-key="12345"]
+      // For each non-first token, should have xpath self::*[...all attrs...]
       const xpathCalls = calls.filter(
         (c) => c.method === 'locator' && String(c.args[0]).includes('xpath=self')
       )
       expect(xpathCalls).toHaveLength(2) // once for "12345", once for "like-button"
 
-      expect(String(xpathCalls[0].args[0])).toContain('data-key="12345"')
-      expect(String(xpathCalls[1].args[0])).toContain('data-key="like-button"')
+      // Each xpath predicate covers all attribute types, including data-key
+      expect(String(xpathCalls[0].args[0])).toContain('@data-key="12345"')
+      expect(String(xpathCalls[0].args[0])).toContain('@data-testid="12345"')
+      expect(String(xpathCalls[1].args[0])).toContain('@data-key="like-button"')
+      expect(String(xpathCalls[1].args[0])).toContain('@data-testid="like-button"')
 
       // NO .first() called anywhere
       const firstCalls = calls.filter((c) => c.method === 'first')
       expect(firstCalls).toHaveLength(0)
+    })
+
+    it('same-element data-testid match: deck-tile case where data-key and data-testid share an element', () => {
+      // Regression: selector "decks-list-grid kan deck-tile" where the button has
+      // both data-key="kan" AND data-testid="deck-tile" — the last token must
+      // match the same element via data-testid, not only via data-key.
+      const { page, calls } = createMockPage()
+
+      resolveSelector(page, 'decks-list-grid kan deck-tile')
+
+      const xpathCalls = calls.filter(
+        (c) => c.method === 'locator' && String(c.args[0]).includes('xpath=self')
+      )
+      // Two same-element checks: one for "kan", one for "deck-tile"
+      expect(xpathCalls).toHaveLength(2)
+
+      // "deck-tile" xpath must include data-testid so it can match [data-testid="deck-tile"]
+      const deckTileXpath = String(xpathCalls[1].args[0])
+      expect(deckTileXpath).toContain('@data-testid="deck-tile"')
+      expect(deckTileXpath).toContain('@aria-label="deck-tile"')
+      expect(deckTileXpath).toContain('@data-key="deck-tile"')
     })
 
     it('builds correct CSS selector with all attribute types', () => {

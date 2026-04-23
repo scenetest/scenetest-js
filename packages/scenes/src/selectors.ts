@@ -54,6 +54,23 @@ function buildTokenSelector(token: string): string {
 }
 
 /**
+ * Build an XPath predicate (without outer brackets) matching any of the same
+ * attributes as buildTokenSelector. Used for same-element filtering in
+ * resolveSelector so that e.g. [data-key="kan"][data-testid="deck-tile"] on
+ * the same element is found when the selector chain ends on that element.
+ */
+function buildXpathTokenPredicate(token: string): string {
+  return [
+    `@aria-label="${token}"`,
+    `@id="${token}"`,
+    `@data-testid="${token}"`,
+    `@data-name="${token}"`,
+    `@data-key="${token}"`,
+    `@name="${token}"`,
+  ].join(' or ')
+}
+
+/**
  * Resolve a single token to a locator.
  * Handles aliases (~) and explicit aria-labels (@).
  */
@@ -143,8 +160,8 @@ export function resolveSelector(base: Page | Locator, selector: string): Locator
       continue
     }
 
-    // Same-element match: current element has data-key=nextToken (stay on it)
-    const sameElement = locator.locator(`xpath=self::*[@data-key="${nextToken}"]`)
+    // Same-element match: current element itself matches nextToken by any attribute
+    const sameElement = locator.locator(`xpath=self::*[${buildXpathTokenPredicate(nextToken)}]`)
     // Descendant match: find child/descendant matching nextToken (descend)
     const descendant = locator.locator(buildTokenSelector(nextToken))
 
