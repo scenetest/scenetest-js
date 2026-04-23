@@ -4,6 +4,20 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.8.2] — 2026-04-23
+
+### Improvements
+
+* For CI workflows, `exit(1)` when there are failures
+* Fix llms.txt route
+* Navbar stats show _scene_ pass/fail rather than assertions
+*
+
+### Site
+
+* Switch to Wrangler for move to CF
+* SSR all docs for improved agent readability
+
 ## [0.8.1] — 2026-04-17
 
 ### API
