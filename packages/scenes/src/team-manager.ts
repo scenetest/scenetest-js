@@ -426,7 +426,7 @@ export class TeamSession {
     // Suppress dev panel if --no-panel was passed
     if (this.noPanel) {
       await page.addInitScript(() => {
-        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+        ;(window as unknown as Record<string, unknown>).__scenetest_no_panel = true
       })
     }
 
@@ -559,7 +559,7 @@ export class TeamSession {
     // Suppress dev panel if --no-panel was passed
     if (this.noPanel) {
       await page.addInitScript(() => {
-        ;(window as unknown as Record<string, unknown>).__scenetest_panel = true
+        ;(window as unknown as Record<string, unknown>).__scenetest_no_panel = true
       })
     }
 
