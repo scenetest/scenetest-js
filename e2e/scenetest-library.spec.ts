@@ -160,6 +160,7 @@ test.describe('serverFn assertions', () => {
 
 test.describe('Vite plugin dev panel', () => {
   test('dev panel is injected in development mode', async ({ page }) => {
+    await page.addInitScript(() => { (window as unknown as Record<string, unknown>).__scenetest_force_panel = true })
     await page.goto('/')
     await page.waitForSelector('[data-testid="display-name"]')
 
@@ -169,6 +170,7 @@ test.describe('Vite plugin dev panel', () => {
   })
 
   test('dev panel shows assertion count', async ({ page }) => {
+    await page.addInitScript(() => { (window as unknown as Record<string, unknown>).__scenetest_force_panel = true })
     await page.goto('/')
     await page.waitForSelector('[data-testid="display-name"]')
     await page.waitForTimeout(200)

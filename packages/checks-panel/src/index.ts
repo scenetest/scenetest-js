@@ -43,6 +43,8 @@ export type { AssertionResult, AssertionGroup, ViewMode } from './types.js'
 declare global {
   interface Window {
     __scenetest_panel?: boolean
+    __scenetest_no_panel?: boolean
+    __scenetest_force_panel?: boolean
     __scenetest_report?: (result: AssertionResult) => void
     __scenetest_openInEditor?: typeof openInEditor
     __scenetest_openFullscreenToGroup?: typeof openFullscreenToGroup
@@ -123,8 +125,8 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
   // Add to group
   addToGroup(result)
 
-  // Create panel on first assertion if not exists
-  if (!panel && document.body) {
+  // Create panel on first assertion if not exists (skip under automation)
+  if (!panel && document.body && window.__scenetest_force_panel || (!navigator.webdriver && !window.__scenetest_no_panel)) {
     createPanel()
   }
 
@@ -185,10 +187,12 @@ export function initObserver(): void {
     handleAssertion(result, existingReport)
   }
 
-  // Create panel when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createPanel)
-  } else {
-    createPanel()
+  // Create panel when DOM is ready (skip under automation)
+  if (window.__scenetest_force_panel || (!navigator.webdriver && !window.__scenetest_no_panel)) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', createPanel)
+    } else {
+      createPanel()
+    }
   }
 }
