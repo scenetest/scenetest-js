@@ -238,6 +238,87 @@ describe('resolveSelector', () => {
     })
   })
 
+  // ---------------------------------------------------------------------------
+  // Same-element attribute coexistence
+  //
+  // When data-key and another attribute (e.g. data-testid) share a single DOM
+  // element, the selector chain should resolve regardless of which attribute
+  // comes first in the token sequence.
+  // ---------------------------------------------------------------------------
+  describe('same-element attribute coexistence', () => {
+    /**
+     * Pull out the xpath same-element locator calls in the order they were made.
+     * Each non-first token in a multi-token selector produces exactly one xpath call.
+     */
+    function xpathCalls(calls: Array<{ method: string; args: unknown[]; on: string }>) {
+      return calls
+        .filter((c) => c.method === 'locator' && String(c.args[0]).startsWith('xpath=self'))
+        .map((c) => String(c.args[0]))
+    }
+
+    it('same-element xpath includes all six attribute types', () => {
+      const { page, calls } = createMockPage()
+      resolveSelector(page, 'grid item')
+
+      const [xpath] = xpathCalls(calls)
+      expect(xpath).toContain('@aria-label="item"')
+      expect(xpath).toContain('@id="item"')
+      expect(xpath).toContain('@data-testid="item"')
+      expect(xpath).toContain('@data-name="item"')
+      expect(xpath).toContain('@data-key="item"')
+      expect(xpath).toContain('@name="item"')
+    })
+
+    it('data-key token then data-testid token (kan → deck-tile order)', () => {
+      // Element has data-key="kan" AND data-testid="deck-tile" on the same node.
+      // "kan" is found via descendant data-key match; "deck-tile" must then match
+      // the same element via data-testid — not a child.
+      const { page, calls } = createMockPage()
+      resolveSelector(page, 'decks-list-grid kan deck-tile')
+
+      const [kanXpath, deckTileXpath] = xpathCalls(calls)
+
+      expect(kanXpath).toContain('@data-key="kan"')
+
+      // Critical: deck-tile same-element check must include @data-testid
+      expect(deckTileXpath).toContain('@data-testid="deck-tile"')
+    })
+
+    it('data-testid token then data-key token (deck-tile → kan order)', () => {
+      // Reversed order: "deck-tile" found as descendant via data-testid, then
+      // "kan" matches the same element via data-key.
+      const { page, calls } = createMockPage()
+      resolveSelector(page, 'decks-list-grid deck-tile kan')
+
+      const [deckTileXpath, kanXpath] = xpathCalls(calls)
+
+      expect(deckTileXpath).toContain('@data-testid="deck-tile"')
+      expect(kanXpath).toContain('@data-key="kan"')
+    })
+
+    it('both orderings produce the same chain structure', () => {
+      // Neither ordering should be privileged — same number of or() calls either way.
+      const forward = createMockPage()
+      const reversed = createMockPage()
+
+      resolveSelector(forward.page, 'grid kan deck-tile')
+      resolveSelector(reversed.page, 'grid deck-tile kan')
+
+      const forwardOrCount = forward.calls.filter((c) => c.method === 'or').length
+      const reversedOrCount = reversed.calls.filter((c) => c.method === 'or').length
+      expect(forwardOrCount).toBe(reversedOrCount)
+    })
+
+    it('aria-label and data-key on the same element', () => {
+      const { page, calls } = createMockPage()
+      resolveSelector(page, 'nav Japanese settings')
+
+      const [, settingsXpath] = xpathCalls(calls)
+      expect(settingsXpath).toContain('@aria-label="settings"')
+      expect(settingsXpath).toContain('@data-key="settings"')
+    })
+  })
+
   describe('#N nth-element narrowing', () => {
     it('#1 calls .nth(0) on the current locator', () => {
       const { page, calls } = createMockPage()
