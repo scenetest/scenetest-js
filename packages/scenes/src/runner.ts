@@ -174,13 +174,17 @@ export class SceneRunner {
           })
 
           // Run pre-cleanup if configured
-          await runCleanup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart)
+          await runCleanup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart, 'before')
 
           // Run setup if configured (after pre-cleanup, before scene)
           await runSetup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart)
 
           // Run the scene
           const report = await runScene(registered, session, timeout)
+
+          // Run post-cleanup so the next scene starts with the documented
+          // pristine state — `cleanup:` is idempotent and runs both sides.
+          await runCleanup(registered, resolvedTeam.actors, resolvedTeam.meta, server, testStart, 'after')
 
           // Enrich actor info with device and navigation mode assignments
           for (const [role, actor] of session.getActors()) {
@@ -504,21 +508,27 @@ function evaluateCleanup(expression: string, server: Record<string, unknown>): u
 }
 
 /**
- * Run pre-cleanup for a scene if it has cleanup expressions.
+ * Run cleanup for a scene if it has cleanup expressions.
  * Each expression is interpolated, evaluated with server context, and awaited.
  * Never throws — failures are logged but don't prevent the scene.
+ *
+ * `phase` controls the suffix on the success log so before/after passes are
+ * distinguishable. The runner calls this twice per scene — once before
+ * `setup` and once after the scene finishes — so cleanup statements stay
+ * idempotent regardless of which scene ran previously.
  */
 export async function runCleanup(
   registered: RegisteredScene,
   team: TeamConfig,
   teamMeta: TeamMeta,
   server: Record<string, unknown> | undefined,
-  testStart: string
+  testStart: string,
+  phase: 'before' | 'after' = 'before'
 ): Promise<void> {
   if (!registered.cleanup || registered.cleanup.length === 0) return
 
   if (!server || Object.keys(server).length === 0) {
-    console.warn(`  ⚠ cleanup: expressions present but no server config provided`)
+    console.warn(`  ⚠ cleanup (${phase}): expressions present but no server config provided`)
     return
   }
 
@@ -531,11 +541,11 @@ export async function runCleanup(
       }
     } catch (err) {
       console.warn(
-        `  ⚠ cleanup failed: ${err instanceof Error ? err.message : String(err)}`
+        `  ⚠ cleanup (${phase}) failed: ${err instanceof Error ? err.message : String(err)}`
       )
     }
   }
-  console.log(`  ♻ cleanup ran`)
+  console.log(`  ♻ cleanup ran (${phase})`)
 }
 
 /**

@@ -599,6 +599,42 @@ describe('drainAll', () => {
   })
 })
 
+describe('settle integration', () => {
+  it('flushes microtasks/RAFs after openTo so derived live queries can render', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.openTo('/dashboard')
+    await actor.drain()
+
+    expect(page.goto).toHaveBeenCalledWith('/dashboard', { timeout: 5000 })
+    // settle() runs page.evaluate(...) to flush microtasks + 2 RAFs
+    expect(page.evaluate).toHaveBeenCalled()
+  })
+
+  it('flushes microtasks/RAFs after up(selector) waits for visibility', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.up('header')
+    await actor.drain()
+
+    // Locator was waited on, then page.evaluate ran the settle flush
+    expect(page._locator.waitFor).toHaveBeenCalledWith({
+      state: 'visible',
+      timeout: 5000,
+    })
+    expect(page.evaluate).toHaveBeenCalled()
+  })
+
+  it('flushes microtasks/RAFs after bare up() resets scope', async () => {
+    const { actor, page } = createTestActor()
+
+    actor.up()
+    await actor.drain()
+
+    expect(page.evaluate).toHaveBeenCalled()
+  })
+})
+
 describe('reload()', () => {
   it('queues a reload action', () => {
     const { actor } = createTestActor()
