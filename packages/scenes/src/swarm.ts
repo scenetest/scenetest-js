@@ -224,10 +224,12 @@ export async function runSwarm(
             // Run pre-cleanup and setup if configured
             const swarmTeam = teamManager.getTeam(task.teamIndex)
             const swarmTestStart = new Date().toISOString()
-            await runCleanup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart)
+            await runCleanup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart, 'before')
             await runSetup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart)
 
             const report = await runScene(scene, session, timeout)
+
+            await runCleanup(scene, swarmTeam.actors, swarmTeam.meta, server, swarmTestStart, 'after')
 
             const detail: SwarmRunDetail = {
               teamIndex: task.teamIndex,

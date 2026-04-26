@@ -7,6 +7,7 @@ import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
+import { settle } from './settle.js'
 
 /**
  * Action to be executed in a chain
@@ -185,6 +186,7 @@ class ActionChainImpl implements ActionChain {
       this.scopeStack = []
       this.scopeSetUrl = ''
       this.scopeStackUrls = []
+      await settle(this.page)
     })
   }
 
@@ -503,6 +505,7 @@ class ActionChainImpl implements ActionChain {
         this.scopeStack = []
         this.scopeSetUrl = ''
         this.scopeStackUrls = []
+        await settle(this.page)
       })
     }
     const target = formatSelector(selector)
@@ -510,6 +513,7 @@ class ActionChainImpl implements ActionChain {
       const ancestorLocator = resolveSelector(this.page, selector)
       await ancestorLocator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       this.pushScope(ancestorLocator)
+      await settle(this.page)
     })
   }
 

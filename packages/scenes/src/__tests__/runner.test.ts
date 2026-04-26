@@ -141,6 +141,34 @@ describe('runCleanup', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('notexist'))
     warnSpy.mockRestore()
   })
+
+  it('logs the phase suffix so before/after passes are distinguishable', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const server = { db: { delete: () => Promise.resolve() } }
+    const scene = makeScene({ cleanup: ["db.delete('x')"] })
+
+    await runCleanup(scene, team, teamMeta, server, testStart, 'before')
+    await runCleanup(scene, team, teamMeta, server, testStart, 'after')
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('cleanup ran (before)'))
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('cleanup ran (after)'))
+    logSpy.mockRestore()
+  })
+
+  it('runs the cleanup expressions again when invoked with phase=after', async () => {
+    const calls: string[] = []
+    const server = {
+      db: {
+        delete: (table: string) => { calls.push(`delete:${table}`); return Promise.resolve() },
+      },
+    }
+    const scene = makeScene({ cleanup: ["db.delete('user_deck')"] })
+
+    await runCleanup(scene, team, teamMeta, server, testStart, 'before')
+    await runCleanup(scene, team, teamMeta, server, testStart, 'after')
+
+    expect(calls).toEqual(['delete:user_deck', 'delete:user_deck'])
+  })
 })
 
 // ---------------------------------------------------------------------------

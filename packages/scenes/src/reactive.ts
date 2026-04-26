@@ -72,6 +72,7 @@ import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { registerScene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
+import { settle } from './settle.js'
 
 // ---------------------------------------------------------------------------
 // Interpolation helpers
@@ -397,6 +398,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       this.scopeStack = []
       this.scopeSetUrl = ''
       this.scopeStackUrls = []
+      await settle(this.page)
     })
   }
 
@@ -688,6 +690,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         this.scopeStack = []
         this.scopeSetUrl = ''
         this.scopeStackUrls = []
+        await settle(this.page)
       })
     }
     return this.push('up', selector, async () => {
@@ -700,6 +703,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       this.scopeStackUrls.push(this.scopeSetUrl)
       this.currentScope = ancestorLocator
       this.scopeSetUrl = this.page.url()
+      await settle(this.page)
     })
   }
 
