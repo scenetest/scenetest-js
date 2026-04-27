@@ -353,7 +353,16 @@ describe('buildSelectorMissError', () => {
   })
 
   it('does not mask the original error if diagnostic count() throws', async () => {
-    const scope: any = { locator: vi.fn(() => createCountingLocator(0)) }
+    const scope: any = {
+      locator: vi.fn(() => ({
+        count: vi.fn(async () => {
+          throw new Error('diagnostic blew up')
+        }),
+        locator: vi.fn(() => createCountingLocator(0)),
+        or: vi.fn(() => createCountingLocator(0)),
+        nth: vi.fn(() => createCountingLocator(0)),
+      })),
+    }
     const page: any = {
       locator: vi.fn(() => ({
         count: vi.fn(async () => {
@@ -371,5 +380,45 @@ describe('buildSelectorMissError', () => {
     // Should still produce an error with the original cause attached
     expect(err.message).toContain('scope(btn) timed out')
     expect((err as Error & { cause?: unknown }).cause).toBe(cause)
+  })
+
+  it('flags ambiguous selector and suggests `#N` when scope has multiple matches', async () => {
+    // Strict-mode violation: 3 matches in the current scope. The underlying
+    // Playwright error gets caught and wrapped — we want a message that
+    // points at `#1`, not the misleading "not visible" wording.
+    const scope: any = { locator: vi.fn(() => createCountingLocator(3)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(3)) }
+    const cause = new Error('strict mode violation: locator resolved to 3 elements')
+
+    const err = await buildSelectorMissError(scope, page, 'click', 'admin-phrase-detail-link', cause)
+
+    expect(err.message).toContain('matched 3 elements in current scope')
+    expect(err.message).toContain('selector is ambiguous')
+    expect(err.message).toContain('`admin-phrase-detail-link #1`')
+    expect(err.message).not.toContain('not visible in current scope')
+    expect((err as Error & { cause?: unknown }).cause).toBe(cause)
+  })
+
+  it('suggests `#N` even when scope is the page root', async () => {
+    // Multi-match at top-level — still ambiguous, still wants disambiguation.
+    const page: any = { locator: vi.fn(() => createCountingLocator(2)) }
+
+    const err = await buildSelectorMissError(page, page, 'click', 'submit-btn', new Error())
+
+    expect(err.message).toContain('matched 2 elements in current scope')
+    expect(err.message).toContain('`submit-btn #1`')
+  })
+
+  it('omits the "scope too narrow" hint when selector resolves once in scope', async () => {
+    // Single match in scope means it really is a visibility timeout, not a
+    // scoping problem. Don't muddy the message with a root-count hint.
+    const scope: any = { locator: vi.fn(() => createCountingLocator(1)) }
+    const page: any = { locator: vi.fn(() => createCountingLocator(5)) }
+
+    const err = await buildSelectorMissError(scope, page, 'see', 'spinner', new Error('timeout'))
+
+    expect(err.message).toContain('see(spinner) timed out')
+    expect(err.message).not.toContain('document root')
+    expect(err.message).not.toContain('selector is ambiguous')
   })
 })
