@@ -33,6 +33,7 @@ export async function init(cwd: string, options: InitOptions = {}): Promise<void
 
 export default defineConfig({
   baseUrl: 'http://localhost:5173',
+  sound: { enabled: true },
 })
 `)
     console.log('Created scenetest/config.ts')

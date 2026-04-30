@@ -13,6 +13,7 @@ import { loadMarkdownScene } from './markdown-scene.js'
 import { SwarmTrigger, runSwarm } from './swarm.js'
 import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
+import { tick as soundTick, fail as soundFail } from './sound.js'
 
 /**
  * Main scene runner
@@ -217,6 +218,11 @@ export class SceneRunner {
           // Log progress
           const statusIcon = report.status === 'completed' ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
           console.log(`  ${statusIcon} ${registered.name} (${report.duration}ms)`)
+
+          if (this.config.sound?.enabled) {
+            if (report.status === 'completed') soundTick()
+            else soundFail()
+          }
 
           if (report.error) {
             console.log(`    Error: ${report.error}`)
