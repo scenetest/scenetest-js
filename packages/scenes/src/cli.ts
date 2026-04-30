@@ -6,6 +6,7 @@ import fs from 'fs'
 import { loadConfig } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
 import { init } from './init.js'
+import { finish as soundFinish, resolveSoundEnabled } from './sound.js'
 import {
   gatherProjectContext,
   generatePrompt,
@@ -31,6 +32,8 @@ program
   .option('--fuzzy-fingers', 'Enable fuzzy-finger touch behavior (simulates imprecise human touch ~1 in 5 clicks)')
   .option('--swarm', 'Force swarm mode: run all teams against all scenes to classify failures')
   .option('--no-panel', 'Suppress the dev panel in the browser (useful for CI / headless runs)')
+  .option('--sound', 'Enable terminal-bell sound feedback (1 bell pass, 2 fail, 3 finish)')
+  .option('--no-sound', 'Disable terminal-bell sound feedback')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
       // Load config and discover actor teams
@@ -58,6 +61,7 @@ program
       if (options.noPanel) {
         config.noPanel = true
       }
+      config.sound = { enabled: resolveSoundEnabled(config, options) }
 
       // Interactive UI mode
       if (options.ui) {
@@ -115,6 +119,8 @@ program
             await writeReport(swarmReport, config.reportDir!, config.reportFormat!)
           }
         }
+
+        if (config.sound?.enabled) soundFinish()
 
         // In UI mode, keep browser open
         if (options.ui) {

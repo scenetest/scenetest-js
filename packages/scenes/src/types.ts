@@ -245,6 +245,14 @@ export interface ScenetestConfig extends BaseConfig {
   noPanel?: boolean
 
   /**
+   * Terminal-bell sound feedback during CLI runs.
+   * 1 bell per scene pass, 2 for a failure, 3 when the run finishes.
+   * Off by default. Override at runtime with `--sound`/`--no-sound` or
+   * `SCENETEST_SOUND=0|1`.
+   */
+  sound?: { enabled?: boolean }
+
+  /**
    * Capture browser console errors and surface them in the CLI output.
    *
    * - `true` or `'error'`: capture `console.error` messages only (default: `true`)
@@ -1147,4 +1155,10 @@ export interface CLIOptions {
 
   /** Suppress the dev panel in the browser (useful for CI / headless runs) */
   noPanel?: boolean
+
+  /** Enable terminal-bell sound feedback */
+  sound?: boolean
+
+  /** Disable terminal-bell sound feedback */
+  noSound?: boolean
 }
