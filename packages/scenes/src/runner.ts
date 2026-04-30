@@ -14,6 +14,18 @@ import { SwarmTrigger, runSwarm } from './swarm.js'
 import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 
+function formatConsoleMessage(message: string, bodyLimit: number): string {
+  const lines = message.split('\n')
+  const atIndex = lines.findIndex(l => /^\s+at /.test(l))
+  if (atIndex === -1) {
+    return message.slice(0, bodyLimit)
+  }
+  const body = lines.slice(0, atIndex).join(' ').replace(/\s+/g, ' ').trim()
+  const firstAt = lines[atIndex].trim()
+  const truncatedBody = body.length > bodyLimit ? body.slice(0, bodyLimit) + '…' : body
+  return `${truncatedBody} ${firstAt}`
+}
+
 /**
  * Main scene runner
  */
@@ -226,7 +238,7 @@ export class SceneRunner {
             console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
             for (const ce of report.consoleErrors.slice(0, 5)) {
               const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
-              console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 200)}`)
+              console.log(`      └─ [${ce.actor}] ${label}: ${formatConsoleMessage(ce.message, 200)}`)
             }
             if (report.consoleErrors.length > 5) {
               console.log(`      └─ ... and ${report.consoleErrors.length - 5} more`)
@@ -618,7 +630,7 @@ export function printSummary(report: RunReport): void {
         console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
         for (const ce of scene.consoleErrors.slice(0, 3)) {
           const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
-          console.log(`      └─ [${ce.actor}] ${label}: ${ce.message.slice(0, 150)}`)
+          console.log(`      └─ [${ce.actor}] ${label}: ${formatConsoleMessage(ce.message, 150)}`)
         }
         if (scene.consoleErrors.length > 3) {
           console.log(`      └─ ... and ${scene.consoleErrors.length - 3} more`)
