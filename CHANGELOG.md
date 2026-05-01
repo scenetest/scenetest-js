@@ -177,6 +177,19 @@ Now `resolveSelectorWithFallback` waits for the scoped locator first (full timeo
 
 This fixes tests where `see()` timed out searching within a stale scope after a click navigated to a new route.
 
+**Migration:** existing specs that manually called `up` (or bare `up`) immediately after a navigation-causing click will still pass — bare `up` on an already-page-root scope is a no-op. But the redundant lines are now noise. Paste the following into your coding agent to clean them up:
+
+> I upgraded to `@scenetest/scenes` 0.7.2. As of this version, `click` and `ifClick` automatically reset scope to the page root when the click causes a URL change (same as `openTo`, `goBack`). That means `up` / `up <selector>` lines that were placed after a navigation-causing click purely to reset scope are now redundant.
+>
+> Please scan all `.spec.md` files and any TypeScript scenes (`scene(...)` / `test(...)`) in this repo and remove `up` lines that follow a click which navigates to a new route. Be conservative:
+>
+> 1. Only remove an `up` (or bare `up()` in TS) when the immediately preceding action is a `click` / `ifClick` whose target is clearly a navigation control — a link, sidebar item, menu entry, or a button whose handler routes to a different URL. If you can't tell from the selector name and surrounding `openTo` / `see` lines whether the click navigates, leave the `up` alone.
+> 2. Do **not** remove `up` lines after clicks on in-page controls (modal close buttons, dropdown toggles, accordion headers, form submits that stay on the same page) — those don't trigger the auto-reset.
+> 3. Do **not** touch `scope` / `prev` lines, or `up <selector>` calls that climb to a specific named ancestor for a *non-navigating* click — those are still doing real work.
+> 4. After editing, re-run `pnpm scenetest` (or your project's equivalent) to confirm the touched scenes still pass.
+>
+> Show me a diff of each file you change with a one-line note explaining why each removed `up` was safe to drop.
+
 ### Migration
 
 #### `see` → `scope` codemod
