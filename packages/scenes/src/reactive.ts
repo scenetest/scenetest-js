@@ -919,6 +919,42 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     this._abortReason = reason
   }
 
+  /**
+   * Final synchronous sweep of error selectors against the current page.
+   *
+   * Per-action polling (see `executeWithMonitors`) catches selectors that
+   * become visible *while an action is running*.  When an action throws
+   * (e.g. a `seeToast` timeout) the polling loop exits, so an error toast
+   * the app renders at that exact moment can slip through.  This sweep —
+   * invoked from the scene wrapper's `finally` block after `drainAll`
+   * resolves or rejects — gives every still-armed selector one last
+   * visibility check before pages are torn down.
+   */
+  async sweepErrorSelectors(): Promise<void> {
+    if (this.errorSelectorTriggers.length === 0) return
+    if (!this._page || this._page.isClosed()) return
+    for (const trigger of this.errorSelectorTriggers) {
+      if (trigger.triggered) continue
+      try {
+        const locator = resolveSelector(this._page, trigger.selector)
+        if (await locator.isVisible()) {
+          trigger.triggered = true
+          this.consoleErrors.push({
+            message: trigger.message,
+            actor: this.role,
+            timestamp: Date.now(),
+            type: 'error',
+            source: 'selector',
+            selector: trigger.selector,
+            url: this._page.url(),
+          })
+        }
+      } catch {
+        // Ignore errors from isVisible check — page may be navigating or torn down
+      }
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Drain — the execution engine
   // -----------------------------------------------------------------------
@@ -1348,8 +1384,18 @@ export function scene(name: string, fnOrOptions: SceneFn | SceneOptions, maybeFn
       })
     )
 
-    // Phase 3: Execution — all actors drain concurrently
-    await drainAll(reactiveActors)
+    // Phase 3: Execution — all actors drain concurrently.
+    // Sweep error selectors in `finally` so that if drain throws (e.g. a
+    // `seeToast` timeout) we still catch any error toast that the app
+    // rendered at the moment the action failed but the per-action polling
+    // loop missed.
+    try {
+      await drainAll(reactiveActors)
+    } finally {
+      for (const actor of reactiveActors) {
+        await actor.sweepErrorSelectors()
+      }
+    }
   }
 
   registerScene(name, wrappedFn, options)

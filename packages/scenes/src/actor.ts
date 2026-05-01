@@ -892,6 +892,42 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   }
 
   /**
+   * Final synchronous sweep of error selectors against the current page.
+   *
+   * Per-action polling (see `executeWithWatchers`) catches selectors that
+   * become visible *while an action is running*.  When an action throws
+   * (e.g. `seeToast` timeout) the polling loop exits, so an error toast
+   * that the app renders at that exact moment can slip through.  This
+   * sweep — invoked from `TeamSession.flushErrorSelectors()` after the
+   * scene body has resolved or rejected — gives every still-armed
+   * selector one last visibility check before the page is torn down.
+   */
+  async sweepErrorSelectors(): Promise<void> {
+    if (this.errorSelectorTriggers.length === 0) return
+    if (this._page.isClosed()) return
+    for (const trigger of this.errorSelectorTriggers) {
+      if (trigger.triggered) continue
+      try {
+        const locator = resolveSelector(this._page, trigger.selector)
+        if (await locator.isVisible()) {
+          trigger.triggered = true
+          this.consoleErrors.push({
+            message: trigger.message,
+            actor: this.role,
+            timestamp: Date.now(),
+            type: 'error',
+            source: 'selector',
+            selector: formatSelector(trigger.selector),
+            url: this._page.url(),
+          })
+        }
+      } catch {
+        // Ignore errors from isVisible check — page may be navigating or torn down
+      }
+    }
+  }
+
+  /**
    * Clear all registered watchers (called after each await)
    * Note: Warning triggers persist across the entire scene
    */

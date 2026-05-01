@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
-import type { TimelineEntry, ScriptWarning } from '../types.js'
+import type { TimelineEntry, ScriptWarning, ConsoleError, ErrorSelector } from '../types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers — minimal Playwright mocks
@@ -28,6 +28,7 @@ function mockPage() {
     goBack: vi.fn().mockResolvedValue(undefined),
     goForward: vi.fn().mockResolvedValue(undefined),
     url: vi.fn().mockReturnValue('http://localhost:5173/'),
+    isClosed: vi.fn().mockReturnValue(false),
     getByText: vi.fn().mockReturnValue({ first: () => locator }),
     locator: vi.fn().mockReturnValue(locator),
     evaluate: vi.fn().mockResolvedValue(undefined),
@@ -939,6 +940,100 @@ describe('switchDevice()', () => {
       const { actor } = createTestActor()
       const returned = actor.ifClick('dismiss-btn')
       expect(returned).toBe(actor)
+    })
+  })
+
+  describe('sweepErrorSelectors()', () => {
+    function createActorWithErrorSelectors(
+      errorSelectors: ErrorSelector[],
+      page: ReturnType<typeof mockPage>
+    ) {
+      const consoleErrors: ConsoleError[] = []
+      const actor = new ConcurrentActorHandleImpl(
+        'user',
+        { key: 'user-1', username: 'user', email: 'u@test.com', password: 'p' },
+        page as any,
+        new MessageBus(),
+        [],
+        [],
+        consoleErrors,
+        5000,
+        60000,
+        'pointer',
+        false,
+        errorSelectors
+      )
+      return { actor, consoleErrors }
+    }
+
+    it('records a console error when an error selector is visible', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(true)
+      const { actor, consoleErrors } = createActorWithErrorSelectors(
+        [{ selector: 'toast-error', message: 'Error toast appeared' }],
+        page
+      )
+
+      await actor.sweepErrorSelectors()
+
+      expect(consoleErrors).toHaveLength(1)
+      expect(consoleErrors[0]).toMatchObject({
+        message: 'Error toast appeared',
+        actor: 'user',
+        type: 'error',
+        source: 'selector',
+        selector: 'toast-error',
+      })
+    })
+
+    it('does not record an error when the selector is not visible', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(false)
+      const { actor, consoleErrors } = createActorWithErrorSelectors(
+        [{ selector: 'toast-error', message: 'Error toast appeared' }],
+        page
+      )
+
+      await actor.sweepErrorSelectors()
+
+      expect(consoleErrors).toHaveLength(0)
+    })
+
+    it('is idempotent — calling twice does not double-record', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(true)
+      const { actor, consoleErrors } = createActorWithErrorSelectors(
+        [{ selector: 'toast-error', message: 'Error toast appeared' }],
+        page
+      )
+
+      await actor.sweepErrorSelectors()
+      await actor.sweepErrorSelectors()
+
+      expect(consoleErrors).toHaveLength(1)
+    })
+
+    it('is a no-op when no error selectors are configured', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockResolvedValue(true)
+      const { actor, consoleErrors } = createActorWithErrorSelectors([], page)
+
+      await actor.sweepErrorSelectors()
+
+      expect(consoleErrors).toHaveLength(0)
+      expect(page._locator.isVisible).not.toHaveBeenCalled()
+    })
+
+    it('swallows errors from isVisible (e.g. page being torn down)', async () => {
+      const page = mockPage()
+      page._locator.isVisible.mockRejectedValue(new Error('Target page closed'))
+      const { actor, consoleErrors } = createActorWithErrorSelectors(
+        [{ selector: 'toast-error', message: 'Error toast appeared' }],
+        page
+      )
+
+      await expect(actor.sweepErrorSelectors()).resolves.toBeUndefined()
+      expect(consoleErrors).toHaveLength(0)
     })
   })
 })

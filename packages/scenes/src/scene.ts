@@ -134,6 +134,10 @@ export async function runScene(
     }
     error = err instanceof Error ? err.message : String(err)
   } finally {
+    // Final sweep for error toasts / error elements that may have appeared
+    // at the moment an action failed but slipped past per-action polling.
+    // Runs whether the scene completed or threw, before the report is built.
+    await session.flushErrorSelectors()
     setCurrentSession(null)
   }
 

@@ -659,6 +659,24 @@ export class TeamSession {
   }
 
   /**
+   * Final synchronous sweep of `errorSelectors` against every sequential
+   * actor's page.  Called from `runScene()`'s `finally` block, after the
+   * scene body resolves or rejects, so an error toast that becomes visible
+   * at the moment an action throws is still recorded — closing the race
+   * between per-action polling and scene teardown.
+   *
+   * Reactive (`scene()`) actors aren't tracked at the session level; their
+   * sweep happens inside the reactive scene wrapper around `drainAll`.
+   */
+  async flushErrorSelectors(): Promise<void> {
+    if (this.consoleErrorMode === false) return
+    if (!this.errorSelectors || this.errorSelectors.length === 0) return
+    for (const actor of this.actors.values()) {
+      await actor.sweepErrorSelectors()
+    }
+  }
+
+  /**
    * Close all browser contexts
    */
   async close(): Promise<void> {
