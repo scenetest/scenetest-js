@@ -15,16 +15,33 @@ import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 import { tick as soundTick, fail as soundFail } from './sound.js'
 
-function formatConsoleMessage(message: string, bodyLimit: number): string {
+function formatConsoleEntry(actor: string, label: string, message: string, bodyLimit: number): string {
+  const prefix = `      └─ [${actor}]`
   const lines = message.split('\n')
-  const atIndex = lines.findIndex(l => /^\s+at /.test(l))
-  if (atIndex === -1) {
-    return message.slice(0, bodyLimit)
-  }
-  const body = lines.slice(0, atIndex).join(' ').replace(/\s+/g, ' ').trim()
-  const firstAt = lines[atIndex].trim()
+  const atIndex = lines.findIndex(l => /^\s*at /.test(l))
+
+  const body = (atIndex === -1 ? lines : lines.slice(0, atIndex))
+    .join(' ').replace(/\s+/g, ' ').trim()
   const truncatedBody = body.length > bodyLimit ? body.slice(0, bodyLimit) + '…' : body
-  return `${truncatedBody} ${firstAt}`
+
+  if (atIndex === -1) {
+    return `${prefix} ${label}: ${truncatedBody}`
+  }
+
+  // Parse "  at fnName (http://host/path:line:col)" or "  at http://host/path:line:col"
+  const raw = lines[atIndex].trim()
+  const withParens = raw.match(/^at (.+?) \((.+)\)$/)
+  const withoutParens = raw.match(/^at ()(https?:\/\/.+)$/)
+  const m = withParens ?? withoutParens
+
+  if (!m) {
+    return `${prefix} ${label}: ${truncatedBody} ${raw}`
+  }
+
+  const fn = m[1] || ''
+  const location = m[2].replace(/^https?:\/\/[^/]+/, '')
+  const locLabel = fn ? `${location} in ${fn}` : location
+  return `${prefix} ${locLabel}:\n         ${label}: ${truncatedBody}`
 }
 
 /**
@@ -244,7 +261,7 @@ export class SceneRunner {
             console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
             for (const ce of report.consoleErrors.slice(0, 5)) {
               const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
-              console.log(`      └─ [${ce.actor}] ${label}: ${formatConsoleMessage(ce.message, 200)}`)
+              console.log(formatConsoleEntry(ce.actor, label, ce.message, 200))
             }
             if (report.consoleErrors.length > 5) {
               console.log(`      └─ ... and ${report.consoleErrors.length - 5} more`)
@@ -636,7 +653,7 @@ export function printSummary(report: RunReport): void {
         console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
         for (const ce of scene.consoleErrors.slice(0, 3)) {
           const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
-          console.log(`      └─ [${ce.actor}] ${label}: ${formatConsoleMessage(ce.message, 150)}`)
+          console.log(formatConsoleEntry(ce.actor, label, ce.message, 150))
         }
         if (scene.consoleErrors.length > 3) {
           console.log(`      └─ ... and ${scene.consoleErrors.length - 3} more`)
