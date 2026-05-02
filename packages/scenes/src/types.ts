@@ -376,6 +376,8 @@ export interface TimelineEntry {
 export interface SceneReport {
   name: string
   file: string
+  /** 1-indexed line in `file` where the scene declaration begins, when known. */
+  line?: number
   status: 'completed' | 'failed' | 'timeout'
   teamIndex: number
   /** Team metadata (name, tags) — empty object when not provided */
@@ -905,6 +907,8 @@ export interface RegisteredScene {
   name: string
   fn: TestFn
   file: string
+  /** 1-indexed line in `file` where the scene declaration begins, when known. */
+  line?: number
   /**
    * Pre/post-cleanup expressions from `cleanup:` directives in .spec.md files.
    * Each entry is evaluated independently. Multiple `cleanup:` lines are supported.

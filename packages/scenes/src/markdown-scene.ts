@@ -60,7 +60,7 @@ import path from 'path'
 import type { ConcurrentActorHandle } from './types.js'
 import { parseAction, applyDslAction, getMacro } from './dsl.js'
 import { scene as registerReactiveScene } from './reactive.js'
-import { sceneRegistry, setCurrentFile, getCurrentSession } from './scene.js'
+import { sceneRegistry, setCurrentFile, getCurrentSession, setNextSceneLine } from './scene.js'
 
 // ---------------------------------------------------------------------------
 // Intermediate representation
@@ -69,6 +69,8 @@ import { sceneRegistry, setCurrentFile, getCurrentSession } from './scene.js'
 export interface MarkdownScene {
   name: string
   group?: string
+  /** 1-indexed line of the scene's heading (or first content line for headless scenes). */
+  line?: number
   /** Pre/post-cleanup expressions from `cleanup:` directives (one per line) */
   cleanup: string[]
   /** Setup expressions from `setup:` directives — run after pre-cleanup, before scene */
@@ -138,7 +140,7 @@ export function parseMarkdownScenes(
       // # = group, ## = scene
       if (/^## /.test(trimmed)) {
         const name = trimmed.slice(3).trim()
-        currentScene = { name, group: currentGroup, cleanup: [], setup: [], blocks: [] }
+        currentScene = { name, group: currentGroup, line: i + 1, cleanup: [], setup: [], blocks: [] }
         scenes.push(currentScene)
         currentBlock = null
         continue
@@ -151,7 +153,7 @@ export function parseMarkdownScenes(
       // No ## headings — # = scene
       if (/^# /.test(trimmed)) {
         const name = trimmed.slice(2).trim()
-        currentScene = { name, group: undefined, cleanup: [], setup: [], blocks: [] }
+        currentScene = { name, group: undefined, line: i + 1, cleanup: [], setup: [], blocks: [] }
         scenes.push(currentScene)
         currentBlock = null
         continue
@@ -182,6 +184,7 @@ export function parseMarkdownScenes(
       currentScene = {
         name: path.basename(filePath, '.spec.md'),
         group: undefined,
+        line: i + 1,
         cleanup: [],
         setup: [],
         blocks: [],
@@ -479,6 +482,7 @@ export function registerMarkdownScenes(
     // Extract unique roles from actor blocks for team matching
     const roles = [...new Set(mdScene.blocks.map(b => b.role))]
 
+    setNextSceneLine(mdScene.line)
     registerReactiveScene(mdScene.name, { roles }, ({ actor, team: teamMeta }) => {
       // ── Phase 1: collect all unique roles and create actors ──────────
       const actors = new Map<string, ConcurrentActorHandle>()

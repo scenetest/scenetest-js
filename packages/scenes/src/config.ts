@@ -15,7 +15,7 @@ const defaults: Partial<ScenetestConfig> = {
   actionTimeout: 5000,
   warnAfter: 500,
   reportDir: './scenetest/.reports',
-  reportFormat: 'html',
+  reportFormat: 'json',
 }
 
 /**

@@ -2,11 +2,13 @@ import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
+import fs from 'fs'
 import path from 'path'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
 import { generateDashboardHtml } from './dashboard.js'
+import { generateAnalyzeAppHtml } from './analyze-app.js'
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -57,17 +59,76 @@ export function failed(description: string, context?: Record<string, unknown>): 
  * privileges. This is dev-only tooling - never expose to untrusted code
  * or networks. See README.md "Security Considerations" for details.
  */
-export function createScenetestMiddleware(server: ViteDevServer, root: string): Connect.NextHandleFunction {
+export function createScenetestMiddleware(
+  server: ViteDevServer,
+  root: string,
+  options: { reportsDir?: string } = {}
+): Connect.NextHandleFunction {
   const eventHub = new EventHub()
   let activeReplay: ChildProcess | null = null
   let paused = false
 
+  // Where to look for past JSON run reports. Defaults to the same path the
+  // CLI writes to. Resolved against the consumer's project root.
+  const reportsDir = path.resolve(root, options.reportsDir ?? 'scenetest/.reports')
+
   return async (req, res, next) => {
+    // ── Analyze app (root) ──────────────────────────────────
+    // /__scenetest, /__scenetest/, /__scenetest?…, /__scenetest/?…
+    if (req.method === 'GET' && req.url) {
+      const pathname = req.url.split('?')[0]
+      if (pathname === '/__scenetest' || pathname === '/__scenetest/') {
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        res.end(generateAnalyzeAppHtml())
+        return
+      }
+    }
+
     // ── Dashboard page ──────────────────────────────────────
     if (req.method === 'GET' && req.url === '/__scenetest/dashboard') {
       res.statusCode = 200
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.end(generateDashboardHtml())
+      return
+    }
+
+    // ── List past run reports (JSON files in reportsDir) ────
+    if (req.method === 'GET' && req.url === '/__scenetest/runs') {
+      const runs = listRunReports(reportsDir)
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ reportsDir, runs }))
+      return
+    }
+
+    // ── Read a single run report by id (filename without .json) ──
+    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/runs/')) {
+      const id = decodeURIComponent(req.url.slice('/__scenetest/runs/'.length))
+      const result = readRunReport(reportsDir, id)
+      if (!result) {
+        res.statusCode = 404
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'Report not found' }))
+        return
+      }
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(result)
+      return
+    }
+
+    // ── Read a window of source lines around a given line ──
+    // GET /__scenetest/source?file=<abs path>&line=<n>&context=<n>
+    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/source')) {
+      const url = new URL(req.url, 'http://x')
+      const file = url.searchParams.get('file') || ''
+      const line = parseInt(url.searchParams.get('line') || '1', 10)
+      const ctx = Math.max(0, Math.min(200, parseInt(url.searchParams.get('context') || '20', 10)))
+      const snippet = readSourceSnippet(root, file, line, ctx)
+      res.statusCode = snippet ? 200 : 404
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(snippet ?? { error: 'File not readable or out of allowed root' }))
       return
     }
 
@@ -264,5 +325,89 @@ export function createScenetestMiddleware(server: ViteDevServer, root: string): 
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(response))
     }
+  }
+}
+
+// ─── Run report helpers (dev-only, local read) ──────────────────────
+
+interface RunListEntry {
+  id: string
+  file: string
+  size: number
+  mtime: number
+}
+
+function listRunReports(dir: string): RunListEntry[] {
+  if (!fs.existsSync(dir)) return []
+  let entries: fs.Dirent[]
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out: RunListEntry[] = []
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    if (!entry.name.endsWith('.json')) continue
+    const full = path.join(dir, entry.name)
+    let stat: fs.Stats
+    try {
+      stat = fs.statSync(full)
+    } catch {
+      continue
+    }
+    out.push({
+      id: entry.name.replace(/\.json$/, ''),
+      file: full,
+      size: stat.size,
+      mtime: stat.mtimeMs,
+    })
+  }
+  out.sort((a, b) => b.mtime - a.mtime)
+  return out
+}
+
+function readRunReport(dir: string, id: string): string | null {
+  // Defense in depth: only allow simple ids, no path traversal.
+  if (!/^[A-Za-z0-9._-]+$/.test(id)) return null
+  const full = path.join(dir, `${id}.json`)
+  // Resolve and ensure the result is still inside dir
+  const resolved = path.resolve(full)
+  if (!resolved.startsWith(path.resolve(dir) + path.sep)) return null
+  try {
+    return fs.readFileSync(resolved, 'utf-8')
+  } catch {
+    return null
+  }
+}
+
+function readSourceSnippet(
+  root: string,
+  file: string,
+  line: number,
+  context: number
+): { file: string; line: number; start: number; end: number; lines: string[] } | null {
+  if (!file) return null
+  // Resolve to absolute, then constrain to project root for safety.
+  const absolute = path.isAbsolute(file) ? file : path.resolve(root, file)
+  const resolvedRoot = path.resolve(root)
+  if (!absolute.startsWith(resolvedRoot + path.sep) && absolute !== resolvedRoot) {
+    return null
+  }
+  let content: string
+  try {
+    content = fs.readFileSync(absolute, 'utf-8')
+  } catch {
+    return null
+  }
+  const allLines = content.split('\n')
+  const start = Math.max(1, line - context)
+  const end = Math.min(allLines.length, line + context)
+  return {
+    file: absolute,
+    line,
+    start,
+    end,
+    lines: allLines.slice(start - 1, end),
   }
 }
