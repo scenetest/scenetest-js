@@ -20,10 +20,44 @@ export const sceneRegistry: RegisteredScene[] = []
 let currentFile = ''
 
 /**
+ * Optional explicit line override for the next registration. Used by the
+ * markdown loader, which knows the exact heading line for each scene.
+ * Consumed (and cleared) by `registerScene`.
+ */
+let nextSceneLine: number | undefined
+
+/**
  * Set the current file being loaded
  */
 export function setCurrentFile(file: string): void {
   currentFile = file
+}
+
+/**
+ * Provide the line number for the next `registerScene` call. Used by the
+ * markdown loader to attach heading line numbers to compiled scenes.
+ */
+export function setNextSceneLine(line: number | undefined): void {
+  nextSceneLine = line
+}
+
+/**
+ * Best-effort extraction of the call-site line within `currentFile` from
+ * `Error().stack`. Returns undefined when the stack doesn't reference the
+ * expected file (e.g. registration happens through indirection).
+ */
+function captureCallSiteLine(): number | undefined {
+  if (!currentFile) return undefined
+  const stack = new Error().stack
+  if (!stack) return undefined
+  const needle = currentFile.replace(/\\/g, '/')
+  for (const raw of stack.split('\n')) {
+    const line = raw.replace(/\\/g, '/')
+    if (!line.includes(needle)) continue
+    const match = line.match(/:(\d+):\d+\)?\s*$/)
+    if (match) return parseInt(match[1], 10)
+  }
+  return undefined
 }
 
 /**
@@ -32,10 +66,13 @@ export function setCurrentFile(file: string): void {
  * Not part of the public API — authors should use `test()` or `scene()`.
  */
 export function registerScene(name: string, fn: TestFn, options?: SceneOptions): void {
+  const line = nextSceneLine ?? captureCallSiteLine()
+  nextSceneLine = undefined
   sceneRegistry.push({
     name,
     fn,
     file: currentFile,
+    ...(line !== undefined ? { line } : {}),
     ...(options?.roles ? { roles: options.roles } : {}),
   })
 }
@@ -149,6 +186,7 @@ export async function runScene(
   return {
     name: registered.name,
     file: registered.file,
+    ...(registered.line !== undefined ? { line: registered.line } : {}),
     status,
     teamIndex: session.teamIndex,
     team: session.meta,
