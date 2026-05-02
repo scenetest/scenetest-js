@@ -1,19 +1,24 @@
 /**
  * Self-contained interactive analyze app served at `/__scenetest/`.
  *
+ * Uses Preact + htm via a `<script type="importmap">` that points each
+ * bare specifier ("preact", "preact/hooks", "htm") at a middleware route
+ * (see `middleware.ts`, VENDOR_MODULES) which serves the matching ESM
+ * bundle out of the plugin's own node_modules. No build step, no CDN.
+ *
  * Two views over the same RunReport shape:
- *   - "Log"       — filterable / groupable list with copy-failure helpers and a
- *                   spec-snippet side panel for reproducing failures manually.
- *   - "Waterfall" — links out to the existing /__scenetest/dashboard page.
+ *   - "Log"       — filterable / groupable scene list with copy-failures
+ *                   and a spec-snippet panel for reproducing manually.
+ *   - "Waterfall" — links out to /__scenetest/dashboard (existing page).
  *
  * Data sources (chosen via the run-picker in the header):
  *   - "live"               — subscribes to /__scenetest/events (SSE) and folds
- *                            DashboardEvent stream into a RunReport-shaped
+ *                            the DashboardEvent stream into a RunReport-shaped
  *                            in-memory model.
- *   - <timestamped run id> — fetched from /__scenetest/runs/<id> (JSON file
- *                            on disk written by the CLI runner).
+ *   - <timestamped run id> — fetched from /__scenetest/runs/<id> (a JSON
+ *                            file written by the CLI runner).
  *
- * Spec snippet for a failing scene is fetched lazily from /__scenetest/source.
+ * Spec snippet for a selected scene is fetched lazily from /__scenetest/source.
  */
 export function generateAnalyzeAppHtml(): string {
   return `<!DOCTYPE html>
@@ -23,55 +28,24 @@ export function generateAnalyzeAppHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Scenetest</title>
   <style>${STYLES}</style>
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "/__scenetest/vendor/preact.js",
+      "preact/hooks": "/__scenetest/vendor/preact-hooks.js",
+      "htm": "/__scenetest/vendor/htm.js"
+    }
+  }
+  </script>
 </head>
 <body>
-  <header>
-    <h1><span class="logo">🎬</span> Scenetest</h1>
-    <nav class="tabs">
-      <button class="tab active" data-view="log">Log</button>
-      <a class="tab" href="/__scenetest/dashboard">Waterfall</a>
-    </nav>
-    <div class="run-picker">
-      <label for="run-select">Run</label>
-      <select id="run-select"></select>
-      <span id="conn" class="conn" title="connection"></span>
-    </div>
-    <div class="status-bar" id="status-bar"></div>
-  </header>
-
-  <main>
-    <aside id="tree" class="tree" aria-label="Scene tree"></aside>
-
-    <section class="list-pane">
-      <div class="filters">
-        <input id="filter-text" type="search" placeholder="Filter by scene, file, or assertion…" />
-        <div class="chips" id="status-chips">
-          <button class="chip on" data-status="failed">Failed</button>
-          <button class="chip on" data-status="completed">Passed</button>
-          <button class="chip on" data-status="running">Running</button>
-          <button class="chip on" data-status="timeout">Timeout</button>
-        </div>
-        <select id="group-by" title="Group by">
-          <option value="none">No grouping</option>
-          <option value="file">Group by file</option>
-          <option value="status" selected>Group by status</option>
-          <option value="team">Group by team</option>
-        </select>
-        <button id="copy-failures" class="btn">Copy all failures</button>
-        <button id="copy-all" class="btn subtle">Copy all</button>
-      </div>
-      <div id="list" class="list" aria-live="polite"></div>
-    </section>
-
-    <aside id="detail" class="detail" aria-label="Scene detail">
-      <div class="empty">Select a scene on the left to see error details, timeline, and the spec snippet for reproducing it manually.</div>
-    </aside>
-  </main>
-
-  <script>${CLIENT_SCRIPT}</script>
+  <div id="root"></div>
+  <script type="module">${CLIENT_SCRIPT}</script>
 </body>
 </html>`
 }
+
+// ─── Styles ─────────────────────────────────────────────────────────
 
 const STYLES = `
   :root {
@@ -89,24 +63,17 @@ const STYLES = `
     --purple: #8b5cf6;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
+  html, body, #root { height: 100%; }
   body {
     font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
     background: var(--bg);
     color: var(--text);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
   }
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 10px 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 16px; background: var(--bg2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
   }
   header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .logo {
@@ -120,8 +87,7 @@ const STYLES = `
   .tab {
     padding: 5px 12px; background: transparent; color: var(--text2);
     border: 1px solid var(--border); border-radius: 4px;
-    font: inherit; cursor: pointer; text-decoration: none;
-    font-size: 12px;
+    font: inherit; cursor: pointer; text-decoration: none; font-size: 12px;
   }
   .tab:hover { color: var(--text); border-color: var(--text2); }
   .tab.active { background: var(--bg3); color: var(--text); border-color: var(--text2); }
@@ -134,10 +100,10 @@ const STYLES = `
   .conn { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); }
   .conn.connected { background: var(--green); }
   .conn.disconnected { background: var(--red); }
-  .conn.idle { background: var(--text3); }
   .status-bar { margin-left: auto; font-size: 12px; color: var(--text2); display: flex; gap: 14px; }
   .status-bar .ok { color: var(--green); }
   .status-bar .fail { color: var(--red); }
+
   main {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr) minmax(320px, 420px);
@@ -171,7 +137,7 @@ const STYLES = `
   .chip[data-status=completed].on { color: var(--green); border-color: var(--green); }
   .chip[data-status=running].on { color: var(--blue); border-color: var(--blue); }
   .chip[data-status=timeout].on { color: var(--amber); border-color: var(--amber); }
-  #group-by {
+  select.group-by {
     background: var(--bg3); color: var(--text);
     border: 1px solid var(--border); border-radius: 4px;
     padding: 4px 8px; font: inherit; font-size: 12px;
@@ -192,8 +158,7 @@ const STYLES = `
     letter-spacing: 0.04em;
   }
   .row {
-    display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) auto auto;
+    display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto;
     gap: 10px; align-items: center;
     padding: 6px 14px; border-bottom: 1px solid rgba(46, 49, 64, 0.4);
     cursor: pointer;
@@ -207,7 +172,11 @@ const STYLES = `
   .row .icon.running { color: var(--blue); }
   .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
   .row .meta { color: var(--text2); font-size: 11px; white-space: nowrap; }
-  .row .file { color: var(--text3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+  .row .file {
+    color: var(--text3); font-size: 11px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+  }
+
   .tree { padding: 10px 0; font-size: 12px; }
   .tree-file {
     padding: 4px 14px; color: var(--text2);
@@ -219,8 +188,10 @@ const STYLES = `
     display: flex; justify-content: space-between; gap: 8px; cursor: pointer;
   }
   .tree-scene:hover { background: rgba(255, 255, 255, 0.03); }
-  .tree-scene.failed { color: var(--red); }
+  .tree-scene.failed, .tree-scene.timeout { color: var(--red); }
   .tree-scene.running { color: var(--blue); }
+  .tree-scene.selected { background: rgba(59, 130, 246, 0.08); }
+
   .detail h3 { font-size: 13px; margin-bottom: 8px; word-break: break-word; }
   .detail .meta-row {
     color: var(--text2); font-size: 11px; margin-bottom: 12px;
@@ -235,7 +206,10 @@ const STYLES = `
     font-size: 12px; white-space: pre-wrap; word-break: break-word;
     margin-bottom: 12px;
   }
-  .detail h4 { font-size: 11px; text-transform: uppercase; color: var(--text2); margin: 14px 0 6px; letter-spacing: 0.04em; }
+  .detail h4 {
+    font-size: 11px; text-transform: uppercase; color: var(--text2);
+    margin: 14px 0 6px; letter-spacing: 0.04em;
+  }
   .detail ul { list-style: none; }
   .detail .alist li { font-size: 12px; padding: 2px 0; }
   .detail .alist .pass { color: var(--green); }
@@ -244,6 +218,7 @@ const STYLES = `
   .detail .timeline .err-step { color: var(--red); }
   .detail .actions { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .detail .empty { color: var(--text2); font-size: 12px; }
+
   pre.snippet {
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 4px; padding: 8px 0; font-size: 11px;
@@ -253,556 +228,583 @@ const STYLES = `
     display: inline-block; width: 38px; text-align: right;
     color: var(--text3); padding-right: 10px; user-select: none;
   }
-  pre.snippet .row-line { padding: 0 8px; }
+  pre.snippet .row-line { padding: 0 8px; white-space: pre; }
   pre.snippet .row-line.hl { background: rgba(239, 68, 68, 0.12); }
 `
 
-// ─── Client script ──────────────────────────────────────────────────
+// ─── Client (Preact + htm) ──────────────────────────────────────────
 //
-// Plain ES2017 — no transpile, no framework. Organized into small modules
-// (state store, fetchers, renderers, event handlers) defined in a single
-// IIFE to keep the global namespace clean.
-const CLIENT_SCRIPT = `(() => {
-  // ── State ────────────────────────────────────────────────────────
-  /** @type {{ scenes: any[], summary: any, source: 'live' | 'file', runId: string | null, connected: boolean | null }} */
-  const state = {
-    scenes: [],
-    summary: emptySummary(),
-    source: 'live',
-    runId: null,
-    connected: null,
-    selected: null,
-    sceneActions: new Map(), // sceneName -> array of action events for live mode
-  };
+// Imports resolve via the importmap above. The whole app fits in a single
+// module — store + components — but is broken into clearly scoped pieces.
 
-  function emptySummary() {
-    return {
-      scenes: 0, completed: 0, failed: 0,
-      assertions: { total: 0, passed: 0, failed: 0 },
-      warnings: 0, consoleErrors: 0,
-    };
+const CLIENT_SCRIPT = `
+import { h, render } from 'preact'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'preact/hooks'
+import htm from 'htm'
+
+const html = htm.bind(h)
+
+// ── Helpers ───────────────────────────────────────────────────────
+const STATUSES = ['failed', 'timeout', 'running', 'completed']
+
+function emptySummary() {
+  return {
+    scenes: 0, completed: 0, failed: 0,
+    assertions: { total: 0, passed: 0, failed: 0 },
+    warnings: 0, consoleErrors: 0,
   }
+}
 
-  const filters = {
-    text: '',
-    statuses: new Set(['failed', 'completed', 'running', 'timeout']),
-    groupBy: 'status',
-  };
+function shortFile(f) {
+  if (!f) return ''
+  const parts = f.replace(/\\\\/g, '/').split('/')
+  return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : f
+}
 
-  // ── Bootstrap ────────────────────────────────────────────────────
-  init();
+function statusIcon(s) {
+  return s === 'completed' ? '✓' : s === 'running' ? '◐' : s === 'timeout' ? '⏱' : '✗'
+}
 
-  async function init() {
-    bindFilterEvents();
-    await refreshRunList();
-    const initialRun = readRunFromUrl() || 'live';
-    await loadRun(initialRun);
-  }
+// ── Live SSE store ────────────────────────────────────────────────
+//
+// Folds DashboardEvent stream into a RunReport-shaped value. Mutations
+// happen through dispatch so React re-renders are predictable. Each
+// dispatch returns a *new* state object — Preact diffs from there.
 
-  function readRunFromUrl() {
-    const params = new URLSearchParams(location.search);
-    return params.get('run');
-  }
-
-  function setUrlRun(run) {
-    const params = new URLSearchParams(location.search);
-    params.set('run', run);
-    history.replaceState(null, '', '?' + params.toString());
-  }
-
-  // ── Run picker / loading ────────────────────────────────────────
-  async function refreshRunList() {
-    const select = document.getElementById('run-select');
-    select.innerHTML = '';
-    const liveOpt = document.createElement('option');
-    liveOpt.value = 'live';
-    liveOpt.textContent = 'Live (current run)';
-    select.appendChild(liveOpt);
-    try {
-      const res = await fetch('/__scenetest/runs');
-      if (res.ok) {
-        const data = await res.json();
-        for (const run of data.runs || []) {
-          const opt = document.createElement('option');
-          opt.value = run.id;
-          opt.textContent = formatRunLabel(run);
-          select.appendChild(opt);
-        }
+function applyEvent(state, ev) {
+  switch (ev.type) {
+    case 'run:start':
+      return {
+        ...state,
+        scenes: [],
+        sceneActions: new Map(),
+        summary: { ...emptySummary(), scenes: ev.sceneCount || 0 },
       }
-    } catch {}
-    select.addEventListener('change', () => loadRun(select.value));
+    case 'scene:start': {
+      const scene = {
+        name: ev.name, file: ev.file || '',
+        line: ev.line, status: 'running',
+        assertions: [], warnings: [], consoleErrors: [], timeline: [],
+        actors: Object.fromEntries((ev.actors || []).map(r => [r, { key: r }])),
+        team: {}, teamIndex: 0, duration: 0, error: undefined,
+      }
+      const sceneActions = new Map(state.sceneActions)
+      sceneActions.set(ev.name, [])
+      return { ...state, scenes: [...state.scenes, scene], sceneActions }
+    }
+    case 'action:start':
+    case 'action:end': {
+      // Append to the most recent running scene's action log
+      const last = lastRunningSceneIndex(state.scenes)
+      if (last < 0) return state
+      const sceneName = state.scenes[last].name
+      const sceneActions = new Map(state.sceneActions)
+      const arr = sceneActions.get(sceneName) || []
+      sceneActions.set(sceneName, [...arr, ev])
+      return { ...state, sceneActions }
+    }
+    case 'assertion': {
+      const last = lastRunningSceneIndex(state.scenes)
+      if (last < 0) return state
+      const scenes = state.scenes.slice()
+      const sc = { ...scenes[last] }
+      sc.assertions = [...sc.assertions, {
+        type: ev.result ? 'pass' : 'fail',
+        description: ev.description, result: ev.result, timestamp: ev.timestamp,
+      }]
+      scenes[last] = sc
+      const summary = {
+        ...state.summary,
+        assertions: {
+          total: state.summary.assertions.total + 1,
+          passed: state.summary.assertions.passed + (ev.result ? 1 : 0),
+          failed: state.summary.assertions.failed + (ev.result ? 0 : 1),
+        },
+      }
+      return { ...state, scenes, summary }
+    }
+    case 'warning': {
+      const last = lastRunningSceneIndex(state.scenes)
+      if (last < 0) return state
+      const scenes = state.scenes.slice()
+      const sc = { ...scenes[last] }
+      sc.warnings = [...sc.warnings, {
+        actor: ev.actor, selector: ev.selector,
+        message: ev.message, timestamp: ev.timestamp,
+      }]
+      scenes[last] = sc
+      return { ...state, scenes, summary: { ...state.summary, warnings: state.summary.warnings + 1 } }
+    }
+    case 'scene:end': {
+      const idx = state.scenes.findIndex(s => s.name === ev.name && s.status === 'running')
+      if (idx < 0) return state
+      const scenes = state.scenes.slice()
+      scenes[idx] = { ...scenes[idx], status: ev.status, duration: ev.duration, error: ev.error }
+      const summary = { ...state.summary }
+      if (ev.status === 'completed') summary.completed = (summary.completed || 0) + 1
+      else summary.failed = (summary.failed || 0) + 1
+      return { ...state, scenes, summary }
+    }
+    case 'run:end':
+      return ev.summary ? { ...state, summary: ev.summary } : state
+    default:
+      return state
   }
+}
 
-  function formatRunLabel(run) {
-    const d = new Date(run.mtime);
-    return d.toLocaleString() + '  —  ' + run.id;
+function lastRunningSceneIndex(scenes) {
+  for (let i = scenes.length - 1; i >= 0; i--) {
+    if (scenes[i].status === 'running') return i
   }
+  return -1
+}
 
-  async function loadRun(runId) {
-    closeLiveStream();
-    state.scenes = [];
-    state.summary = emptySummary();
-    state.sceneActions = new Map();
-    state.runId = runId;
-    state.selected = null;
-    setUrlRun(runId);
+// ── App root ──────────────────────────────────────────────────────
+function App() {
+  const [runs, setRuns] = useState([])
+  const [runId, setRunId] = useState(() =>
+    new URLSearchParams(location.search).get('run') || 'live'
+  )
+  const [report, setReport] = useState({
+    scenes: [], summary: emptySummary(), sceneActions: new Map(),
+  })
+  const [connection, setConnection] = useState('idle')
+  const [filters, setFilters] = useState({
+    text: '', statuses: new Set(STATUSES), groupBy: 'status',
+  })
+  const [selected, setSelected] = useState(null)
 
-    const select = document.getElementById('run-select');
-    if (select.value !== runId) select.value = runId;
+  // Fetch list of past runs once on mount
+  useEffect(() => {
+    fetch('/__scenetest/runs')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setRuns(data.runs || []) })
+      .catch(() => {})
+  }, [])
+
+  // Sync URL when run changes
+  useEffect(() => {
+    const p = new URLSearchParams(location.search)
+    p.set('run', runId)
+    history.replaceState(null, '', '?' + p.toString())
+  }, [runId])
+
+  // Load past run / connect to live SSE depending on selected run id
+  useEffect(() => {
+    setReport({ scenes: [], summary: emptySummary(), sceneActions: new Map() })
+    setSelected(null)
 
     if (runId === 'live') {
-      state.source = 'live';
-      openLiveStream();
+      const es = new EventSource('/__scenetest/events')
+      es.onopen = () => setConnection('connected')
+      es.onerror = () => setConnection('disconnected')
+      es.onmessage = e => {
+        try {
+          const ev = JSON.parse(e.data)
+          setReport(prev => applyEvent(prev, ev))
+        } catch {}
+      }
+      return () => { es.close(); setConnection('idle') }
     } else {
-      state.source = 'file';
-      try {
-        const res = await fetch('/__scenetest/runs/' + encodeURIComponent(runId));
-        if (res.ok) {
-          const report = await res.json();
-          state.scenes = (report.scenes || []).map(s => ({ ...s, status: s.status || 'failed' }));
-          state.summary = report.summary || emptySummary();
-        }
-      } catch {}
-      setConnection('idle');
+      setConnection('idle')
+      fetch('/__scenetest/runs/' + encodeURIComponent(runId))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return
+          setReport({
+            scenes: data.scenes || [],
+            summary: data.summary || emptySummary(),
+            sceneActions: new Map(),
+          })
+        })
+        .catch(() => {})
     }
-    renderAll();
-  }
+  }, [runId])
 
-  // ── SSE live stream ─────────────────────────────────────────────
-  let eventSource = null;
+  return html\`
+    <div class="app">
+      <\${Header}
+        runs=\${runs} runId=\${runId} onRunChange=\${setRunId}
+        connection=\${connection} summary=\${report.summary}
+        scenes=\${report.scenes}
+      />
+      <main>
+        <\${Tree} scenes=\${report.scenes} selected=\${selected} onSelect=\${setSelected} />
+        <\${ListPane}
+          scenes=\${report.scenes} filters=\${filters} onFilters=\${setFilters}
+          selected=\${selected} onSelect=\${setSelected}
+          sceneActions=\${report.sceneActions} runId=\${runId}
+        />
+        <\${Detail}
+          scene=\${report.scenes.find(s => s.name === selected)}
+          sceneActions=\${report.sceneActions}
+        />
+      </main>
+    </div>
+  \`
+}
 
-  function openLiveStream() {
-    eventSource = new EventSource('/__scenetest/events');
-    eventSource.onopen = () => setConnection('connected');
-    eventSource.onerror = () => setConnection('disconnected');
-    eventSource.onmessage = ev => {
-      try { handleLiveEvent(JSON.parse(ev.data)); } catch {}
-    };
-  }
-  function closeLiveStream() {
-    if (eventSource) { eventSource.close(); eventSource = null; }
-  }
-  function setConnection(kind) {
-    const el = document.getElementById('conn');
-    el.className = 'conn ' + kind;
-    el.title = kind;
-  }
+// ── Header ────────────────────────────────────────────────────────
+function Header({ runs, runId, onRunChange, connection, summary, scenes }) {
+  const completed = scenes.filter(s => s.status === 'completed').length
+  const a = summary.assertions || { total: 0, passed: 0, failed: 0 }
+  return html\`
+    <header>
+      <h1><span class="logo">🎬</span> Scenetest</h1>
+      <nav class="tabs">
+        <span class="tab active">Log</span>
+        <a class="tab" href="/__scenetest/dashboard">Waterfall</a>
+      </nav>
+      <div class="run-picker">
+        <label for="run-select">Run</label>
+        <select id="run-select" value=\${runId} onChange=\${e => onRunChange(e.target.value)}>
+          <option value="live">Live (current run)</option>
+          \${runs.map(r => html\`
+            <option value=\${r.id}>\${new Date(r.mtime).toLocaleString()}  —  \${r.id}</option>
+          \`)}
+        </select>
+        <span class=\${'conn ' + connection} title=\${connection}></span>
+      </div>
+      <div class="status-bar">
+        <span>scenes \${completed}/\${summary.scenes || scenes.length}</span>
+        <span class="ok">✓ \${a.passed}</span>
+        <span class="fail">✗ \${a.failed}</span>
+        \${summary.warnings ? html\`<span>⚡ \${summary.warnings}</span>\` : null}
+      </div>
+    </header>
+  \`
+}
 
-  function handleLiveEvent(ev) {
-    switch (ev.type) {
-      case 'run:start':
-        state.scenes = [];
-        state.summary = emptySummary();
-        state.sceneActions = new Map();
-        state.summary.scenes = ev.sceneCount || 0;
-        renderAll();
-        return;
-
-      case 'scene:start': {
-        const s = {
-          name: ev.name, file: ev.file || '', status: 'running',
-          assertions: [], warnings: [], consoleErrors: [], timeline: [],
-          actors: {}, team: {}, teamIndex: 0, duration: 0, error: undefined,
-          _startedAt: ev.timestamp,
-        };
-        for (const role of ev.actors || []) s.actors[role] = { key: role };
-        upsertScene(s);
-        state.sceneActions.set(ev.name, []);
-        renderListAndTree();
-        return;
-      }
-
-      case 'action:start':
-      case 'action:end': {
-        const list = state.sceneActions.get(currentRunningSceneName()) || [];
-        list.push(ev);
-        renderDetailIfSelected();
-        return;
-      }
-
-      case 'assertion': {
-        const scene = lastRunningScene();
-        if (!scene) return;
-        scene.assertions.push({
-          type: ev.result ? 'pass' : 'fail',
-          description: ev.description,
-          result: ev.result,
-          timestamp: ev.timestamp,
-        });
-        state.summary.assertions.total++;
-        if (ev.result) state.summary.assertions.passed++;
-        else state.summary.assertions.failed++;
-        renderListAndTree();
-        renderStatusBar();
-        renderDetailIfSelected();
-        return;
-      }
-
-      case 'warning': {
-        const scene = lastRunningScene();
-        if (!scene) return;
-        scene.warnings.push({
-          actor: ev.actor, selector: ev.selector,
-          message: ev.message, timestamp: ev.timestamp,
-        });
-        state.summary.warnings++;
-        renderDetailIfSelected();
-        return;
-      }
-
-      case 'scene:end': {
-        const scene = state.scenes.find(s => s.name === ev.name && s.status === 'running');
-        if (!scene) return;
-        scene.status = ev.status;
-        scene.duration = ev.duration;
-        if (ev.error) scene.error = ev.error;
-        if (ev.status === 'completed') state.summary.completed++;
-        else state.summary.failed++;
-        renderAll();
-        return;
-      }
-
-      case 'run:end':
-        if (ev.summary) state.summary = ev.summary;
-        renderAll();
-        return;
+// ── Tree ──────────────────────────────────────────────────────────
+function Tree({ scenes, selected, onSelect }) {
+  const byFile = useMemo(() => {
+    const m = new Map()
+    for (const s of scenes) {
+      const f = s.file || '(no file)'
+      if (!m.has(f)) m.set(f, [])
+      m.get(f).push(s)
     }
-  }
+    return m
+  }, [scenes])
 
-  function currentRunningSceneName() {
-    const s = lastRunningScene();
-    return s ? s.name : null;
-  }
-  function lastRunningScene() {
-    for (let i = state.scenes.length - 1; i >= 0; i--) {
-      if (state.scenes[i].status === 'running') return state.scenes[i];
-    }
-    return null;
-  }
-  function upsertScene(s) {
-    const existing = state.scenes.findIndex(x => x.name === s.name && x.status === 'running');
-    if (existing >= 0) state.scenes[existing] = s;
-    else state.scenes.push(s);
-  }
+  return html\`
+    <aside class="tree">
+      \${[...byFile.entries()].map(([file, group]) => {
+        const fails = group.filter(s => s.status !== 'completed' && s.status !== 'running').length
+        return html\`
+          <div class="tree-file" title=\${file}>
+            <span>\${shortFile(file)}</span>
+            \${fails ? html\`<span class="fail">\${fails}</span>\` : null}
+          </div>
+          \${group.map(s => html\`
+            <div
+              class=\${'tree-scene ' + s.status + (s.name === selected ? ' selected' : '')}
+              onClick=\${() => onSelect(s.name)}
+            >\${s.name}</div>
+          \`)}
+        \`
+      })}
+    </aside>
+  \`
+}
 
-  // ── Filter / group ──────────────────────────────────────────────
-  function bindFilterEvents() {
-    document.getElementById('filter-text').addEventListener('input', e => {
-      filters.text = e.target.value.toLowerCase();
-      renderListAndTree();
-    });
-    document.querySelectorAll('#status-chips .chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const s = chip.dataset.status;
-        if (filters.statuses.has(s)) { filters.statuses.delete(s); chip.classList.remove('on'); }
-        else { filters.statuses.add(s); chip.classList.add('on'); }
-        renderListAndTree();
-      });
-    });
-    document.getElementById('group-by').addEventListener('change', e => {
-      filters.groupBy = e.target.value;
-      renderListAndTree();
-    });
-    document.getElementById('copy-failures').addEventListener('click', e => {
-      copyText(formatFailureReport(state.scenes.filter(s => s.status !== 'completed')), e.currentTarget);
-    });
-    document.getElementById('copy-all').addEventListener('click', e => {
-      copyText(formatFailureReport(state.scenes), e.currentTarget);
-    });
-  }
-
-  function visibleScenes() {
-    return state.scenes.filter(s => {
-      if (!filters.statuses.has(s.status)) return false;
-      if (!filters.text) return true;
-      const haystack = [
+// ── List pane (filters + grouped list) ───────────────────────────
+function ListPane({ scenes, filters, onFilters, selected, onSelect, sceneActions, runId }) {
+  const filtered = useMemo(() => {
+    const text = filters.text.toLowerCase()
+    return scenes.filter(s => {
+      if (!filters.statuses.has(s.status)) return false
+      if (!text) return true
+      const hay = [
         s.name, s.file,
         ...(s.assertions || []).map(a => a.description),
         s.error || '',
-      ].join(' ').toLowerCase();
-      return haystack.includes(filters.text);
-    });
+      ].join(' ').toLowerCase()
+      return hay.includes(text)
+    })
+  }, [scenes, filters])
+
+  const groups = useMemo(() => groupScenes(filtered, filters.groupBy), [filtered, filters.groupBy])
+
+  const toggleStatus = useCallback(s => {
+    const next = new Set(filters.statuses)
+    next.has(s) ? next.delete(s) : next.add(s)
+    onFilters({ ...filters, statuses: next })
+  }, [filters, onFilters])
+
+  return html\`
+    <section class="list-pane">
+      <div class="filters">
+        <input type="search" placeholder="Filter by scene, file, or assertion…"
+          value=\${filters.text}
+          onInput=\${e => onFilters({ ...filters, text: e.target.value })}
+        />
+        <div class="chips">
+          \${STATUSES.map(s => html\`
+            <button
+              class=\${'chip' + (filters.statuses.has(s) ? ' on' : '')}
+              data-status=\${s} onClick=\${() => toggleStatus(s)}
+            >\${s[0].toUpperCase() + s.slice(1)}</button>
+          \`)}
+        </div>
+        <select class="group-by" value=\${filters.groupBy}
+          onChange=\${e => onFilters({ ...filters, groupBy: e.target.value })}>
+          <option value="none">No grouping</option>
+          <option value="file">Group by file</option>
+          <option value="status">Group by status</option>
+          <option value="team">Group by team</option>
+        </select>
+        <\${CopyButton}
+          label="Copy all failures"
+          getText=\${() => formatFailureReport(scenes.filter(s => s.status !== 'completed'), runId, sceneActions)}
+        />
+        <\${CopyButton}
+          label="Copy all" subtle
+          getText=\${() => formatFailureReport(scenes, runId, sceneActions)}
+        />
+      </div>
+      <div class="list">
+        \${groups.length === 0
+          ? html\`<div class="group-header">No scenes match the current filters.</div>\`
+          : groups.map(g => html\`
+            \${filters.groupBy !== 'none' ? html\`
+              <div class="group-header">\${g.key || ''}  ·  \${g.items.length}</div>
+            \` : null}
+            \${g.items.map(s => html\`
+              <div
+                class=\${'row' + (s.name === selected ? ' selected' : '')}
+                onClick=\${() => onSelect(s.name)}
+              >
+                <span class=\${'icon ' + s.status}>\${statusIcon(s.status)}</span>
+                <span class="name">\${s.name}</span>
+                <span class="meta">
+                  \${(s.assertions || []).filter(a => !a.result).length > 0
+                    ? html\`<span class="icon failed">✗</span> \`
+                    : null}
+                  \${(s.assertions || []).length} check\${(s.assertions || []).length === 1 ? '' : 's'}
+                  \${s.duration ? '  ·  ' + s.duration + 'ms' : ''}
+                </span>
+                <span class="file">\${shortFile(s.file)}</span>
+              </div>
+            \`)}
+          \`)}
+      </div>
+    </section>
+  \`
+}
+
+function groupScenes(scenes, groupBy) {
+  if (groupBy === 'none') return [{ key: '', items: scenes }]
+  const m = new Map()
+  for (const s of scenes) {
+    let key = ''
+    if (groupBy === 'file') key = s.file || '(no file)'
+    else if (groupBy === 'status') key = s.status
+    else if (groupBy === 'team') key = (s.team && s.team.name) || ('team#' + s.teamIndex)
+    if (!m.has(key)) m.set(key, [])
+    m.get(key).push(s)
+  }
+  const keys = [...m.keys()]
+  if (groupBy === 'status') {
+    const order = { failed: 0, timeout: 1, running: 2, completed: 3 }
+    keys.sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99))
+  } else {
+    keys.sort()
+  }
+  return keys.map(k => ({ key: k, items: m.get(k) }))
+}
+
+// ── Detail pane (scene + spec snippet) ───────────────────────────
+function Detail({ scene, sceneActions }) {
+  if (!scene) {
+    return html\`
+      <aside class="detail">
+        <div class="empty">
+          Select a scene on the left to see error details, timeline,
+          and the spec snippet for reproducing it manually.
+        </div>
+      </aside>
+    \`
   }
 
-  function groupScenes(scenes) {
-    if (filters.groupBy === 'none') return [{ key: '', items: scenes }];
-    const map = new Map();
-    for (const s of scenes) {
-      let key = '';
-      if (filters.groupBy === 'file') key = s.file || '(no file)';
-      else if (filters.groupBy === 'status') key = s.status;
-      else if (filters.groupBy === 'team') key = (s.team && s.team.name) || ('team#' + s.teamIndex);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(s);
-    }
-    // Stable order: failed first when grouped by status
-    const keys = [...map.keys()];
-    if (filters.groupBy === 'status') {
-      const order = { failed: 0, timeout: 1, running: 2, completed: 3 };
-      keys.sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
-    } else {
-      keys.sort();
-    }
-    return keys.map(k => ({ key: k, items: map.get(k) }));
-  }
+  const failed = scene.status !== 'completed' && scene.status !== 'running'
+  const liveActions = sceneActions.get(scene.name) || []
+  const timeline = (scene.timeline && scene.timeline.length)
+    ? scene.timeline
+    : liveActionsToTimeline(liveActions)
 
-  // ── Rendering ───────────────────────────────────────────────────
-  function renderAll() {
-    renderStatusBar();
-    renderTree();
-    renderList();
-    renderDetailIfSelected();
-  }
-  function renderListAndTree() {
-    renderTree();
-    renderList();
-    renderStatusBar();
-  }
-  function renderDetailIfSelected() {
-    if (!state.selected) return;
-    const s = state.scenes.find(x => x.name === state.selected);
-    if (s) renderDetail(s);
-  }
+  const pills = [
+    'team ' + ((scene.team && scene.team.name) || scene.teamIndex),
+    scene.duration ? scene.duration + 'ms' : '',
+    scene.status,
+  ].filter(Boolean)
 
-  function renderStatusBar() {
-    const sb = document.getElementById('status-bar');
-    const a = state.summary.assertions || { passed: 0, total: 0, failed: 0 };
-    sb.innerHTML =
-      '<span>scenes ' + state.scenes.filter(s => s.status === 'completed').length +
-      '/' + (state.summary.scenes || state.scenes.length) + '</span>' +
-      '<span class="ok">✓ ' + a.passed + '</span>' +
-      '<span class="fail">✗ ' + a.failed + '</span>' +
-      (state.summary.warnings ? ('<span>⚡ ' + state.summary.warnings + '</span>') : '');
-  }
+  return html\`
+    <aside class="detail">
+      <div class="actions">
+        <\${CopyButton} label="Copy" getText=\${() => formatScene(scene, sceneActions)} />
+        \${scene.file ? html\`
+          <a class="btn subtle"
+             href=\${'/__open-in-editor?file=' + encodeURIComponent(scene.file) +
+                    (scene.line ? '&line=' + scene.line : '')}
+          >Open in editor</a>
+        \` : null}
+      </div>
+      <h3>
+        \${failed ? html\`<span class="icon failed">✗</span> \` : null}
+        \${scene.name}
+      </h3>
+      <div class="meta-row">
+        \${pills.map(t => html\`<span class="pill">\${t}</span>\`)}
+        \${scene.file ? html\`
+          <span class="pill" title=\${scene.file}>
+            \${shortFile(scene.file)}\${scene.line ? ':' + scene.line : ''}
+          </span>
+        \` : null}
+      </div>
+      \${scene.error ? html\`<div class="err">\${scene.error}</div>\` : null}
+      <h4>Assertions</h4>
+      <ul class="alist">
+        \${(scene.assertions || []).length === 0
+          ? html\`<li>No assertions recorded.</li>\`
+          : scene.assertions.map(a => html\`
+            <li class=\${a.result ? 'pass' : 'fail'}>
+              \${a.result ? '✓' : '✗'} \${a.description}
+            </li>
+          \`)}
+      </ul>
+      <h4>Timeline</h4>
+      <ul class="timeline">
+        \${timeline.length === 0
+          ? html\`<li>(no timeline)</li>\`
+          : timeline.map(t => html\`
+            <li class=\${t.error ? 'err-step' : ''}>
+              \${t.actor}: \${t.action}\${t.target ? ' ' + t.target : ''}
+              \${t.duration != null ? ' (' + t.duration + 'ms)' : ''}
+              \${t.error ? '  — ' + t.error : ''}
+            </li>
+          \`)}
+      </ul>
+      <h4>Spec snippet</h4>
+      <\${SpecSnippet} file=\${scene.file} line=\${scene.line} />
+    </aside>
+  \`
+}
 
-  function renderTree() {
-    const tree = document.getElementById('tree');
-    const byFile = new Map();
-    for (const s of state.scenes) {
-      const f = s.file || '(no file)';
-      if (!byFile.has(f)) byFile.set(f, []);
-      byFile.get(f).push(s);
-    }
-    let html = '';
-    for (const [file, scenes] of byFile) {
-      const fails = scenes.filter(s => s.status !== 'completed' && s.status !== 'running').length;
-      html += '<div class="tree-file"><span title="' + esc(file) + '">' + esc(shortFile(file)) +
-        '</span>' + (fails > 0 ? '<span class="fail">' + fails + '</span>' : '') + '</div>';
-      for (const sc of scenes) {
-        const cls = sc.status === 'completed' ? '' : sc.status;
-        html += '<div class="tree-scene ' + cls + '" data-scene="' + esc(sc.name) +
-          '">' + esc(sc.name) + '</div>';
-      }
-    }
-    tree.innerHTML = html;
-    tree.querySelectorAll('.tree-scene').forEach(el => {
-      el.addEventListener('click', () => selectScene(el.dataset.scene));
-    });
-  }
-
-  function renderList() {
-    const list = document.getElementById('list');
-    const groups = groupScenes(visibleScenes());
-    let html = '';
-    for (const g of groups) {
-      if (filters.groupBy !== 'none') {
-        html += '<div class="group-header">' + esc(String(g.key || '')) +
-          '  ·  ' + g.items.length + '</div>';
-      }
-      for (const s of g.items) {
-        const failed = s.status !== 'completed' && s.status !== 'running';
-        const icon = s.status === 'completed' ? '✓' :
-          s.status === 'running' ? '◐' :
-          s.status === 'timeout' ? '⏱' : '✗';
-        const aTotal = (s.assertions || []).length;
-        const aFail = (s.assertions || []).filter(a => !a.result).length;
-        const sel = s.name === state.selected ? ' selected' : '';
-        html += '<div class="row' + sel + '" data-scene="' + esc(s.name) + '">' +
-          '<span class="icon ' + s.status + '">' + icon + '</span>' +
-          '<span class="name">' + esc(s.name) + '</span>' +
-          '<span class="meta">' + (aFail > 0 ? '<span class="icon failed">✗</span> ' : '') +
-            aTotal + ' check' + (aTotal === 1 ? '' : 's') +
-            (s.duration ? '  ·  ' + s.duration + 'ms' : '') + '</span>' +
-          '<span class="file">' + esc(shortFile(s.file)) + '</span>' +
-          '</div>';
-        // best-effort highlight of failed-state class
-        if (failed) {} // kept for clarity
-      }
-    }
-    if (!html) html = '<div class="group-header">No scenes match the current filters.</div>';
-    list.innerHTML = html;
-    list.querySelectorAll('.row').forEach(el => {
-      el.addEventListener('click', () => selectScene(el.dataset.scene));
-    });
-  }
-
-  // ── Detail panel ────────────────────────────────────────────────
-  function selectScene(name) {
-    state.selected = name;
-    document.querySelectorAll('.row').forEach(r => {
-      r.classList.toggle('selected', r.dataset.scene === name);
-    });
-    const s = state.scenes.find(x => x.name === name);
-    if (s) renderDetail(s);
-  }
-
-  async function renderDetail(s) {
-    const detail = document.getElementById('detail');
-    const failed = s.status !== 'completed' && s.status !== 'running';
-    const metaPills = [
-      'team ' + ((s.team && s.team.name) || s.teamIndex),
-      s.duration ? s.duration + 'ms' : '',
-      s.status,
-    ].filter(Boolean).map(t => '<span class="pill">' + esc(t) + '</span>').join('');
-
-    const assertions = (s.assertions || []).map(a => {
-      const cls = a.result ? 'pass' : 'fail';
-      const icon = a.result ? '✓' : '✗';
-      return '<li class="' + cls + '">' + icon + ' ' + esc(a.description) + '</li>';
-    }).join('') || '<li class="' + (failed ? 'fail' : '') + '">No assertions recorded.</li>';
-
-    const liveActions = state.sceneActions.get(s.name) || [];
-    const timeline = (s.timeline && s.timeline.length ? s.timeline : liveActionsToTimeline(liveActions))
-      .map(t => {
-        const cls = t.error ? 'err-step' : '';
-        const target = t.target ? ' ' + t.target : '';
-        const dur = t.duration != null ? ' (' + t.duration + 'ms)' : '';
-        return '<li class="' + cls + '">' + esc(t.actor) + ': ' + esc(t.action) +
-          esc(target) + dur + (t.error ? '  — ' + esc(t.error) : '') + '</li>';
-      }).join('') || '<li>(no timeline)</li>';
-
-    const fileLink = s.file
-      ? '<a href="/__open-in-editor?file=' + encodeURIComponent(s.file) +
-        (s.line ? '&line=' + s.line : '') + '" class="btn subtle">Open in editor</a>'
-      : '';
-
-    detail.innerHTML =
-      '<div class="actions">' +
-        '<button class="btn" data-copy-scene="' + esc(s.name) + '">Copy</button>' +
-        fileLink +
-      '</div>' +
-      '<h3>' + (failed ? '<span class="icon failed">✗</span> ' : '') + esc(s.name) + '</h3>' +
-      '<div class="meta-row">' + metaPills +
-        (s.file ? '<span class="pill" title="' + esc(s.file) + '">' + esc(shortFile(s.file)) +
-          (s.line ? ':' + s.line : '') + '</span>' : '') +
-      '</div>' +
-      (s.error ? '<div class="err">' + esc(s.error) + '</div>' : '') +
-      '<h4>Assertions</h4><ul class="alist">' + assertions + '</ul>' +
-      '<h4>Timeline</h4><ul class="timeline">' + timeline + '</ul>' +
-      '<h4>Spec snippet</h4>' +
-      '<div id="snippet-host"><div class="empty">Loading…</div></div>';
-
-    detail.querySelector('[data-copy-scene]').addEventListener('click', e => {
-      copyText(formatScene(s), e.currentTarget);
-    });
-
-    if (s.file) await loadSnippet(s);
-    else document.getElementById('snippet-host').innerHTML = '<div class="empty">No source file recorded.</div>';
-  }
-
-  async function loadSnippet(scene) {
-    const host = document.getElementById('snippet-host');
-    if (!host) return;
-    const url = '/__scenetest/source?file=' + encodeURIComponent(scene.file) +
-      '&line=' + (scene.line || 1) + '&context=20';
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        host.innerHTML = '<div class="empty">Source not available (' + res.status + ').</div>';
-        return;
-      }
-      const data = await res.json();
-      const start = data.start, target = scene.line || start;
-      const html = data.lines.map((line, i) => {
-        const ln = start + i;
-        const hl = ln === target ? ' hl' : '';
-        return '<div class="row-line' + hl + '"><span class="ln">' + ln + '</span>' + esc(line) + '</div>';
-      }).join('');
-      host.innerHTML = '<pre class="snippet">' + html + '</pre>';
-    } catch {
-      host.innerHTML = '<div class="empty">Could not load source.</div>';
+function liveActionsToTimeline(events) {
+  const open = new Map()
+  const out = []
+  for (const ev of events) {
+    const key = ev.actor + ':' + ev.action
+    if (ev.type === 'action:start') open.set(key, ev)
+    else if (ev.type === 'action:end') {
+      out.push({
+        actor: ev.actor, action: ev.action, target: ev.target,
+        timestamp: ev.timestamp, duration: ev.duration, error: ev.error,
+      })
+      open.delete(key)
     }
   }
+  for (const ev of open.values()) {
+    out.push({
+      actor: ev.actor, action: ev.action + ' (in flight)',
+      target: ev.target, timestamp: ev.timestamp,
+    })
+  }
+  return out
+}
 
-  function liveActionsToTimeline(events) {
-    const open = new Map();
-    const out = [];
-    for (const ev of events) {
-      const key = ev.actor + ':' + ev.action;
-      if (ev.type === 'action:start') open.set(key, ev);
-      else if (ev.type === 'action:end') {
-        out.push({
-          actor: ev.actor, action: ev.action, target: ev.target,
-          timestamp: ev.timestamp, duration: ev.duration, error: ev.error,
-        });
-        open.delete(key);
-      }
-    }
-    for (const ev of open.values()) {
-      out.push({ actor: ev.actor, action: ev.action + ' (in flight)', target: ev.target, timestamp: ev.timestamp });
-    }
-    return out;
-  }
+// ── Spec snippet (lazy fetch) ─────────────────────────────────────
+function SpecSnippet({ file, line }) {
+  const [state, setState] = useState({ status: 'idle' })
+  // Re-fetch when file or line changes; aborts on unmount
+  useEffect(() => {
+    if (!file) { setState({ status: 'no-file' }); return }
+    const ctrl = new AbortController()
+    setState({ status: 'loading' })
+    const url = '/__scenetest/source?file=' + encodeURIComponent(file) +
+      '&line=' + (line || 1) + '&context=20'
+    fetch(url, { signal: ctrl.signal })
+      .then(r => r.ok ? r.json().then(d => ({ ok: true, d })) : { ok: false, status: r.status })
+      .then(res => {
+        if (res.ok) setState({ status: 'loaded', data: res.d })
+        else setState({ status: 'missing', code: res.status })
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') setState({ status: 'error' })
+      })
+    return () => ctrl.abort()
+  }, [file, line])
 
-  // ── Copy helpers ────────────────────────────────────────────────
-  function formatScene(s) {
-    const status = s.status === 'completed' ? 'PASSED' :
-      s.status === 'timeout' ? 'TIMEOUT' :
-      s.status === 'running' ? 'RUNNING' : 'FAILED';
-    const icon = s.status === 'completed' ? '✓' : s.status === 'timeout' ? '⏱' : '✗';
-    const lines = [];
-    lines.push(icon + ' ' + s.name + ' — ' + status);
-    lines.push('  File: ' + s.file + (s.line ? ':' + s.line : ''));
-    lines.push('  Team: ' + ((s.team && s.team.name) || ('team#' + s.teamIndex)) +
-      (s.duration ? '  ·  ' + s.duration + 'ms' : ''));
-    if (s.error) lines.push('  Error: ' + s.error);
-    if (s.assertions && s.assertions.length) {
-      lines.push('  Assertions:');
-      for (const a of s.assertions) {
-        lines.push('    ' + (a.result ? '✓' : '✗') + ' ' + a.description);
-      }
-    }
-    const tl = s.timeline && s.timeline.length ? s.timeline : liveActionsToTimeline(state.sceneActions.get(s.name) || []);
-    if (tl.length) {
-      lines.push('  Timeline:');
-      for (const t of tl) {
-        lines.push('    ' + t.actor + ': ' + t.action + (t.target ? ' ' + t.target : '') +
-          (t.duration != null ? ' (' + t.duration + 'ms)' : '') + (t.error ? ' — ' + t.error : ''));
-      }
-    }
-    return lines.join('\\n');
-  }
+  if (state.status === 'no-file') return html\`<div class="empty">No source file recorded.</div>\`
+  if (state.status === 'loading') return html\`<div class="empty">Loading…</div>\`
+  if (state.status === 'missing') return html\`<div class="empty">Source not available (\${state.code}).</div>\`
+  if (state.status === 'error') return html\`<div class="empty">Could not load source.</div>\`
+  if (state.status !== 'loaded') return null
 
-  function formatFailureReport(scenes) {
-    const failures = scenes.filter(s => s.status !== 'completed' && s.status !== 'running');
-    if (!failures.length && scenes.length) {
-      return scenes.map(formatScene).join('\\n\\n');
+  const { start, lines } = state.data
+  const target = line || start
+  return html\`
+    <pre class="snippet">\${lines.map((ln, i) => {
+      const n = start + i
+      const cls = 'row-line' + (n === target ? ' hl' : '')
+      return html\`<div class=\${cls}><span class="ln">\${n}</span>\${ln}</div>\`
+    })}</pre>
+  \`
+}
+
+// ── Copy button (shared) ──────────────────────────────────────────
+function CopyButton({ label, getText, subtle }) {
+  const [copied, setCopied] = useState(false)
+  const tRef = useRef(null)
+  useEffect(() => () => { if (tRef.current) clearTimeout(tRef.current) }, [])
+  const onClick = () => {
+    navigator.clipboard.writeText(getText()).then(() => {
+      setCopied(true)
+      tRef.current = setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  const cls = 'btn' + (subtle ? ' subtle' : '') + (copied ? ' copied' : '')
+  return html\`<button class=\${cls} onClick=\${onClick}>\${copied ? 'Copied!' : label}</button>\`
+}
+
+// ── Plain-text formatters (clipboard payload) ────────────────────
+function formatScene(s, sceneActions) {
+  const status = s.status === 'completed' ? 'PASSED'
+    : s.status === 'timeout' ? 'TIMEOUT'
+    : s.status === 'running' ? 'RUNNING' : 'FAILED'
+  const lines = []
+  lines.push(statusIcon(s.status) + ' ' + s.name + ' — ' + status)
+  lines.push('  File: ' + s.file + (s.line ? ':' + s.line : ''))
+  lines.push('  Team: ' + ((s.team && s.team.name) || ('team#' + s.teamIndex)) +
+    (s.duration ? '  ·  ' + s.duration + 'ms' : ''))
+  if (s.error) lines.push('  Error: ' + s.error)
+  if ((s.assertions || []).length) {
+    lines.push('  Assertions:')
+    for (const a of s.assertions) {
+      lines.push('    ' + (a.result ? '✓' : '✗') + ' ' + a.description)
     }
-    const lines = ['Scenetest — ' + (state.runId || 'live')];
-    lines.push(failures.length + ' failing scene(s)');
-    lines.push('');
-    return lines.join('\\n') + '\\n' + failures.map(formatScene).join('\\n\\n');
   }
+  const tl = (s.timeline && s.timeline.length)
+    ? s.timeline
+    : liveActionsToTimeline(sceneActions.get(s.name) || [])
+  if (tl.length) {
+    lines.push('  Timeline:')
+    for (const t of tl) {
+      lines.push('    ' + t.actor + ': ' + t.action + (t.target ? ' ' + t.target : '') +
+        (t.duration != null ? ' (' + t.duration + 'ms)' : '') + (t.error ? ' — ' + t.error : ''))
+    }
+  }
+  return lines.join('\\n')
+}
 
-  function copyText(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
-    });
-  }
+function formatFailureReport(scenes, runId, sceneActions) {
+  const failures = scenes.filter(s => s.status !== 'completed' && s.status !== 'running')
+  const target = failures.length ? failures : scenes
+  const header = ['Scenetest — ' + (runId || 'live'), failures.length + ' failing scene(s)', '']
+  return header.join('\\n') + '\\n' + target.map(s => formatScene(s, sceneActions)).join('\\n\\n')
+}
 
-  // ── Utils ────────────────────────────────────────────────────────
-  function esc(s) {
-    return String(s ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-  function shortFile(f) {
-    if (!f) return '';
-    const parts = f.replace(/\\\\/g, '/').split('/');
-    return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : f;
-  }
-})();
+// ── Bootstrap ─────────────────────────────────────────────────────
+render(h(App, {}), document.getElementById('root'))
 `

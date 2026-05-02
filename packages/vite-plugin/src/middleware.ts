@@ -4,11 +4,38 @@ import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
 import { generateDashboardHtml } from './dashboard.js'
 import { generateAnalyzeAppHtml } from './analyze-app.js'
+
+/**
+ * Map of /__scenetest/vendor/<name> → bare specifier in the plugin's own
+ * node_modules. The middleware reads each module's ESM build off disk and
+ * serves it so the analyze app can `import` Preact / htm without a build
+ * step or a CDN. The HTML page contains a corresponding <script type="importmap">
+ * so that bare specifiers inside these modules (e.g. `from "preact"` inside
+ * preact/hooks) resolve to the vendor URL.
+ */
+// Map of /__scenetest/vendor/<name> → bare specifier whose ESM build we
+// serve. We resolve via `import.meta.resolve` from the plugin's own module
+// context so each package's `exports` map (with the `import` condition)
+// gives us a real ESM file path inside the plugin's node_modules.
+const VENDOR_MODULES: Record<string, string> = {
+  'preact.js': 'preact',
+  'preact-hooks.js': 'preact/hooks',
+  'htm.js': 'htm',
+}
+
+function resolveVendor(specifier: string): string | null {
+  try {
+    return fileURLToPath(import.meta.resolve(specifier))
+  } catch {
+    return null
+  }
+}
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -83,6 +110,34 @@ export function createScenetestMiddleware(
         res.end(generateAnalyzeAppHtml())
         return
       }
+    }
+
+    // ── Vendored ESM modules (preact, preact/hooks, htm) ────
+    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/vendor/')) {
+      const name = req.url.slice('/__scenetest/vendor/'.length).split('?')[0]
+      const target = VENDOR_MODULES[name]
+      if (!target) {
+        res.statusCode = 404
+        res.end('Not found')
+        return
+      }
+      const resolved = resolveVendor(target)
+      if (!resolved) {
+        res.statusCode = 500
+        res.end('// Vendor module could not be resolved')
+        return
+      }
+      try {
+        const code = fs.readFileSync(resolved, 'utf-8')
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+        res.setHeader('Cache-Control', 'public, max-age=86400')
+        res.end(code)
+      } catch {
+        res.statusCode = 500
+        res.end('// Vendor module read failed')
+      }
+      return
     }
 
     // ── Dashboard page ──────────────────────────────────────
