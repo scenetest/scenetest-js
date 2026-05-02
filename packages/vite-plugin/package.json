@@ -36,7 +36,9 @@
     "@babel/parser": "^7.24.0",
     "@babel/traverse": "^7.24.0",
     "@babel/types": "^7.24.0",
+    "htm": "^3.1.1",
     "magic-string": "^0.30.10",
+    "preact": "^10.22.0",
     "@scenetest/checks": "workspace:*",
     "@scenetest/checks-panel": "workspace:*",
     "@scenetest/scenes-panel": "workspace:*"
