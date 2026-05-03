@@ -56,8 +56,9 @@ Every action falls into one of four categories:
 |----------|---------|--------------|
 | **Sets scope** | `scope`, `up` | Narrows subsequent interactions to within the matched element. `scope` pushes onto a stack; `up` navigates to an ancestor or resets to page root. |
 | **Resets scope** | `openTo`, `reload`, `goBack`, `goForward`, `switchDevice` | Clears scope entirely — back to page root. |
-| **Resets scope on navigation** | `click`, `ifClick` | If the click triggers a URL change, scope resets to page root. Otherwise scope is unchanged. |
-| **Does not change scope** | `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom`, `prev` | Scope stays where it is. (`prev` pops the scope stack, returning to the previous scope.) |
+| **Does not change scope** | `click`, `ifClick`, `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom`, `prev` | Scope stays where it is. (`prev` pops the scope stack, returning to the previous scope.) |
+
+**`click` does not change scope.** A click that navigates to a new URL leaves the scope stack as-is; the runtime validates the scope before the next action and walks up the stack to the nearest surviving ancestor (or page root) automatically. You do **not** need to follow a navigating click with `up` — and adding one is a common source of unnecessary churn in specs.
 
 **`see` vs `scope`:** `see` is a pure assertion — it checks that an element is visible but does not narrow scope. Use `scope` when you need subsequent actions (like `typeInto` or `check`) to resolve within a specific container.
 

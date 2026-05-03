@@ -71,6 +71,8 @@ user:
 - typeInto search-input foo   # searches within settings-modal
 ```
 
+**`click` does not change scope.** Even when a click navigates to a new URL, the scope stack is left untouched; the runtime walks up the stack to the nearest surviving ancestor before the next action. There is no need to follow a navigating click with `up` — and adding one is a common source of unnecessary churn in specs. Only use `up` when *you* want to widen scope explicitly (e.g. after `scope`-ing into a sub-region you've finished working with).
+
 `up` with a selector navigates to an ancestor matching that selector. `up` with no selector resets scope to the page root:
 
 ```scenetest

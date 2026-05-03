@@ -4,6 +4,40 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.8.3] — 2026-05-03
+
+### API
+
+#### `click` and `ifClick` no longer mutate scope
+
+`click()` and `ifClick()` now leave the scope stack untouched in **every** case — including clicks that navigate to a new URL. The 0.7.2 "reset scope on URL change" behaviour is removed; it was redundant defensive logic on top of `validateScope()`, which already runs before every action and walks up the scope stack to the nearest surviving ancestor (or page root) when the URL has changed since the scope was set.
+
+The mental model is now uniform: **`click` is a leaf action, not a scope verb.** Only `scope`, `up`, `prev`, `openTo`, `reload`, `goBack`, `goForward`, and `switchDevice` change scope.
+
+This eliminates the common "scope X / click / up" tax that crept into specs as authors guessed (correctly, in some cases) that `click` might leave them in a stale scope. With `validateScope()` doing the work, that `up` is unnecessary in *all* cases.
+
+**No code change required for correct specs.** Removing redundant `up` lines is opportunistic — they're now dead code, not bugs. Two cleanup paths:
+
+1. **Specs in this repo / your spec files.** Paste the prompt below into your coding agent.
+2. **Project-level `CLAUDE.md` / agent notes.** If you previously documented "after a navigating click, add `up` to reset scope" in your project's CLAUDE.md, agent rules, or onboarding doc, delete that guidance — it's now wrong. Replace it with the rule from the docs: *"`click` never changes scope. Use `up` only when you explicitly want to widen scope."*
+
+##### Migration prompt for coding agents
+
+> I upgraded `@scenetest/scenes` to 0.8.3. As of this version, **`click` and `ifClick` never change the scope stack** — including clicks that navigate to a new URL. The runtime's `validateScope` step handles stale-scope cleanup automatically before the next action. The previous 0.7.2 "reset scope on URL change" behaviour is gone, and you no longer need `up` (or bare `up`) after a navigating click.
+>
+> Please do two things in this repo:
+>
+> 1. **Scan all `.spec.md` files and TypeScript scenes (`scene(...)` / `test(...)`) and remove now-redundant `up` lines.** Be conservative:
+>    - Remove `up` (or bare `up()` in TS) only when the line immediately preceding it is a `click` / `ifClick` / `pressKey Enter`-style action whose purpose is to commit/submit/navigate. The `up` was paying the old "reset after navigation" tax.
+>    - Do **not** remove `up` lines that come after a `scope X` block where the author is widening back out to do unrelated work — those are real, intentional scope mutations.
+>    - Do **not** touch `up <selector>` calls (climbing to a named ancestor) or `prev` calls.
+>    - When in doubt, leave the `up` and add a `# kept: explicit widen` comment so a human can review.
+> 2. **Update the project's `CLAUDE.md` (and any other agent rules / onboarding docs) to remove guidance that says clicks reset scope on navigation, or that recommends adding `up` after navigating clicks.** Replace any such guidance with: *"`click` never changes scope. Only `scope`, `up`, `prev`, `openTo`, `reload`, `goBack`, `goForward`, and `switchDevice` change scope. Use `up` only when you want to widen scope explicitly."*
+>
+> Show me a diff of every file you change, with a one-line note per removal explaining why each `up` was safe to drop. After editing, re-run the affected scenes (`pnpm scenetest`) and confirm they still pass.
+
+---
+
 ## [0.8.2] — 2026-04-23
 
 ### Improvements
@@ -177,18 +211,7 @@ Now `resolveSelectorWithFallback` waits for the scoped locator first (full timeo
 
 This fixes tests where `see()` timed out searching within a stale scope after a click navigated to a new route.
 
-**Migration:** existing specs that manually called `up` (or bare `up`) immediately after a navigation-causing click will still pass — bare `up` on an already-page-root scope is a no-op. But the redundant lines are now noise. Paste the following into your coding agent to clean them up:
-
-> I upgraded to `@scenetest/scenes` 0.7.2. As of this version, `click` and `ifClick` automatically reset scope to the page root when the click causes a URL change (same as `openTo`, `goBack`). That means `up` / `up <selector>` lines that were placed after a navigation-causing click purely to reset scope are now redundant.
->
-> Please scan all `.spec.md` files and any TypeScript scenes (`scene(...)` / `test(...)`) in this repo and remove `up` lines that follow a click which navigates to a new route. Be conservative:
->
-> 1. Only remove an `up` (or bare `up()` in TS) when the immediately preceding action is a `click` / `ifClick` whose target is clearly a navigation control — a link, sidebar item, menu entry, or a button whose handler routes to a different URL. If you can't tell from the selector name and surrounding `openTo` / `see` lines whether the click navigates, leave the `up` alone.
-> 2. Do **not** remove `up` lines after clicks on in-page controls (modal close buttons, dropdown toggles, accordion headers, form submits that stay on the same page) — those don't trigger the auto-reset.
-> 3. Do **not** touch `scope` / `prev` lines, or `up <selector>` calls that climb to a specific named ancestor for a *non-navigating* click — those are still doing real work.
-> 4. After editing, re-run `pnpm scenetest` (or your project's equivalent) to confirm the touched scenes still pass.
->
-> Show me a diff of each file you change with a one-line note explaining why each removed `up` was safe to drop.
+> **Note (0.8.3):** the click/navigation reset described here was removed in 0.8.3. `click` and `ifClick` now never change scope; `validateScope()` handles stale-scope cleanup. See the 0.8.3 entry for the migration prompt.
 
 ### Migration
 

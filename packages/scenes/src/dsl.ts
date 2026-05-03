@@ -25,11 +25,11 @@ import type { DslTarget, Selector } from './types.js'
  *   prev                            - Return to previous scope
  *
  * Interactions (resolve within current scope):
- *   click [<selector>]              - Click element; resets scope if URL changes (with fallback to root)
+ *   click [<selector>]              - Click element; never changes scope (validateScope handles stale scope after navigation)
  *   typeInto <selector> <value>     - Fill input (strict scope, no fallback)
  *   check <selector>                - Check checkbox (strict scope, no fallback)
  *   select <selector> <value>       - Select dropdown option (strict scope, no fallback)
- *   ifClick <selector>              - Click if visible; resets scope if URL changes (with fallback to root)
+ *   ifClick <selector>              - Click if visible; never changes scope
  *   pressKey <key>                  - Send raw keyboard event (Playwright key name)
  *
  * Control:
