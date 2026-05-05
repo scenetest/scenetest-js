@@ -50,19 +50,15 @@ Control:
 
 ### How actions affect scope
 
-Every action falls into one of four categories:
-
 | Category | Actions | What happens |
 |----------|---------|--------------|
-| **Sets scope** | `scope`, `up` | Narrows subsequent interactions to within the matched element. `scope` pushes onto a stack; `up` navigates to an ancestor or resets to page root. |
+| **Changes scope** | `scope`, `up`, `prev` | `scope` pushes onto the scope stack and narrows. `up` widens — bare `up` resets to page root, `up <selector>` climbs to a matching ancestor. `prev` pops the stack, returning to the previous scope. |
 | **Resets scope** | `openTo`, `reload`, `goBack`, `goForward`, `switchDevice` | Clears scope entirely — back to page root. |
-| **Does not change scope** | `click`, `ifClick`, `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom`, `prev` | Scope stays where it is. (`prev` pops the scope stack, returning to the previous scope.) |
-
-**`click` does not change scope.** A click that navigates to a new URL leaves the scope stack as-is; the runtime validates the scope before the next action and walks up the stack to the nearest surviving ancestor (or page root) automatically. You do **not** need to follow a navigating click with `up` — and adding one is a common source of unnecessary churn in specs.
+| **Leaves scope alone** | `click`, `ifClick`, `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom` | Scope stays where it is. Even when `click` causes navigation, the scope stack is left intact; the runtime walks up to the nearest surviving ancestor before the next action. |
 
 **`see` vs `scope`:** `see` is a pure assertion — it checks that an element is visible but does not narrow scope. Use `scope` when you need subsequent actions (like `typeInto` or `check`) to resolve within a specific container.
 
-**Fallback resolution:** `see`, `click`, and `scope` try the current scope first. If no match is found, they retry from the page root and log a warning. This prevents silent failures when an element exists outside the expected scope. Form interactions (`typeInto`, `check`, `select`) do **not** fall back — they resolve strictly within the current scope so you can be sure which form you're interacting with.
+**Selector resolution is strict.** Selectors resolve against the current scope only; if nothing matches, you get a diagnostic error naming the action, the selector, and the scope rather than a silent fallback. If you need to reach an element outside the current scope, widen with `up` or `prev` first.
 
 ### Nested selectors
 

@@ -88,7 +88,7 @@ user:
 - see other-section
 ```
 
-**Fallback resolution:** `see`, `click`, and `scope` try the current scope first. If no match is found, they retry from the page root and log a warning. This prevents silent failures when an element exists outside the expected scope. Form interactions (`typeInto`, `check`, `select`) do **not** fall back — they resolve strictly within the current scope so you can be sure which form you're interacting with.
+**Selector resolution is strict.** Every action resolves selectors against the current scope only — there's no silent fallback to the page root. If the element isn't in scope, you get a diagnostic error naming the action, the selector, and the scope. To reach something outside the current scope, widen first with `up` or `prev`.
 
 ## Conditional Handling
 
