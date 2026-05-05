@@ -10,31 +10,11 @@ All notable changes to Scenetest are documented here.
 
 #### `click` and `ifClick` no longer mutate scope
 
-`click()` and `ifClick()` now leave the scope stack untouched in **every** case — including clicks that navigate to a new URL. The 0.7.2 "reset scope on URL change" behaviour is removed; it was redundant defensive logic on top of `validateScope()`, which already runs before every action and walks up the scope stack to the nearest surviving ancestor (or page root) when the URL has changed since the scope was set.
+`click` and `ifClick` were never meant to change scope — but on navigating clicks (the 0.7.2 fix), they did. That's gone. They now leave the scope stack alone in every case; `validateScope()` already handles stale scope after navigation, so the extra reset was just making the rules harder to explain.
 
-The mental model is now uniform: **`click` is a leaf action, not a scope verb.** Only `scope`, `up`, `prev`, `openTo`, `reload`, `goBack`, `goForward`, and `switchDevice` change scope.
+If you've been writing `click` followed by `up` to work around this, you don't need to anymore. Paste this into your coding agent:
 
-This eliminates the common "scope X / click / up" tax that crept into specs as authors guessed (correctly, in some cases) that `click` might leave them in a stale scope. With `validateScope()` doing the work, that `up` is unnecessary in *all* cases.
-
-**No code change required for correct specs.** Removing redundant `up` lines is opportunistic — they're now dead code, not bugs. Two cleanup paths:
-
-1. **Specs in this repo / your spec files.** Paste the prompt below into your coding agent.
-2. **Project-level `CLAUDE.md` / agent notes.** If you previously documented "after a navigating click, add `up` to reset scope" in your project's CLAUDE.md, agent rules, or onboarding doc, delete that guidance — it's now wrong. Replace it with the rule from the docs: *"`click` never changes scope. Use `up` only when you explicitly want to widen scope."*
-
-##### Migration prompt for coding agents
-
-> I upgraded `@scenetest/scenes` to 0.8.3. As of this version, **`click` and `ifClick` never change the scope stack** — including clicks that navigate to a new URL. The runtime's `validateScope` step handles stale-scope cleanup automatically before the next action. The previous 0.7.2 "reset scope on URL change" behaviour is gone, and you no longer need `up` (or bare `up`) after a navigating click.
->
-> Please do two things in this repo:
->
-> 1. **Scan all `.spec.md` files and TypeScript scenes (`scene(...)` / `test(...)`) and remove now-redundant `up` lines.** Be conservative:
->    - Remove `up` (or bare `up()` in TS) only when the line immediately preceding it is a `click` / `ifClick` / `pressKey Enter`-style action whose purpose is to commit/submit/navigate. The `up` was paying the old "reset after navigation" tax.
->    - Do **not** remove `up` lines that come after a `scope X` block where the author is widening back out to do unrelated work — those are real, intentional scope mutations.
->    - Do **not** touch `up <selector>` calls (climbing to a named ancestor) or `prev` calls.
->    - When in doubt, leave the `up` and add a `# kept: explicit widen` comment so a human can review.
-> 2. **Update the project's `CLAUDE.md` (and any other agent rules / onboarding docs) to remove guidance that says clicks reset scope on navigation, or that recommends adding `up` after navigating clicks.** Replace any such guidance with: *"`click` never changes scope. Only `scope`, `up`, `prev`, `openTo`, `reload`, `goBack`, `goForward`, and `switchDevice` change scope. Use `up` only when you want to widen scope explicitly."*
->
-> Show me a diff of every file you change, with a one-line note per removal explaining why each `up` was safe to drop. After editing, re-run the affected scenes (`pnpm scenetest`) and confirm they still pass.
+> Heads up: in `@scenetest/scenes` 0.8.3, `click` and `ifClick` no longer change scope (they weren't supposed to — old versions reset it on navigation as a workaround). If you've been writing `click \n up` in a bunch of places to deal with that, you can stop. Please go over the `.spec.md` files and any TypeScript scenes, look for places where this was happening, and drop the useless `up`s. It's totally fine to keep an `up` if it's actually doing something — just clean up the ones that aren't. Give me a short list of what you changed and what you left alone (and why) when you're done.
 
 ---
 
