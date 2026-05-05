@@ -156,6 +156,26 @@ describe('parseAction', () => {
     })
   })
 
+  // Pins the footgun documented in text-dsl.md ### Format rules.  An unquoted
+  // multi-word value is parsed as "last word = value, everything else = compound
+  // selector".  If you "fix" this, update the doc rule too.
+  it('treats unquoted multi-word tail as compound selector + last-word value', () => {
+    expect(parseAction('typeInto some-selector quoted text for words')).toEqual({
+      action: 'typeInto', selector: 'some-selector quoted text for', value: 'words',
+    })
+    // Quoting the value fixes it.
+    expect(parseAction('typeInto some-selector "quoted text for words"')).toEqual({
+      action: 'typeInto', selector: 'some-selector', value: 'quoted text for words',
+    })
+    // Same footgun applies to select and warnIf.
+    expect(parseAction('select role admin user')).toEqual({
+      action: 'select', selector: 'role admin', value: 'user',
+    })
+    expect(parseAction('warnIf modal should not appear')).toEqual({
+      action: 'warnIf', selector: 'modal should not', value: 'appear',
+    })
+  })
+
   it('handles selector-only for typeInto/select (no value)', () => {
     // Only selector, no value
     expect(parseAction('typeInto email-input')).toEqual({
