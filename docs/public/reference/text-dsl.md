@@ -137,6 +137,7 @@ returning-user:
 - `waitFor <message>` blocks the actor until a bus message arrives
 - Bare `click` (no selector) clicks the current scope element
 - Bare `up` (no selector) resets scope to the page root
+- Multi-word values must be quoted: `typeInto some-selector "quoted text for words"`. Without quotes, only the last word is the value — `typeInto some-selector quoted text for words` types `words` into the compound selector `some-selector quoted text for`. Single or double quotes both work; applies anywhere a value follows a selector (`typeInto`, `select`, `warnIf`).
 
 ### Cleanup and setup directives
 
