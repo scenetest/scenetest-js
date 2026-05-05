@@ -79,6 +79,41 @@ The `at` frame is parsed to extract the path (origin stripped) and function name
 
 ---
 
+## [0.8.3] — 2026-04-27
+
+### Bug fixes
+
+#### `up()` and `openTo()` now settle the render queue before continuing
+
+`up()` and `openTo()` only waited for Playwright DOM visibility, so subsequent steps could run while React was still showing a `<Loader />` placeholder for a derived live-query collection that computes in a microtask after the network resolves (TanStack DB-style live queries hit this most often).
+
+A new `settle(page)` helper flushes microtasks + two animation frames, and is called after `up()` waits for visibility and after `openTo()` navigates. Internal change — no API impact, but flaky "saw the loader instead of the content" failures in scenes that mix navigation with derived live queries should clear up.
+
+#### `cleanup:` now runs both before *and* after each scene
+
+`cleanup:` directives were only running before each scene, despite the docs promising `cleanup (before) → setup → scene → cleanup (after)` for idempotency. One scene's leftover state could break the next.
+
+`runCleanup` now takes a `phase` parameter, and both `runner.ts` and `swarm.ts` call it post-scene as well as pre-scene. Log lines distinguish `♻ cleanup ran (before)` / `(after)`.
+
+#### Ambiguous selectors get a dedicated error with `#N` advice
+
+`buildSelectorMissError` previously always wrapped the underlying Playwright failure as "timed out — not visible in current scope", which masked strict-mode violations: when a selector matched multiple elements in scope the user got the wrong diagnostic and no pointer to the `#1`/`#N` escape hatch.
+
+Now matches in scope are counted first. If >1, the error reads:
+
+```
+click(submit-button) matched 3 elements in current scope — selector is ambiguous.
+  Disambiguate with an Nth-element token: `submit-button #1` (or #2, #3…) to pick a specific match.
+```
+
+If exactly 1 match, the root-count hint is omitted (it's a true visibility timeout, not a scoping issue). The existing 0-match path is unchanged.
+
+#### Same-element selector matching covers all attributes, not just `data-key`
+
+The same-element xpath check (used when the selector chain ends on the current element) only looked at `@data-key`, so e.g. `[data-testid="deck-tile"][data-key="kan"]` on the same element wouldn't match unless the final token was the `data-key`. It now uses the same attribute set as `buildTokenSelector` (`aria-label`, `id`, `data-testid`, `data-name`, `data-key`, `name`).
+
+---
+
 ## [0.8.2] — 2026-04-23
 
 ### Improvements
@@ -252,7 +287,7 @@ Now `resolveSelectorWithFallback` waits for the scoped locator first (full timeo
 
 This fixes tests where `see()` timed out searching within a stale scope after a click navigated to a new route.
 
-> **Note (0.8.3):** the click/navigation reset described here was removed in 0.8.3. `click` and `ifClick` now never change scope; `validateScope()` handles stale-scope cleanup. See the 0.8.3 entry for the migration prompt.
+> **Note (0.9.0):** the click/navigation reset described here was removed in 0.9.0. `click` and `ifClick` now never change scope; `validateScope()` handles stale-scope cleanup. See the 0.9.0 entry for the migration prompt.
 
 ### Migration
 
