@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/vite-plugin",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Vite plugin for scenetest - strips assertions in production, injects dev panel",
   "type": "module",
   "license": "MIT",

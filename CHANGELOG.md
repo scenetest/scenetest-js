@@ -4,7 +4,55 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## [0.8.3] — 2026-05-03
+## [0.9.0] — 2026-05-05
+
+### New features
+
+#### Interactive analyze app at `/__scenetest/`
+
+The static HTML report file is replaced by an interactive app served by the Vite plugin at `/__scenetest/`. It shows both a log-list view and the existing swim-lane dashboard view, navigable via tabs. The log view is filterable and groupable, with copy-failures support. The app reads live SSE events during a run and picks up past runs from JSON files on disk.
+
+New middleware routes:
+
+- `GET /__scenetest/` — the analyze app
+- `GET /__scenetest/runs` — list JSON reports under the configured `reportsDir`
+- `GET /__scenetest/runs/:id` — fetch a single report (path-traversal guarded)
+- `GET /__scenetest/source` — a window of source lines around a scene's registration point
+
+The app is implemented with Preact + htm via a `<script type="importmap">` pointing at `/__scenetest/vendor/<file>` routes — no build step, no CDN dependency, modules resolved from the plugin's own `node_modules` at runtime.
+
+**CLI report format change:** the CLI now writes JSON only by default. `--format html` prints a note pointing at `/__scenetest/` rather than generating a standalone file. The `reportFormat` config default changes from `'html'` to `'json'`.
+
+Scene source lines are now captured at registration time (`.spec.md` heading line; `.spec.ts` best-effort stack parse) and surfaced in `RegisteredScene.line` / `SceneReport.line` for the source-viewer pane.
+
+#### Terminal-bell sound feedback in CLI
+
+Opt-in audio cues during `scenetest` runs:
+
+- 1 bell when a scene passes
+- 2 bells when a scene fails
+- 3 bells when the run finishes
+
+Off by default. Enable via `defineConfig`:
+
+```ts
+export default defineConfig({
+  sound: { enabled: true },
+})
+```
+
+Or one-off via CLI flags (`--sound` / `--no-sound`) or the `SCENETEST_SOUND` env var (`0`/`1`). Precedence: CLI flag > env var > config. `scenetest init` generates a config with `sound: { enabled: true }` so new projects discover it.
+
+#### `SCENETEST_PANEL` env var
+
+The dev panel can now be toggled without editing `vite.config`:
+
+```bash
+SCENETEST_PANEL=0 vite          # disable for this run
+SCENETEST_PANEL=1 vite          # force-enable
+```
+
+Accepts `0 / false / off / no` (disable) and `1 / true / on / yes` (enable). The explicit `devPanel` plugin option still wins if set.
 
 ### API
 
@@ -14,7 +62,20 @@ All notable changes to Scenetest are documented here.
 
 If you've been writing `click` followed by `up` to work around this, you don't need to anymore. Paste this into your coding agent:
 
-> Heads up: in `@scenetest/scenes` 0.8.3, `click` and `ifClick` no longer change scope (they weren't supposed to — old versions reset it on navigation as a workaround). If you've been writing `click \n up` in a bunch of places to deal with that, you can stop. Please go over the `.spec.md` files and any TypeScript scenes, look for places where this was happening, and drop the useless `up`s. It's totally fine to keep an `up` if it's actually doing something — just clean up the ones that aren't. Give me a short list of what you changed and what you left alone (and why) when you're done.
+> Heads up: in `@scenetest/scenes` 0.9.0, `click` and `ifClick` no longer change scope (they weren't supposed to — old versions reset it on navigation as a workaround). If you've been writing `click \n up` in a bunch of places to deal with that, you can stop. Please go over the `.spec.md` files and any TypeScript scenes, look for places where this was happening, and drop the useless `up`s. It's totally fine to keep an `up` if it's actually doing something — just clean up the ones that aren't. Give me a short list of what you changed and what you left alone (and why) when you're done.
+
+### Bug fixes
+
+#### Console error entries show call site before the message
+
+Console errors in CLI output now lead with the source location and function name rather than truncating the message at a fixed character limit mid-line:
+
+```
+└─ [actor] /assets/index.js:123:45 in queryFn:
+   console.error: ZodError: [...]
+```
+
+The `at` frame is parsed to extract the path (origin stripped) and function name. When no stack frame is present, the message is collapsed to one line and truncated with `…`.
 
 ---
 
