@@ -71,6 +71,8 @@ user:
 - typeInto search-input foo   # searches within settings-modal
 ```
 
+**`click` does not change scope.** Even when a click navigates to a new URL, the scope stack is left untouched; the runtime walks up the stack to the nearest surviving ancestor before the next action. There is no need to follow a navigating click with `up` — and adding one is a common source of unnecessary churn in specs. Only use `up` when *you* want to widen scope explicitly (e.g. after `scope`-ing into a sub-region you've finished working with).
+
 `up` with a selector navigates to an ancestor matching that selector. `up` with no selector resets scope to the page root:
 
 ```scenetest
@@ -86,7 +88,7 @@ user:
 - see other-section
 ```
 
-**Fallback resolution:** `see`, `click`, and `scope` try the current scope first. If no match is found, they retry from the page root and log a warning. This prevents silent failures when an element exists outside the expected scope. Form interactions (`typeInto`, `check`, `select`) do **not** fall back — they resolve strictly within the current scope so you can be sure which form you're interacting with.
+**Selector resolution is strict.** Every action resolves selectors against the current scope only — there's no silent fallback to the page root. If the element isn't in scope, you get a diagnostic error naming the action, the selector, and the scope. To reach something outside the current scope, widen first with `up` or `prev`.
 
 ## Conditional Handling
 

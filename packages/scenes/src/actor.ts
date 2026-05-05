@@ -319,7 +319,6 @@ class ActionChainImpl implements ActionChain {
         if (scope === this.page) {
           throw new Error('click with no selector requires a scope (use see() first)')
         }
-        const urlBefore = this.page.url()
         if (this.isKeyboard) {
           await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
           await pressEnter(this.page)
@@ -328,18 +327,10 @@ class ActionChainImpl implements ActionChain {
         } else {
           await (scope as Locator).click({ timeout: this.actionTimeout })
         }
-        // If the click caused navigation, reset scope to page root
-        if (this.page.url() !== urlBefore) {
-          this.currentScope = this.page
-          this.scopeStack = []
-          this.scopeSetUrl = ''
-          this.scopeStackUrls = []
-        }
       })
     }
     const target = formatSelector(selector)
     return this.addAction('click', target, async () => {
-      const urlBefore = this.page.url()
       const locator = resolveSelector(this.getScope(), selector)
       try {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
@@ -354,13 +345,6 @@ class ActionChainImpl implements ActionChain {
       } else {
         await locator.click({ timeout: this.actionTimeout })
       }
-      // If the click caused navigation, reset scope to page root
-      if (this.page.url() !== urlBefore) {
-        this.currentScope = this.page
-        this.scopeStack = []
-        this.scopeSetUrl = ''
-        this.scopeStackUrls = []
-      }
     })
   }
 
@@ -372,7 +356,6 @@ class ActionChainImpl implements ActionChain {
       const locator = resolveSelector(this.getScope(), selector)
       const visible = await locator.isVisible()
       if (visible) {
-        const urlBefore = this.page.url()
         if (this.isKeyboard) {
           await tabToElement(this.page, locator, { timeout: this.actionTimeout })
           await pressEnter(this.page)
@@ -380,13 +363,6 @@ class ActionChainImpl implements ActionChain {
           await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
         } else {
           await locator.click({ timeout: this.actionTimeout })
-        }
-        // If the click caused navigation, reset scope to page root
-        if (this.page.url() !== urlBefore) {
-          this.currentScope = this.page
-          this.scopeStack = []
-          this.scopeSetUrl = ''
-          this.scopeStackUrls = []
         }
       }
     })

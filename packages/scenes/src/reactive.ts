@@ -561,7 +561,6 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         if (scope === this.page) {
           throw new Error('click with no selector requires a scope (use see() first)')
         }
-        const urlBefore = this.page.url()
         if (this.isKeyboard) {
           await tabToElement(this.page, scope as Locator, { timeout: this.actionTimeout })
           await pressEnter(this.page)
@@ -570,17 +569,9 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
         } else {
           await (scope as Locator).click({ timeout: this.actionTimeout })
         }
-        // If the click caused navigation, reset scope to page root
-        if (this.page.url() !== urlBefore) {
-          this.currentScope = this.page
-          this.scopeStack = []
-          this.scopeSetUrl = ''
-          this.scopeStackUrls = []
-        }
       })
     }
     return this.push('click', selector, async () => {
-      const urlBefore = this.page.url()
       const locator = resolveSelector(this.activeScope, selector)
       try {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
@@ -595,13 +586,6 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       } else {
         await locator.click({ timeout: this.actionTimeout })
       }
-      // If the click caused navigation, reset scope to page root
-      if (this.page.url() !== urlBefore) {
-        this.currentScope = this.page
-        this.scopeStack = []
-        this.scopeSetUrl = ''
-        this.scopeStackUrls = []
-      }
     })
   }
 
@@ -612,7 +596,6 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       const locator = resolveSelector(this.activeScope, selector)
       const visible = await locator.isVisible()
       if (visible) {
-        const urlBefore = this.page.url()
         if (this.isKeyboard) {
           await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
           await tabToElement(this.page, locator, { timeout: this.actionTimeout })
@@ -621,13 +604,6 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
           await fuzzyFingerClick(this.page, locator, this.actionTimeout, selector)
         } else {
           await locator.click({ timeout: this.actionTimeout })
-        }
-        // If the click caused navigation, reset scope to page root
-        if (this.page.url() !== urlBefore) {
-          this.currentScope = this.page
-          this.scopeStack = []
-          this.scopeSetUrl = ''
-          this.scopeStackUrls = []
         }
       }
     })

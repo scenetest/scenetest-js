@@ -4,6 +4,20 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.8.3] — 2026-05-03
+
+### API
+
+#### `click` and `ifClick` no longer mutate scope
+
+`click` and `ifClick` were never meant to change scope — but on navigating clicks (the 0.7.2 fix), they did. That's gone. They now leave the scope stack alone in every case; `validateScope()` already handles stale scope after navigation, so the extra reset was just making the rules harder to explain.
+
+If you've been writing `click` followed by `up` to work around this, you don't need to anymore. Paste this into your coding agent:
+
+> Heads up: in `@scenetest/scenes` 0.8.3, `click` and `ifClick` no longer change scope (they weren't supposed to — old versions reset it on navigation as a workaround). If you've been writing `click \n up` in a bunch of places to deal with that, you can stop. Please go over the `.spec.md` files and any TypeScript scenes, look for places where this was happening, and drop the useless `up`s. It's totally fine to keep an `up` if it's actually doing something — just clean up the ones that aren't. Give me a short list of what you changed and what you left alone (and why) when you're done.
+
+---
+
 ## [0.8.2] — 2026-04-23
 
 ### Improvements
@@ -176,6 +190,8 @@ Now `resolveSelectorWithFallback` waits for the scoped locator first (full timeo
 `click()` and `ifClick()` now detect URL changes and reset scope to page root when navigation occurs, matching the existing behaviour of `openTo`, `goBack`, etc. `seeToast()` always resolves from page root since toasts render as portals outside any scoped container.
 
 This fixes tests where `see()` timed out searching within a stale scope after a click navigated to a new route.
+
+> **Note (0.8.3):** the click/navigation reset described here was removed in 0.8.3. `click` and `ifClick` now never change scope; `validateScope()` handles stale-scope cleanup. See the 0.8.3 entry for the migration prompt.
 
 ### Migration
 
