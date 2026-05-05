@@ -137,7 +137,9 @@ export interface ScenetestPluginOptions {
 
   /**
    * Show the dev panel UI for viewing assertions in real-time.
-   * Defaults to true in development mode.
+   * Defaults to true in development mode. Can also be toggled via the
+   * `SCENETEST_PANEL` env var (e.g. `SCENETEST_PANEL=0 vite`); the explicit
+   * option here takes precedence over the env var.
    */
   devPanel?: boolean
 
@@ -195,6 +197,14 @@ export interface CspDirectives {
   'frame-ancestors': string
 }
 
+function parseEnvFlag(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined
+  const v = value.trim().toLowerCase()
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no' || v === '') return false
+  if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true
+  return undefined
+}
+
 /**
  * Vite plugin for Scenetest
  *
@@ -224,8 +234,9 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       } else {
         // Default: strip in production, keep in dev/test
         shouldStrip = options.strip ?? env.mode === 'production'
-        // Default: show dev panel in development mode
-        showDevPanel = options.devPanel ?? env.mode === 'development'
+        // Precedence: explicit option > SCENETEST_PANEL env var > mode default
+        showDevPanel =
+          options.devPanel ?? parseEnvFlag(process.env.SCENETEST_PANEL) ?? env.mode === 'development'
       }
 
       // Recorder: opt-in, only in development
