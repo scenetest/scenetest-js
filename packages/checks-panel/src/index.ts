@@ -126,7 +126,7 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
   addToGroup(result)
 
   // Create panel on first assertion if not exists (skip under automation)
-  if (!panel && document.body && window.__scenetest_force_panel || (!navigator.webdriver && !window.__scenetest_no_panel)) {
+  if (!panel && document.body && (window.__scenetest_force_panel || (!navigator.webdriver && !window.__scenetest_no_panel))) {
     createPanel()
   }
 
