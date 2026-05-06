@@ -389,6 +389,8 @@ function setupDrag(panelEl: HTMLDivElement): void {
  * Create and mount the floating panel
  */
 export function createPanel(): void {
+  if (panel) return
+
   const panelEl = document.createElement('div')
   panelEl.id = 'scenetest-panel'
   panelEl.innerHTML = getPanelHTML()

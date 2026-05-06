@@ -4,7 +4,7 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## [0.9.1] — 2026-05-06
+## [0.9.2] — 2026-05-06
 
 * Fix bug with multiple panels showing
 

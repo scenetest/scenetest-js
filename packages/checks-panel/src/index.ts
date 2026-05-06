@@ -12,7 +12,6 @@ import type { AssertionResult, ViewMode } from './types.js'
 import {
   assertions,
   groups,
-  panel,
   GROUP_THRESHOLD_MS,
   pendingGroup,
   groupTimeout,
@@ -124,11 +123,6 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
 
   // Add to group
   addToGroup(result)
-
-  // Create panel on first assertion if not exists (skip under automation)
-  if (!panel && document.body && (window.__scenetest_force_panel || (!navigator.webdriver && !window.__scenetest_no_panel))) {
-    createPanel()
-  }
 
   updatePanel()
   updateFullscreenWindow()
