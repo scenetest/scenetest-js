@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks-solid",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Solid bindings for scenetest inline assertions",
   "type": "module",
   "license": "MIT",
