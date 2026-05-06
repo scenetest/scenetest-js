@@ -5,7 +5,7 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import '@scenetest/checks-panel/auto'
 import { SectionNav } from '../components/SectionNav'
 import { LinkCard } from '../components/LinkCard'
 import { Footer } from '../components/Footer'
@@ -30,13 +30,6 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  useEffect(() => {
-    // Initialize observer panel for demo
-    import('@scenetest/checks-panel').then(({ initObserver }) => {
-      initObserver()
-    })
-  }, [])
-
   return (
     <html lang="en">
       <head>
