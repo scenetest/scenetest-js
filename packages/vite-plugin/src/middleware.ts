@@ -324,9 +324,11 @@ export function createScenetestMiddleware(
       }
 
       let file: string | undefined
+      let team: string | undefined
       try {
         const parsed = JSON.parse(body)
         file = parsed.file
+        team = parsed.team
       } catch {
         // No body or invalid JSON — replay all
       }
@@ -338,6 +340,9 @@ export function createScenetestMiddleware(
 
       // Build the CLI args
       const args: string[] = []
+      if (team) {
+        args.push('--team', team)
+      }
       if (file) {
         // file is relative to scenetest/scenes/, resolve to full path
         args.push(path.resolve(root, 'scenetest', 'scenes', file))

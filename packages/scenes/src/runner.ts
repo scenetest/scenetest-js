@@ -279,6 +279,8 @@ export class SceneRunner {
             name: registered.name,
             file: relativeFile,
             actors: registered.roles || [],
+            teamIndex,
+            team: resolvedTeam.meta,
           })
 
           // Run pre-cleanup if configured
@@ -320,6 +322,8 @@ export class SceneRunner {
             status: report.status,
             duration: report.duration,
             error: report.error,
+            teamIndex,
+            team: resolvedTeam.meta,
           })
 
           // Log progress

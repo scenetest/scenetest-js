@@ -160,10 +160,15 @@ const STYLES = `
     letter-spacing: 0.04em;
   }
   .row {
-    display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto;
+    display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto auto;
     gap: 10px; align-items: center;
     padding: 6px 14px; border-bottom: 1px solid rgba(46, 49, 64, 0.4);
     cursor: pointer;
+  }
+  .row .row-team {
+    color: var(--blue); font-size: 11px; white-space: nowrap;
+    padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px;
+    background: rgba(59, 130, 246, 0.08);
   }
   .row:hover { background: rgba(255, 255, 255, 0.02); }
   .row.selected { background: rgba(59, 130, 246, 0.08); }
@@ -304,7 +309,8 @@ function applyEvent(state, ev) {
         line: ev.line, status: 'running',
         assertions: [], warnings: [], consoleErrors: [], timeline: [],
         actors: Object.fromEntries((ev.actors || []).map(r => [r, { key: r }])),
-        team: {}, teamIndex: 0, duration: 0, error: undefined,
+        team: ev.team || {}, teamIndex: ev.teamIndex == null ? 0 : ev.teamIndex,
+        duration: 0, error: undefined,
       }
       const sceneActions = new Map(state.sceneActions)
       sceneActions.set(ev.name, [])
@@ -357,7 +363,12 @@ function applyEvent(state, ev) {
       const idx = state.scenes.findIndex(s => s.name === ev.name && s.status === 'running')
       if (idx < 0) return state
       const scenes = state.scenes.slice()
-      scenes[idx] = { ...scenes[idx], status: ev.status, duration: ev.duration, error: ev.error }
+      scenes[idx] = {
+        ...scenes[idx],
+        status: ev.status, duration: ev.duration, error: ev.error,
+        ...(ev.team ? { team: ev.team } : {}),
+        ...(ev.teamIndex != null ? { teamIndex: ev.teamIndex } : {}),
+      }
       const summary = { ...state.summary }
       if (ev.status === 'completed') summary.completed = (summary.completed || 0) + 1
       else summary.failed = (summary.failed || 0) + 1
@@ -595,6 +606,9 @@ function ListPane({ scenes, filters, onFilters, selected, onSelect, sceneActions
               >
                 <span class=\${'icon ' + s.status}>\${statusIcon(s.status)}</span>
                 <span class="name">\${s.name}</span>
+                <span class="row-team" title="Team running this scene">
+                  \${(s.team && s.team.name) || ('team ' + s.teamIndex)}
+                </span>
                 <span class="meta">
                   \${(s.assertions || []).filter(a => !a.result).length > 0
                     ? html\`<span class="icon failed">✗</span> \`

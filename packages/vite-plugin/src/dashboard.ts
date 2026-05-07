@@ -135,6 +135,30 @@ export function generateDashboardHtml(): string {
       margin-left: 12px;
     }
 
+    .team-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .team-select {
+      background: var(--bg2);
+      color: var(--text1);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .team-select:hover {
+      border-color: var(--blue);
+    }
+
     .scene-replay-btn {
       margin-left: auto;
     }
@@ -319,6 +343,15 @@ export function generateDashboardHtml(): string {
       color: var(--text2);
       margin-left: auto;
       font-size: 12px;
+    }
+
+    .scene-header .team {
+      color: var(--blue);
+      font-size: 11px;
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: rgba(59, 130, 246, 0.08);
     }
 
     .scene-header .duration {
@@ -582,6 +615,12 @@ export function generateDashboardHtml(): string {
     <button class="replay-btn replay-all-btn" id="replay-all" onclick="replayAll()">
       <span class="play-icon">&#9654;</span> Replay All
     </button>
+    <label class="team-select-wrap" title="When set, replays run only on the selected team. Populated as scenes execute.">
+      Team:
+      <select id="team-select" class="team-select" onchange="onTeamSelectChange(event)">
+        <option value="">all teams</option>
+      </select>
+    </label>
     <button class="pause-btn" id="pause-btn" onclick="togglePause()">
       <span class="btn-icon" id="pause-icon">&#9646;&#9646;</span> <span id="pause-label">Pause</span>
     </button>
@@ -625,13 +664,15 @@ export function generateDashboardHtml(): string {
   <script>
     // ─── State ────────────────────────────────────────
     const state = {
-      scenes: [],       // { name, file, actors, actions: Map<actor, []>, assertions: [], startTime, endTime, status }
+      scenes: [],       // { name, file, actors, actions: Map<actor, []>, assertions: [], startTime, endTime, status, team, teamIndex }
       currentScene: null,
       runStartTime: null,
       passCount: 0,
       failCount: 0,
       sceneCount: 0,
       followOutput: true,
+      teams: new Set(),     // team names seen in scene:start events
+      replayTeam: '',       // currently selected team to replay against ('' = all teams)
     }
 
     // ─── Follow-output toggle ────────────────────────
@@ -728,6 +769,8 @@ export function generateDashboardHtml(): string {
             startTime: event.timestamp,
             endTime: null,
             status: 'running',
+            team: event.team || {},
+            teamIndex: event.teamIndex == null ? 0 : event.teamIndex,
           }
           // Initialize lanes for declared actors
           for (const actor of scene.actors) {
@@ -735,6 +778,10 @@ export function generateDashboardHtml(): string {
           }
           state.scenes.push(scene)
           state.currentScene = scene
+          if (scene.team && scene.team.name && !state.teams.has(scene.team.name)) {
+            state.teams.add(scene.team.name)
+            renderTeamSelect()
+          }
           renderScene(scene)
           // Auto-scroll to keep the running scene visible, only when the
           // user has follow-output enabled. Scrolling up manually turns it off.
@@ -978,10 +1025,14 @@ export function generateDashboardHtml(): string {
 
       var lanesRadius = errors.length > 0 ? '' : ' style="border-radius: 0 0 8px 8px;"'
 
+      var teamLabel = (scene.team && scene.team.name) || ('team ' + scene.teamIndex)
+      var teamHtml = '<span class="team" title="Team running this scene">' + escapeHtml(teamLabel) + '</span>'
+
       el.innerHTML =
         '<div class="scene-header">' +
           '<span class="icon" style="color:' + statusColor + '">' + statusIcon + '</span>' +
           '<span class="name">' + escapeHtml(scene.name) + '</span>' +
+          teamHtml +
           '<span class="file">' + escapeHtml(scene.file || '') + '</span>' +
           '<span class="duration">' + durationStr + '</span>' +
           '<button class="replay-btn scene-replay-btn"' + replayFileAttr + replayDisabled +
@@ -1034,12 +1085,18 @@ export function generateDashboardHtml(): string {
       document.getElementById('pause-label').textContent = isPaused ? 'Resume' : 'Pause'
     }
 
+    function replayBody(extra) {
+      var body = extra || {}
+      if (state.replayTeam) body.team = state.replayTeam
+      return JSON.stringify(body)
+    }
+
     function replayAll() {
       setRunning(true)
       fetch('/__scenetest/replay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}',
+        body: replayBody(),
       }).catch(function() {
         setRunning(false)
       })
@@ -1052,10 +1109,28 @@ export function generateDashboardHtml(): string {
       fetch('/__scenetest/replay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: file }),
+        body: replayBody({ file: file }),
       }).catch(function() {
         setRunning(false)
       })
+    }
+
+    function onTeamSelectChange(e) {
+      state.replayTeam = e.target.value || ''
+    }
+
+    function renderTeamSelect() {
+      var sel = document.getElementById('team-select')
+      if (!sel) return
+      var current = state.replayTeam
+      var teams = Array.from(state.teams).sort()
+      var html = '<option value="">all teams</option>'
+      for (var i = 0; i < teams.length; i++) {
+        var name = teams[i]
+        var safe = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        html += '<option value="' + safe + '"' + (name === current ? ' selected' : '') + '>' + safe + '</option>'
+      }
+      sel.innerHTML = html
     }
 
     function stopRun() {
