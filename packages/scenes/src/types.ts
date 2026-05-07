@@ -449,12 +449,12 @@ export interface ErrorSelector {
  */
 export type DashboardEvent =
   | { type: 'run:start'; timestamp: number; sceneCount: number }
-  | { type: 'scene:start'; timestamp: number; name: string; file: string; actors: string[] }
+  | { type: 'scene:start'; timestamp: number; name: string; file: string; actors: string[]; teamIndex: number; team: TeamMeta }
   | { type: 'action:start'; timestamp: number; actor: string; action: string; target?: string }
   | { type: 'action:end'; timestamp: number; actor: string; action: string; target?: string; duration: number; error?: string }
   | { type: 'assertion'; timestamp: number; actor?: string; description: string; result: boolean }
   | { type: 'warning'; timestamp: number; actor: string; selector: string; message: string }
-  | { type: 'scene:end'; timestamp: number; name: string; status: string; duration: number; error?: string }
+  | { type: 'scene:end'; timestamp: number; name: string; status: string; duration: number; error?: string; teamIndex: number; team: TeamMeta }
   | { type: 'run:end'; timestamp: number; duration: number; summary: RunReport['summary'] }
 
 // ─── Swarm Mode Types ────────────────────────────────────────────────
@@ -1170,4 +1170,10 @@ export interface CLIOptions {
 
   /** Disable terminal-bell sound feedback */
   noSound?: boolean
+
+  /**
+   * Restrict the run to a single team by `meta.name`.
+   * Other teams are filtered out of the pool before scenes execute.
+   */
+  team?: string
 }

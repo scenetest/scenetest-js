@@ -31,13 +31,27 @@ program
   .option('--no-keyboard-actor', 'Disable keyboard-only actor rotation (keyboard navigation is ON by default)')
   .option('--fuzzy-fingers', 'Enable fuzzy-finger touch behavior (simulates imprecise human touch ~1 in 5 clicks)')
   .option('--swarm', 'Force swarm mode: run all teams against all scenes to classify failures')
+  .option('--team <name>', 'Restrict the run to a single team by name (matches team.meta.name)')
   .option('--no-panel', 'Suppress the dev panel in the browser (useful for CI / headless runs)')
   .option('--sound', 'Enable terminal-bell sound feedback (1 bell pass, 2 fail, 3 finish)')
   .option('--no-sound', 'Disable terminal-bell sound feedback')
   .action(async (scenes: string[], options: CLIOptions) => {
     try {
       // Load config and discover actor teams
-      const { config, teams } = await loadConfig(options.config)
+      const { config, teams: allTeams } = await loadConfig(options.config)
+
+      // Filter by --team <name> if provided
+      let teams = allTeams
+      if (options.team) {
+        const wanted = options.team
+        teams = allTeams.filter(t => t.meta.name === wanted)
+        if (teams.length === 0) {
+          const available = allTeams.map(t => t.meta.name ?? '(unnamed)').join(', ')
+          console.error(`Error: --team "${wanted}" not found. Available teams: ${available}`)
+          process.exit(1)
+        }
+        console.log(`  Team filter: ${wanted} (${teams.length}/${allTeams.length} teams)\n`)
+      }
 
       // Override config with CLI options
       if (options.headed) {
