@@ -190,6 +190,18 @@ user:
 
 Prefer a container with `data-testid` when one exists. Use `data-name` + `data-key` on items only when the DOM structure doesn't have a natural wrapper to label.
 
+## Nth-Element Disambiguation
+
+Selector resolution is **strict** in both directions: a selector that matches zero elements in scope fails with a diagnostic error, and so does one that matches more than one. When multiple elements legitimately share the same selector and you want a specific one, append an `#N` token (1-based):
+
+```scenetest
+user:
+- click feed-item #1            # the first feed-item in scope
+- click feed-item #2 like-button # the like-button inside the second feed-item
+```
+
+`#N` narrows the locator built so far to its Nth match, so it can appear mid-chain as well as at the end. Prefer `data-key` when the item has a stable identifier (see [Key Selectors](#key-selectors)) — `#N` is the right tool when items genuinely have no identity beyond their position (e.g. an "at least 3 results" assertion, or stress-testing an arbitrary row).
+
 ## Sigil Prefixes
 
 - `~name` — Alias lookup (configured in your config file)
