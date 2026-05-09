@@ -57,7 +57,7 @@ function getPanelHTML(): string {
         <button class="scenetest-btn scenetest-audio-btn" id="scenetest-play" title="Play symphony">\u25B6</button>
       </div>
       <span class="scenetest-separator"></span>
-      <a class="scenetest-btn" id="scenetest-dashboard" href="/__scenetest/dashboard" target="_blank" title="Live dashboard">dashboard</a>
+      <a class="scenetest-btn" id="scenetest-dashboard" href="/__scenetest" target="_blank" title="Live dashboard">dashboard</a>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
       <button class="scenetest-btn" id="scenetest-clear">clear</button>
     </div>
