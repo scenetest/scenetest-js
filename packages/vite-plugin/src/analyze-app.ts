@@ -1,12 +1,14 @@
 /**
- * Self-contained interactive analyze app served at `/__scenetest/`.
+ * Self-contained Preact app served at `/__scenetest/` (index) and
+ * `/__scenetest/runner` (the analyze view). The middleware serves the
+ * same HTML at both paths and the client routes on `location.pathname`.
  *
  * Uses Preact + htm via a `<script type="importmap">` that points each
  * bare specifier ("preact", "preact/hooks", "htm") at a middleware route
  * (see `middleware.ts`, VENDOR_MODULES) which serves the matching ESM
  * bundle out of the plugin's own node_modules. No build step, no CDN.
  *
- * Two views over the same RunReport shape:
+ * Runner view has two tabs over the same RunReport shape:
  *   - "Log"       — filterable / groupable scene list with copy-failures
  *                   and a spec-snippet panel for reproducing manually.
  *   - "Waterfall" — links out to /__scenetest/dashboard (existing page).
@@ -230,6 +232,22 @@ const STYLES = `
   }
   pre.snippet .row-line { padding: 0 8px; white-space: pre; }
   pre.snippet .row-line.hl { background: rgba(239, 68, 68, 0.12); }
+
+  .index { padding: 48px 32px; max-width: 720px; margin: 0 auto; }
+  .index h1 {
+    font-size: 22px; font-weight: 600;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .index .lede { color: var(--text2); font-size: 13px; margin-bottom: 32px; }
+  .index .cards { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  .index .card {
+    display: block; padding: 20px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--bg2); text-decoration: none;
+    color: var(--text); transition: border-color 0.15s, background 0.15s;
+  }
+  .index .card:hover { border-color: var(--text2); background: var(--bg3); }
+  .index .card .name { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .index .card .desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
 `
 
 // ─── Client (Preact + htm) ──────────────────────────────────────────
@@ -805,6 +823,51 @@ function formatFailureReport(scenes, runId, sceneActions) {
   return header.join('\\n') + '\\n' + target.map(s => formatScene(s, sceneActions)).join('\\n\\n')
 }
 
+// ── Index page ────────────────────────────────────────────────────
+function Index() {
+  return html\`
+    <div class="index">
+      <h1><span class="logo">🎬</span> Scenetest</h1>
+      <p class="lede">Pick a view.</p>
+      <div class="cards">
+        <a class="card" href="/__scenetest/runner" onClick=\${navigate}>
+          <div class="name">Scene runner →</div>
+          <div class="desc">Live and past runs: scene tree, status, failure log, spec snippets.</div>
+        </a>
+        <a class="card" href="/__scenetest/dashboard">
+          <div class="name">Assertions dashboard →</div>
+          <div class="desc">Waterfall view of inline check() / should() assertions across actors.</div>
+        </a>
+      </div>
+    </div>
+  \`
+}
+
+// ── Router ────────────────────────────────────────────────────────
+// Same HTML at /__scenetest and /__scenetest/runner; switch by pathname.
+function navigate(e) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return
+  const href = e.currentTarget.getAttribute('href')
+  if (!href || !href.startsWith('/__scenetest')) return
+  if (href === '/__scenetest/dashboard') return
+  e.preventDefault()
+  history.pushState(null, '', href)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+function Root() {
+  const [path, setPath] = useState(location.pathname)
+  useEffect(() => {
+    const onPop = () => setPath(location.pathname)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  if (path === '/__scenetest/runner' || path === '/__scenetest/runner/') {
+    return html\`<\${App} />\`
+  }
+  return html\`<\${Index} />\`
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────
-render(h(App, {}), document.getElementById('root'))
+render(h(Root, {}), document.getElementById('root'))
 `
