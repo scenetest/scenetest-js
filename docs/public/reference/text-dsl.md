@@ -58,7 +58,7 @@ Control:
 
 **`see` vs `scope`:** `see` is a pure assertion — it checks that an element is visible but does not narrow scope. Use `scope` when you need subsequent actions (like `typeInto` or `check`) to resolve within a specific container.
 
-**Selector resolution is strict.** Selectors resolve against the current scope only; if nothing matches, you get a diagnostic error naming the action, the selector, and the scope rather than a silent fallback. If you need to reach an element outside the current scope, widen with `up` or `prev` first.
+**Selector resolution is strict.** Selectors resolve against the current scope only; if nothing matches, you get a diagnostic error naming the action, the selector, and the scope rather than a silent fallback. If you need to reach an element outside the current scope, widen with `up` or `prev` first. If multiple elements match in scope, resolution is also strict — disambiguate with an Nth-element token (`#1`, `#2`, `#3`…) appended to the selector.
 
 ### Nested selectors
 

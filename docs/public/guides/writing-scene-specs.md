@@ -88,7 +88,7 @@ user:
 - see other-section
 ```
 
-**Selector resolution is strict.** Every action resolves selectors against the current scope only — there's no silent fallback to the page root. If the element isn't in scope, you get a diagnostic error naming the action, the selector, and the scope. To reach something outside the current scope, widen first with `up` or `prev`.
+**Selector resolution is strict.** Every action resolves selectors against the current scope only — there's no silent fallback to the page root. If the element isn't in scope, you get a diagnostic error naming the action, the selector, and the scope. To reach something outside the current scope, widen first with `up` or `prev`. If the selector matches multiple elements in scope, the error is also strict — pick one with an Nth-element token: `click feed-item #1` (or `#2`, `#3`…).
 
 ## Conditional Handling
 
