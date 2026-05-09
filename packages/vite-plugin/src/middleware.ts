@@ -193,11 +193,17 @@ export function createScenetestMiddleware(
   const reportsDir = path.resolve(root, options.reportsDir ?? 'scenetest/.reports')
 
   return async (req, res, next) => {
-    // ── Analyze app (root) ──────────────────────────────────
-    // /__scenetest, /__scenetest/, /__scenetest?…, /__scenetest/?…
+    // ── Preact app shell (index + runner) ───────────────────
+    // Same HTML for /__scenetest (index) and /__scenetest/runner
+    // (current analyze view); the client routes on location.pathname.
     if (req.method === 'GET' && req.url) {
       const pathname = req.url.split('?')[0]
-      if (pathname === '/__scenetest' || pathname === '/__scenetest/') {
+      if (
+        pathname === '/__scenetest' ||
+        pathname === '/__scenetest/' ||
+        pathname === '/__scenetest/runner' ||
+        pathname === '/__scenetest/runner/'
+      ) {
         res.statusCode = 200
         res.setHeader('Content-Type', 'text/html; charset=utf-8')
         res.end(generateAnalyzeAppHtml())
