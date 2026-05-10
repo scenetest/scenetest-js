@@ -22,7 +22,7 @@
 		"release": "pnpm build && pnpm typecheck && pnpm -r publish --access public --no-git-checks"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.40.0",
+		"@playwright/test": "~1.56.0",
 		"typescript": "^5.3.3"
 	},
 	"packageManager": "pnpm@10.0.0"

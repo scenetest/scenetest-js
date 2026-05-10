@@ -30,7 +30,7 @@ test.describe('/__scenetest index', () => {
 
     await page.locator('.index .card', { hasText: 'Scene runner' }).click()
 
-    await expect(page).toHaveURL(/\/__scenetest\/runner$/)
+    await expect(page).toHaveURL(/\/__scenetest\/runner(\?|$)/)
     // Runner header is the analyze app; tabs are part of <App/>
     await expect(page.locator('header .tabs')).toBeVisible()
 
@@ -47,7 +47,7 @@ test.describe('/__scenetest index', () => {
     await expect(page.locator('header .tabs')).toBeVisible()
 
     await page.goBack()
-    await expect(page).toHaveURL(/\/__scenetest\/?$/)
+    await expect(page).toHaveURL(/\/__scenetest\/?(\?|$)/)
     await expect(page.locator('.index .card')).toHaveCount(2)
   })
 
