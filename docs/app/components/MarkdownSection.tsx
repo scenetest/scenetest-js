@@ -1,4 +1,4 @@
-import { Children, createElement, useEffect, useMemo, useRef, useState } from 'react'
+import { Children, createElement, useEffect, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
 import Markdown, { type Options } from 'react-markdown'
@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 import { TabbedCode } from './TabbedCode'
+import { PageActions } from './PageActions'
 import { highlightLanguages } from '../lib/highlight'
 import 'highlight.js/styles/github.css'
 
@@ -184,7 +185,6 @@ const remarkPlugins: Options['remarkPlugins'] = [remarkGfm]
 
 export function MarkdownSection({ content, className = '' }: MarkdownSectionProps) {
   const rawMarkdown = content
-  const [copied, setCopied] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { hash } = useLocation()
   const router = useRouter()
@@ -251,20 +251,9 @@ export function MarkdownSection({ content, className = '' }: MarkdownSectionProp
     [router],
   )
 
-  function handleCopyMarkdown() {
-    if (!rawMarkdown) return
-    navigator.clipboard.writeText(rawMarkdown)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <div className={`markdown-section ${className}`} ref={containerRef}>
-      {rawMarkdown && (
-        <button className="copy-md-btn" onClick={handleCopyMarkdown}>
-          {copied ? 'Copied!' : 'Copy markdown'}
-        </button>
-      )}
+      {rawMarkdown && <PageActions rawMarkdown={rawMarkdown} />}
       {segments.map((seg, i) =>
         seg.type === 'tabs' ? (
           <TabbedCode key={i} tabs={seg.tabs} />

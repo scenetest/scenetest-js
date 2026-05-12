@@ -409,29 +409,94 @@ figure.screenshot figcaption {
   position: relative;
 }
 
-.copy-md-btn {
+/* Page actions: split button (copy) + dropdown (view / open-in tools) */
+.page-actions {
   position: absolute;
   top: -36px;
   right: 0;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  cursor: pointer;
+  display: inline-flex;
   opacity: 0;
   transition: opacity 0.2s;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
   color: var(--text-light);
 }
 
-.markdown-section:hover .copy-md-btn {
+.markdown-section:hover .page-actions,
+.page-actions:focus-within {
   opacity: 1;
 }
 
-.copy-md-btn:hover {
+.page-actions-main,
+.page-actions-toggle {
+  font-family: inherit;
+  font-size: inherit;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: inherit;
+  padding: 4px 10px;
+}
+
+.page-actions-main {
+  border-radius: 4px 0 0 4px;
+}
+
+.page-actions-toggle {
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-actions-main:hover,
+.page-actions-toggle:hover {
   background: white;
   color: var(--text);
+}
+
+.page-actions-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.page-actions-item {
+  font-family: inherit;
+  font-size: inherit;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.page-actions-item:hover {
+  background: var(--bg-soft, #f3f3f3);
+}
+
+.page-actions-ext {
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
 /* ── Tabbed code blocks ── */
