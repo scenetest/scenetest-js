@@ -389,7 +389,9 @@ function setupDrag(panelEl: HTMLDivElement): void {
  * Create and mount the floating panel
  */
 export function createPanel(): void {
-  if (panel) return
+  // Belt-and-braces against duplicate module instances: a fresh module copy
+  // sees `panel` as null, so check the DOM as a backup singleton.
+  if (panel || document.getElementById('scenetest-panel')) return
 
   const panelEl = document.createElement('div')
   panelEl.id = 'scenetest-panel'

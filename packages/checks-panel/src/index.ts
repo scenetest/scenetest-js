@@ -140,13 +140,17 @@ function handleAssertion(result: AssertionResult, existingReport?: (result: Asse
  * Safe to call multiple times - subsequent calls are no-ops.
  */
 export function initObserver(): void {
-  // Don't initialize twice
-  if (typeof window !== 'undefined' && window.__scenetest_panel) {
+  if (typeof window === 'undefined') {
+    console.warn('[scenetest/observer] initObserver() called in non-browser environment')
     return
   }
 
-  if (typeof window === 'undefined') {
-    console.warn('[scenetest/observer] initObserver() called in non-browser environment')
+  // The DOM check backs up the window flag: if a duplicate module instance
+  // loads (e.g. bundler ships multiple copies, or per-route chunks each
+  // carry their own state), we'd otherwise chain another __scenetest_report
+  // reporter and spawn a second panel.
+  if (window.__scenetest_panel || document.getElementById('scenetest-panel')) {
+    window.__scenetest_panel = true
     return
   }
 
