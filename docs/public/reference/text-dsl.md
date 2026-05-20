@@ -30,7 +30,7 @@ Scope:
 
 Interactions (resolve within current scope):
   click [<selector>]              Click element (bare click = click current scope)
-  typeInto <selector> <value>     Fill input
+  typeInto <selector> <value>     Fill input (replaces existing content)
   check <selector>                Check checkbox
   select <selector> <value>       Select dropdown option
   ifClick <selector>              Click element if visible, skip silently if not
@@ -138,6 +138,7 @@ returning-user:
 - Bare `click` (no selector) clicks the current scope element
 - Bare `up` (no selector) resets scope to the page root
 - Multi-word values must be quoted: `typeInto some-selector "quoted text for words"`. Without quotes, only the last word is the value — `typeInto some-selector quoted text for words` types `words` into the compound selector `some-selector quoted text for`. Single or double quotes both work; applies anywhere a value follows a selector (`typeInto`, `select`, `warnIf`).
+- `typeInto` always clears the field first, then enters the value — it replaces, never appends. This holds in every mode (mouse, keyboard, fuzzy-finger), so a pre-filled input (e.g. an edit dialog) needs no separate clear step. There is no append-style entry in the DSL.
 
 ### Cleanup and setup directives
 
