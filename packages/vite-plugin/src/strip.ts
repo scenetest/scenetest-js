@@ -174,10 +174,18 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
       // Check if this call is an ExpressionStatement (standalone call)
       const parent = path.parentPath
       if (parent && t.isExpressionStatement(parent.node)) {
-        // Remove the entire statement
         const start = parent.node.start!
         const end = parent.node.end!
-        rangesToRemove.push({ start, end, type: 'statement' })
+        if (parent.inList) {
+          // Statement lives in a statement list (block, program, switch case) -
+          // safe to remove entirely.
+          rangesToRemove.push({ start, end, type: 'statement' })
+        } else {
+          // Statement is the single-statement body of a control structure
+          // (e.g. `if (x) should(...)` without braces). Removing it would
+          // leave a dangling `if (x)`, so replace it with an empty statement.
+          rangesToRemove.push({ start, end, type: 'empty-statement' })
+        }
         hasChanges = true
       } else {
         // Call is in an expression context - replace with void 0
@@ -202,6 +210,10 @@ export function stripScenetest(code: string, options: StripOptions = {}): StripR
     if (range.type === 'expression') {
       // Replace with void 0 to maintain expression validity
       s.overwrite(range.start, range.end, 'void 0')
+    } else if (range.type === 'empty-statement') {
+      // Replace with an empty statement so a control structure that uses this
+      // as its unbraced body still has a body.
+      s.overwrite(range.start, range.end, ';')
     } else {
       // For imports and statements, remove entirely
       // Also try to remove trailing newline for cleaner output

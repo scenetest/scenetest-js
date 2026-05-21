@@ -309,6 +309,112 @@ console.log(x)`
     })
   })
 
+  describe('unbraced control-flow bodies', () => {
+    it('keeps the if body when should() is an unbraced consequent', () => {
+      const code = `import { should } from '@scenetest/checks'
+if (row)
+  should('row exists', row != null)
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('if (row)')
+      expect(result!.code).toContain('const x = 1')
+      // Must still parse - if the body were removed entirely this would throw.
+      expect(() => stripScenetest(result!.code + '\nimport "scenetest"')).not.toThrow()
+    })
+
+    it('keeps a multi-line unbraced call body intact', () => {
+      const code = `import { should } from '@scenetest/checks'
+const collections = items.map((row) => ({
+  ...row,
+  ok: true,
+}))
+if (row)
+  should('row is valid', (() => {
+    const a = 1
+    const b = 2
+    return a + b > 0
+  })())`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('if (row)')
+      expect(result!.code).toContain('const collections = items.map')
+    })
+
+    it('handles should() as an unbraced consequent with an else branch', () => {
+      const code = `import { should } from '@scenetest/checks'
+if (cond)
+  should('a', true)
+else
+  console.log('else branch')`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('if (cond)')
+      expect(result!.code).toContain("console.log('else branch')")
+    })
+
+    it('handles failed() as an unbraced else branch', () => {
+      const code = `import { failed } from '@scenetest/checks'
+if (cond)
+  console.log('then branch')
+else
+  failed('bad')
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('failed(')
+      expect(result!.code).toContain("console.log('then branch')")
+      expect(result!.code).toContain('const x = 1')
+    })
+
+    it('handles should() as an unbraced for-loop body', () => {
+      const code = `import { should } from '@scenetest/checks'
+for (const row of rows)
+  should('row ok', row != null)
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('for (const row of rows)')
+      expect(result!.code).toContain('const x = 1')
+    })
+
+    it('handles should() as an unbraced while-loop body', () => {
+      const code = `import { should } from '@scenetest/checks'
+while (cond)
+  should('looping', true)
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('while (cond)')
+      expect(result!.code).toContain('const x = 1')
+    })
+
+    it('still removes the whole statement when should() is inside a block', () => {
+      const code = `import { should } from '@scenetest/checks'
+if (row) {
+  should('row exists', row != null)
+}
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).not.toContain('should(')
+      expect(result!.code).toContain('if (row) {')
+      expect(result!.code).toContain('const x = 1')
+    })
+  })
+
   describe('source maps', () => {
     it('generates source map by default', () => {
       const code = `import { should } from '@scenetest/checks'
