@@ -56,9 +56,11 @@ export function removeAssertionsForFile(filename: string): void {
  * Generate the virtual module code.
  * This module exports a map of assertion IDs to their serverFn functions.
  *
- * Each serverFn receives (server, data, { pass, fail }) where pass/fail
- * are destructured in the function parameters, making them available in scope
- * for the inlined body code.
+ * Each serverFn is wrapped as an `async` arrow so that bodies using `await`
+ * (the common case — serverCheck exists to do async server work) parse and
+ * run. It receives the author's first two parameters followed by an injected
+ * `{ should, failed }` argument, making those helpers available in scope for
+ * the inlined body code.
  *
  * SECURITY NOTE: This function embeds user-provided assertion code directly
  * into the generated module. The code runs in the Vite dev server context
@@ -73,11 +75,13 @@ export function generateVirtualModuleCode(): string {
     return `export const assertions = {}`
   }
 
-  // Generate an object with all serverFn functions
-  // The original serverFn body is inlined into a wrapper function that
-  // provides should/failed in scope via parameter destructuring
+  // Generate an object with all serverFn functions.
+  // The original serverFn body is inlined into an async wrapper function that
+  // provides should/failed in scope via parameter destructuring. The author's
+  // own parameters are kept so destructured patterns keep resolving.
   const entries = assertions.map((assertion) => {
-    return `  ${JSON.stringify(assertion.id)}: (server, data, { should, failed }) => {
+    const params = assertion.params || 'server, data'
+    return `  ${JSON.stringify(assertion.id)}: async (${params}, { should, failed }) => {
     ${assertion.serverFnBodyCode}
   }`
   })
