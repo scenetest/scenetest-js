@@ -1,4 +1,5 @@
 import preferAriaLabel from './rules/prefer-aria-label.js'
+import inlineServerFn from './rules/inline-server-fn.js'
 
 const plugin = {
   meta: {
@@ -7,6 +8,7 @@ const plugin = {
   },
   rules: {
     'prefer-aria-label': preferAriaLabel,
+    'inline-server-fn': inlineServerFn,
   },
   configs: {} as Record<string, unknown>,
 }
@@ -18,6 +20,7 @@ plugin.configs['recommended'] = {
   },
   rules: {
     'scenetest/prefer-aria-label': 'warn',
+    'scenetest/inline-server-fn': 'error',
   },
 }
 

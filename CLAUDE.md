@@ -32,7 +32,7 @@ packages/
 ├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware
-├── eslint-plugin/          # ESLint plugin — prefer-aria-label rule
+├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
 ├── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
 ├── example-app-react/      # React demo app with working Scene tests
 ├── example-app-vue/        # Vue demo app
@@ -89,6 +89,7 @@ packages/
 ### ESLint Plugin (`packages/eslint-plugin/src/`)
 - `index.ts` — Plugin entry, `recommended` flat config preset
 - `rules/prefer-aria-label.ts` — Rule: prefer `aria-label` over `data-testid` for selectors
+- `rules/inline-server-fn.ts` — Rule: `serverCheck()`'s server function must be an inline function literal (the Vite plugin extracts it statically; a variable reference can't be)
 
 ### VS Code Extension (`packages/vscode-scenetest/`)
 - `package.json` — Extension manifest (language ID `scenetest-spec`, grammar registration)
