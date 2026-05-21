@@ -20,6 +20,13 @@ export interface ExtractedAssertion {
   title: string
   /** The serverFn body code (without function wrapper) */
   serverFnBodyCode: string
+  /**
+   * The serverFn's first two parameters, source-preserved (names and
+   * destructuring patterns) so the inlined body keeps resolving the symbols
+   * it references. Always exactly two slots; missing ones fall back to the
+   * canonical `server` / `data` names.
+   */
+  params: string
   /** Source location */
   location: {
     file: string
@@ -45,21 +52,70 @@ export interface TransformOptions {
 }
 
 /**
- * Helper to extract serverFn body code from a function node
+ * Unwrap TypeScript-only and parenthesized wrappers so the underlying
+ * function expression can be found, e.g. `((s, d) => {...}) as ServerFn`.
  */
-function extractServerFnBody(code: string, serverFnNode: t.Node, filename: string, line: number): string | null {
-  if (t.isArrowFunctionExpression(serverFnNode) || t.isFunctionExpression(serverFnNode)) {
-    const body = serverFnNode.body
-    if (t.isBlockStatement(body)) {
-      const bodyCode = code.slice(body.start!, body.end!)
-      return bodyCode.slice(1, -1).trim() // Remove { and }
-    } else {
-      return `return ${code.slice(body.start!, body.end!)}`
-    }
-  } else {
-    console.warn(`[vite-plugin-scenetest] serverFn is not a function at ${filename}:${line}`)
+function unwrapExpression(node: t.Node): t.Node {
+  let current = node
+  while (
+    t.isTSAsExpression(current) ||
+    t.isTSSatisfiesExpression(current) ||
+    t.isTSNonNullExpression(current) ||
+    t.isParenthesizedExpression(current)
+  ) {
+    current = current.expression
+  }
+  return current
+}
+
+/**
+ * Print a single parameter pattern without its TypeScript type annotation.
+ * The virtual module is evaluated as plain JS, so annotations must be dropped
+ * while destructuring patterns and default values are preserved.
+ */
+function cleanParam(code: string, node: t.Node): string {
+  if (t.isAssignmentPattern(node)) {
+    return `${cleanParam(code, node.left)} = ${code.slice(node.right.start!, node.right.end!)}`
+  }
+  const annotation = (node as t.Identifier | t.ObjectPattern | t.ArrayPattern | t.RestElement).typeAnnotation
+  const end = annotation && annotation.start != null ? annotation.start : node.end!
+  // Drop a trailing TS optional marker, e.g. `data?`.
+  return code.slice(node.start!, end).replace(/\?\s*$/, '').trim()
+}
+
+/**
+ * Extract the serverFn body and its first two parameters from a function node.
+ *
+ * The body is inlined verbatim into the virtual module. The parameters are
+ * source-preserved (including destructuring patterns) so a serverFn written as
+ * `(server, { id }) => ...` keeps working — the canonical `server` / `data`
+ * names are only used as fallbacks when the author omits a parameter.
+ */
+function extractServerFn(
+  code: string,
+  serverFnNode: t.Node,
+  filename: string,
+  line: number
+): { body: string; params: string } | null {
+  if (!t.isArrowFunctionExpression(serverFnNode) && !t.isFunctionExpression(serverFnNode)) {
+    console.warn(
+      `[vite-plugin-scenetest] serverCheck() second argument must be an inline function at ` +
+        `${filename}:${line} (got ${serverFnNode.type}). A variable reference or other expression ` +
+        `cannot be statically extracted — inline the function literal.`
+    )
     return null
   }
+
+  const fnParams = serverFnNode.params
+  const p0 = fnParams[0] ? cleanParam(code, fnParams[0]) : 'server'
+  const p1 = fnParams[1] ? cleanParam(code, fnParams[1]) : 'data'
+  const params = `${p0}, ${p1}`
+
+  const body = serverFnNode.body
+  if (t.isBlockStatement(body)) {
+    return { params, body: code.slice(body.start! + 1, body.end! - 1).trim() } // Remove { and }
+  }
+  return { params, body: `return ${code.slice(body.start!, body.end!)}` }
 }
 
 /**
@@ -164,7 +220,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
       }
 
       const titleArg = args[0]
-      const serverFnArg = args[1]
+      const serverFnArg = unwrapExpression(args[1])
       const withDataArg = args[2] // optional
 
       // Get the source location
@@ -183,9 +239,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
         titleValue = titleArg.quasis[0].value.raw
       }
 
-      // Extract serverFn body code
-      const serverFnBodyCode = extractServerFnBody(code, serverFnArg, filename, line)
-      if (!serverFnBodyCode) {
+      // Extract serverFn body code and parameters
+      const extracted = extractServerFn(code, serverFnArg, filename, line)
+      if (!extracted) {
         return
       }
 
@@ -193,7 +249,8 @@ export function transformAssertions(code: string, options: TransformOptions = {}
       extractedAssertions.push({
         id,
         title: titleValue,
-        serverFnBodyCode,
+        serverFnBodyCode: extracted.body,
+        params: extracted.params,
         location: { file: filename, line, column },
       })
 
