@@ -217,6 +217,48 @@ function handleResponse(response) {
 }
 ```
 
+### Fold Guards Into the Check — Don't Wrap It in `if`
+
+In production builds the Vite plugin strips scenetest imports and calls. A `should()`
+call is removed cleanly, but a **bare `if` around it is not** — the guard condition
+stays in your production bundle as dead code.
+
+```tsx
+// Avoid: the `if (items.length > 0)` guard still ships to production
+if (items.length > 0)
+  should('first item has a price', items[0].price > 0)
+```
+
+After stripping, production contains `if (items.length > 0) ;` — the assertion is
+gone, but the guard (and the cost of evaluating it) remains.
+
+Instead, fold the guard into the check's condition so the **whole expression**
+disappears in production:
+
+```tsx
+// Prefer: the entire call, guard included, is stripped from production
+should('first item has a price',
+  items.length === 0 || items[0].price > 0)
+```
+
+For reactive checks that take a callback (`useCheck`, `watchCheck`, `createCheck`,
+`checkEffect`), put the guard **inside the callback body**, not around the call:
+
+```tsx
+// Avoid: the `if` survives stripping (and conditionally calling a hook
+// also breaks the Rules of Hooks)
+if (profile)
+  useCheck(() => { should('name is set', !!profile.name) }, [profile])
+
+// Prefer: the guard lives inside the callback, so it strips with the check
+useCheck(() => {
+  if (!profile) return
+  should('name is set', !!profile.name)
+}, [profile])
+```
+
+This keeps assertion logic — and its runtime cost — entirely out of production.
+
 ## Summary
 
 - `should(description, condition, context?)` - assert something is true
@@ -225,3 +267,4 @@ function handleResponse(response) {
 - Assertions are grouped by timing (50ms threshold)
 - Include context to make debugging easier
 - Use your framework's check hook for reactive assertions
+- Fold guards into the check so the whole call strips from production
