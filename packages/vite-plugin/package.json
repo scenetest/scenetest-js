@@ -9,7 +9,14 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/vite-plugin"
   },
-  "keywords": ["testing", "e2e", "playwright", "vite", "vite-plugin", "assertions"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "vite",
+    "vite-plugin",
+    "assertions"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -22,7 +29,9 @@
       "import": "./dist/middleware.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -36,19 +45,22 @@
     "@babel/parser": "^7.24.0",
     "@babel/traverse": "^7.24.0",
     "@babel/types": "^7.24.0",
-    "htm": "^3.1.1",
-    "magic-string": "^0.30.10",
-    "preact": "^10.22.0",
     "@scenetest/checks": "workspace:*",
     "@scenetest/checks-panel": "workspace:*",
-    "@scenetest/scenes-panel": "workspace:*"
+    "@scenetest/scenes-panel": "workspace:*",
+    "htm": "^3.1.1",
+    "magic-string": "^0.30.10",
+    "preact": "^10.22.0"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
   },
   "devDependencies": {
     "@types/babel__traverse": "^7.20.5",
+    "@types/estree": "^1.0.9",
     "@types/node": "^20.0.0",
+    "estree-walker": "^3.0.3",
+    "oxc-parser": "^0.132.0",
     "typescript": "^5.3.3",
     "vite": "^6.4.2",
     "vitest": "^4.1.4"
