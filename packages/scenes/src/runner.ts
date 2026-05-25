@@ -323,7 +323,9 @@ export class SceneRunner {
           })
 
           // Log progress
-          const passed = report.status === 'completed'
+          const failedAssertions = report.assertions.filter((a) => !a.result)
+          const sceneFailed = report.status !== 'completed'
+          const passed = !sceneFailed && failedAssertions.length === 0
           const statusIcon = passed ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
 
           if (passed) {
@@ -331,19 +333,41 @@ export class SceneRunner {
           } else {
             // Set failing scenes apart with blank lines + a separator so they're
             // easy to scroll to and copy-paste from a long CI log.
-            const label = report.status === 'timeout' ? 'TIMEOUT' : 'FAIL'
+            const label = report.status === 'timeout'
+              ? 'TIMEOUT'
+              : sceneFailed
+                ? 'FAIL'
+                : 'ASSERTION FAIL'
             console.log('')
             console.log('  ' + '─'.repeat(60))
             console.log(`  ${statusIcon} ${label}: ${registered.name} (${report.duration}ms) ${teamLabel}`)
-            console.log(`     file: ${fileWithLine}`)
 
+            // Prefer the failing-line resolved from the stack; fall back to the
+            // scene declaration line so we always print something useful.
             const frame = findFailingFrame(report.errorStack, registered.file)
+            const displayPath = frame
+              ? path.relative(process.cwd(), frame.file)
+              : relativeFile
+            const displayLine = frame?.line ?? registered.line
+            const fileLine = displayLine !== undefined ? `${displayPath}:${displayLine}` : displayPath
+            console.log(`     file: ${fileLine}`)
+
             if (frame) {
-              const frameRel = path.relative(process.cwd(), frame.file)
-              console.log(`     at:   ${frameRel}:${frame.line}`)
               const context = readSourceContext(frame.file, frame.line)
               if (context) {
                 console.log(context)
+              }
+            }
+
+            if (failedAssertions.length > 0) {
+              console.log(`     failed assertion(s): ${failedAssertions.length}`)
+              for (const a of failedAssertions.slice(0, 5)) {
+                const actor = a.actor ? `[${a.actor}] ` : ''
+                const loc = a.location ? ` (${path.relative(process.cwd(), a.location.file)}:${a.location.line})` : ''
+                console.log(`       ✗ ${actor}${a.description}${loc}`)
+              }
+              if (failedAssertions.length > 5) {
+                console.log(`       … and ${failedAssertions.length - 5} more`)
               }
             }
 
