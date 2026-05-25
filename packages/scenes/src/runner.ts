@@ -15,6 +15,11 @@ import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 import { tick as soundTick, fail as soundFail } from './sound.js'
 
+function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
+  const name = meta?.name
+  return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
+}
+
 function formatConsoleEntry(actor: string, label: string, message: string, bodyLimit: number): string {
   const prefix = `      └─ [${actor}]`
   const lines = message.split('\n')
@@ -187,11 +192,13 @@ export class SceneRunner {
         const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel, this.config.consoleErrors, this.config.errorSelectors)
 
         try {
-          // Log which scene is starting
-          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
-          console.log(`▶ ${registered.name} (${relativeFile})`)
-
           const resolvedTeam = this.teamManager.getTeam(teamIndex)
+
+          // Log which scene is starting (with team label for concurrency debugging)
+          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
+          const teamLabel = formatTeamLabel(teamIndex, resolvedTeam.meta)
+          console.log(`▶ ${registered.name} (${relativeFile}) ${teamLabel}`)
+
           const server = this.config.server as Record<string, unknown> | undefined
           const testStart = new Date().toISOString()
 
@@ -245,16 +252,29 @@ export class SceneRunner {
           })
 
           // Log progress
-          const statusIcon = report.status === 'completed' ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
-          console.log(`  ${statusIcon} ${registered.name} (${report.duration}ms)`)
+          const passed = report.status === 'completed'
+          const statusIcon = passed ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
 
-          if (this.config.sound?.enabled) {
-            if (report.status === 'completed') soundTick()
-            else soundFail()
+          if (passed) {
+            console.log(`  ${statusIcon} ${registered.name} (${report.duration}ms) ${teamLabel}`)
+          } else {
+            // Set failing scenes apart with blank lines + a separator so they're
+            // easy to scroll to and copy-paste from a long CI log.
+            const label = report.status === 'timeout' ? 'TIMEOUT' : 'FAIL'
+            console.log('')
+            console.log('  ' + '─'.repeat(60))
+            console.log(`  ${statusIcon} ${label}: ${registered.name} (${report.duration}ms) ${teamLabel}`)
+            console.log(`     file: ${relativeFile}`)
+            if (report.error) {
+              console.log(`     error: ${report.error}`)
+            }
+            console.log('  ' + '─'.repeat(60))
+            console.log('')
           }
 
-          if (report.error) {
-            console.log(`    Error: ${report.error}`)
+          if (this.config.sound?.enabled) {
+            if (passed) soundTick()
+            else soundFail()
           }
 
           if (report.consoleErrors.length > 0) {
@@ -664,6 +684,29 @@ export function printSummary(report: RunReport): void {
 
   if (report.summary.failed > 0) {
     console.log(`\n  ✗ ${report.summary.failed} scene(s) failed`)
+    for (const scene of report.scenes) {
+      if (scene.status !== 'completed') {
+        const label = scene.status === 'timeout' ? '⏱ timeout' : '✗ failed'
+        console.log(`    ${label}: ${scene.name} ${formatTeamLabel(scene.teamIndex, scene.team)}`)
+      }
+    }
+  }
+
+  // Team usage breakdown — handy for verifying that concurrency actually
+  // distributes scenes across the configured teams.
+  const teamCounts = new Map<number, { name?: string; count: number }>()
+  for (const scene of report.scenes) {
+    const entry = teamCounts.get(scene.teamIndex)
+    if (entry) entry.count++
+    else teamCounts.set(scene.teamIndex, { name: scene.team?.name, count: 1 })
+  }
+  if (teamCounts.size > 0) {
+    console.log(`\n  Teams used: ${teamCounts.size}`)
+    const sorted = [...teamCounts.entries()].sort((a, b) => a[0] - b[0])
+    for (const [index, { name, count }] of sorted) {
+      const label = name ? `${name} #${index}` : `#${index}`
+      console.log(`    ${label}: ${count} scene(s)`)
+    }
   }
 
   // Device and navigation mode info
