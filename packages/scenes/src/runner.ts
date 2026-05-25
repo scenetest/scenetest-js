@@ -1,5 +1,7 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
 import path from 'path'
 import type { ScenetestConfig, ResolvedTeam, TeamConfig, TeamMeta, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
@@ -18,6 +20,74 @@ import { tick as soundTick, fail as soundFail } from './sound.js'
 function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
   const name = meta?.name
   return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
+}
+
+/**
+ * Find the first stack frame pointing into the user's scene file, falling
+ * back to the first frame that isn't inside scenetest itself or node_modules.
+ *
+ * Returns absolute path + 1-indexed line, or `null` if no usable frame was
+ * found. The location of the scene file is used to bias the match toward
+ * user-authored code rather than framework internals.
+ */
+function findFailingFrame(
+  stack: string | undefined,
+  sceneFile: string
+): { file: string; line: number } | null {
+  if (!stack) return null
+
+  // Stack frames look like "  at fn (/abs/path.ts:12:34)" or
+  // "  at /abs/path.ts:12:34" or with file:// URLs.
+  const frameRe = /\((file:\/\/[^)]+|\/[^)\s]+):(\d+):\d+\)|at (file:\/\/\S+|\/\S+):(\d+):\d+/g
+
+  const frames: { file: string; line: number }[] = []
+  let m: RegExpExecArray | null
+  while ((m = frameRe.exec(stack)) !== null) {
+    const rawFile = m[1] ?? m[3]
+    const rawLine = m[2] ?? m[4]
+    if (!rawFile || !rawLine) continue
+    const filePath = rawFile.startsWith('file://') ? fileURLToPath(rawFile) : rawFile
+    frames.push({ file: filePath, line: parseInt(rawLine, 10) })
+  }
+
+  if (frames.length === 0) return null
+
+  // Prefer a frame in the actual scene file
+  const sceneFrame = frames.find((f) => f.file === sceneFile)
+  if (sceneFrame) return sceneFrame
+
+  // Otherwise pick the first frame that's not in node_modules and not in the
+  // scenetest packages themselves
+  const userFrame = frames.find(
+    (f) => !f.file.includes('/node_modules/') && !/\/packages\/(scenes|checks|vite-plugin)\//.test(f.file)
+  )
+  return userFrame ?? null
+}
+
+/**
+ * Read up to 3 lines (the target line + the 2 preceding lines) from `file`,
+ * formatted with line-number gutters. Returns `null` if the file can't be
+ * read or the line is out of range.
+ */
+function readSourceContext(file: string, line: number): string | null {
+  let contents: string
+  try {
+    contents = fs.readFileSync(file, 'utf8')
+  } catch {
+    return null
+  }
+  const lines = contents.split('\n')
+  if (line < 1 || line > lines.length) return null
+
+  const start = Math.max(1, line - 2)
+  const gutterWidth = String(line).length
+  const out: string[] = []
+  for (let i = start; i <= line; i++) {
+    const num = String(i).padStart(gutterWidth, ' ')
+    const marker = i === line ? '>' : ' '
+    out.push(`       ${marker} ${num} | ${lines[i - 1]}`)
+  }
+  return out.join('\n')
 }
 
 function formatConsoleEntry(actor: string, label: string, message: string, bodyLimit: number): string {
@@ -196,8 +266,9 @@ export class SceneRunner {
 
           // Log which scene is starting (with team label for concurrency debugging)
           const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
+          const fileWithLine = registered.line !== undefined ? `${relativeFile}:${registered.line}` : relativeFile
           const teamLabel = formatTeamLabel(teamIndex, resolvedTeam.meta)
-          console.log(`▶ ${registered.name} (${relativeFile}) ${teamLabel}`)
+          console.log(`▶ ${registered.name} (${fileWithLine}) ${teamLabel}`)
 
           const server = this.config.server as Record<string, unknown> | undefined
           const testStart = new Date().toISOString()
@@ -264,7 +335,18 @@ export class SceneRunner {
             console.log('')
             console.log('  ' + '─'.repeat(60))
             console.log(`  ${statusIcon} ${label}: ${registered.name} (${report.duration}ms) ${teamLabel}`)
-            console.log(`     file: ${relativeFile}`)
+            console.log(`     file: ${fileWithLine}`)
+
+            const frame = findFailingFrame(report.errorStack, registered.file)
+            if (frame) {
+              const frameRel = path.relative(process.cwd(), frame.file)
+              console.log(`     at:   ${frameRel}:${frame.line}`)
+              const context = readSourceContext(frame.file, frame.line)
+              if (context) {
+                console.log(context)
+              }
+            }
+
             if (report.error) {
               console.log(`     error: ${report.error}`)
             }

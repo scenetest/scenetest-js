@@ -154,6 +154,7 @@ export async function runScene(
 
   let status: SceneReport['status'] = 'completed'
   let error: string | undefined
+  let errorStack: string | undefined
 
   try {
     // Run with timeout
@@ -170,6 +171,7 @@ export async function runScene(
       status = 'failed'
     }
     error = err instanceof Error ? err.message : String(err)
+    errorStack = err instanceof Error ? err.stack : undefined
   } finally {
     setCurrentSession(null)
   }
@@ -197,5 +199,6 @@ export async function runScene(
     timeline: session.timeline,
     duration: Date.now() - start,
     error,
+    ...(errorStack ? { errorStack } : {}),
   }
 }
