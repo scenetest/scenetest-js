@@ -1,5 +1,7 @@
 import { chromium, firefox, webkit, type Browser } from 'playwright'
 import { glob } from 'glob'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
 import path from 'path'
 import type { ScenetestConfig, ResolvedTeam, TeamConfig, TeamMeta, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
@@ -14,6 +16,79 @@ import { SwarmTrigger, runSwarm } from './swarm.js'
 import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 import { tick as soundTick, fail as soundFail } from './sound.js'
+
+function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
+  const name = meta?.name
+  return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
+}
+
+/**
+ * Find the first stack frame pointing into the user's scene file, falling
+ * back to the first frame that isn't inside scenetest itself or node_modules.
+ *
+ * Returns absolute path + 1-indexed line, or `null` if no usable frame was
+ * found. The location of the scene file is used to bias the match toward
+ * user-authored code rather than framework internals.
+ */
+function findFailingFrame(
+  stack: string | undefined,
+  sceneFile: string
+): { file: string; line: number } | null {
+  if (!stack) return null
+
+  // Stack frames look like "  at fn (/abs/path.ts:12:34)" or
+  // "  at /abs/path.ts:12:34" or with file:// URLs.
+  const frameRe = /\((file:\/\/[^)]+|\/[^)\s]+):(\d+):\d+\)|at (file:\/\/\S+|\/\S+):(\d+):\d+/g
+
+  const frames: { file: string; line: number }[] = []
+  let m: RegExpExecArray | null
+  while ((m = frameRe.exec(stack)) !== null) {
+    const rawFile = m[1] ?? m[3]
+    const rawLine = m[2] ?? m[4]
+    if (!rawFile || !rawLine) continue
+    const filePath = rawFile.startsWith('file://') ? fileURLToPath(rawFile) : rawFile
+    frames.push({ file: filePath, line: parseInt(rawLine, 10) })
+  }
+
+  if (frames.length === 0) return null
+
+  // Prefer a frame in the actual scene file
+  const sceneFrame = frames.find((f) => f.file === sceneFile)
+  if (sceneFrame) return sceneFrame
+
+  // Otherwise pick the first frame that's not in node_modules and not in the
+  // scenetest packages themselves
+  const userFrame = frames.find(
+    (f) => !f.file.includes('/node_modules/') && !/\/packages\/(scenes|checks|vite-plugin)\//.test(f.file)
+  )
+  return userFrame ?? null
+}
+
+/**
+ * Read up to 3 lines (the target line + the 2 preceding lines) from `file`,
+ * formatted with line-number gutters. Returns `null` if the file can't be
+ * read or the line is out of range.
+ */
+function readSourceContext(file: string, line: number): string | null {
+  let contents: string
+  try {
+    contents = fs.readFileSync(file, 'utf8')
+  } catch {
+    return null
+  }
+  const lines = contents.split('\n')
+  if (line < 1 || line > lines.length) return null
+
+  const start = Math.max(1, line - 2)
+  const gutterWidth = String(line).length
+  const out: string[] = []
+  for (let i = start; i <= line; i++) {
+    const num = String(i).padStart(gutterWidth, ' ')
+    const marker = i === line ? '>' : ' '
+    out.push(`       ${marker} ${num} | ${lines[i - 1]}`)
+  }
+  return out.join('\n')
+}
 
 function formatConsoleEntry(actor: string, label: string, message: string, bodyLimit: number): string {
   const prefix = `      └─ [${actor}]`
@@ -187,11 +262,14 @@ export class SceneRunner {
         const session = await this.teamManager.createSession(teamIndex, actionTimeout, warnAfter, this.config.baseUrl, fuzzyFingers, this.config.noPanel, this.config.consoleErrors, this.config.errorSelectors)
 
         try {
-          // Log which scene is starting
-          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
-          console.log(`▶ ${registered.name} (${relativeFile})`)
-
           const resolvedTeam = this.teamManager.getTeam(teamIndex)
+
+          // Log which scene is starting (with team label for concurrency debugging)
+          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
+          const fileWithLine = registered.line !== undefined ? `${relativeFile}:${registered.line}` : relativeFile
+          const teamLabel = formatTeamLabel(teamIndex, resolvedTeam.meta)
+          console.log(`▶ ${registered.name} (${fileWithLine}) ${teamLabel}`)
+
           const server = this.config.server as Record<string, unknown> | undefined
           const testStart = new Date().toISOString()
 
@@ -245,16 +323,64 @@ export class SceneRunner {
           })
 
           // Log progress
-          const statusIcon = report.status === 'completed' ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
-          console.log(`  ${statusIcon} ${registered.name} (${report.duration}ms)`)
+          const failedAssertions = report.assertions.filter((a) => !a.result)
+          const sceneFailed = report.status !== 'completed'
+          const passed = !sceneFailed && failedAssertions.length === 0
+          const statusIcon = passed ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
 
-          if (this.config.sound?.enabled) {
-            if (report.status === 'completed') soundTick()
-            else soundFail()
+          if (passed) {
+            console.log(`  ${statusIcon} ${registered.name} (${report.duration}ms) ${teamLabel}`)
+          } else {
+            // Set failing scenes apart with blank lines + a separator so they're
+            // easy to scroll to and copy-paste from a long CI log.
+            const label = report.status === 'timeout'
+              ? 'TIMEOUT'
+              : sceneFailed
+                ? 'FAIL'
+                : 'ASSERTION FAIL'
+            console.log('')
+            console.log('  ' + '─'.repeat(60))
+            console.log(`  ${statusIcon} ${label}: ${registered.name} (${report.duration}ms) ${teamLabel}`)
+
+            // Prefer the failing-line resolved from the stack; fall back to the
+            // scene declaration line so we always print something useful.
+            const frame = findFailingFrame(report.errorStack, registered.file)
+            const displayPath = frame
+              ? path.relative(process.cwd(), frame.file)
+              : relativeFile
+            const displayLine = frame?.line ?? registered.line
+            const fileLine = displayLine !== undefined ? `${displayPath}:${displayLine}` : displayPath
+            console.log(`     file: ${fileLine}`)
+
+            if (frame) {
+              const context = readSourceContext(frame.file, frame.line)
+              if (context) {
+                console.log(context)
+              }
+            }
+
+            if (failedAssertions.length > 0) {
+              console.log(`     failed assertion(s): ${failedAssertions.length}`)
+              for (const a of failedAssertions.slice(0, 5)) {
+                const actor = a.actor ? `[${a.actor}] ` : ''
+                const loc = a.location ? ` (${path.relative(process.cwd(), a.location.file)}:${a.location.line})` : ''
+                console.log(`       ✗ ${actor}${a.description}${loc}`)
+              }
+              if (failedAssertions.length > 5) {
+                console.log(`       … and ${failedAssertions.length - 5} more`)
+              }
+            }
+
+            if (report.error) {
+              console.log(`     error: ${report.error}`)
+            }
+            console.log('  ' + '─'.repeat(60))
+            console.log('')
           }
 
-          if (report.error) {
-            console.log(`    Error: ${report.error}`)
+          if (this.config.sound?.enabled) {
+            if (passed) soundTick()
+            else soundFail()
           }
 
           if (report.consoleErrors.length > 0) {
@@ -664,6 +790,29 @@ export function printSummary(report: RunReport): void {
 
   if (report.summary.failed > 0) {
     console.log(`\n  ✗ ${report.summary.failed} scene(s) failed`)
+    for (const scene of report.scenes) {
+      if (scene.status !== 'completed') {
+        const label = scene.status === 'timeout' ? '⏱ timeout' : '✗ failed'
+        console.log(`    ${label}: ${scene.name} ${formatTeamLabel(scene.teamIndex, scene.team)}`)
+      }
+    }
+  }
+
+  // Team usage breakdown — handy for verifying that concurrency actually
+  // distributes scenes across the configured teams.
+  const teamCounts = new Map<number, { name?: string; count: number }>()
+  for (const scene of report.scenes) {
+    const entry = teamCounts.get(scene.teamIndex)
+    if (entry) entry.count++
+    else teamCounts.set(scene.teamIndex, { name: scene.team?.name, count: 1 })
+  }
+  if (teamCounts.size > 0) {
+    console.log(`\n  Teams used: ${teamCounts.size}`)
+    const sorted = [...teamCounts.entries()].sort((a, b) => a[0] - b[0])
+    for (const [index, { name, count }] of sorted) {
+      const label = name ? `${name} #${index}` : `#${index}`
+      console.log(`    ${label}: ${count} scene(s)`)
+    }
   }
 
   // Device and navigation mode info

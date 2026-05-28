@@ -397,6 +397,11 @@ export interface SceneReport {
   timeline: TimelineEntry[]
   duration: number
   error?: string
+  /**
+   * Raw stack trace from the failure, when available. Captured so the CLI
+   * can resolve the failing source line and show context around it.
+   */
+  errorStack?: string
 }
 
 /**
