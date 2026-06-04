@@ -21,6 +21,38 @@ export interface AssertionResult {
 }
 
 /**
+ * Debugging context attached to an assertion result.
+ */
+export type CheckContext = Record<string, unknown>
+
+/**
+ * Context passed to `should()` / `failed()`. Either an object, or a function
+ * that returns one — the function form is only evaluated when the assertion
+ * runs, so expensive context construction is deferred (and stripped entirely
+ * from production builds along with the rest of the call).
+ */
+export type LazyContext = CheckContext | (() => CheckContext)
+
+/**
+ * The condition argument to `should()`. Either a boolean, or a predicate that
+ * returns one. The predicate form lets you keep the (possibly expensive)
+ * computation inline with the assertion instead of hoisting it into a
+ * variable that runs even when assertions are stripped:
+ *
+ * ```ts
+ * // Hoisted — runs in production even though the assertion is stripped
+ * const items = expensiveQuery()
+ * should('has items', items.length > 0)
+ *
+ * // Lazy — the whole thing, query included, strips from production
+ * should('has items', () => expensiveQuery().length > 0)
+ * ```
+ *
+ * The predicate receives the resolved `context` so you can reuse it.
+ */
+export type CheckCondition = boolean | ((context?: CheckContext) => boolean)
+
+/**
  * Server function that runs assertions with access to server context.
  */
 export type AssertServerFn<TData = unknown> = (

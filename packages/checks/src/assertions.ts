@@ -1,4 +1,11 @@
-import type { AssertionResult, AssertServerFn, AssertDataFn } from './types.js'
+import type {
+  AssertionResult,
+  AssertServerFn,
+  AssertDataFn,
+  CheckContext,
+  CheckCondition,
+  LazyContext,
+} from './types.js'
 
 /**
  * Compare pairs of values for equality.
@@ -76,6 +83,29 @@ function parseLocation(stack: string | undefined): AssertionResult['location'] {
 }
 
 /**
+ * Normalize a thrown value into a readable string for context.
+ */
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+/**
+ * Resolve a possibly-lazy context into a plain object.
+ *
+ * If the context is a function it is invoked here so that expensive context
+ * construction is deferred until the assertion actually runs. A throwing
+ * context provider is reported rather than allowed to crash the caller.
+ */
+function resolveContext(context?: LazyContext): CheckContext | undefined {
+  if (typeof context !== 'function') return context
+  try {
+    return context()
+  } catch (err) {
+    return { contextError: errorMessage(err) }
+  }
+}
+
+/**
  * Report an assertion result to the test runner (if available)
  */
 function report(result: AssertionResult): void {
@@ -90,6 +120,11 @@ function report(result: AssertionResult): void {
  * Use this in your components to validate your mental model of how the code works.
  * The description should read as a natural "should" statement.
  *
+ * The `condition` may be a boolean, or a function returning a boolean. The
+ * function form is evaluated lazily, so keep expensive computation inline with
+ * the assertion instead of hoisting it into a variable that still runs after
+ * the assertion is stripped from production:
+ *
  * @example
  * ```tsx
  * function ProfileForm() {
@@ -97,18 +132,48 @@ function report(result: AssertionResult): void {
  *   should('profile should be loaded without pending state', profile !== undefined)
  *   // With context for debugging:
  *   should('user should have valid ID', !!user.id, { userId: user.id, userName: user.name })
+ *
+ *   // Lazy form — the computation only runs when the assertion runs, and the
+ *   // whole call (computation included) is stripped from production builds:
+ *   should('search returns results', () => expensiveSearch(query).length > 0)
+ *
+ *   // The predicate receives the resolved context:
+ *   should('all items priced', (ctx) => ctx.items.every((i) => i.price > 0), { items })
  * }
  * ```
  */
-export function should(description: string, condition: boolean, context?: Record<string, unknown>): void {
+export function should(description: string, condition: CheckCondition, context?: LazyContext): void {
   const stack = getStack()
+  const resolvedContext = resolveContext(context)
+
+  let result: boolean
+  if (typeof condition === 'function') {
+    try {
+      result = !!condition(resolvedContext)
+    } catch (err) {
+      // A throwing predicate is a failed assertion, not a crashed component.
+      report({
+        type: 'fail',
+        description,
+        result: false,
+        timestamp: Date.now(),
+        stack,
+        context: { ...resolvedContext, error: errorMessage(err) },
+        location: parseLocation(stack),
+      })
+      return
+    }
+  } else {
+    result = condition
+  }
+
   report({
-    type: condition ? 'pass' : 'fail',
+    type: result ? 'pass' : 'fail',
     description,
-    result: condition,
+    result,
     timestamp: Date.now(),
     stack,
-    context,
+    context: resolvedContext,
     location: parseLocation(stack),
   })
 }
@@ -134,8 +199,12 @@ export function should(description: string, condition: boolean, context?: Record
  *   })
  * }
  * ```
+ *
+ * The `context` may be a function returning an object; it is only evaluated
+ * when `failed()` runs, so expensive context construction can live with the
+ * call and still strip cleanly from production builds.
  */
-export function failed(description: string, context?: Record<string, unknown>): void {
+export function failed(description: string, context?: LazyContext): void {
   const stack = getStack()
   report({
     type: 'fail',
@@ -143,7 +212,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
     result: false,
     timestamp: Date.now(),
     stack,
-    context,
+    context: resolveContext(context),
     location: parseLocation(stack),
   })
 }

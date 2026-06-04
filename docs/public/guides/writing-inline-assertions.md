@@ -56,8 +56,8 @@ should(description, condition, context?)
 ```
 
 - `description`: What you're asserting (string)
-- `condition`: Boolean expression to check
-- `context`: Optional object with debugging info
+- `condition`: A boolean expression, or a function returning a boolean
+- `context`: Optional object with debugging info, or a function returning one (evaluated lazily)
 
 ```typescript
 import { should } from '@scenetest/checks-react'
@@ -74,6 +74,35 @@ function UserProfile({ user }) {
 }
 ```
 
+### Lazy Conditions with a Callback
+
+`condition` can be a **function** that returns a boolean. Scenetest calls it and
+evaluates the return value. This lets you keep a computation *inside* the
+assertion instead of hoisting it into a variable:
+
+```typescript
+// Avoid: the work is hoisted into a variable, so it runs in production even
+// after the Vite plugin strips the should() call
+const results = expensiveSearch(query)
+should('search returns results', results.length > 0)
+
+// Prefer: the whole computation lives in the callback, so it only runs when the
+// assertion runs — and strips from production along with the call
+should('search returns results', () => expensiveSearch(query).length > 0)
+```
+
+The predicate receives the resolved `context`, so you can reuse it:
+
+```typescript
+should('all items are priced', (ctx) => ctx.items.every((i) => i.price > 0), { items })
+```
+
+If the predicate **throws**, Scenetest reports a failed assertion (with the error
+message in context) rather than letting the exception escape into your render.
+
+The `context` argument can likewise be a function — `should('...', cond, () => buildContext())` —
+so expensive debugging context is only built when the assertion actually runs.
+
 ## Using `failed()`
 
 Use `failed()` when something **should not happen**:
@@ -83,7 +112,7 @@ failed(description, context?)
 ```
 
 - `description`: What went wrong (string)
-- `context`: Optional object with debugging info
+- `context`: Optional object with debugging info, or a function returning one (evaluated lazily, only when `failed()` runs)
 
 ```typescript
 import { failed } from '@scenetest/checks-react'
@@ -241,6 +270,14 @@ should('first item has a price',
   items.length === 0 || items[0].price > 0)
 ```
 
+Or use the **callback condition** when the check involves real work — the guard
+and the computation both live in the function body and strip together:
+
+```tsx
+// Prefer: nothing here survives stripping
+should('first item has a price', () => items.length === 0 || items[0].price > 0)
+```
+
 For reactive checks that take a callback (`useCheck`, `watchCheck`, `createCheck`,
 `checkEffect`), put the guard **inside the callback body**, not around the call:
 
@@ -261,8 +298,8 @@ This keeps assertion logic — and its runtime cost — entirely out of producti
 
 ## Summary
 
-- `should(description, condition, context?)` - assert something is true
-- `failed(description, context?)` - mark code paths that should never run
+- `should(description, condition, context?)` - assert something is true; `condition` may be a boolean or a `() => boolean` predicate (lazy)
+- `failed(description, context?)` - mark code paths that should never run; `context` may be an object or a `() => object` (lazy)
 - `serverCheck()` with test effects - compare browser and server data
 - Assertions are grouped by timing (50ms threshold)
 - Include context to make debugging easier

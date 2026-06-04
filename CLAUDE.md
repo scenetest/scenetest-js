@@ -63,6 +63,7 @@ packages/
 - `audio.ts` — Audio feedback (chords per group)
 - `styles.ts` — Injected CSS
 - `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
+- `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` (transitively through any `@scenetest/checks-*` binding) and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
 
 ### Scenes (`packages/scenes/src/`)
 - `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors

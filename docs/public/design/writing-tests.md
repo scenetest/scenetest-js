@@ -91,6 +91,20 @@ function ProfileForm({ user }) {
 }
 ```
 
+`should()`'s condition can be a boolean **or a `() => boolean` predicate**. Prefer
+the predicate form when the check involves real work — it keeps the computation
+inline and strips from production along with the assertion, instead of hoisting it
+into a variable that runs even after stripping:
+
+```tsx
+// Avoid: runs in production even though the should() call is stripped
+const results = expensiveSearch(query)
+should('search returns results', results.length > 0)
+
+// Prefer: the computation only runs when the assertion runs
+should('search returns results', () => expensiveSearch(query).length > 0)
+```
+
 For the full guide on `should()`, `failed()`, multi-context `serverCheck()`, framework imports, and best practices, see [Writing Inline Assertions](/guides/writing-inline-assertions).
 
 ---
