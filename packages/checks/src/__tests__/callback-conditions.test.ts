@@ -63,6 +63,29 @@ describe('should() / failed() callback forms', () => {
       expect(reportedResults[0].type).toBe('pass')
     })
 
+    it('resolves a lazy context before passing it to the predicate (fn, fn)', () => {
+      const order: string[] = []
+      const buildContext = vi.fn(() => {
+        order.push('context')
+        return { items: [1, 2, 3] }
+      })
+      const predicate = vi.fn((ctx?: Record<string, unknown>) => {
+        order.push('predicate')
+        return (ctx!.items as number[]).every((p) => p > 0)
+      })
+
+      should('all priced', predicate, buildContext)
+
+      // Context provider runs first, exactly once, before the predicate.
+      expect(order).toEqual(['context', 'predicate'])
+      expect(buildContext).toHaveBeenCalledTimes(1)
+      expect(predicate).toHaveBeenCalledTimes(1)
+      // The same resolved object is passed to the predicate and attached to the result.
+      expect(predicate.mock.calls[0][0]).toEqual({ items: [1, 2, 3] })
+      expect(reportedResults[0].type).toBe('pass')
+      expect(reportedResults[0].context).toEqual({ items: [1, 2, 3] })
+    })
+
     it('reports a failure (not a throw) when the predicate throws', () => {
       expect(() =>
         should('throwing predicate', () => {
