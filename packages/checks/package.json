@@ -9,7 +9,7 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/checks"
   },
-  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions"],
+  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions", "tanstack-intent"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -22,7 +22,7 @@
       "import": "./dist/runtime.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "skills", "!skills/_artifacts"],
   "publishConfig": {
     "access": "public"
   },
@@ -30,9 +30,11 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "skills:validate": "intent validate"
   },
   "devDependencies": {
+    "@tanstack/intent": "^0.0.41",
     "typescript": "^5.3.3",
     "vite": "^6.4.2",
     "vitest": "^4.1.4"
