@@ -56,8 +56,8 @@ should(description, condition, context?)
 ```
 
 - `description`: What you're asserting (string)
-- `condition`: A boolean expression, **or a function returning a boolean** (see [Lazy conditions](#lazy-conditions-with-a-callback))
-- `context`: Optional object with debugging info, **or a function returning one** (evaluated lazily)
+- `condition`: A boolean expression, or a function returning a boolean
+- `context`: Optional object with debugging info, or a function returning one (evaluated lazily)
 
 ```typescript
 import { should } from '@scenetest/checks-react'
@@ -112,7 +112,7 @@ failed(description, context?)
 ```
 
 - `description`: What went wrong (string)
-- `context`: Optional object with debugging info, **or a function returning one** (evaluated lazily, only when `failed()` runs)
+- `context`: Optional object with debugging info, or a function returning one (evaluated lazily, only when `failed()` runs)
 
 ```typescript
 import { failed } from '@scenetest/checks-react'
