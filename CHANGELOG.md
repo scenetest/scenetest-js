@@ -4,6 +4,21 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.10.0] — 2026-06-05
+
+### New
+
+* **Teams everywhere.** Each scene now shows which team ran it — in the CLI output, the live dashboard, and reports. A new `--team <name>` flag (and a dashboard dropdown) lets you run or replay just one team.
+* **Clearer failures.** Failed scenes are set off with blank lines and a separator so they're easy to find and copy out of CI logs. Each failure now points at the exact source line that broke, with a couple of lines of surrounding code. The summary also lists scene counts per team.
+* **`/__scenetest/` landing page.** Visiting `/__scenetest/` now shows an index page; the test runner moved to `/__scenetest/runner`.
+* **Friendlier `should()` / `failed()`.** Both now accept a function for the condition (and `failed()` a lazy context), so you can compute values on the spot. Ships with a new inline-assertions Agent Skill that teaches the patterns.
+* **New ESLint rule `inline-server-fn`** — flags when a `serverCheck()` server function isn't written inline (the plugin can't extract it otherwise).
+
+### Fixes
+
+* `serverCheck()` extracted functions are now emitted as async.
+* Stripping a check call written without braces (e.g. `if (x) should(...)`) no longer drops the surrounding code.
+
 ## [0.9.2] — 2026-05-06
 
 * Fix bug with multiple panels showing
