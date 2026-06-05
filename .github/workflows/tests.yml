@@ -48,6 +48,12 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.58.1-noble
 
     steps:
+      # The container runs as a different user than the one that owns the
+      # mounted workspace, so git refuses to operate on it ("detected dubious
+      # ownership"). Mark the workspace safe before any git-touching step runs.
+      - name: Mark workspace as a safe git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
