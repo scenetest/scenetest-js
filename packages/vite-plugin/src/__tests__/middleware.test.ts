@@ -102,6 +102,14 @@ describe('scenetest middleware', () => {
       const res = await call(mw, 'GET', '/__scenetest/?run=report-x')
       expect(res.statusCode).toBe(200)
     })
+
+    it('serves the same HTML at /__scenetest/runner', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      const res = await call(mw, 'GET', '/__scenetest/runner')
+      expect(res.statusCode).toBe(200)
+      expect(res.headers['content-type']).toContain('text/html')
+      expect(res.body).toContain('importmap')
+    })
   })
 
   describe('GET /__scenetest/runs', () => {

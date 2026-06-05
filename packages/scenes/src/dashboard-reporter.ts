@@ -38,7 +38,7 @@ export class DashboardReporter {
 
   /** Dashboard URL for the user to open in a browser. */
   get dashboardUrl(): string {
-    return this.endpoint.replace('/events', '/dashboard')
+    return this.endpoint.replace('/events', '')
   }
 }
 
