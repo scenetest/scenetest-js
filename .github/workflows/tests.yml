@@ -41,11 +41,13 @@ jobs:
     timeout-minutes: 30
     # Run inside the official Playwright image: browsers and OS dependencies are
     # preinstalled, so there's no apt step and no browser download to stall.
-    # The tag MUST match the @playwright/test version in pnpm-lock.yaml — bump
-    # both together, or `playwright test` won't find the baked-in browsers and
-    # will fall back to downloading them.
+    # The tag MUST match the @playwright/test version installed by pnpm (pinned
+    # via pnpm.overrides in package.json) — bump both together, or `playwright
+    # test` won't find the baked-in browsers and will fall back to downloading
+    # them. The "Verify Playwright/image version match" step below fails loudly
+    # if they ever drift.
     container:
-      image: mcr.microsoft.com/playwright:v1.58.1-noble
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
 
     steps:
       # The container runs as a different user than the one that owns the
@@ -68,6 +70,23 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      # Guard against the container image tag silently drifting from the
+      # Playwright version pnpm actually installs. If they diverge, Playwright
+      # looks for browser binaries that aren't baked into the image and the run
+      # fails with a confusing "Executable doesn't exist" error — fail here
+      # instead with a clear message.
+      - name: Verify Playwright/image version match
+        run: |
+          IMAGE_TAG=v1.56.1-noble
+          INSTALLED=$(pnpm exec playwright --version | awk '{print $2}')
+          EXPECTED=${IMAGE_TAG#v}; EXPECTED=${EXPECTED%-noble}
+          echo "Image tag: $IMAGE_TAG (expects Playwright $EXPECTED)"
+          echo "Installed Playwright: $INSTALLED"
+          if [ "$INSTALLED" != "$EXPECTED" ]; then
+            echo "::error::Playwright version ($INSTALLED) does not match container image tag ($IMAGE_TAG). Bump the image tag and the pin in package.json together."
+            exit 1
+          fi
 
       - name: Build packages
         run: pnpm build
