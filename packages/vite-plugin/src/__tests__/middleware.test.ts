@@ -1,8 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { Readable } from 'stream'
+import { spawn } from 'child_process'
 import { createScenetestMiddleware } from '../middleware.js'
+
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+}))
 
 // Dev-server methods used by the middleware. Only `/__scenetest/run` reads
 // from the server (ssrLoadModule). The routes under test don't, so a thin
@@ -66,6 +72,21 @@ async function call(
   )
   // For routes that delegate to next() the test treats that as "no match"
   if (nextCalled && !res.statusCode) res.statusCode = -1
+  return res
+}
+
+async function callWithBody(
+  mw: ReturnType<typeof createScenetestMiddleware>,
+  method: string,
+  url: string,
+  body: string
+): Promise<MockResponse> {
+  const res = mockRes()
+  const req = Readable.from([body]) as unknown as Record<string, unknown>
+  ;(req as { method: string }).method = method
+  ;(req as { url: string }).url = url
+  ;(req as { headers: Record<string, string> }).headers = {}
+  await mw(req as never, res as never, () => {})
   return res
 }
 
@@ -232,6 +253,52 @@ describe('scenetest middleware', () => {
       const mw = createScenetestMiddleware(stubServer(), tmp)
       const res = await call(mw, 'GET', '/__scenetest/vendor/react.js')
       expect(res.statusCode).toBe(404)
+    })
+  })
+
+  describe('POST /__scenetest/replay', () => {
+    const fakeChild = { exitCode: null, kill: vi.fn(), on: vi.fn() }
+
+    beforeEach(() => {
+      vi.mocked(spawn).mockReset()
+      vi.mocked(spawn).mockReturnValue(fakeChild as never)
+    })
+
+    it('passes --team <name> to the runner when team is provided', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      const res = await callWithBody(mw, 'POST', '/__scenetest/replay', '{"team":"French Content"}')
+      expect(res.statusCode).toBe(200)
+      expect(spawn).toHaveBeenCalledTimes(1)
+      const args = vi.mocked(spawn).mock.calls[0][1] as string[]
+      expect(args).toContain('--team')
+      const teamIdx = args.indexOf('--team')
+      expect(args[teamIdx + 1]).toBe('French Content')
+    })
+
+    it('omits --team when no team is provided', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      const res = await callWithBody(mw, 'POST', '/__scenetest/replay', '{}')
+      expect(res.statusCode).toBe(200)
+      const args = vi.mocked(spawn).mock.calls[0][1] as string[]
+      expect(args).not.toContain('--team')
+    })
+
+    it('places --team before the resolved scene file path', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      const res = await callWithBody(
+        mw,
+        'POST',
+        '/__scenetest/replay',
+        '{"team":"Spanish","file":"login.spec.ts"}'
+      )
+      expect(res.statusCode).toBe(200)
+      const args = vi.mocked(spawn).mock.calls[0][1] as string[]
+      // spawn('npx', ['scenetest', ...args]) — drop the leading 'scenetest'
+      expect(args[0]).toBe('scenetest')
+      expect(args[1]).toBe('--team')
+      expect(args[2]).toBe('Spanish')
+      expect(args[3]).toContain('login.spec.ts')
+      expect(args[3]).toContain(path.join('scenetest', 'scenes'))
     })
   })
 })
