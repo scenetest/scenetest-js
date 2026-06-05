@@ -52,7 +52,7 @@ export function PageActions({ rawMarkdown }: PageActionsProps) {
   const items: { label: string; href: string; external?: boolean }[] = [
     { label: 'View Markdown', href: mdUrl, external: true },
     { label: 'Open in ChatGPT', href: `https://chatgpt.com/?hints=search&q=${encoded}`, external: true },
-    { label: 'Open in Claude', href: `https://claude.ai/new?q=${encoded}`, external: true },
+    { label: 'Open in Claude Code', href: `https://claude.ai/code?q=${encoded}`, external: true },
     {
       label: 'Open in Cursor',
       href: `cursor://anysphere.cursor-deeplink/prompt?text=${encoded}`,
