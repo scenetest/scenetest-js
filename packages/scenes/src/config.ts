@@ -187,3 +187,16 @@ export function defineConfig(config: ScenetestConfig): ScenetestConfig {
 export function defineTeam(team: TeamDef): TeamDef {
   return team
 }
+
+/**
+ * Restrict a team pool to a single team by `meta.name`.
+ * Throws with a helpful list of available team names on no match.
+ */
+export function filterTeamsByName(teams: ResolvedTeam[], name: string): ResolvedTeam[] {
+  const matched = teams.filter(t => t.meta.name === name)
+  if (matched.length === 0) {
+    const available = teams.map(t => t.meta.name ?? '(unnamed)').join(', ')
+    throw new Error(`--team "${name}" not found. Available teams: ${available}`)
+  }
+  return matched
+}

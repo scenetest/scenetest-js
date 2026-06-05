@@ -3,7 +3,7 @@
 import { Command } from 'commander'
 import path from 'path'
 import fs from 'fs'
-import { loadConfig } from './config.js'
+import { loadConfig, filterTeamsByName } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
 import { init } from './init.js'
 import { finish as soundFinish, resolveSoundEnabled } from './sound.js'
@@ -43,14 +43,13 @@ program
       // Filter by --team <name> if provided
       let teams = allTeams
       if (options.team) {
-        const wanted = options.team
-        teams = allTeams.filter(t => t.meta.name === wanted)
-        if (teams.length === 0) {
-          const available = allTeams.map(t => t.meta.name ?? '(unnamed)').join(', ')
-          console.error(`Error: --team "${wanted}" not found. Available teams: ${available}`)
+        try {
+          teams = filterTeamsByName(allTeams, options.team)
+        } catch (err) {
+          console.error(`Error: ${(err as Error).message}`)
           process.exit(1)
         }
-        console.log(`  Team filter: ${wanted} (${teams.length}/${allTeams.length} teams)\n`)
+        console.log(`  Team filter: ${options.team} (${teams.length}/${allTeams.length} teams)\n`)
       }
 
       // Override config with CLI options
