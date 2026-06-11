@@ -14,11 +14,8 @@ Scenetest runs with the same trust model as the rest of your development tooling
 
 ## Test credentials are fixtures, not secrets
 
-Actor passwords live in your actor files, checked into the repo and deployed to your test box. Assume they're breached. By convention, make them all the same — one obviously fake value like `password` or `test123` across every actor — partly as a standing reminder of their status, and partly as a forcing function: fixtures that only log into seeded test accounts can't accidentally be pointed at an environment with real users, because nothing would log in.
+Actor passwords are checked into the repo and deployed to your test box — assume they're breached. By convention, give every actor the same obviously fake password (`password`, `test123`): it reminds you they're not secrets, and fixtures that only log into seeded accounts can't be pointed at an environment with real users.
 
-Two things follow from assuming the breach:
+It follows that your test environment must tolerate a hostile logged-in user — the same property production needs so users can't elevate privileges — and that session-derived artifacts (storage state, DOM, dashboard events, reports) are only as private as the box itself. Defend the environment's perimeter, not the credentials.
 
-- **Your test environment must tolerate a hostile logged-in user.** This is not a new requirement — it's the same property you already need in production so that users can't elevate privileges. A breached test credential should buy an attacker exactly what any user has: one seeded account on a disposable box.
-- **Session-derived artifacts inherit the same status.** Warmup storage state (cookies, tokens), DOM contents, dashboard events, and run reports all come from those sessions. Scenetest keeps typed values out of dashboard events and report timelines, but treat all run artifacts as visible to anyone who can reach the test environment, and keep the environment's perimeter — not the credentials — as the boundary you actually defend.
-
-One line to keep sharp: **actor credentials are fixtures; infrastructure credentials are not.** Database connection strings and API keys in `config.server` are real secrets — keep them in environment variables, never in actor files or team tags. Tags ride on dashboard events by design, so anything in a tag is visible wherever events go.
+The exception: **infrastructure credentials are real secrets.** Keep database URLs and API keys in environment variables — never in actor files or team tags (tags ride on dashboard events by design).
