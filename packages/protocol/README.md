@@ -50,3 +50,14 @@ Two levels of validation, for two jobs:
 
 All validators tolerate unknown extra fields; additive changes are
 non-breaking and do not bump `PROTOCOL_VERSION`.
+
+## Payloads are viewer-visible
+
+Events fan out to every connected dashboard viewer and persist in run
+artifacts (`.jsonl`, reports). Producers must not place secrets in event
+fields: action targets carry selectors only (never typed values), and
+`TeamMeta.tags` are public by design. Test-account credentials are
+fixtures, not secrets — see the
+[security FAQ](https://scenetest.msnook.xyz/faq/security) — but infrastructure
+credentials (database URLs, API keys) must never appear in any event
+field.

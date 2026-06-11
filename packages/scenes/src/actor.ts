@@ -369,7 +369,10 @@ class ActionChainImpl implements ActionChain {
   }
 
   typeInto(selector: Selector, value: string): ActionChain {
-    const target = `${formatSelector(selector)}=${value}`
+    // Selector only — never the typed value. The target rides on dashboard
+    // events and the persisted timeline, and the value may be a credential
+    // (the builtin login macro types [self.password]).
+    const target = formatSelector(selector)
     return this.addAction('typeInto', target, async () => {
       const locator = resolveSelector(this.getScope(), selector)
       if (this.isKeyboard) {
@@ -401,7 +404,8 @@ class ActionChainImpl implements ActionChain {
   }
 
   select(selector: Selector, value: string): ActionChain {
-    const target = `${formatSelector(selector)}=${value}`
+    // Selector only — see typeInto.
+    const target = formatSelector(selector)
     return this.addAction('select', target, async () => {
       const locator = resolveSelector(this.getScope(), selector)
       if (this.isKeyboard) {

@@ -11,3 +11,11 @@ Yes. Scenetest is designed with security in mind, even for dev tooling:
 **Production builds strip everything.** The Vite plugin automatically removes all Scenetest imports and function calls in production builds. No test code, no dev panel, no server endpoints - zero bundle impact and zero attack surface in production.
 
 Scenetest runs with the same trust model as the rest of your development tooling. If you trust your source code and your build process, Scenetest should not increase your risk.
+
+## Test credentials are fixtures, not secrets
+
+Actor passwords are checked into the repo and deployed to your test box — assume they're breached. By convention, give every actor the same obviously fake password (`password`, `test123`): it reminds you they're not secrets, and fixtures that only log into seeded accounts can't be pointed at an environment with real users.
+
+It follows that your test environment must tolerate a hostile logged-in user — the same property production needs so users can't elevate privileges — and that session-derived artifacts (storage state, DOM, dashboard events, reports) are only as private as the box itself. Defend the environment's perimeter, not the credentials.
+
+The exception: **infrastructure credentials are real secrets.** Keep database URLs and API keys in environment variables — never in actor files or team tags (tags ride on dashboard events by design).
