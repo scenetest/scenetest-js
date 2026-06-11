@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@scenetest/checks": "workspace:*",
+    "@scenetest/protocol": "workspace:*",
     "playwright": "^1.40.0",
     "commander": "^12.0.0",
     "glob": "^11.1.0",

@@ -4,6 +4,10 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## @scenetest/protocol 0.10.0 — 2026-06-11
+
+* **New package: `@scenetest/protocol`** — the typed event and command vocabulary shared by the CLI, Vite plugin, dashboard, and the cloud service (architecture step 1 of the scenetest-cloud plan). Defines the `RunEvent` union (the existing `run:start` … `run:end` wire format, unchanged, plus a new `run:progress` rollup event for home-view tiles), the `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`), and a zero-dependency codec: strict `decodeEvent()`/`decodeCommand()` that never throw, and `isEventShaped()` for relays that must pass through event types newer than themselves. `@scenetest/scenes` now sources `TeamMeta`, `RunSummary`, and `DashboardEvent` (a back-compat alias of `RunEvent`) from it, and the Vite middleware validates inbound CLI events with it. No wire-format or behavior changes.
+
 ## @scenetest/vite-plugin 0.10.1 — 2026-06-11
 
 * Expose `./dashboard` in the package `exports` map. `dist/dashboard.js` and its types were already shipped but couldn't be imported under `moduleResolution: Bundler` or esbuild. External consumers (e.g. scenetest-cloud's Worker-rendered per-run dashboard) can now `import { generateDashboardHtml } from '@scenetest/vite-plugin/dashboard'` without a `pnpm.patchedDependencies` patch. Note: this subpath is a stopgap — the planned dashboard widget extraction (`mountDashboard` + transport adapters in a dedicated package) will supersede it.

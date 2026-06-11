@@ -1,6 +1,9 @@
 import type { Page, BrowserContext, Browser } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
+import type { RunEvent, RunSummary, TeamMeta } from '@scenetest/protocol'
 import type { DeviceProfile } from './devices.js'
+
+export type { RunEvent, RunSummary }
 
 /**
  * Factory function for creating a new browser page + context.
@@ -70,21 +73,7 @@ export type TeamConfig = Record<string, ActorConfig>
  * }
  * ```
  */
-export interface TeamMeta {
-  /** Human-readable team name (used in reports and CLI output) */
-  name?: string
-
-  /**
-   * Arbitrary key-value tags for filtering and `[team.field]` interpolation.
-   *
-   * @example
-   * ```ts
-   * tags: { locale: 'fr', region: 'europe', tier: 'premium' }
-   * // In DSL: openTo /categories/[team.locale]
-   * ```
-   */
-  tags?: Record<string, string>
-}
+export type { TeamMeta } from '@scenetest/protocol'
 
 /**
  * Full team definition — actors plus optional metadata.
@@ -411,18 +400,8 @@ export interface RunReport {
   timestamp: string
   duration: number
   scenes: SceneReport[]
-  summary: {
-    scenes: number
-    completed: number
-    failed: number
-    assertions: {
-      total: number
-      passed: number
-      failed: number
-    }
-    warnings: number
-    consoleErrors: number
-  }
+  /** Aggregate counts — same shape that rides on the `run:end` protocol event. */
+  summary: RunSummary
   /** Present when this run was triggered by swarm mode */
   swarm?: SwarmReport
 }
@@ -446,16 +425,11 @@ export interface ErrorSelector {
 /**
  * Events streamed from the CLI runner to the Vite dev server
  * for the live dashboard at /__scenetest/dashboard.
+ *
+ * The vocabulary is defined by `@scenetest/protocol` (where it is named
+ * `RunEvent`); this alias is kept for backwards compatibility.
  */
-export type DashboardEvent =
-  | { type: 'run:start'; timestamp: number; sceneCount: number }
-  | { type: 'scene:start'; timestamp: number; name: string; file: string; actors: string[]; teamIndex: number; team: TeamMeta }
-  | { type: 'action:start'; timestamp: number; actor: string; action: string; target?: string }
-  | { type: 'action:end'; timestamp: number; actor: string; action: string; target?: string; duration: number; error?: string }
-  | { type: 'assertion'; timestamp: number; actor?: string; description: string; result: boolean }
-  | { type: 'warning'; timestamp: number; actor: string; selector: string; message: string }
-  | { type: 'scene:end'; timestamp: number; name: string; status: string; duration: number; error?: string; teamIndex: number; team: TeamMeta }
-  | { type: 'run:end'; timestamp: number; duration: number; summary: RunReport['summary'] }
+export type DashboardEvent = RunEvent
 
 // ─── Swarm Mode Types ────────────────────────────────────────────────
 

@@ -44,6 +44,7 @@
     "magic-string": "^0.30.10",
     "preact": "^10.22.0",
     "@scenetest/checks": "workspace:*",
+    "@scenetest/protocol": "workspace:*",
     "@scenetest/checks-panel": "workspace:*",
     "@scenetest/scenes-panel": "workspace:*"
   },
