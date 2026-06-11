@@ -74,6 +74,22 @@ export interface ServerContext {
 }
 
 /**
+ * Helpers injected into a `serverCheck()` server function when it executes
+ * in the dev server (the third argument of the generated wrapper, after the
+ * author's `server` and `data` parameters).
+ *
+ * `signal` aborts when the per-check timeout elapses (the Vite plugin's
+ * `serverCheckTimeout` option, default 5000ms). Long-running checks should
+ * observe it to stop early; the middleware enforces the deadline either way
+ * and reports a timed-out check as a failed assertion.
+ */
+export interface ServerCheckHelpers {
+  should: (description: string, condition: boolean, context?: Record<string, unknown>) => void
+  failed: (description: string, context?: Record<string, unknown>) => void
+  signal: AbortSignal
+}
+
+/**
  * Internal RPC payload sent from browser to server
  */
 export interface AssertionRpcPayload {

@@ -10,6 +10,7 @@ export type {
   AssertServerFn,
   AssertDataFn,
   ServerContext,
+  ServerCheckHelpers,
   AssertionRpcPayload,
   AssertionRpcResponse,
 } from './types.js'

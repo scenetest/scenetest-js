@@ -16,7 +16,7 @@ describe('generateVirtualModuleCode', () => {
     expect(code).toBe('export const assertions = {}')
   })
 
-  it('should generate serverFn with { should, failed } parameters', () => {
+  it('should generate serverFn with { should, failed, signal } parameters', () => {
     registerAssertions([
       {
         id: 'test-id',
@@ -29,10 +29,10 @@ describe('generateVirtualModuleCode', () => {
 
     const code = generateVirtualModuleCode()
 
-    // The generated code MUST use { should, failed } so that:
+    // The generated code MUST use { should, failed, signal } so that:
     // 1. User code can call should() and failed() in serverFn
-    // 2. The middleware can pass { should, failed } helpers
-    expect(code).toContain('{ should, failed }')
+    // 2. The middleware can pass { should, failed, signal } helpers
+    expect(code).toContain('{ should, failed, signal }')
     expect(code).not.toContain('{ pass, fail }')
   })
 
@@ -93,7 +93,7 @@ describe('generateVirtualModuleCode', () => {
 
     const code = generateVirtualModuleCode()
 
-    expect(code).toContain('async (server, data, { should, failed })')
+    expect(code).toContain('async (server, data, { should, failed, signal })')
     // The whole module must be valid JS — `await` outside async would throw.
     expect(() => parse(code, { sourceType: 'module' })).not.toThrow()
   })
@@ -113,7 +113,7 @@ describe('generateVirtualModuleCode', () => {
 
     // Author destructured `data` — the wrapper must keep that pattern so the
     // body references (`id`, `status`) still resolve.
-    expect(code).toContain('async (server, { id, status }, { should, failed })')
+    expect(code).toContain('async (server, { id, status }, { should, failed, signal })')
     expect(() => parse(code, { sourceType: 'module' })).not.toThrow()
   })
 
@@ -130,6 +130,6 @@ describe('generateVirtualModuleCode', () => {
 
     const code = generateVirtualModuleCode()
 
-    expect(code).toContain('async (server, data, { should, failed })')
+    expect(code).toContain('async (server, data, { should, failed, signal })')
   })
 })

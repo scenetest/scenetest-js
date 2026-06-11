@@ -1,12 +1,18 @@
 import type { Connect, ViteDevServer } from 'vite'
-import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
+import type {
+  AssertionRpcPayload,
+  AssertionRpcResponse,
+  AssertionResult,
+  ServerCheckHelpers,
+  ServerContext,
+} from '@scenetest/checks'
 import { createReceiverApp, toNodeHandler, JsonlSink, type Sink } from '@scenetest/receiver'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { createRequire } from 'module'
-import { RESOLVED_VIRTUAL_MODULE_ID } from './virtual-module.js'
+import { VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
 import { generateDashboardHtml } from './dashboard.js'
@@ -169,6 +175,52 @@ export function failed(description: string, context?: Record<string, unknown>): 
 }
 
 /**
+ * Loads and evaluates a module through the dev server's plugin pipeline
+ * (so the scenetest plugin's resolveId/load hooks apply).
+ */
+type ServerModuleLoader = (id: string) => Promise<Record<string, unknown>>
+
+/**
+ * Default per-serverCheck() execution timeout (ms). Overridable via the
+ * middleware's `serverCheckTimeout` option (threaded from the plugin option
+ * of the same name).
+ */
+const DEFAULT_SERVER_CHECK_TIMEOUT_MS = 5000
+
+/**
+ * Build the module loader used to evaluate the virtual assertions module and
+ * the user's scenetest config.
+ *
+ * On vite 6+ the Environments API is available: we create a server module
+ * runner against the `ssr` environment (once per middleware instance, reused
+ * across requests) and import through it. On vite 5 — or any vite build that
+ * doesn't export `createServerModuleRunner` — we fall back to the legacy
+ * `server.ssrLoadModule`, which the wide peer range still requires.
+ */
+async function createServerModuleLoader(server: ViteDevServer): Promise<ServerModuleLoader> {
+  const ssrEnvironment = (server as { environments?: Record<string, unknown> }).environments?.ssr
+  if (ssrEnvironment) {
+    try {
+      // Dynamic import + existence check: on vite 5 the import succeeds but
+      // the export is absent, so we must not reference it statically.
+      const vite = (await import('vite')) as unknown as {
+        createServerModuleRunner?: (
+          environment: unknown,
+          options?: { hmr?: false }
+        ) => { import: (id: string) => Promise<Record<string, unknown>> }
+      }
+      if (typeof vite.createServerModuleRunner === 'function') {
+        const runner = vite.createServerModuleRunner(ssrEnvironment, { hmr: false })
+        return (id) => runner.import(id)
+      }
+    } catch {
+      // Fall through to ssrLoadModule
+    }
+  }
+  return (id) => server.ssrLoadModule(id)
+}
+
+/**
  * Create the scenetest middleware for handling RPC requests.
  *
  * Observer and recorder modules are served via Vite's resolveId hook
@@ -183,7 +235,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
 export function createScenetestMiddleware(
   server: ViteDevServer,
   root: string,
-  options: { reportsDir?: string; jsonl?: boolean | string } = {}
+  options: { reportsDir?: string; jsonl?: boolean | string; serverCheckTimeout?: number } = {}
 ): Connect.NextHandleFunction {
   const eventHub = new EventHub()
   let activeReplay: ChildProcess | null = null
@@ -207,6 +259,17 @@ export function createScenetestMiddleware(
     sinks.push(new JsonlSink(jsonlPath))
   }
   const receiverHandler = toNodeHandler(createReceiverApp({ sinks }))
+
+  // Per-serverCheck() execution deadline for /__scenetest/run.
+  const serverCheckTimeoutMs = options.serverCheckTimeout ?? DEFAULT_SERVER_CHECK_TIMEOUT_MS
+
+  // Module loader for serverFns + config: created lazily on the first RPC,
+  // then reused for every request (the module runner keeps its own cache).
+  let moduleLoaderPromise: Promise<ServerModuleLoader> | null = null
+  const getModuleLoader = (): Promise<ServerModuleLoader> => {
+    if (!moduleLoaderPromise) moduleLoaderPromise = createServerModuleLoader(server)
+    return moduleLoaderPromise
+  }
 
   return async (req, res, next) => {
     // ── Preact app shell (index + runner) ───────────────────
@@ -422,71 +485,129 @@ export function createScenetestMiddleware(
 
     const { id, title, data } = payload
 
-    try {
-      // Load the virtual module containing all serverFns
-      const virtualModule = await server.ssrLoadModule(RESOLVED_VIRTUAL_MODULE_ID)
-      const assertions = virtualModule.assertions as Record<string, (server: ServerContext, data: unknown) => void | Promise<void>>
+    const errorDetail = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
-      // Get the serverFn for this ID
-      const serverFn = assertions[id] as (
-        server: ServerContext,
-        data: unknown,
-        helpers: { should: typeof should; failed: typeof failed }
-      ) => void | Promise<void>
+    const failResult = (description: string, context?: Record<string, unknown>): AssertionResult => ({
+      type: 'fail',
+      description,
+      result: false,
+      timestamp: Date.now(),
+      context,
+    })
 
-      if (!serverFn) {
-        const response: AssertionRpcResponse = {
-          success: false,
-          results: [],
-          error: `No serverFn found for id: ${id}`,
-        }
-        res.statusCode = 200
-        res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify(response))
-        return
+    // Always answer HTTP 200 with a well-formed AssertionRpcResponse:
+    // middleware-level failures surface as a normalized fail result so the
+    // observer panel shows a failed check instead of an opaque 500.
+    const respond = (response: AssertionRpcResponse): void => {
+      let body: string
+      try {
+        body = JSON.stringify(response)
+      } catch (err) {
+        // Non-serializable assertion context (circular refs, BigInt, …)
+        body = JSON.stringify({
+          success: true,
+          results: [failResult(`${title}: failed to serialize results`, { error: errorDetail(err) })],
+        } satisfies AssertionRpcResponse)
       }
-
-      // Load config to get server functions
-      const config = await loadConfig(root, (id) => server.ssrLoadModule(id))
-      const serverContext = (config.server || {}) as ServerContext
-
-      // Execute serverFn with AsyncLocalStorage for result collection
-      const results: AssertionResult[] = []
-
-      await assertionStorage.run(results, async () => {
-        try {
-          // Pass the should/failed helpers directly to the serverFn
-          await serverFn(serverContext, data, { should, failed })
-        } catch (err) {
-          results.push({
-            type: 'fail',
-            description: `${title}: serverFn threw an error`,
-            result: false,
-            timestamp: Date.now(),
-            context: { error: err instanceof Error ? err.message : String(err) },
-          })
-        }
-      })
-
-      const response: AssertionRpcResponse = {
-        success: true,
-        results,
-      }
-
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify(response))
-    } catch (err) {
-      console.error('[vite-plugin-scenetest] Middleware error:', err)
-      const response: AssertionRpcResponse = {
-        success: false,
-        results: [],
-        error: err instanceof Error ? err.message : String(err),
-      }
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify(response))
+      res.end(body)
     }
+
+    type ServerCheckFn = (
+      server: ServerContext,
+      data: unknown,
+      helpers: ServerCheckHelpers
+    ) => void | Promise<void>
+
+    // Load the virtual module containing all serverFns
+    let serverFn: ServerCheckFn | undefined
+    try {
+      const loadModule = await getModuleLoader()
+      const virtualModule = await loadModule(VIRTUAL_MODULE_ID)
+      const assertions = virtualModule.assertions as Record<string, ServerCheckFn>
+      serverFn = assertions[id]
+    } catch (err) {
+      console.error('[vite-plugin-scenetest] Failed to load server assertions:', err)
+      respond({
+        success: true,
+        results: [failResult(`${title}: failed to load server assertions`, { error: errorDetail(err) })],
+      })
+      return
+    }
+
+    if (!serverFn) {
+      respond({
+        success: true,
+        results: [failResult(`${title}: no serverCheck() registered for id ${id}`, { id })],
+      })
+      return
+    }
+    const checkFn: ServerCheckFn = serverFn
+
+    // Load config to get server resources. loadConfig() swallows load errors
+    // (warn + empty config), so capture the underlying error here to surface
+    // it as a failed check instead of silently running the serverFn against
+    // an unexpectedly empty server context.
+    let serverContext: ServerContext
+    try {
+      let configLoadFailed = false
+      let configLoadError: unknown
+      const loadModule = await getModuleLoader()
+      const config = await loadConfig(root, async (configId) => {
+        try {
+          return await loadModule(configId)
+        } catch (err) {
+          configLoadFailed = true
+          configLoadError = err
+          throw err
+        }
+      })
+      if (configLoadFailed) throw configLoadError
+      serverContext = (config.server || {}) as ServerContext
+    } catch (err) {
+      respond({
+        success: true,
+        results: [failResult(`${title}: failed to load scenetest config`, { error: errorDetail(err) })],
+      })
+      return
+    }
+
+    // Execute the serverFn with AsyncLocalStorage for result collection.
+    // Each invocation gets an AbortSignal that fires at the deadline; since
+    // user code is free to ignore it, the invocation is also raced against
+    // the same deadline so the HTTP response always returns.
+    const results: AssertionResult[] = []
+    const signal = AbortSignal.timeout(serverCheckTimeoutMs)
+    let timedOut = false
+
+    await assertionStorage.run(results, async () => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const deadline = new Promise<void>((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true
+          resolve()
+        }, serverCheckTimeoutMs)
+      })
+      // Pass the should/failed helpers (and the abort signal) to the serverFn
+      const invocation = Promise.resolve().then(() => checkFn(serverContext, data, { should, failed, signal }))
+      // A serverFn that rejects after the deadline must not crash the dev
+      // server with an unhandled rejection.
+      invocation.catch(() => {})
+      try {
+        await Promise.race([invocation, deadline])
+      } catch (err) {
+        results.push(failResult(`${title}: serverFn threw an error`, { error: errorDetail(err) }))
+      } finally {
+        clearTimeout(timer)
+      }
+    })
+
+    if (timedOut) {
+      results.push(failResult(`${title}: serverCheck timed out after ${serverCheckTimeoutMs}ms`))
+    }
+
+    respond({ success: true, results })
   }
 }
 
