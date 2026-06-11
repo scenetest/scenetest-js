@@ -21,6 +21,8 @@ actors/team-maria.ts:
 
 If a scene calls `actor('existing-friend')`, that actor must already be friends with `actor('primary-learner')` in the database. The actor files don't create these relationships -- your seed data does.
 
+A note on the passwords: they're fixtures, not secrets. Use one obviously fake value (like `test123` above) for every actor, and assume it's public -- see [Is Scenetest Safe?](/faq/security) for what that implies about your test environment.
+
 ## Step 1: Identify Roles From Your Scenes
 
 Start with the scenes you want to test. Each distinct persona in a scene becomes a **role**. Name roles by their relationship to the story, not by system role:
