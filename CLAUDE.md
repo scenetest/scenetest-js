@@ -24,7 +24,7 @@ pnpm -r test          # Run all unit tests across packages
 ## Package Structure
 
 ```
-packages/
+packages/                   # Published packages
 ├── checks/                 # Core library — should(), failed(), serverCheck(), match(); framework bindings as subpath exports (./react, ./vue, ./solid, ./svelte) with optional peer deps
 ├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
 ├── receiver/               # Receiver core — framework-agnostic Hono app that accepts protocol events and fans them out to sinks
@@ -32,11 +32,13 @@ packages/
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware; observer + recorder panel UIs live in src/panels/ (subpath exports ./panels/observer, ./panels/recorder)
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
-├── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
-├── example-app-react/      # React demo app with working Scene tests
-├── example-app-vue/        # Vue demo app
-├── example-app-solid/      # Solid demo app
-└── example-app-svelte/     # Svelte 5 demo app
+└── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
+
+examples/                   # Private workspace apps (never published) — the dev loop, e2e harness, and per-framework compile-tests for the consumer API
+├── react/                  # React demo app (package name example-app-react) — root `pnpm dev` and the Playwright e2e suite boot this one; has working Scene tests
+├── vue/                    # Vue demo app (example-app-vue)
+├── solid/                  # Solid demo app (example-app-solid)
+└── svelte/                 # Svelte 5 demo app (example-app-svelte)
 ```
 
 ---
@@ -115,7 +117,7 @@ The dashboard UI extracted from the Vite plugin's inline HTML string so dev and 
 - `syntaxes/scenetest-spec.tmLanguage.json` — TextMate grammar for `.spec.md` scene specs
 - `language-configuration.json` — Comment toggling, folding, bracket config
 
-### Example App (`packages/example-app-react/src/`)
+### Example App (`examples/react/src/`)
 - `App.tsx` — Working example with `should()`, `failed()`, `useCheck`, multi-context comparisons
 
 ---
