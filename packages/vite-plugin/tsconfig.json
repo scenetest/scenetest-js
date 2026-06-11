@@ -4,6 +4,10 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"],
-  "exclude": ["src/dev-panel", "src/**/__tests__"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/**/__tests__"
+  ]
 }
