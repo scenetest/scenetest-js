@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { should, failed, serverCheck, useCheck } from '@scenetest/checks-react'
+import { should, failed, serverCheck, useCheck } from '@scenetest/checks/react'
 import { useProfile, useUpdateProfile, PROFILE_QUERY_KEY } from './hooks'
 import { getProfileFromDb, type Profile } from './db'
 

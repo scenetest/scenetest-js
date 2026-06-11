@@ -87,7 +87,7 @@ Scenetest functions from your production build. Zero production footprint (not e
 The real power of inline checks shows up in your mutation callbacks, effects, and event handlers &mdash; the places where external test frameworks can't easily reach:
 
 ```tsx
-import { should, serverCheck, match } from '@scenetest/checks-react'
+import { should, serverCheck, match } from '@scenetest/checks/react'
 
 function EditPostForm({ post }) {
   const queryClient = useQueryClient()

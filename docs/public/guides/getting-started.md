@@ -4,21 +4,15 @@ This guide walks you through adding Scenetest to an existing Vite project. By th
 
 ## 1. Install and Set Up
 
-Install the three Scenetest packages. Pick the one that matches your framework:
+Install the three Scenetest packages:
 
 ```bash
-# React
-pnpm add -D @scenetest/checks-react @scenetest/vite-plugin @scenetest/scenes
-
-# Vue
-pnpm add -D @scenetest/checks-vue @scenetest/vite-plugin @scenetest/scenes
-
-# Solid
-pnpm add -D @scenetest/checks-solid @scenetest/vite-plugin @scenetest/scenes
-
-# Svelte
-pnpm add -D @scenetest/checks-svelte @scenetest/vite-plugin @scenetest/scenes
+pnpm add -D @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
 ```
+
+Framework bindings are subpaths of `@scenetest/checks`: import from
+`@scenetest/checks/react`, `@scenetest/checks/vue`, `@scenetest/checks/solid`,
+or `@scenetest/checks/svelte` depending on your framework.
 
 Add the Vite plugin:
 
@@ -152,7 +146,7 @@ Here's the simplest possible check. Pick a component that receives data and add 
 
 ```tsx
 // src/components/UserProfile.tsx
-import { should } from '@scenetest/checks-react'
+import { should } from '@scenetest/checks/react'
 
 function UserProfile({ user }) {
   should('user should be loaded', user !== undefined)
@@ -180,7 +174,7 @@ if (items.some(item => item.price < 0)) {
 The real power of inline checks shows up in your mutation callbacks, effects, and event handlers -- the places where external test frameworks can't easily reach. For example, inside an `onSettled` callback after a mutation:
 
 ```tsx
-import { should } from '@scenetest/checks-react'
+import { should } from '@scenetest/checks/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 function EditPostForm({ post }) {
@@ -229,7 +223,7 @@ export default defineConfig({
 Then use `serverCheck()` inside your component to compare client and server state:
 
 ```tsx
-import { should, serverCheck, match } from '@scenetest/checks-react'
+import { should, serverCheck, match } from '@scenetest/checks/react'
 
 // inside your onSettled callback:
 serverCheck(

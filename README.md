@@ -13,18 +13,11 @@ _Evaluate your product, not your tests. A Javascript testing framework with inli
 ## Installation
 
 ```bash
-# For React apps
-pnpm add @scenetest/checks-react @scenetest/vite-plugin @scenetest/scenes
-
-# For Vue apps
-pnpm add @scenetest/checks-vue @scenetest/vite-plugin @scenetest/scenes
-
-# For Solid apps
-pnpm add @scenetest/checks-solid @scenetest/vite-plugin @scenetest/scenes
-
-# For Svelte apps
-pnpm add @scenetest/checks-svelte @scenetest/vite-plugin @scenetest/scenes
+pnpm add @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
 ```
+
+Framework bindings ship as subpaths of `@scenetest/checks` — import from
+`@scenetest/checks/react`, `/vue`, `/solid`, or `/svelte`.
 
 ## Quick Start
 
@@ -42,7 +35,7 @@ export default defineConfig({
 **2. Write inline assertions in components:**
 
 ```tsx
-import { should, failed } from '@scenetest/checks-react'
+import { should, failed } from '@scenetest/checks/react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)
@@ -121,10 +114,10 @@ pnpm scenetest
 | `@scenetest/vite-plugin` | Vite plugin for production stripping and dev panel |
 | `@scenetest/scenes` | CLI runner for scene specs |
 | `@scenetest/checks` | Core `should()`, `failed()`, `serverCheck()` functions |
-| `@scenetest/checks-react` | React bindings with `useCheck` hook |
-| `@scenetest/checks-vue` | Vue bindings with `watchCheck` composable |
-| `@scenetest/checks-solid` | Solid bindings with `createCheck` primitive |
-| `@scenetest/checks-svelte` | Svelte bindings with `checkEffect` helper |
+| `@scenetest/checks/react` | React subpath with `useCheck` hook |
+| `@scenetest/checks/vue` | Vue subpath with `watchCheck` composable |
+| `@scenetest/checks/solid` | Solid subpath with `createCheck` primitive |
+| `@scenetest/checks/svelte` | Svelte subpath with `checkEffect` helper |
 
 ## FAQ
 

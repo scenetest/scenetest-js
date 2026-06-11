@@ -82,7 +82,7 @@ For the complete `.spec.md` format rules, interpolation, cleanup/setup directive
 
 ```tsx
 // components/ProfileForm.tsx
-import { should, failed } from '@scenetest/checks-react'
+import { should, failed } from '@scenetest/checks/react'
 
 function ProfileForm({ user }) {
   should('user should be available', user !== undefined)

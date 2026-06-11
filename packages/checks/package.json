@@ -27,6 +27,22 @@
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js"
+    },
+    "./solid": {
+      "types": "./dist/solid.d.ts",
+      "import": "./dist/solid.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte.d.ts",
+      "import": "./dist/svelte.js"
     }
   },
   "files": [
@@ -48,6 +64,31 @@
     "@tanstack/intent": "^0.0.41",
     "typescript": "^5.3.3",
     "vite": "^6.4.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@types/react": "^18.0.0",
+    "react": "^18.3.0",
+    "vue": "^3.5.0",
+    "solid-js": "^1.9.11",
+    "svelte": "^5.53.5"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "vue": "^3.3.0",
+    "solid-js": "^1.8.0",
+    "svelte": "^5.53.5"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    }
   }
 }

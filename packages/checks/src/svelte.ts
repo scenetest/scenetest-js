@@ -7,7 +7,7 @@
  * @example
  * ```svelte
  * <script>
- * import { checkEffect, serverCheck, should } from '@scenetest/checks-svelte'
+ * import { checkEffect, serverCheck, should } from '@scenetest/checks/svelte'
  *
  * let profile = $state(null)
  *
@@ -31,7 +31,7 @@
  * For simple cases, you can use serverCheck() directly in $effect:
  * ```svelte
  * <script>
- * import { should } from '@scenetest/checks-svelte'
+ * import { should } from '@scenetest/checks/svelte'
  *
  * let count = $state(0)
  *
@@ -46,3 +46,16 @@ export function checkEffect(effect: () => void): void {
   // In production, vite-plugin-scenetest strips the entire call
   effect()
 }
+
+// Re-export everything from core scenetest for convenience
+export { should, failed, serverCheck, match, defineConfig } from './index.js'
+export type {
+  AssertionResult,
+  ScenetestReporter,
+  ScenetestConfig,
+  AssertServerFn,
+  AssertDataFn,
+  ServerContext,
+  AssertionRpcPayload,
+  AssertionRpcResponse,
+} from './index.js'

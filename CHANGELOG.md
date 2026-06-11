@@ -4,6 +4,58 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## Unreleased
+
+**Package consolidation.** Six packages folded into two existing ones — npm package names and import paths change, but every API keeps its name and signature. No behavior changes.
+
+### @scenetest/checks
+
+* **Breaking: the framework binding packages are gone; bindings are now subpath exports of `@scenetest/checks`.** `@scenetest/checks-react`, `@scenetest/checks-vue`, `@scenetest/checks-solid`, and `@scenetest/checks-svelte` are no longer published. Import the same APIs from `@scenetest/checks/react`, `@scenetest/checks/vue`, `@scenetest/checks/solid`, or `@scenetest/checks/svelte` instead. Each subpath still re-exports the full core API (`should`, `failed`, `serverCheck`, `match`, `defineConfig`), so it stays a one-import experience. The framework dependencies (`react`, `vue`, `solid-js`, `svelte`) are optional peer dependencies — you only need the one you import.
+
+### @scenetest/vite-plugin
+
+* **Breaking: `@scenetest/checks-panel` and `@scenetest/scenes-panel` are gone; the panel UIs now ship inside the plugin.** The observer panel is `@scenetest/vite-plugin/panels/observer` and the recorder panel is `@scenetest/vite-plugin/panels/recorder` (both auto-initialize on import, like the old `/auto` entries). If you only ever used the panels through the plugin's dev injection — the normal case — nothing changes and there is nothing to do.
+* The production strip now matches `@scenetest/checks` subpath imports (`/react`, `/vue`, `/solid`, `/svelte`, `/runtime`). The old standalone binding package names remain in the strip list, so apps that haven't migrated keep stripping cleanly.
+* Internal: panel injection now resolves via a self-referencing subpath export, which removes the pnpm-strict-hoisting edge case for panel resolution entirely.
+
+### @scenetest/eslint-plugin
+
+* `inline-server-fn` recognizes `serverCheck` imported from the new `@scenetest/checks/*` subpaths (old package names still recognized).
+
+### Migration
+
+The old packages stay on npm at 0.11.0 (and will be marked deprecated) but receive no further updates. To migrate, paste the block below into your AI coding assistant — or apply it by hand; it is a pure rename:
+
+```text
+Migrate this repo from scenetest's standalone binding packages to the
+consolidated 0.12 layout. These are pure renames — no API, signature, or
+behavior changes.
+
+1. In package.json (all workspaces):
+   - Replace any dependency on @scenetest/checks-react, @scenetest/checks-vue,
+     @scenetest/checks-solid, or @scenetest/checks-svelte with
+     @scenetest/checks (same version range, ^0.12.0 or later).
+   - Replace any dependency on @scenetest/checks-panel or
+     @scenetest/scenes-panel with @scenetest/vite-plugin (^0.12.0 or later).
+   - Update @scenetest/vite-plugin and @scenetest/scenes to ^0.12.0 if present.
+
+2. In source files, rewrite import specifiers (named imports are unchanged):
+   - '@scenetest/checks-react'  -> '@scenetest/checks/react'
+   - '@scenetest/checks-vue'    -> '@scenetest/checks/vue'
+   - '@scenetest/checks-solid'  -> '@scenetest/checks/solid'
+   - '@scenetest/checks-svelte' -> '@scenetest/checks/svelte'
+   - '@scenetest/checks-panel/auto'  -> '@scenetest/vite-plugin/panels/observer'
+   - '@scenetest/checks-panel'       -> '@scenetest/vite-plugin/panels/observer'
+   - '@scenetest/scenes-panel/auto'  -> '@scenetest/vite-plugin/panels/recorder'
+   - '@scenetest/scenes-panel'       -> '@scenetest/vite-plugin/panels/recorder'
+   Also update any of these names appearing in declare-module blocks (*.d.ts),
+   vite/vitest config (optimizeDeps, ssr.noExternal, aliases), and docs.
+
+3. Run the package manager install to refresh the lockfile, then build and
+   typecheck. Imports of useCheck, watchCheck, createCheck, checkEffect,
+   should, failed, serverCheck, match, and defineConfig all keep their names.
+```
+
 ## [0.11.0] — 2026-06-11
 
 Coordinated release: all packages changed since 0.10.0 (`checks`, `protocol`, `scenes`, `vite-plugin`, and the new `receiver` and `dashboard`) ship as 0.11.0.

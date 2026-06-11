@@ -13,7 +13,7 @@ Use inline assertions when you want to verify:
 
 ```tsx
 // src/components/Cart.tsx
-import { should, failed } from '@scenetest/checks-react'
+import { should, failed } from '@scenetest/checks/react'
 
 function Cart({ items }) {
   should('cart has items', items.length > 0)
@@ -32,16 +32,16 @@ Import from your framework's package:
 
 ```typescript
 // React
-import { should, failed, serverCheck, useCheck } from '@scenetest/checks-react'
+import { should, failed, serverCheck, useCheck } from '@scenetest/checks/react'
 
 // Vue
-import { should, failed, serverCheck, watchCheck } from '@scenetest/checks-vue'
+import { should, failed, serverCheck, watchCheck } from '@scenetest/checks/vue'
 
 // Solid
-import { should, failed, serverCheck, createCheck } from '@scenetest/checks-solid'
+import { should, failed, serverCheck, createCheck } from '@scenetest/checks/solid'
 
 // Svelte (use inside $effect)
-import { should, failed, serverCheck, checkEffect } from '@scenetest/checks-svelte'
+import { should, failed, serverCheck, checkEffect } from '@scenetest/checks/svelte'
 
 // Framework-agnostic (just assertions)
 import { should, failed, serverCheck } from '@scenetest/checks'
@@ -60,7 +60,7 @@ should(description, condition, context?)
 - `context`: Optional object with debugging info, or a function returning one (evaluated lazily)
 
 ```typescript
-import { should } from '@scenetest/checks-react'
+import { should } from '@scenetest/checks/react'
 
 function UserProfile({ user }) {
   should('user has a display name', !!user.displayName)
@@ -115,7 +115,7 @@ failed(description, context?)
 - `context`: Optional object with debugging info, or a function returning one (evaluated lazily, only when `failed()` runs)
 
 ```typescript
-import { failed } from '@scenetest/checks-react'
+import { failed } from '@scenetest/checks/react'
 
 function ErrorBoundary({ error }) {
   if (error) {
@@ -135,7 +135,7 @@ function ErrorBoundary({ error }) {
 For comparing browser data with server data, use `serverCheck()` with your framework's test effect hook:
 
 ```tsx
-import { should, serverCheck, useCheck } from '@scenetest/checks-react'
+import { should, serverCheck, useCheck } from '@scenetest/checks/react'
 
 function ProfileForm({ userId }) {
   const { profile, isLoading } = useProfile(userId)

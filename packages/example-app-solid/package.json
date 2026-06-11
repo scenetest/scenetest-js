@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@scenetest/checks-solid": "workspace:*",
-    "solid-js": "^1.9.11"
+    "solid-js": "^1.9.11",
+    "@scenetest/checks": "workspace:*"
   },
   "devDependencies": {
     "@scenetest/vite-plugin": "workspace:*",

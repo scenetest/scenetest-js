@@ -563,6 +563,45 @@ function Component() {
     })
   })
 
+  describe('framework subpath imports', () => {
+    it('removes import from @scenetest/checks/react', () => {
+      const code = `import { should, failed, useCheck } from '@scenetest/checks/react'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('removes calls imported from framework subpaths', () => {
+      const code = `import { should, watchCheck } from '@scenetest/checks/vue'
+should('one', true)
+watchCheck(() => { should('in effect', true) })
+console.log('kept')`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code.trim()).toBe(`console.log('kept')`)
+    })
+
+    it('removes import from @scenetest/checks/runtime', () => {
+      const code = `import { __scenetest_rpc } from '@scenetest/checks/runtime'
+const x = 1`
+
+      const result = stripScenetest(code)
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('const x = 1')
+    })
+
+    it('does not strip unrelated packages sharing the prefix string', () => {
+      const code = `import { should } from '@scenetest/checks-extras'
+should('kept', true)`
+
+      const result = stripScenetest(code)
+      expect(result).toBeNull()
+    })
+  })
+
   describe('real-world example', () => {
     it('handles a React component with multiple assertions', () => {
       const code = `import { useState, useEffect } from 'react'

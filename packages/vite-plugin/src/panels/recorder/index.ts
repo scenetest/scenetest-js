@@ -5,11 +5,11 @@
  * Captures clicks, typing, navigation, and annotates with inline assertions.
  *
  * Usage:
- *   import { initRecorder } from '@scenetest/scenes-panel'
+ *   import { initRecorder } from '@scenetest/vite-plugin/panels/recorder'
  *   initRecorder()
  *
  * Or auto-init:
- *   import '@scenetest/scenes-panel/auto'
+ *   import '@scenetest/vite-plugin/panels/recorder'
  */
 
 import type { RecorderState, DslLine, AssertionAnnotation } from './types.js'
@@ -31,7 +31,7 @@ export type { DslLine, AssertionAnnotation, RecorderState } from './types.js'
 declare global {
   interface Window {
     __scenetest_recorder?: boolean
-    __scenetest_report?: (result: AssertionResult) => void
+    // __scenetest_report is declared in @scenetest/checks (ScenetestReporter)
   }
 }
 
@@ -42,7 +42,7 @@ interface AssertionResult {
   timestamp: number
   stack?: string
   context?: Record<string, unknown>
-  location?: { file: string; line: number; column: number }
+  location?: { file: string; line: number; column?: number }
 }
 
 /**
