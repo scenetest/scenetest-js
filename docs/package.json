@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "pnpm --filter @scenetest/checks --filter @scenetest/vite-plugin build && NITRO_PRESET=cloudflare_module vite build",
+    "build": "pnpm --filter \"@scenetest/vite-plugin...\" build && NITRO_PRESET=cloudflare_module vite build",
     "preview": "pnpm build && wrangler dev",
     "deploy": "pnpm build && wrangler deploy"
   },
