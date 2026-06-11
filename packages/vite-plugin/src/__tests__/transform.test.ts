@@ -124,7 +124,7 @@ serverCheck('row matches', async (server, { id, status }) => {
     registerAssertions(result!.extractedAssertions)
 
     const moduleCode = generateVirtualModuleCode()
-    expect(moduleCode).toContain('async (server, { id, status }, { should, failed })')
+    expect(moduleCode).toContain('async (server, { id, status }, { should, failed, signal })')
     // Regression: an `await` body inside a non-async wrapper fails to parse.
     expect(() => parse(moduleCode, { sourceType: 'module' })).not.toThrow()
   })

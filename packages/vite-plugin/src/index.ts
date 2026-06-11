@@ -158,6 +158,15 @@ export interface ScenetestPluginOptions {
   recorder?: boolean
 
   /**
+   * Maximum time in milliseconds a single serverCheck() server function may
+   * run in the dev server before it is reported as a failed check. The
+   * deadline is also handed to the server function as an AbortSignal
+   * (the `signal` helper) so well-behaved checks can stop early.
+   * Defaults to 5000.
+   */
+  serverCheckTimeout?: number
+
+  /**
    * Content Security Policy configuration for dev mode.
    * Adds CSP headers to protect against XSS and other injection attacks.
    * Defaults to disabled — opt in with `csp: true` or `csp: { enabled: true }`.
@@ -270,7 +279,9 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       }
 
       // Install the scenetest middleware for handling RPC requests
-      server.middlewares.use(createScenetestMiddleware(server, root))
+      server.middlewares.use(
+        createScenetestMiddleware(server, root, { serverCheckTimeout: options.serverCheckTimeout })
+      )
     },
 
     resolveId(id) {

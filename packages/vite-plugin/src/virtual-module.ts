@@ -59,8 +59,9 @@ export function removeAssertionsForFile(filename: string): void {
  * Each serverFn is wrapped as an `async` arrow so that bodies using `await`
  * (the common case — serverCheck exists to do async server work) parse and
  * run. It receives the author's first two parameters followed by an injected
- * `{ should, failed }` argument, making those helpers available in scope for
- * the inlined body code.
+ * `{ should, failed, signal }` argument, making those helpers available in
+ * scope for the inlined body code. `signal` is an AbortSignal that fires when
+ * the middleware's per-check timeout elapses (see `serverCheckTimeout`).
  *
  * SECURITY NOTE: This function embeds user-provided assertion code directly
  * into the generated module. The code runs in the Vite dev server context
@@ -81,7 +82,7 @@ export function generateVirtualModuleCode(): string {
   // own parameters are kept so destructured patterns keep resolving.
   const entries = assertions.map((assertion) => {
     const params = assertion.params || 'server, data'
-    return `  ${JSON.stringify(assertion.id)}: async (${params}, { should, failed }) => {
+    return `  ${JSON.stringify(assertion.id)}: async (${params}, { should, failed, signal }) => {
     ${assertion.serverFnBodyCode}
   }`
   })

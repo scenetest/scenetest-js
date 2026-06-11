@@ -10,6 +10,12 @@ All notable changes to Scenetest are documented here.
 
 * **New package: `@scenetest/receiver`** — the receiver core extracted from the Vite middleware as a framework-agnostic Hono app. `createReceiverApp({ sinks })` accepts protocol events on `POST /events` (envelope-validated with `isEventShaped()` so it relays event types newer than itself, always responding 200 so old CLIs never break) and fans them out to `Sink`s, calling `clear()` on `run:start`. Ships a `JsonlSink` (one protocol event per JSON line) and a `toNodeHandler()` adapter; the Vite middleware now delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink, and dev behavior is unchanged.
 
+### @scenetest/vite-plugin
+
+* **Hardened the `serverCheck()` executor.** Each server function now runs under a per-check timeout (default 5000ms, configurable via the new `serverCheckTimeout` plugin option) and receives an `AbortSignal` as a new `signal` helper (`{ should, failed, signal }`); a hung check is reported as a failed assertion and the RPC response always returns.
+* Middleware-level failures on `POST /__scenetest/run` (virtual-module load error, unknown serverFn id, scenetest config load error) now answer HTTP 200 with a normalized failed check — title-prefixed description, error detail in `context` — instead of an opaque 500 or an empty `success: false` response.
+* serverFns and the scenetest config are loaded through Vite's Environments API module runner (`createServerModuleRunner` against the `ssr` environment) when available, falling back to `server.ssrLoadModule` on vite 5.
+
 ### Security
 
 * **Typed values no longer leave the test process.** `typeInto()` and `select()` used to record their target as `selector=value`, which put the literal value — including `[self.password]` from the builtin login macro — into dashboard events (SSE-visible to anything that could reach the dev server) and into the persisted run-report timeline. The target is now the selector only, in both the `test()` and `scene()` models.
