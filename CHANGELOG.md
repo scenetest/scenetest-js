@@ -15,6 +15,7 @@ All notable changes to Scenetest are documented here.
 * **Hardened the `serverCheck()` executor.** Each server function now runs under a per-check timeout (default 5000ms, configurable via the new `serverCheckTimeout` plugin option) and receives an `AbortSignal` as a new `signal` helper (`{ should, failed, signal }`); a hung check is reported as a failed assertion and the RPC response always returns.
 * Middleware-level failures on `POST /__scenetest/run` (virtual-module load error, unknown serverFn id, scenetest config load error) now answer HTTP 200 with a normalized failed check — title-prefixed description, error detail in `context` — instead of an opaque 500 or an empty `success: false` response.
 * serverFns and the scenetest config are loaded through Vite's Environments API module runner (`createServerModuleRunner` against the `ssr` environment) when available, falling back to `server.ssrLoadModule` on vite 5.
+* The SSE stream now flushes its response headers on connect, so a dashboard `EventSource` opened before any run fires `open` immediately instead of waiting for the first event.
 
 ### Security
 

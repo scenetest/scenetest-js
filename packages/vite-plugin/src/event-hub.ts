@@ -31,6 +31,10 @@ export class EventHub {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     })
+    // Node buffers the response head until the first body write, so with
+    // an empty buffer the EventSource would sit pending (no `open` event)
+    // until the first run produces an event. Flush immediately.
+    res.flushHeaders()
 
     // Send buffered events so late joiners catch up
     for (const event of this.buffer) {
