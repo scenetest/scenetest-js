@@ -1,6 +1,6 @@
 import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
-import { isEventShaped } from '@scenetest/protocol'
+import { createReceiverApp, toNodeHandler, JsonlSink, type Sink } from '@scenetest/receiver'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
@@ -183,7 +183,7 @@ export function failed(description: string, context?: Record<string, unknown>): 
 export function createScenetestMiddleware(
   server: ViteDevServer,
   root: string,
-  options: { reportsDir?: string } = {}
+  options: { reportsDir?: string; jsonl?: boolean | string } = {}
 ): Connect.NextHandleFunction {
   const eventHub = new EventHub()
   let activeReplay: ChildProcess | null = null
@@ -192,6 +192,21 @@ export function createScenetestMiddleware(
   // Where to look for past JSON run reports. Defaults to the same path the
   // CLI writes to. Resolved against the consumer's project root.
   const reportsDir = path.resolve(root, options.reportsDir ?? 'scenetest/.reports')
+
+  // Inbound CLI events go through the framework-agnostic receiver core
+  // (@scenetest/receiver). The EventHub doubles as a Sink: write() relays
+  // to the SSE clients, clear() resets the ring buffer on run:start.
+  // Serving the SSE stream itself stays here — that's a dev-transport
+  // concern, not the receiver's.
+  const sinks: Sink[] = [eventHub]
+  if (options.jsonl) {
+    const jsonlPath =
+      typeof options.jsonl === 'string'
+        ? path.resolve(root, options.jsonl)
+        : path.join(reportsDir, 'events.jsonl')
+    sinks.push(new JsonlSink(jsonlPath))
+  }
+  const receiverHandler = toNodeHandler(createReceiverApp({ sinks }))
 
   return async (req, res, next) => {
     // ── Preact app shell (index + runner) ───────────────────
@@ -294,31 +309,13 @@ export function createScenetestMiddleware(
     }
 
     // ── Receive events from CLI runner ──────────────────────
+    // Delegated to the receiver core: envelope-only validation (relay
+    // semantics — event types newer than this plugin still fan out),
+    // sink clear() on run:start, always 200 so old CLIs never break.
     if (req.method === 'POST' && req.url === '/__scenetest/events') {
-      let body = ''
-      for await (const chunk of req) {
-        body += chunk
-      }
-
-      try {
-        const event = JSON.parse(body)
-        // The hub is a relay, not a consumer: require only the protocol
-        // envelope so event types newer than this plugin still fan out
-        // (a newer CLI paired with an older plugin is the normal case).
-        if (isEventShaped(event)) {
-          // Clear buffer on new run so the dashboard starts fresh
-          if (event.type === 'run:start') {
-            eventHub.clear()
-          }
-          eventHub.push(event)
-        }
-      } catch {
-        // Ignore malformed events
-      }
-
-      res.statusCode = 200
-      res.setHeader('Content-Type', 'application/json')
-      res.end('{"ok":true}')
+      // The receiver app mounts at its own root; strip the prefix.
+      req.url = '/events'
+      await receiverHandler(req, res)
       return
     }
 

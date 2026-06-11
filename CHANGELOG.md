@@ -6,6 +6,10 @@ All notable changes to Scenetest are documented here.
 
 ## Unreleased
 
+### @scenetest/receiver 0.10.0
+
+* **New package: `@scenetest/receiver`** — the receiver core extracted from the Vite middleware as a framework-agnostic Hono app. `createReceiverApp({ sinks })` accepts protocol events on `POST /events` (envelope-validated with `isEventShaped()` so it relays event types newer than itself, always responding 200 so old CLIs never break) and fans them out to `Sink`s, calling `clear()` on `run:start`. Ships a `JsonlSink` (one protocol event per JSON line) and a `toNodeHandler()` adapter; the Vite middleware now delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink, and dev behavior is unchanged.
+
 ### Security
 
 * **Typed values no longer leave the test process.** `typeInto()` and `select()` used to record their target as `selector=value`, which put the literal value — including `[self.password]` from the builtin login macro — into dashboard events (SSE-visible to anything that could reach the dev server) and into the persisted run-report timeline. The target is now the selector only, in both the `test()` and `scene()` models.
