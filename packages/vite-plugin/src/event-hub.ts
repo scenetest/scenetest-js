@@ -45,6 +45,14 @@ export class EventHub {
     })
   }
 
+  /**
+   * Sink-compatible alias of `push()` so the hub can be handed to the
+   * `@scenetest/receiver` core as a `Sink` (which also uses `clear()`).
+   */
+  write(event: DashboardEvent): void {
+    this.push(event)
+  }
+
   /** Broadcast an event to all connected clients and buffer it. */
   push(event: DashboardEvent): void {
     // Buffer for late joiners

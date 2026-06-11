@@ -45,6 +45,7 @@
     "preact": "^10.22.0",
     "@scenetest/checks": "workspace:*",
     "@scenetest/protocol": "workspace:*",
+    "@scenetest/receiver": "workspace:*",
     "@scenetest/checks-panel": "workspace:*",
     "@scenetest/scenes-panel": "workspace:*"
   },

@@ -31,6 +31,7 @@ packages/
 ├── checks-solid/           # Solid bindings — createCheck primitive (re-exports checks)
 ├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
 ├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
+├── receiver/               # Receiver core — framework-agnostic Hono app that accepts protocol events and fans them out to sinks
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
@@ -72,6 +73,13 @@ packages/
 - `codec.ts` — `encodeEvent()`/`decodeEvent()` (strict, never throws), `isEventShaped()` (envelope-only check so relays pass through event types newer than themselves)
 
 Zero-dependency package; the seam between the dev tool and scenetest-cloud. Producers (CLI, injected listener) and consumers (dashboard, recorders, cloud worker) share this vocabulary, and wire-format changes route through a published release so version skew stays visible. `@scenetest/scenes` re-exports `RunEvent` as `DashboardEvent` for backwards compatibility.
+
+### Receiver (`packages/receiver/src/`)
+- `app.ts` — `createReceiverApp({ sinks })`, a Hono app with `POST /events` (envelope-validated via `isEventShaped()`, always responds 200, calls sink `clear?.()` on `run:start`), `ReceiverAppType` for `hono/client`
+- `sink.ts` — `Sink` interface (`write()`, optional `clear()`), `JsonlSink` (one protocol event per JSON line, lazy open, `close()`)
+- `node.ts` — `toNodeHandler(app)` via `@hono/node-server`'s `getRequestListener`, for mounting in connect-style servers (Vite dev server)
+
+The receiver core extracted from the Vite middleware, framework-agnostic so scenetest-cloud can mount the same app. It is a relay: envelope-only validation passes through event types newer than itself, and responses are always `200` (`{"ok":true}`/`{"ok":false}`) because the CLI's reporter is fire-and-forget. The Vite middleware delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink; serving SSE itself stays in the middleware (dev-transport concern). Only this package depends on `hono`/`@hono/node-server`.
 
 ### Scenes (`packages/scenes/src/`)
 - `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors
@@ -184,6 +192,6 @@ TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs
 | Network layer (`network.fail()`, `network.mock()`) | Design only | `cli-v2.md` section 7 |
 | Snapshots (`snapshot()`, `expectSnapshot()`) | Design only | `cli-v2.md` section 8 |
 | Dashboard & JSONL reports | Design only | `dashboard.md` |
-| Dashboard widget extraction (`mountDashboard()` + transport adapters, receiver core) | Protocol package landed; widget/receiver extraction pending | `architecture.md` in scenetest-cloud |
+| Dashboard widget extraction (`mountDashboard()` + transport adapters) | Protocol and receiver packages landed; widget extraction pending | `architecture.md` in scenetest-cloud |
 | Interactive UI mode (`--ui`) | Stub only | `cli-v2.md` |
 | Visualization (timeline/musical) | Conceptual | `cli-v2.md` section 10 |
