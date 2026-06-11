@@ -4,9 +4,9 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## Unreleased
+## [0.12.0] — 2026-06-11
 
-**Package consolidation.** Six packages folded into two existing ones — npm package names and import paths change, but every API keeps its name and signature. No behavior changes.
+**Package consolidation.** Six packages folded into two existing ones — npm package names and import paths change, but every API keeps its name and signature. No behavior changes. `@scenetest/checks` and `@scenetest/vite-plugin` bump to 0.12.0 (and `@scenetest/eslint-plugin` from 0.10.0 to 0.12.0); unchanged packages — `@scenetest/scenes`, `@scenetest/protocol`, `@scenetest/receiver`, `@scenetest/dashboard` — stay at 0.11.0.
 
 ### @scenetest/checks
 
@@ -37,7 +37,9 @@ behavior changes.
      @scenetest/checks (same version range, ^0.12.0 or later).
    - Replace any dependency on @scenetest/checks-panel or
      @scenetest/scenes-panel with @scenetest/vite-plugin (^0.12.0 or later).
-   - Update @scenetest/vite-plugin and @scenetest/scenes to ^0.12.0 if present.
+   - Bump @scenetest/checks and @scenetest/vite-plugin to ^0.12.0. Leave
+     @scenetest/scenes at its current 0.11.x range — it did not change in
+     this release.
 
 2. In source files, rewrite import specifiers (named imports are unchanged):
    - '@scenetest/checks-react'  -> '@scenetest/checks/react'
