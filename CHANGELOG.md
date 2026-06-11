@@ -6,6 +6,15 @@ All notable changes to Scenetest are documented here.
 
 ## Unreleased
 
+### @scenetest/dashboard 0.1.0
+
+* **New package: `@scenetest/dashboard`** — the dashboard UI extracted from the Vite plugin's inline HTML string into a mountable Preact widget. `mountDashboard(element, { transport, theme? })` renders into a shadow root (own styles/fonts, no leakage in either direction) so dev and scenetest-cloud mount the same widget; the only dev/cloud difference is the `Transport` adapter (`fetchState` / `subscribe` / `sendCommand` over `@scenetest/protocol` types). Ships `createDevTransport()` (fetch + SSE against the Vite middleware) and a DOM-free event-folding store (`foldEvents`, `applyEvent`). Theming is limited to `--st-bg` / `--st-accent` / `--st-font` / `--st-font-size`.
+* `@scenetest/protocol` now also exposes `./package.json` in its exports map (so tooling can resolve it under CJS) — additive, non-breaking.
+
+### @scenetest/vite-plugin
+
+* **The `/__scenetest/dashboard` page is now a thin shell that mounts `@scenetest/dashboard`.** The ~1200-line inline dashboard HTML/JS moved into the widget package; the page serves an importmap + bootstrap and the widget's built ESM is served off disk under `/__scenetest/widget/*`. The live dev dashboard is unchanged for users. **Breaking for direct importers of the `./dashboard` subpath:** `generateDashboardHtml()` now returns this dev shell (which depends on the Vite middleware's widget routes), not a self-contained page — consumers rendering their own dashboard should migrate to `mountDashboard()` from `@scenetest/dashboard` with their own transport.
+
 ### @scenetest/receiver 0.10.0
 
 * **New package: `@scenetest/receiver`** — the receiver core extracted from the Vite middleware as a framework-agnostic Hono app. `createReceiverApp({ sinks })` accepts protocol events on `POST /events` (envelope-validated with `isEventShaped()` so it relays event types newer than itself, always responding 200 so old CLIs never break) and fans them out to `Sink`s, calling `clear()` on `run:start`. Ships a `JsonlSink` (one protocol event per JSON line) and a `toNodeHandler()` adapter; the Vite middleware now delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink, and dev behavior is unchanged.

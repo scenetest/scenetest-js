@@ -51,6 +51,40 @@ const VENDOR_MODULES: Record<string, string> = {
  */
 const vendorRequire = createRequire(import.meta.url)
 
+/**
+ * Workspace packages whose built ESM the dashboard shell loads directly off
+ * disk. `/__scenetest/widget/<key>/<file>` serves files from the package's
+ * `dist` dir, so the widget's relative imports (`./store.js`) and its
+ * bare imports (resolved by the page's importmap) work without a build step.
+ */
+const WIDGET_PACKAGES: Record<string, string> = {
+  dashboard: '@scenetest/dashboard',
+  protocol: '@scenetest/protocol',
+}
+
+const widgetDistCache = new Map<string, string | null>()
+
+/**
+ * Resolve a widget package's `dist` directory. We resolve its
+ * `package.json` (each exposes `"./package.json"`) rather than its entry,
+ * because the entry's `exports` map only carries an `import` condition and
+ * CJS `require.resolve` can't follow it.
+ */
+function resolveWidgetDistDir(key: string): string | null {
+  if (widgetDistCache.has(key)) return widgetDistCache.get(key) ?? null
+  const pkg = WIDGET_PACKAGES[key]
+  let dir: string | null = null
+  if (pkg) {
+    try {
+      dir = path.join(path.dirname(vendorRequire.resolve(`${pkg}/package.json`)), 'dist')
+    } catch {
+      dir = null
+    }
+  }
+  widgetDistCache.set(key, dir)
+  return dir
+}
+
 function resolveVendor(specifier: string): string | null {
   // Split "preact/hooks" → ["preact", "./hooks"], "preact" → ["preact", "."]
   const slash = specifier.indexOf('/')
@@ -314,6 +348,38 @@ export function createScenetestMiddleware(
       } catch {
         res.statusCode = 500
         res.end('// Vendor module read failed')
+      }
+      return
+    }
+
+    // ── Dashboard widget ESM (@scenetest/dashboard + deps) ──
+    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/widget/')) {
+      const rest = req.url.slice('/__scenetest/widget/'.length).split('?')[0]
+      const slash = rest.indexOf('/')
+      const key = slash === -1 ? rest : rest.slice(0, slash)
+      const relPath = slash === -1 ? '' : rest.slice(slash + 1)
+      const distDir = resolveWidgetDistDir(key)
+      if (!distDir || !relPath) {
+        res.statusCode = 404
+        res.end('// Widget module not found')
+        return
+      }
+      // Constrain to the package's dist dir — never serve outside it.
+      const target = path.resolve(distDir, relPath)
+      if (target !== distDir && !target.startsWith(distDir + path.sep)) {
+        res.statusCode = 403
+        res.end('// Forbidden')
+        return
+      }
+      try {
+        const code = fs.readFileSync(target, 'utf-8')
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.end(code)
+      } catch {
+        res.statusCode = 404
+        res.end('// Widget module read failed')
       }
       return
     }

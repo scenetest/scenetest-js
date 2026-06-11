@@ -32,6 +32,7 @@ packages/
 ├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
 ├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
 ├── receiver/               # Receiver core — framework-agnostic Hono app that accepts protocol events and fans them out to sinks
+├── dashboard/              # Mountable Preact dashboard widget — mountDashboard() + transport adapter, shared by dev and cloud
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
@@ -80,6 +81,16 @@ Zero-dependency package; the seam between the dev tool and scenetest-cloud. Prod
 - `node.ts` — `toNodeHandler(app)` via `@hono/node-server`'s `getRequestListener`, for mounting in connect-style servers (Vite dev server)
 
 The receiver core extracted from the Vite middleware, framework-agnostic so scenetest-cloud can mount the same app. It is a relay: envelope-only validation passes through event types newer than itself, and responses are always `200` (`{"ok":true}`/`{"ok":false}`) because the CLI's reporter is fire-and-forget. The Vite middleware delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink; serving SSE itself stays in the middleware (dev-transport concern). Only this package depends on `hono`/`@hono/node-server`.
+
+### Dashboard (`packages/dashboard/src/`)
+- `mount.ts` — `mountDashboard(element, { transport, theme? })`: attaches a shadow root, injects styles, renders the Preact widget, returns `{ unmount() }`
+- `app.ts` — Preact components (htm tagged templates, like analyze-app): `Dashboard` root (folds the event stream via the store, drives it from the transport), `Header`, `SceneCard`; `sceneSummary()` copy-failures text
+- `store.ts` — pure, DOM-free event folding: `applyEvent()`, `foldEvents()`, `initialState()` — the original inline dashboard's `handleEvent` made immutable
+- `dev-transport.ts` — `createDevTransport()`: fetch + SSE adapter for the Vite middleware; maps `Command`s to `/__scenetest/replay|stop|pause`
+- `types.ts` — `Transport`, `DashboardState`, `Scene`, `DashboardTheme`, `ConnectionStatus`
+- `styles.ts` — shadow-root CSS; theming surface is `--st-bg`/`--st-accent`/`--st-font`/`--st-font-size` only
+
+The dashboard UI extracted from the Vite plugin's inline HTML string so dev and scenetest-cloud mount the same widget; the dev/cloud difference is confined to the transport adapter (dev: fetch+SSE; cloud: fetch+WebSocket). The Vite plugin's `/__scenetest/dashboard` is now a thin shell that imports the built widget (served off disk under `/__scenetest/widget/*`) and mounts it with `createDevTransport()`.
 
 ### Scenes (`packages/scenes/src/`)
 - `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors
@@ -192,6 +203,7 @@ TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs
 | Network layer (`network.fail()`, `network.mock()`) | Design only | `cli-v2.md` section 7 |
 | Snapshots (`snapshot()`, `expectSnapshot()`) | Design only | `cli-v2.md` section 8 |
 | Dashboard & JSONL reports | Design only | `dashboard.md` |
-| Dashboard widget extraction (`mountDashboard()` + transport adapters) | Protocol and receiver packages landed; widget extraction pending | `architecture.md` in scenetest-cloud |
+| Receiver core as a cloud-mountable Hono app (D1/DO sinks) | `@scenetest/receiver` landed; cloud worker mounting pending | `architecture.md` in scenetest-cloud |
+| Cloud WebSocket transport adapter for `@scenetest/dashboard` | Widget + dev (SSE) adapter landed; cloud adapter lives in scenetest-cloud | `architecture.md` in scenetest-cloud |
 | Interactive UI mode (`--ui`) | Stub only | `cli-v2.md` |
 | Visualization (timeline/musical) | Conceptual | `cli-v2.md` section 10 |

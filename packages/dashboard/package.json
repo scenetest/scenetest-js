@@ -1,15 +1,15 @@
 {
-  "name": "@scenetest/protocol",
-  "version": "0.10.0",
-  "description": "Typed event and command vocabulary shared by the scenetest CLI, Vite plugin, dashboard, and cloud service",
+  "name": "@scenetest/dashboard",
+  "version": "0.1.0",
+  "description": "Mountable Preact dashboard widget for scenetest — renders a live run into a shadow root, fed by a pluggable transport adapter",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/scenetest/scenetest-js",
-    "directory": "packages/protocol"
+    "directory": "packages/dashboard"
   },
-  "keywords": ["testing", "e2e", "playwright", "protocol", "events"],
+  "keywords": ["testing", "e2e", "playwright", "dashboard", "preact", "widget"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -29,8 +29,14 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@scenetest/protocol": "workspace:*",
+    "htm": "^3.1.1",
+    "preact": "^10.22.0"
+  },
   "devDependencies": {
     "typescript": "^5.3.3",
+    "vite": "^6.4.2",
     "vitest": "^4.1.4"
   }
 }
