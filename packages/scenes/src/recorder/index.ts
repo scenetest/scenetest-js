@@ -5,11 +5,11 @@
  * Captures clicks, typing, navigation, and annotates with inline assertions.
  *
  * Usage:
- *   import { initRecorder } from '@scenetest/vite-plugin/panels/recorder'
+ *   import { initRecorder } from '@scenetest/scenes/recorder'
  *   initRecorder()
  *
  * Or auto-init:
- *   import '@scenetest/vite-plugin/panels/recorder'
+ *   import '@scenetest/scenes/recorder'
  */
 
 import type { RecorderState, DslLine, AssertionAnnotation } from './types.js'

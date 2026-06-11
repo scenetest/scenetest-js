@@ -23,12 +23,13 @@ import type { Connect } from 'vite'
 const OBSERVER_VIRTUAL_ID = '/@scenetest/observer.js'
 const RECORDER_VIRTUAL_ID = '/@scenetest/recorder.js'
 
-// The panel entry points these resolve to. The observer is the viewing lens
-// for @scenetest/checks' assertions and lives there (@scenetest/checks/panel,
-// usable with no Vite at all); the recorder is dev tooling and ships inside
-// this package as a self-referencing subpath export.
+// The panel entry points these resolve to. Both live with the thing they're
+// a lens/composer for: the observer renders @scenetest/checks' assertions
+// (@scenetest/checks/panel, a hard dependency of this plugin); the recorder
+// composes @scenetest/scenes' DSL (@scenetest/scenes/recorder, an optional
+// peer — every scenetest app has scenes installed as its test runner).
 const OBSERVER_MODULE = '@scenetest/checks/panel'
-const RECORDER_MODULE = '@scenetest/vite-plugin/panels/recorder'
+const RECORDER_MODULE = '@scenetest/scenes/recorder'
 
 function resolveFromPlugin(specifier: string): string | null {
   try {
@@ -295,11 +296,12 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       if (id === OBSERVER_VIRTUAL_ID || id === RECORDER_VIRTUAL_ID) {
         return id
       }
-      // Resolve panel entries for the consumer. The observer resolves through
-      // this package's @scenetest/checks dependency and the recorder through a
-      // self-referencing subpath, so both work regardless of the consumer's
-      // hoisting setup (pnpm strict hoisting hides transitive deps from the
-      // project root)
+      // Resolve panel entries for the consumer via import.meta.resolve() from
+      // this plugin (checks is a dependency; scenes an optional peer), which
+      // defeats pnpm strict hoisting (transitive deps aren't visible from the
+      // project root). Returning null falls through to Vite's own resolution
+      // from the consumer root — which finds scenes wherever it's a direct
+      // devDependency of the app, the normal scenetest setup.
       if (id === OBSERVER_MODULE || id === RECORDER_MODULE) {
         return resolveFromPlugin(id)
       }

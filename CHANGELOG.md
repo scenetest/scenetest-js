@@ -4,6 +4,30 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.14.0] — 2026-06-11
+
+**The recorder panel moves to `@scenetest/scenes/recorder`**, completing what 0.13.0 did for the observer: each panel lives with the package it's a lens/composer for. The recorder composes scenes DSL, so it versions in lockstep with the parser that consumes its output — and like the observer it is pure DOM code with zero Vite coupling (record on any page, export `.spec.md`, run with the CLI). `@scenetest/scenes` and `@scenetest/vite-plugin` bump to 0.14.0; other packages are unchanged.
+
+### @scenetest/scenes
+
+* **New subpath `@scenetest/scenes/recorder`** — the scene recorder panel, auto-initializing on import.
+
+### @scenetest/vite-plugin
+
+* **Breaking: the `./panels/recorder` subpath is removed** — the plugin now injects the recorder from `@scenetest/scenes`, which becomes an **optional peer dependency**. `recorder: true` requires `@scenetest/scenes` to be installed — which every scenetest app already has, since it's the test runner. If you imported `@scenetest/vite-plugin/panels/recorder` directly, import `@scenetest/scenes/recorder` instead.
+* Internal: removed a directory of unreferenced legacy icons.
+
+### Migration
+
+If you are coming from `@scenetest/scenes-panel` (≤0.11.0), the target is `@scenetest/scenes/recorder` — not the short-lived intermediate paths. One-liner for your AI assistant:
+
+```text
+Replace any dependency on @scenetest/scenes-panel with @scenetest/scenes
+(^0.14.0), and rewrite imports of '@scenetest/scenes-panel/auto',
+'@scenetest/scenes-panel', or '@scenetest/vite-plugin/panels/recorder' to
+'@scenetest/scenes/recorder'. Pure rename; no API or behavior changes.
+```
+
 ## [0.13.0] — 2026-06-11
 
 **The observer panel moves to `@scenetest/checks/panel`.** The panel is the viewing lens for checks' assertions — dependency-free DOM code that hooks `window.__scenetest_report` — and is usable with any bundler and no Vite at all, so it belongs with the assertions, not the Vite plugin. `@scenetest/checks` and `@scenetest/vite-plugin` bump to 0.13.0; other packages are unchanged.

@@ -377,6 +377,9 @@ importers:
         specifier: ^10.22.0
         version: 10.29.1
     devDependencies:
+      '@scenetest/scenes':
+        specifier: workspace:*
+        version: link:../scenes
       '@types/babel__traverse':
         specifier: ^7.20.5
         version: 7.28.0
