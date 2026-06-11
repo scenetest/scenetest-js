@@ -117,13 +117,14 @@ describe('events path through the receiver core', () => {
     expect(await readSseReplay(1)).toEqual([{ type: 'run:start', timestamp: 2, sceneCount: 1 }])
   })
 
-  it('does not send Access-Control-Allow-Origin on the SSE stream', async () => {
+  it('flushes SSE headers immediately and sends no Access-Control-Allow-Origin', async () => {
     await startServer()
-    // Buffer one event first: SSE headers only flush with the first body
-    // bytes, and fetch() resolves on headers.
-    await postEvent(JSON.stringify({ type: 'assertion', timestamp: 1, result: true }))
+    // No events posted: headers must arrive even with an empty buffer
+    // (a browser EventSource opened before any run).
     const controller = new AbortController()
     const res = await fetch(`${baseUrl}/__scenetest/events`, { signal: controller.signal })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/event-stream')
     expect(res.headers.get('access-control-allow-origin')).toBeNull()
     controller.abort()
   })
