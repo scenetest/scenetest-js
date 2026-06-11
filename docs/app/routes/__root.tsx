@@ -5,7 +5,7 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
-import '@scenetest/vite-plugin/panels/observer'
+import '@scenetest/checks/panel'
 import { SectionNav } from '../components/SectionNav'
 import { LinkCard } from '../components/LinkCard'
 import { Footer } from '../components/Footer'

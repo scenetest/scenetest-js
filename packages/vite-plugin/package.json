@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/vite-plugin",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Vite plugin for scenetest - strips assertions in production, injects dev panel",
   "type": "module",
   "license": "MIT",
@@ -31,10 +31,6 @@
     "./dashboard": {
       "types": "./dist/dashboard.d.ts",
       "import": "./dist/dashboard.js"
-    },
-    "./panels/observer": {
-      "types": "./dist/panels/observer/auto.d.ts",
-      "import": "./dist/panels/observer/auto.js"
     },
     "./panels/recorder": {
       "types": "./dist/panels/recorder/auto.d.ts",
