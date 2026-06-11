@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Inline assertions for end-to-end testing",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,14 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/checks"
   },
-  "keywords": ["testing", "e2e", "playwright", "assertions", "inline-assertions", "tanstack-intent"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "assertions",
+    "inline-assertions",
+    "tanstack-intent"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -22,7 +29,11 @@
       "import": "./dist/runtime.js"
     }
   },
-  "files": ["dist", "skills", "!skills/_artifacts"],
+  "files": [
+    "dist",
+    "skills",
+    "!skills/_artifacts"
+  ],
   "publishConfig": {
     "access": "public"
   },

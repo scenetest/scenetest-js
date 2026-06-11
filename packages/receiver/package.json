@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/receiver",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Framework-agnostic receiver core for scenetest protocol events - a Hono app that accepts events and fans them out to sinks",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,15 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/receiver"
   },
-  "keywords": ["testing", "e2e", "playwright", "protocol", "events", "receiver", "hono"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "protocol",
+    "events",
+    "receiver",
+    "hono"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -18,7 +26,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
