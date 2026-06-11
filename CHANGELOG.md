@@ -4,6 +4,13 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## Unreleased
+
+### Security
+
+* **Typed values no longer leave the test process.** `typeInto()` and `select()` used to record their target as `selector=value`, which put the literal value — including `[self.password]` from the builtin login macro — into dashboard events (SSE-visible to anything that could reach the dev server) and into the persisted run-report timeline. The target is now the selector only, in both the `test()` and `scene()` models.
+* The `/__scenetest/events` SSE stream no longer sends `Access-Control-Allow-Origin: *`. Its only legitimate browser consumers are the same-origin dashboard pages; cross-origin pages could previously read the full buffered event stream.
+
 ## @scenetest/protocol 0.10.0 — 2026-06-11
 
 * **New package: `@scenetest/protocol`** — the typed event and command vocabulary shared by the CLI, Vite plugin, dashboard, and the cloud service (architecture step 1 of the scenetest-cloud plan). Defines the `RunEvent` union (the existing `run:start` … `run:end` wire format, unchanged, plus a new `run:progress` rollup event for home-view tiles), the `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`), and a zero-dependency codec: strict `decodeEvent()`/`decodeCommand()` that never throw, and `isEventShaped()` for relays that must pass through event types newer than themselves. `@scenetest/scenes` now sources `TeamMeta`, `RunSummary`, and `DashboardEvent` (a back-compat alias of `RunEvent`) from it, and the Vite middleware validates inbound CLI events with it. No wire-format or behavior changes.

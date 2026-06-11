@@ -610,7 +610,10 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   typeInto(selector: Selector, value: string): this {
-    return this.push('typeInto', `${selector}=${value}`, async () => {
+    // Selector only — never the typed value. The target rides on dashboard
+    // events and the persisted timeline, and the value may be a credential
+    // (the builtin login macro types [self.password]).
+    return this.push('typeInto', selector, async () => {
       const locator = resolveSelector(this.activeScope, selector)
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
@@ -640,7 +643,8 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
   }
 
   select(selector: Selector, value: string): this {
-    return this.push('select', `${selector}=${value}`, async () => {
+    // Selector only — see typeInto.
+    return this.push('select', selector, async () => {
       const locator = resolveSelector(this.activeScope, selector)
       if (this.isKeyboard) {
         await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })

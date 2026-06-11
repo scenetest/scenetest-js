@@ -22,12 +22,14 @@ export class EventHub {
 
   /** Register an SSE client connection. */
   addClient(res: ServerResponse): void {
-    // Set up SSE headers
+    // Set up SSE headers. Deliberately no Access-Control-Allow-Origin:
+    // the only browser consumers are the dashboard pages this same
+    // middleware serves (same-origin), and the buffered events may
+    // reference test activity that shouldn't be readable cross-origin.
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     })
 
     // Send buffered events so late joiners catch up
