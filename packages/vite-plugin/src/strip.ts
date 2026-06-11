@@ -23,7 +23,7 @@ export interface StripOptions {
 }
 
 // All scenetest packages that should be stripped. '@scenetest/checks' also
-// covers its subpath entries (./react, ./vue, ./solid, ./svelte, ./runtime);
+// covers its subpath entries (./react, ./preact, ./vue, ./solid, ./svelte, ./runtime);
 // the standalone checks-* names are the pre-0.12 framework binding packages,
 // kept so apps still on them keep stripping cleanly.
 const SCENETEST_PACKAGES = [

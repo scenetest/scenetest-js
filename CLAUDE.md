@@ -25,7 +25,7 @@ pnpm -r test          # Run all unit tests across packages
 
 ```
 packages/                   # Published packages
-├── checks/                 # Core library — should(), failed(), serverCheck(), match(); framework bindings as subpath exports (./react, ./vue, ./solid, ./svelte) with optional peer deps; observer panel UI as ./panel (vite-free, works under any bundler)
+├── checks/                 # Core library — should(), failed(), serverCheck(), match(); framework bindings as subpath exports (./react, ./preact, ./vue, ./solid, ./svelte) with optional peer deps; observer panel UI as ./panel (vite-free, works under any bundler)
 ├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
 ├── receiver/               # Receiver core — framework-agnostic Hono app that accepts protocol events and fans them out to sinks
 ├── dashboard/              # Mountable Preact dashboard widget — mountDashboard() + transport adapter, shared by dev and cloud
@@ -36,6 +36,7 @@ packages/                   # Published packages
 
 examples/                   # Private workspace apps (never published) — the dev loop, e2e harness, and per-framework compile-tests for the consumer API
 ├── react/                  # React demo app (package name example-app-react) — root `pnpm dev` and the Playwright e2e suite boot this one; has working Scene tests
+├── preact/                 # Preact demo app (example-app-preact)
 ├── vue/                    # Vue demo app (example-app-vue)
 ├── solid/                  # Solid demo app (example-app-solid)
 └── svelte/                 # Svelte 5 demo app (example-app-svelte)
@@ -56,7 +57,7 @@ examples/                   # Private workspace apps (never published) — the d
 - `runtime.ts` — `__scenetest_rpc()` client for multi-context assertions
 - `types.ts` — `AssertionResult`, `ServerContext`, RPC types, `ScenetestReporter` + the `window.__scenetest_report` global declaration
 - `index.ts` — public exports
-- `react.ts` / `vue.ts` / `solid.ts` / `svelte.ts` — framework bindings (`useCheck`, `watchCheck`, `createCheck`, `checkEffect`), published as subpath exports with optional peer deps; each re-exports the core API so app code imports from one place
+- `react.ts` / `preact.ts` / `vue.ts` / `solid.ts` / `svelte.ts` — framework bindings (`useCheck` for react and preact, `watchCheck`, `createCheck`, `checkEffect`), published as subpath exports with optional peer deps; each re-exports the core API so app code imports from one place
 - `panel/` — the floating observer panel (panel, fullscreen viewer, history, audio), subpath export `./panel`, auto-initializing on import. Dependency-free DOM code hooking `window.__scenetest_report` — works under any bundler with no Vite; the Vite plugin injects it in dev, and the docs site imports it directly
 - `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
 
