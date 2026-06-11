@@ -1,0 +1,21 @@
+{
+  "name": "example-app-preact",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "preact": "^10.22.0",
+    "@scenetest/checks": "workspace:*"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@scenetest/vite-plugin": "workspace:*",
+    "typescript": "^5.3.3",
+    "vite": "^6.4.2"
+  }
+}
