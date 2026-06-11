@@ -4,6 +4,10 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## @scenetest/vite-plugin 0.10.1 — 2026-06-11
+
+* Expose `./dashboard` in the package `exports` map. `dist/dashboard.js` and its types were already shipped but couldn't be imported under `moduleResolution: Bundler` or esbuild. External consumers (e.g. scenetest-cloud's Worker-rendered per-run dashboard) can now `import { generateDashboardHtml } from '@scenetest/vite-plugin/dashboard'` without a `pnpm.patchedDependencies` patch. Note: this subpath is a stopgap — the planned dashboard widget extraction (`mountDashboard` + transport adapters in a dedicated package) will supersede it.
+
 ## [0.10.0] — 2026-06-05
 
 ### New
