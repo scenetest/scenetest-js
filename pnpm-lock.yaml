@@ -172,6 +172,28 @@ importers:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.9.3)
 
+  packages/dashboard:
+    dependencies:
+      '@scenetest/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      htm:
+        specifier: ^3.1.1
+        version: 3.1.1
+      preact:
+        specifier: ^10.22.0
+        version: 10.29.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.2
+        version: 6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/eslint-plugin:
     devDependencies:
       '@types/eslint':
@@ -409,6 +431,9 @@ importers:
       '@scenetest/checks-panel':
         specifier: workspace:*
         version: link:../checks-panel
+      '@scenetest/dashboard':
+        specifier: workspace:*
+        version: link:../dashboard
       '@scenetest/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -6357,7 +6382,7 @@ snapshots:
 
   tsx@4.21.0:
     dependencies:
-      esbuild: 0.27.2
+      esbuild: 0.27.3
       get-tsconfig: 4.13.1
     optionalDependencies:
       fsevents: 2.3.3

@@ -46,6 +46,7 @@
     "@scenetest/checks": "workspace:*",
     "@scenetest/protocol": "workspace:*",
     "@scenetest/receiver": "workspace:*",
+    "@scenetest/dashboard": "workspace:*",
     "@scenetest/checks-panel": "workspace:*",
     "@scenetest/scenes-panel": "workspace:*"
   },
