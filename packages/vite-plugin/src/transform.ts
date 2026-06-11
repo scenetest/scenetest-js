@@ -137,7 +137,9 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     return null
   }
 
-  // All scenetest packages
+  // All scenetest packages. '@scenetest/checks' also covers its framework
+  // subpaths (./react etc.); the checks-* names are the pre-0.12 binding
+  // packages, kept for apps still importing from them.
   const SCENETEST_PACKAGES = [
     '@scenetest/checks',
     '@scenetest/checks-react',
@@ -145,6 +147,8 @@ export function transformAssertions(code: string, options: TransformOptions = {}
     '@scenetest/checks-solid',
     '@scenetest/checks-svelte',
   ]
+  const isScenetestSource = (source: string): boolean =>
+    SCENETEST_PACKAGES.some((pkg) => source === pkg || source.startsWith(pkg + '/'))
 
   // Track imported serverCheck name
   let serverCheckLocalName: string | null = null
@@ -181,7 +185,7 @@ export function transformAssertions(code: string, options: TransformOptions = {}
   traverse(ast, {
     ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
       const source = path.node.source.value
-      if (!SCENETEST_PACKAGES.includes(source)) {
+      if (!isScenetestSource(source)) {
         return
       }
 

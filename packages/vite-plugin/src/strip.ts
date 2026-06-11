@@ -22,7 +22,10 @@ export interface StripOptions {
   filename?: string
 }
 
-// All scenetest packages that should be stripped
+// All scenetest packages that should be stripped. '@scenetest/checks' also
+// covers its subpath entries (./react, ./vue, ./solid, ./svelte, ./runtime);
+// the standalone checks-* names are the pre-0.12 framework binding packages,
+// kept so apps still on them keep stripping cleanly.
 const SCENETEST_PACKAGES = [
   '@scenetest/checks',
   '@scenetest/checks-react',
@@ -32,10 +35,10 @@ const SCENETEST_PACKAGES = [
 ]
 
 /**
- * Check if a module source is a scenetest package
+ * Check if a module source is a scenetest package (or a subpath of one)
  */
 function isScenetestPackage(source: string): boolean {
-  return SCENETEST_PACKAGES.includes(source)
+  return SCENETEST_PACKAGES.some((pkg) => source === pkg || source.startsWith(pkg + '/'))
 }
 
 /**

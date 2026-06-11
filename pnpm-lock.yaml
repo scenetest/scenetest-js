@@ -25,12 +25,9 @@ importers:
       '@scenetest/checks':
         specifier: workspace:*
         version: link:../packages/checks
-      '@scenetest/checks-panel':
+      '@scenetest/vite-plugin':
         specifier: workspace:*
-        version: link:../packages/checks-panel
-      '@scenetest/checks-react':
-        specifier: workspace:*
-        version: link:../packages/checks-react
+        version: link:../packages/vite-plugin
       '@tanstack/react-router':
         specifier: ^1.167.0
         version: 1.168.22(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -95,79 +92,27 @@ importers:
       '@tanstack/intent':
         specifier: ^0.0.41
         version: 0.0.41
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vite:
-        specifier: ^6.4.2
-        version: 6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/checks-panel:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vite:
-        specifier: ^6.4.2
-        version: 6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/checks-react:
-    dependencies:
-      '@scenetest/checks':
-        specifier: workspace:*
-        version: link:../checks
-      react:
-        specifier: ^18.0.0 || ^19.0.0
-        version: 19.2.4
-    devDependencies:
       '@types/react':
         specifier: ^18.0.0
         version: 18.3.27
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/checks-solid:
-    dependencies:
-      '@scenetest/checks':
-        specifier: workspace:*
-        version: link:../checks
-    devDependencies:
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
       solid-js:
         specifier: ^1.9.11
         version: 1.9.11
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/checks-svelte:
-    dependencies:
-      '@scenetest/checks':
-        specifier: workspace:*
-        version: link:../checks
-    devDependencies:
       svelte:
         specifier: ^5.53.5
         version: 5.53.5
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
-
-  packages/checks-vue:
-    dependencies:
-      '@scenetest/checks':
-        specifier: workspace:*
-        version: link:../checks
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
+      vite:
+        specifier: ^6.4.2
+        version: 6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
       vue:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.9.3)
@@ -217,9 +162,9 @@ importers:
 
   packages/example-app-react:
     dependencies:
-      '@scenetest/checks-react':
+      '@scenetest/checks':
         specifier: workspace:*
-        version: link:../checks-react
+        version: link:../checks
       '@tanstack/react-query':
         specifier: ^5.90.19
         version: 5.90.20(react@18.3.1)
@@ -254,9 +199,9 @@ importers:
 
   packages/example-app-solid:
     dependencies:
-      '@scenetest/checks-solid':
+      '@scenetest/checks':
         specifier: workspace:*
-        version: link:../checks-solid
+        version: link:../checks
       solid-js:
         specifier: ^1.9.11
         version: 1.9.11
@@ -276,9 +221,9 @@ importers:
 
   packages/example-app-svelte:
     dependencies:
-      '@scenetest/checks-svelte':
+      '@scenetest/checks':
         specifier: workspace:*
-        version: link:../checks-svelte
+        version: link:../checks
     devDependencies:
       '@scenetest/vite-plugin':
         specifier: workspace:*
@@ -301,9 +246,9 @@ importers:
 
   packages/example-app-vue:
     dependencies:
-      '@scenetest/checks-vue':
+      '@scenetest/checks':
         specifier: workspace:*
-        version: link:../checks-vue
+        version: link:../checks
       vue:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.9.3)
@@ -402,18 +347,6 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/scenes-panel:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vite:
-        specifier: ^6.4.2
-        version: 6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@types/node@20.19.30)(vite@6.4.2(@types/node@20.19.30)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
-
   packages/vite-plugin:
     dependencies:
       '@babel/parser':
@@ -428,9 +361,6 @@ importers:
       '@scenetest/checks':
         specifier: workspace:*
         version: link:../checks
-      '@scenetest/checks-panel':
-        specifier: workspace:*
-        version: link:../checks-panel
       '@scenetest/dashboard':
         specifier: workspace:*
         version: link:../dashboard
@@ -440,9 +370,6 @@ importers:
       '@scenetest/receiver':
         specifier: workspace:*
         version: link:../receiver
-      '@scenetest/scenes-panel':
-        specifier: workspace:*
-        version: link:../scenes-panel
       htm:
         specifier: ^3.1.1
         version: 3.1.1

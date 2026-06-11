@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { should, useCheck } from '@scenetest/checks-react'
+import { should, useCheck } from '@scenetest/checks/react'
 
 /**
  * Hook that adds interactive test assertions to the docs page.

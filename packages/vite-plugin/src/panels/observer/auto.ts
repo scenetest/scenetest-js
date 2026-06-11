@@ -2,7 +2,7 @@
  * Auto-initializing observer import
  *
  * Usage:
- *   import '@scenetest/checks-panel/auto'
+ *   import '@scenetest/vite-plugin/panels/observer'
  *
  * This will automatically initialize the observer panel when imported.
  */

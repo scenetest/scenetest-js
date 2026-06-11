@@ -24,7 +24,7 @@ Import from the binding that matches the app's framework. All bindings
 re-export the same `should` / `failed` / `serverCheck`:
 
 ```ts
-import { should, failed, serverCheck } from '@scenetest/checks-react'  // or -vue / -solid / -svelte
+import { should, failed, serverCheck } from '@scenetest/checks/react'  // or /vue, /solid, /svelte
 import { should, failed, serverCheck } from '@scenetest/checks'        // framework-agnostic
 ```
 
@@ -101,7 +101,7 @@ reactive check hook (`useCheck` / `watchCheck` / `createCheck` / `checkEffect`),
 guarding inside the callback:
 
 ```tsx
-import { should, serverCheck, useCheck } from '@scenetest/checks-react'
+import { should, serverCheck, useCheck } from '@scenetest/checks/react'
 
 useCheck(() => {
   if (isLoading || !profile) return

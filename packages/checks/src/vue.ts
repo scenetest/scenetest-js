@@ -9,7 +9,7 @@ import { watchEffect } from 'vue'
  * @example
  * ```vue
  * <script setup>
- * import { watchCheck, serverCheck, should } from '@scenetest/checks-vue'
+ * import { watchCheck, serverCheck, should } from '@scenetest/checks/vue'
  * import { ref } from 'vue'
  *
  * const profile = ref(null)
@@ -34,3 +34,16 @@ export function watchCheck(effect: () => void): void {
   // In production, vite-plugin-scenetest strips the entire call
   watchEffect(effect)
 }
+
+// Re-export everything from core scenetest for convenience
+export { should, failed, serverCheck, match, defineConfig } from './index.js'
+export type {
+  AssertionResult,
+  ScenetestReporter,
+  ScenetestConfig,
+  AssertServerFn,
+  AssertDataFn,
+  ServerContext,
+  AssertionRpcPayload,
+  AssertionRpcResponse,
+} from './index.js'

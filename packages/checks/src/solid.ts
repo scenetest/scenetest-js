@@ -8,7 +8,7 @@ import { createEffect, on, type Accessor } from 'solid-js'
  *
  * @example
  * ```tsx
- * import { createCheck, serverCheck, should } from '@scenetest/checks-solid'
+ * import { createCheck, serverCheck, should } from '@scenetest/checks/solid'
  * import { createSignal } from 'solid-js'
  *
  * function Profile() {
@@ -44,3 +44,16 @@ export function createCheck(
     createEffect(effect)
   }
 }
+
+// Re-export everything from core scenetest for convenience
+export { should, failed, serverCheck, match, defineConfig } from './index.js'
+export type {
+  AssertionResult,
+  ScenetestReporter,
+  ScenetestConfig,
+  AssertServerFn,
+  AssertDataFn,
+  ServerContext,
+  AssertionRpcPayload,
+  AssertionRpcResponse,
+} from './index.js'

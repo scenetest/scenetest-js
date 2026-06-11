@@ -2,7 +2,7 @@
  * Auto-initializing recorder import
  *
  * Usage:
- *   import '@scenetest/scenes-panel/auto'
+ *   import '@scenetest/vite-plugin/panels/recorder'
  *
  * This will automatically initialize the recorder panel when imported.
  */

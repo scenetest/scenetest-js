@@ -31,6 +31,14 @@
     "./dashboard": {
       "types": "./dist/dashboard.d.ts",
       "import": "./dist/dashboard.js"
+    },
+    "./panels/observer": {
+      "types": "./dist/panels/observer/auto.d.ts",
+      "import": "./dist/panels/observer/auto.js"
+    },
+    "./panels/recorder": {
+      "types": "./dist/panels/recorder/auto.d.ts",
+      "import": "./dist/panels/recorder/auto.js"
     }
   },
   "files": [
@@ -55,9 +63,7 @@
     "@scenetest/checks": "workspace:*",
     "@scenetest/protocol": "workspace:*",
     "@scenetest/receiver": "workspace:*",
-    "@scenetest/dashboard": "workspace:*",
-    "@scenetest/checks-panel": "workspace:*",
-    "@scenetest/scenes-panel": "workspace:*"
+    "@scenetest/dashboard": "workspace:*"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"

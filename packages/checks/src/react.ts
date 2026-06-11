@@ -8,6 +8,8 @@ import { useEffect } from 'react'
  *
  * @example
  * ```tsx
+ * import { useCheck, serverCheck, should } from '@scenetest/checks/react'
+ *
  * useCheck(() => {
  *   serverCheck(
  *     'profile synced to db',
@@ -28,3 +30,16 @@ export function useCheck(
   // In production, vite-plugin-scenetest strips the entire call
   useEffect(effect, deps)
 }
+
+// Re-export everything from core scenetest for convenience
+export { should, failed, serverCheck, match, defineConfig } from './index.js'
+export type {
+  AssertionResult,
+  ScenetestReporter,
+  ScenetestConfig,
+  AssertServerFn,
+  AssertDataFn,
+  ServerContext,
+  AssertionRpcPayload,
+  AssertionRpcResponse,
+} from './index.js'

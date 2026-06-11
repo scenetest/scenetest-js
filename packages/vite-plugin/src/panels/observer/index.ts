@@ -44,7 +44,7 @@ declare global {
     __scenetest_panel?: boolean
     __scenetest_no_panel?: boolean
     __scenetest_force_panel?: boolean
-    __scenetest_report?: (result: AssertionResult) => void
+    // __scenetest_report is declared in @scenetest/checks (ScenetestReporter)
     __scenetest_openInEditor?: typeof openInEditor
     __scenetest_openFullscreenToGroup?: typeof openFullscreenToGroup
     __scenetest_showSequence?: typeof showSequence

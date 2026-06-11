@@ -1,15 +1,21 @@
 import type { Rule } from 'eslint'
 
 /**
- * Scenetest packages that may export `serverCheck`.
+ * Scenetest packages that may export `serverCheck`. '@scenetest/checks' also
+ * covers its framework subpaths (./react, ./vue, ./solid, ./svelte); the
+ * standalone checks-* names are the pre-0.12 binding packages.
  */
-const SCENETEST_PACKAGES = new Set([
+const SCENETEST_PACKAGES = [
   '@scenetest/checks',
   '@scenetest/checks-react',
   '@scenetest/checks-vue',
   '@scenetest/checks-solid',
   '@scenetest/checks-svelte',
-])
+]
+
+function isScenetestSource(source: string): boolean {
+  return SCENETEST_PACKAGES.some((pkg) => source === pkg || source.startsWith(pkg + '/'))
+}
 
 /**
  * Node types the Vite plugin can statically extract as the server function.
@@ -101,7 +107,7 @@ const rule: Rule.RuleModule = {
     return {
       ImportDeclaration(node: unknown) {
         const decl = node as unknown as ImportDeclarationNode
-        if (!SCENETEST_PACKAGES.has(decl.source.value)) return
+        if (!isScenetestSource(decl.source.value)) return
         for (const spec of decl.specifiers) {
           if (spec.type !== 'ImportSpecifier' || !spec.imported) continue
           const importedName =

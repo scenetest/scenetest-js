@@ -23,9 +23,10 @@ import type { Connect } from 'vite'
 const OBSERVER_VIRTUAL_ID = '/@scenetest/observer.js'
 const RECORDER_VIRTUAL_ID = '/@scenetest/recorder.js'
 
-// The actual packages these resolve to
-const OBSERVER_MODULE = '@scenetest/checks-panel/auto'
-const RECORDER_MODULE = '@scenetest/scenes-panel/auto'
+// The panel entry points these resolve to — self-referencing subpath exports
+// of this package (the panel sources live in src/panels/)
+const OBSERVER_MODULE = '@scenetest/vite-plugin/panels/observer'
+const RECORDER_MODULE = '@scenetest/vite-plugin/panels/recorder'
 
 function resolveFromPlugin(specifier: string): string | null {
   try {
@@ -292,8 +293,9 @@ export function scenetest(options: ScenetestPluginOptions = {}): Plugin {
       if (id === OBSERVER_VIRTUAL_ID || id === RECORDER_VIRTUAL_ID) {
         return id
       }
-      // Resolve panel packages for the consumer — handles pnpm strict hoisting
-      // where transitive deps aren't directly accessible from the project root
+      // Resolve panel entries for the consumer — the panels ship inside this
+      // package, so a self-referencing resolve always finds them regardless of
+      // the consumer's hoisting setup
       if (id === OBSERVER_MODULE || id === RECORDER_MODULE) {
         return resolveFromPlugin(id)
       }

@@ -25,16 +25,12 @@ pnpm -r test          # Run all unit tests across packages
 
 ```
 packages/
-├── checks/                 # Core library — should(), failed(), serverCheck(), match(), observer, playwright fixtures
-├── checks-react/           # React bindings — useCheck hook (re-exports checks)
-├── checks-vue/             # Vue bindings — watchCheck composable (re-exports checks)
-├── checks-solid/           # Solid bindings — createCheck primitive (re-exports checks)
-├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
+├── checks/                 # Core library — should(), failed(), serverCheck(), match(); framework bindings as subpath exports (./react, ./vue, ./solid, ./svelte) with optional peer deps
 ├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
 ├── receiver/               # Receiver core — framework-agnostic Hono app that accepts protocol events and fans them out to sinks
 ├── dashboard/              # Mountable Preact dashboard widget — mountDashboard() + transport adapter, shared by dev and cloud
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
-├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware
+├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware; observer + recorder panel UIs live in src/panels/ (subpath exports ./panels/observer, ./panels/recorder)
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
 ├── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
 ├── example-app-react/      # React demo app with working Scene tests
@@ -56,17 +52,10 @@ packages/
 ### Checks (`packages/checks/src/`)
 - `assertions.ts` — `should()`, `failed()`, `serverCheck()` (stub), `match()`
 - `runtime.ts` — `__scenetest_rpc()` client for multi-context assertions
-- `types.ts` — `AssertionResult`, `ServerContext`, RPC types
-- `index.ts` — `initObserver()`, assertion handler
-- `panel.ts` — Floating panel UI
-- `fullscreen.ts` — Fullscreen viewer with grouped/location/sequence views
-- `state.ts` — Global state (groups, history, stats)
-- `history.ts` — Assertion history tracking, flaky detection
-- `render.ts` — HTML rendering
-- `audio.ts` — Audio feedback (chords per group)
-- `styles.ts` — Injected CSS
-- `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
-- `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` (transitively through any `@scenetest/checks-*` binding) and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
+- `types.ts` — `AssertionResult`, `ServerContext`, RPC types, `ScenetestReporter` + the `window.__scenetest_report` global declaration
+- `index.ts` — public exports
+- `react.ts` / `vue.ts` / `solid.ts` / `svelte.ts` — framework bindings (`useCheck`, `watchCheck`, `createCheck`, `checkEffect`), published as subpath exports with optional peer deps; each re-exports the core API so app code imports from one place
+- `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
 
 ### Protocol (`packages/protocol/src/`)
 - `events.ts` — `RunEvent` union (`run:start` … `run:end`, plus the `run:progress` rollup), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`
@@ -113,6 +102,8 @@ The dashboard UI extracted from the Vite plugin's inline HTML string so dev and 
 - `middleware.ts` — `/__scenetest/run` endpoint, AsyncLocalStorage for result collection
 - `virtual-module.ts` — Virtual module system for extracted assertions
 - `config.ts` — Plugin config loading
+- `panels/observer/` — floating observer panel UI (panel, fullscreen viewer, history, audio); injected in dev, also importable as `@scenetest/vite-plugin/panels/observer` (the docs site does this)
+- `panels/recorder/` — scene recorder panel UI (opt-in via `recorder: true`); subpath `@scenetest/vite-plugin/panels/recorder`
 
 ### ESLint Plugin (`packages/eslint-plugin/src/`)
 - `index.ts` — Plugin entry, `recommended` flat config preset
@@ -133,7 +124,7 @@ The dashboard UI extracted from the Vite plugin's inline HTML string so dev and 
 
 - **Dev mode**: Injects observer script via `transformIndexHtml`, registers RPC middleware
 - **Production**: Strips all @scenetest/* package imports and calls via Babel AST transform
-- **Packages stripped**: checks, checks-react, checks-vue, checks-solid, checks-svelte
+- **Imports stripped**: `@scenetest/checks` and all its subpaths (`/react`, `/vue`, `/solid`, `/svelte`, `/runtime`); the pre-0.12 standalone binding packages (checks-react etc.) remain in the strip list so unmigrated apps still strip cleanly
 - **Plugin options**: `strip` (force), `devPanel` (show observer), `demo` (keep code + panel in prod), `csp` (Content-Security-Policy config)
 - **CSP**: Opt-in middleware (`csp: true`), disabled by default to avoid breaking external resources (Google Fonts, CDNs, etc.)
 
@@ -143,8 +134,8 @@ The observer and recorder panels are injected into the consumer's dev page using
 
 - `transformIndexHtml` injects `<script type="module" src="/@scenetest/observer.js">` (external script tag)
 - `resolveId` intercepts `/@scenetest/observer.js` and returns it as a virtual module
-- `load` returns bootstrap code: `import '@scenetest/checks-panel/auto'`
-- `resolveId` also intercepts `@scenetest/checks-panel/auto` and resolves it via `import.meta.resolve()` — this handles **pnpm strict hoisting** where transitive deps aren't visible from the consumer's project root
+- `load` returns bootstrap code: `import '@scenetest/vite-plugin/panels/observer'`
+- `resolveId` also intercepts that specifier and resolves it via `import.meta.resolve()` — a self-referencing subpath export, so it always resolves regardless of the consumer's hoisting setup (the panels ship inside the plugin package; pre-0.12 they were separate `checks-panel`/`scenes-panel` packages and needed the same trick for **pnpm strict hoisting**)
 
 **Why not middleware?** Previous approaches tried to serve the observer via a custom middleware route that manually called `server.transformRequest()`. This broke because:
 1. `createRequire` (CJS resolution) can't match `import`-only package.json exports

@@ -1,5 +1,5 @@
 import { createSignal, createMemo, createEffect, Show } from 'solid-js'
-import { should, failed } from '@scenetest/checks-solid'
+import { should, failed } from '@scenetest/checks/solid'
 
 function App() {
   // Reactive state
