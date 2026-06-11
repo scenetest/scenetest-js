@@ -4,6 +4,29 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.13.0] — 2026-06-11
+
+**The observer panel moves to `@scenetest/checks/panel`.** The panel is the viewing lens for checks' assertions — dependency-free DOM code that hooks `window.__scenetest_report` — and is usable with any bundler and no Vite at all, so it belongs with the assertions, not the Vite plugin. `@scenetest/checks` and `@scenetest/vite-plugin` bump to 0.13.0; other packages are unchanged.
+
+### @scenetest/checks
+
+* **New subpath `@scenetest/checks/panel`** — the floating observer panel, auto-initializing on import. Works under any bundler with no scenetest Vite plugin; the plugin-served niceties (click-to-editor via `/__open-in-editor`, the dashboard link) degrade gracefully when absent.
+
+### @scenetest/vite-plugin
+
+* **Breaking: the `./panels/observer` subpath (introduced in 0.12.0) is removed** — the plugin now injects the panel from its `@scenetest/checks` dependency. If you imported `@scenetest/vite-plugin/panels/observer` directly, import `@scenetest/checks/panel` instead; if you only used the panel through dev injection, nothing changes. `./panels/recorder` stays where it is.
+
+### Migration
+
+If you are coming from `@scenetest/checks-panel` (≤0.11.0), the target is `@scenetest/checks/panel` — not the short-lived 0.12.0 path. One-liner for your AI assistant:
+
+```text
+Replace any dependency on @scenetest/checks-panel with @scenetest/checks
+(^0.13.0), and rewrite imports of '@scenetest/checks-panel/auto',
+'@scenetest/checks-panel', or '@scenetest/vite-plugin/panels/observer' to
+'@scenetest/checks/panel'. Pure rename; no API or behavior changes.
+```
+
 ## [0.12.0] — 2026-06-11
 
 **Package consolidation.** Six packages folded into two existing ones — npm package names and import paths change, but every API keeps its name and signature. No behavior changes. `@scenetest/checks` and `@scenetest/vite-plugin` bump to 0.12.0 (and `@scenetest/eslint-plugin` from 0.10.0 to 0.12.0); unchanged packages — `@scenetest/scenes`, `@scenetest/protocol`, `@scenetest/receiver`, `@scenetest/dashboard` — stay at 0.11.0.

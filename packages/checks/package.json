@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/checks",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Inline assertions for end-to-end testing",
   "type": "module",
   "license": "MIT",
@@ -43,6 +43,10 @@
     "./svelte": {
       "types": "./dist/svelte.d.ts",
       "import": "./dist/svelte.js"
+    },
+    "./panel": {
+      "types": "./dist/panel/auto.d.ts",
+      "import": "./dist/panel/auto.js"
     }
   },
   "files": [
