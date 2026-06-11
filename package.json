@@ -12,7 +12,7 @@
 	},
 	"author": "msnook.xyz",
 	"scripts": {
-		"build": "pnpm --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
+		"build": "pnpm --filter @scenetest/protocol --filter @scenetest/checks --filter @scenetest/scenes build && pnpm -r build",
 		"dev": "pnpm --filter @scenetest/vite-plugin build && pnpm --filter example-app-react dev",
 		"docs": "pnpx serve docs",
 		"typecheck": "pnpm -r typecheck",

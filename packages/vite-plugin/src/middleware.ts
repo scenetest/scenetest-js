@@ -1,5 +1,6 @@
 import type { Connect, ViteDevServer } from 'vite'
 import type { AssertionRpcPayload, AssertionRpcResponse, AssertionResult, ServerContext } from '@scenetest/checks'
+import { isEventShaped } from '@scenetest/protocol'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
@@ -301,11 +302,16 @@ export function createScenetestMiddleware(
 
       try {
         const event = JSON.parse(body)
-        // Clear buffer on new run so the dashboard starts fresh
-        if (event.type === 'run:start') {
-          eventHub.clear()
+        // The hub is a relay, not a consumer: require only the protocol
+        // envelope so event types newer than this plugin still fan out
+        // (a newer CLI paired with an older plugin is the normal case).
+        if (isEventShaped(event)) {
+          // Clear buffer on new run so the dashboard starts fresh
+          if (event.type === 'run:start') {
+            eventHub.clear()
+          }
+          eventHub.push(event)
         }
-        eventHub.push(event)
       } catch {
         // Ignore malformed events
       }

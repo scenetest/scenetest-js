@@ -30,6 +30,7 @@ packages/
 ├── checks-vue/             # Vue bindings — watchCheck composable (re-exports checks)
 ├── checks-solid/           # Solid bindings — createCheck primitive (re-exports checks)
 ├── checks-svelte/          # Svelte bindings — checkEffect helper (re-exports checks)
+├── protocol/               # Wire protocol — typed event/command vocabulary + codec shared by CLI, plugin, dashboard, cloud
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config, recorder
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
@@ -64,6 +65,13 @@ packages/
 - `styles.ts` — Injected CSS
 - `fixtures.ts` — `scenePage` fixture, `waitForAssertions()`, failure logging
 - `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` (transitively through any `@scenetest/checks-*` binding) and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
+
+### Protocol (`packages/protocol/src/`)
+- `events.ts` — `RunEvent` union (`run:start` … `run:end`, plus the `run:progress` rollup), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`
+- `commands.ts` — `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`)
+- `codec.ts` — `encodeEvent()`/`decodeEvent()` (strict, never throws), `isEventShaped()` (envelope-only check so relays pass through event types newer than themselves)
+
+Zero-dependency package; the seam between the dev tool and scenetest-cloud. Producers (CLI, injected listener) and consumers (dashboard, recorders, cloud worker) share this vocabulary, and wire-format changes route through a published release so version skew stays visible. `@scenetest/scenes` re-exports `RunEvent` as `DashboardEvent` for backwards compatibility.
 
 ### Scenes (`packages/scenes/src/`)
 - `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors
@@ -176,5 +184,6 @@ TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs
 | Network layer (`network.fail()`, `network.mock()`) | Design only | `cli-v2.md` section 7 |
 | Snapshots (`snapshot()`, `expectSnapshot()`) | Design only | `cli-v2.md` section 8 |
 | Dashboard & JSONL reports | Design only | `dashboard.md` |
+| Dashboard widget extraction (`mountDashboard()` + transport adapters, receiver core) | Protocol package landed; widget/receiver extraction pending | `architecture.md` in scenetest-cloud |
 | Interactive UI mode (`--ui`) | Stub only | `cli-v2.md` |
 | Visualization (timeline/musical) | Conceptual | `cli-v2.md` section 10 |
