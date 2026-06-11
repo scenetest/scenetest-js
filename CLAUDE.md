@@ -180,6 +180,8 @@ The plugin keeps a wide vite peer range (`^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0`)
 
 TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs deploy` (`NITRO_PRESET=cloudflare_module vite build` → `wrangler deploy`). The worker is configured in `docs/wrangler.toml`. Local preview: `pnpm -C docs preview`.
 
+**Cloudflare Workers Builds config** (dashboard, not repo): Workers Builds auto-installs the entire workspace before the build command — including the `examples/*` apps the docs don't need. The dashboard is configured with the build variable `SKIP_DEPENDENCY_INSTALL=true` and build command `pnpm install --filter "@scenetest/docs..." && pnpm run build` so only the docs app and its dependency chain are installed. If docs builds ever fail with missing workspace deps, check that this variable and command are still set.
+
 - Markdown pages (home, `/guides/*`, `/reference/*`, `/faq/*`) live in `docs/public/**/*.md` and are also served as raw `.md` for `llms.txt` / copy-markdown.
 - **Markdown is loaded server-side for SSR**, so LLMs and crawlers see the content without running JS. The route loader calls `getMarkdown(path)` from `docs/app/lib/markdown.ts`, which reads from an `import.meta.glob('../../public/**/*.md', { query: '?raw', eager: true })` map. Content is bundled at build time — no runtime fs access, which Workers wouldn't have anyway.
 - `MarkdownSection` takes the markdown as a `content` prop and renders synchronously. It has no fetch path — if a new route needs markdown, wire the loader.
