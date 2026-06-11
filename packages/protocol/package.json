@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/protocol",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Typed event and command vocabulary shared by the scenetest CLI, Vite plugin, dashboard, and cloud service",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,13 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/protocol"
   },
-  "keywords": ["testing", "e2e", "playwright", "protocol", "events"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "protocol",
+    "events"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,7 +25,9 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },

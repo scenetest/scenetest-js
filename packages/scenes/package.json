@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/scenes",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "CLI tool for running scenetest scene specs",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,13 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/scenes"
   },
-  "keywords": ["testing", "e2e", "playwright", "cli", "assertions"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "cli",
+    "assertions"
+  ],
   "bin": {
     "scenetest": "./dist/cli.js"
   },
@@ -19,7 +25,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },

@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/dashboard",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "description": "Mountable Preact dashboard widget for scenetest — renders a live run into a shadow root, fed by a pluggable transport adapter",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,14 @@
     "url": "https://github.com/scenetest/scenetest-js",
     "directory": "packages/dashboard"
   },
-  "keywords": ["testing", "e2e", "playwright", "dashboard", "preact", "widget"],
+  "keywords": [
+    "testing",
+    "e2e",
+    "playwright",
+    "dashboard",
+    "preact",
+    "widget"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,7 +26,9 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
