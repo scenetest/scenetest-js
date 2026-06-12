@@ -279,9 +279,9 @@ relaying a run to a remote dashboard (e.g. a cloud runner box) or reporting
 directly from CI.
 
 ```sh
-scenetest run --report-url http://127.0.0.1:4999/events/$RUN_ID
+scenetest --report-url http://127.0.0.1:4999/events/$RUN_ID
 # or via env var:
-SCENETEST_REPORT_URL=http://127.0.0.1:4999/events/$RUN_ID scenetest run
+SCENETEST_REPORT_URL=http://127.0.0.1:4999/events/$RUN_ID scenetest
 ```
 
 The flag takes precedence over `SCENETEST_REPORT_URL`, which takes precedence
