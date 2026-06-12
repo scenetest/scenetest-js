@@ -107,7 +107,7 @@ Side-by-side diff showing:
 ```yaml
 # .github/workflows/test.yml
 - name: Run scenetest
-  run: pnpm scenetest run --report
+  run: pnpm scenetest --report
 
 - name: Upload report
   uses: scenetest/upload-report@v1

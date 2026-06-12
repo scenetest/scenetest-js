@@ -7,7 +7,7 @@ npm install -D @scenetest/scenes
 ```
 
 ```bash
-npx scenetest run
+npx scenetest
 ```
 
 See the [monorepo](https://github.com/scenetest/scenetest-js) for full documentation.
