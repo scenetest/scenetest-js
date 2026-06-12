@@ -4,6 +4,17 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## [0.15.0] — 2026-06-12
+
+**`@scenetest/scenes` gains a pluggable report destination.** The CLI can now stream its protocol events to any HTTP endpoint as a run executes — the "speaking" half of the receiver/sink design — unblocking direct-to-cloud and bring-your-own-runner CI reporting. Only `@scenetest/scenes` bumps (to 0.15.0); other packages are unchanged.
+
+### @scenetest/scenes
+
+* **New `--report-url <url>` flag (and `SCENETEST_REPORT_URL` env var)** — streams protocol events to a caller-supplied HTTP endpoint as the run executes, the "speaking" half of the receiver/sink design. `POST`s batched `{ "events": [{ "seq", "payload" }] }` (protocol events verbatim; `seq` is monotonic per run), flushing every ~250ms or 50 events with a final flush before exit. Fail-soft (an unreachable endpoint warns once and never fails the run) and additive — the dev middleware / `.jsonl` keep working. Optional `SCENETEST_REPORT_TOKEN` is sent as an `Authorization: Bearer` header. New config fields `reportUrl` / `reportToken` mirror the flag and env vars.
+* **Fix: `scenetest --version` now reports the installed package version** instead of a stale hardcoded `0.7.0`. The version is read from `package.json` at runtime, so it no longer drifts between releases.
+
+---
+
 ## [0.14.0] — 2026-06-11
 
 **The recorder panel moves to `@scenetest/scenes/recorder`**, completing what 0.13.0 did for the observer: each panel lives with the package it's a lens/composer for. The recorder composes scenes DSL, so it versions in lockstep with the parser that consumes its output — and like the observer it is pure DOM code with zero Vite coupling (record on any page, export `.spec.md`, run with the CLI). `@scenetest/scenes` and `@scenetest/vite-plugin` bump to 0.14.0; other packages are unchanged.
