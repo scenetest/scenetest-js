@@ -179,6 +179,20 @@ export interface ScenetestConfig extends BaseConfig {
   reportFormat?: 'html' | 'json' | 'both'
 
   /**
+   * Live report HTTP endpoint. When set, the CLI POSTs batched protocol events
+   * to this URL as the run executes — in addition to the local dev middleware /
+   * jsonl, not instead of them. The URL is opaque (bake the run id into it).
+   * Overridden by the `--report-url` flag or `SCENETEST_REPORT_URL` env var.
+   */
+  reportUrl?: string
+
+  /**
+   * Bearer token sent as `Authorization: Bearer <token>` to `reportUrl`.
+   * Overridden by the `SCENETEST_REPORT_TOKEN` env var.
+   */
+  reportToken?: string
+
+  /**
    * Device rotation: assign each actor a rotating device profile.
    * When true, uses built-in device pool (mobile, tablet, desktop).
    * When an array of DeviceProfile, uses that as the pool.
@@ -1120,6 +1134,9 @@ export interface CLIOptions {
 
   /** Report format */
   format?: 'html' | 'json' | 'both'
+
+  /** Live report HTTP endpoint — POST batched protocol events as the run executes */
+  reportUrl?: string
 
   /** Config file path */
   config?: string

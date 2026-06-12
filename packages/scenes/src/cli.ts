@@ -6,6 +6,11 @@ import fs from 'fs'
 import { loadConfig, filterTeamsByName } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
 import { init } from './init.js'
+import {
+  ReportUrlReporter,
+  setReportUrlReporter,
+  drainReportUrlReporter,
+} from './report-url-reporter.js'
 import { finish as soundFinish, resolveSoundEnabled } from './sound.js'
 import {
   gatherProjectContext,
@@ -26,6 +31,7 @@ program
   .option('--headed', 'Run with visible browser')
   .option('--report <dir>', 'Report output directory')
   .option('--format <format>', 'Report format (html, json, both)')
+  .option('--report-url <url>', 'POST batched protocol events to this HTTP endpoint as the run executes (also honors SCENETEST_REPORT_URL)')
   .option('--config <path>', 'Path to config file')
   .option('--devices', 'Enable device rotation (assign each actor a rotating mobile/tablet/desktop device)')
   .option('--no-keyboard-actor', 'Disable keyboard-only actor rotation (keyboard navigation is ON by default)')
@@ -75,6 +81,16 @@ program
         config.noPanel = true
       }
       config.sound = { enabled: resolveSoundEnabled(config, options) }
+
+      // Live report-url sink: CLI flag > env var > config. Composes with the
+      // local dev middleware / jsonl — it's an additional sink, not a replacement.
+      const reportUrl =
+        options.reportUrl ?? process.env.SCENETEST_REPORT_URL ?? config.reportUrl
+      if (reportUrl) {
+        const token = process.env.SCENETEST_REPORT_TOKEN ?? config.reportToken
+        setReportUrlReporter(new ReportUrlReporter({ url: reportUrl, token }))
+        console.log(`Reporting events to: ${reportUrl}\n`)
+      }
 
       // Interactive UI mode
       if (options.ui) {
@@ -141,6 +157,9 @@ program
           await new Promise(() => {}) // Wait forever
         }
       } finally {
+        // Final synchronous flush so the tail of the run — including run:end —
+        // is delivered before we exit.
+        await drainReportUrlReporter()
         if (!options.ui) {
           await runner.close()
         }

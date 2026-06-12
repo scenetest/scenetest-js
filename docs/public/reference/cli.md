@@ -20,6 +20,7 @@ scenetest --swarm              # Run swarm mode (all teams, all scenes)
 | `--config <path>` | Path to config file (default: auto-discovered) |
 | `--report <dir>` | Report output directory (default: `./scenetest-reports`) |
 | `--format <fmt>` | Report format: `html`, `json`, or `both` (default: `html`) |
+| `--report-url <url>` | POST batched protocol events to an HTTP endpoint as the run executes (see [Live report URL](#live-report-url)) |
 | `--devices` | Enable device rotation (assign rotating mobile/tablet/desktop devices to actors) |
 | `--no-keyboard-actor` | Disable keyboard-only actor rotation (keyboard navigation is ON by default) |
 | `--fuzzy-fingers` | Enable fuzzy-finger touch simulation (imprecise human touch, ~1 in 5 clicks miss) |
@@ -268,6 +269,44 @@ When running against a Vite dev server with the scenetest plugin, a live dashboa
 The URL is printed when the runner starts. You can also open it from the floating dev panel's **dashboard** button.
 
 See [Live Dashboard](/reference/live-dashboard) for full details.
+
+## Live report URL
+
+`--report-url <url>` streams protocol events to a caller-supplied HTTP endpoint
+as the run executes — in addition to the dev middleware / `.jsonl`, not instead
+of them. This is the "speaking" half of the receiver/sink design, useful for
+relaying a run to a remote dashboard (e.g. a cloud runner box) or reporting
+directly from CI.
+
+```sh
+scenetest run --report-url http://127.0.0.1:4999/events/$RUN_ID
+# or via env var:
+SCENETEST_REPORT_URL=http://127.0.0.1:4999/events/$RUN_ID scenetest run
+```
+
+The flag takes precedence over `SCENETEST_REPORT_URL`, which takes precedence
+over `reportUrl` in the config file.
+
+**Wire contract.** The CLI `POST`s to `<url>` with the body:
+
+```json
+{ "events": [{ "seq": 0, "payload": { "type": "run:start", "timestamp": 1, "sceneCount": 3 } }] }
+```
+
+- `payload` is a protocol event, carried verbatim (no new wire format).
+- `seq` is a monotonic counter assigned per run, so the receiver can order and
+  de-duplicate the stream regardless of HTTP arrival order.
+- The URL is opaque — bake the run id into it.
+
+**Behavior.**
+
+- **Batched** — events flush every ~250ms or once 50 are queued, with a final
+  synchronous flush before exit so the tail of the run (including `run:end`) is
+  never lost.
+- **Fail soft** — an unreachable or erroring endpoint logs a single warning and
+  never fails the run. Reporting is observability, not a gate.
+- **Auth** — set `SCENETEST_REPORT_TOKEN` (or `reportToken` in config) to send
+  an `Authorization: Bearer <token>` header, for the direct-to-cloud case.
 
 ## Exit Codes
 
