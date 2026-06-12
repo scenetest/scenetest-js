@@ -1,4 +1,5 @@
 import type { DashboardEvent } from './types.js'
+import { reportUrlSend } from './report-url-reporter.js'
 
 /**
  * Streams dashboard events to the Vite dev server for the live timeline.
@@ -53,5 +54,8 @@ export function setDashboardReporter(reporter: DashboardReporter | null): void {
 }
 
 export function dashboardSend(event: DashboardEvent): void {
+  // Fan out to every configured sink: the dev-server dashboard (SSE/jsonl) and
+  // the optional caller-supplied --report-url endpoint. Both are fire-and-forget.
   _reporter?.send(event)
+  reportUrlSend(event)
 }
