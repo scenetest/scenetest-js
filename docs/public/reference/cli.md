@@ -305,6 +305,10 @@ over `reportUrl` in the config file.
   never lost.
 - **Fail soft** — an unreachable or erroring endpoint logs a single warning and
   never fails the run. Reporting is observability, not a gate.
+- **Not the verdict** — because delivery is fail-soft, the `run:end` event can
+  legitimately never arrive on a healthy run. Consumers should take the process
+  **exit code** as authoritative and treat `run:end` as best-effort enrichment
+  (see [Exit Codes](#exit-codes)).
 - **Auth** — set `SCENETEST_REPORT_TOKEN` (or `reportToken` in config) to send
   an `Authorization: Bearer <token>` header, for the direct-to-cloud case.
 
@@ -315,3 +319,14 @@ over `reportUrl` in the config file.
 | 0 | All scenes completed, all assertions passed |
 | 1 | One or more scenes failed or timed out |
 | 1 | Configuration error or missing teams |
+
+**The exit code is the run verdict.** `scenetest` exits non-zero when any scene
+fails or times out, any assertion fails, or a scene does not complete — and zero
+otherwise. So a zero exit already implies an all-passing run.
+
+Reporting is independent of the verdict. The `run:end` event carries the same
+pass/fail summary (per-scene and assertion counts) for dashboards, but
+`--report-url` delivery is fail-soft — a dropped or never-delivered `run:end` on
+a zero exit still means the run passed. Tooling that ingests the event stream
+should settle pass/fail from the exit code and use `run:end` only to enrich the
+display, never to gate it.
