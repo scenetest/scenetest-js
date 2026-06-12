@@ -3,6 +3,7 @@
 import { Command } from 'commander'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
 import { loadConfig, filterTeamsByName } from './config.js'
 import { SceneRunner, printSummary } from './runner.js'
 import { init } from './init.js'
@@ -20,12 +21,17 @@ import {
 } from './prompt-generator.js'
 import type { CLIOptions, RunReport } from './types.js'
 
+// Read the version from package.json so `scenetest --version` always matches
+// the installed package instead of a hand-maintained literal that drifts.
+const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json')
+const version = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version as string
+
 const program = new Command()
 
 program
   .name('scenetest')
   .description('Run scenetest scene specs')
-  .version('0.7.0')
+  .version(version)
   .argument('[scenes...]', 'Scene files or directories to run')
   .option('--ui', 'Run in interactive UI mode')
   .option('--headed', 'Run with visible browser')
