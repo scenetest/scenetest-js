@@ -12,7 +12,8 @@
  * distinct from `@scenetest/receiver`, which is the *ingest* half.
  */
 export { createRunSource } from './source.js'
-export { runCollectionOptions } from './options.js'
+export { runCollectionOptions, createRunCollection } from './options.js'
+export { createRunModel, type RunModel } from './model.js'
 export {
   scenesProjection,
   assertionsProjection,

@@ -62,3 +62,38 @@ separately and is DOM-free — useful for tests, SSR, or computing a rollup:
 - `foldEvents(events)` / `applyEvent(state, event)` — reduce protocol events into `DashboardState`
 - `initialState()`, `completedSceneCount(state)`, `withConnection(state, status)`
 - `sceneSummary(scene)` — the plain-text "copy failures" summary
+
+## Collections (`@scenetest/dashboard/collections`)
+
+A read-only [TanStack DB](https://tanstack.com/db) read model over the same
+run stream. `createRunSource(transport)` wraps the transport as one shared,
+fan-out stream; each collection is a projection of it into rows. Several
+collections ride **one** connection — "subscribe to the stream, attach the
+tables" — and each is a server-owned replica: the projection is the sole
+writer, so client `.insert()`/`.update()` throws.
+
+```ts
+import { useLiveQuery } from '@tanstack/react-db'
+import { createDevTransport } from '@scenetest/dashboard'
+import { createRunModel } from '@scenetest/dashboard/collections'
+
+const { scenes, assertions, close } = createRunModel(createDevTransport())
+
+// live queries — filter / aggregate / sort, recomputed incrementally
+const { data } = useLiveQuery((q) =>
+  q.from({ s: scenes }).groupBy(({ s }) => s.status)
+    .select(({ s }) => ({ status: s.status, n: count(s.id) }))
+)
+// on teardown: close()
+```
+
+Lower-level building blocks are exported too: `createRunSource`,
+`runCollectionOptions` / `createRunCollection` (point a projection at a source),
+and the `scenesProjection()` / `assertionsProjection()` reducers. A projection
+speaks a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`), so it is
+testable without TanStack DB. `@tanstack/db` is an **optional peer dependency** —
+only needed if you import this subpath; the widget entry never pulls it in.
+
+History/ordering/de-duplication remain the transport's contract (SSE replay in
+dev, WebSocket `sinceSeq` replay in cloud); the source just consumes `onEvent`
+and resets its replay buffer on `run:start`.

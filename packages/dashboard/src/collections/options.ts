@@ -1,4 +1,5 @@
-import type { CollectionConfig } from '@tanstack/db'
+import { createCollection } from '@tanstack/db'
+import type { Collection, CollectionConfig } from '@tanstack/db'
 import type { RunCollectionOptions } from './types.js'
 
 /**
@@ -70,4 +71,22 @@ export function runCollectionOptions<T extends object, TKey extends string | num
       },
     },
   }
+}
+
+/**
+ * Build and return the run collection itself, ready to query — the common
+ * case, since the result *is* a TanStack DB collection. Equivalent to
+ * `createCollection(runCollectionOptions(options))`.
+ *
+ * @example
+ * ```ts
+ * const source = createRunSource(transport)
+ * const scenes = createRunCollection({ source, projection: scenesProjection() })
+ * // scenes.toArray, useLiveQuery(q => q.from({ s: scenes })…)
+ * ```
+ */
+export function createRunCollection<T extends object, TKey extends string | number>(
+  options: RunCollectionOptions<T, TKey>
+): Collection<T, TKey> {
+  return createCollection(runCollectionOptions(options))
 }
