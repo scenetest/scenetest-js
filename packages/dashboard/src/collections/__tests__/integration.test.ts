@@ -41,18 +41,20 @@ const assertionCollection = (source: RunSource) =>
 const runsCollection = (source: RunSource) =>
   createCollection(runCollectionOptions({ source, projection: runsProjection() }))
 
-const sceneStart = (name: string, ts: number): RunEvent => ({
+const sceneStart = (name: string, ts: number, runId = '1'): RunEvent => ({
   type: 'scene:start',
   timestamp: ts,
+  runId,
   name,
   file: `${name}.ts`,
   actors: ['a'],
   teamIndex: 0,
   team: {},
 })
-const sceneEnd = (name: string, status: string, ts: number): RunEvent => ({
+const sceneEnd = (name: string, status: string, ts: number, runId = '1'): RunEvent => ({
   type: 'scene:end',
   timestamp: ts,
+  runId,
   name,
   status,
   duration: ts,
@@ -69,9 +71,9 @@ describe('run collection (end to end through @tanstack/db)', () => {
     await scenes.preload()
     await assertions.preload()
 
-    emit({ type: 'run:start', timestamp: 1, sceneCount: 2 })
+    emit({ type: 'run:start', timestamp: 1, runId: '1', sceneCount: 2 })
     emit(sceneStart('login', 2))
-    emit({ type: 'assertion', timestamp: 3, actor: 'a', description: 'ok', result: true })
+    emit({ type: 'assertion', timestamp: 3, runId: '1', actor: 'a', description: 'ok', result: true })
     emit(sceneEnd('login', 'completed', 40))
 
     expect(scenes.get('1:0:login')).toMatchObject({ runId: '1', status: 'completed', duration: 40 })
@@ -106,7 +108,7 @@ describe('run collection (end to end through @tanstack/db)', () => {
     const counts = () =>
       Object.fromEntries(byStatus.toArray.map((r) => [r.status as string, r.n as number]))
 
-    emit({ type: 'run:start', timestamp: 1, sceneCount: 2 })
+    emit({ type: 'run:start', timestamp: 1, runId: '1', sceneCount: 2 })
     emit(sceneStart('a', 2))
     emit(sceneStart('b', 3))
     expect(counts()).toEqual({ running: 2 })
@@ -124,7 +126,7 @@ describe('run collection (end to end through @tanstack/db)', () => {
     // First collection starts the subscription and the run gets underway.
     const early = sceneCollection(source)
     await early.preload()
-    emit({ type: 'run:start', timestamp: 1, sceneCount: 1 })
+    emit({ type: 'run:start', timestamp: 1, runId: '1', sceneCount: 1 })
     emit(sceneStart('login', 2))
 
     // A second collection created mid-run replays the buffered events.
@@ -162,16 +164,17 @@ describe('run collection (end to end through @tanstack/db)', () => {
     const runs = runsCollection(source)
     await runs.preload()
 
-    emit({ type: 'run:start', timestamp: 100, sceneCount: 1 })
-    emit(sceneStart('a', 101))
-    emit(sceneEnd('a', 'completed', 110))
+    emit({ type: 'run:start', timestamp: 100, runId: '100', sceneCount: 1 })
+    emit(sceneStart('a', 101, '100'))
+    emit(sceneEnd('a', 'completed', 110, '100'))
     emit({
       type: 'run:end',
       timestamp: 120,
+      runId: '100',
       duration: 20,
       summary: { scenes: 1, completed: 1, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0, consoleErrors: 0 },
     })
-    emit({ type: 'run:start', timestamp: 200, sceneCount: 1 })
+    emit({ type: 'run:start', timestamp: 200, runId: '200', sceneCount: 1 })
 
     expect(runs.toArray.map((r) => [r.id, r.status])).toEqual([
       ['100', 'finished'],

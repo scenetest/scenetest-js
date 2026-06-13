@@ -62,7 +62,7 @@ examples/                   # Private workspace apps (never published) — the d
 - `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
 
 ### Protocol (`packages/protocol/src/`)
-- `events.ts` — `RunEvent` union (`run:start` … `run:end`, plus the `run:progress` rollup), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`
+- `events.ts` — `RunEvent` union (`run:start` … `run:end`, plus the `run:progress` rollup), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`. Every event carries a required `runId` (the `run:start` timestamp; producers stamp it via `dashboardSend`) so consumers partition a PR's whole history by run and attach mid-stream without inferring run from order — required in the strict shape/codec like `name`/`file`, but not in the lenient `isEventShaped` relay envelope
 - `commands.ts` — `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`)
 - `codec.ts` — `encodeEvent()`/`decodeEvent()` (strict, never throws), `isEventShaped()` (envelope-only check so relays pass through event types newer than themselves)
 

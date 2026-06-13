@@ -1,4 +1,4 @@
-import type { DashboardEvent } from './types.js'
+import type { DashboardEvent, DashboardEventInput } from './types.js'
 import { reportUrlSend } from './report-url-reporter.js'
 
 /**
@@ -53,9 +53,19 @@ export function setDashboardReporter(reporter: DashboardReporter | null): void {
   _reporter = reporter
 }
 
-export function dashboardSend(event: DashboardEvent): void {
+// The id of the run currently being emitted. Set when `run:start` passes
+// through, then stamped onto every event of that run, so callers don't have
+// to thread it through. Within a single producer process events are emitted
+// in order (run:start first), so this is reliable here — unlike a consumer,
+// which can attach mid-stream and must read `runId` off the event.
+let _currentRunId = ''
+
+export function dashboardSend(event: DashboardEventInput): void {
+  if (event.type === 'run:start') _currentRunId = String(event.timestamp)
+  const stamped = { ...event, runId: _currentRunId } as DashboardEvent
+
   // Fan out to every configured sink: the dev-server dashboard (SSE/jsonl) and
   // the optional caller-supplied --report-url endpoint. Both are fire-and-forget.
-  _reporter?.send(event)
-  reportUrlSend(event)
+  _reporter?.send(stamped)
+  reportUrlSend(stamped)
 }

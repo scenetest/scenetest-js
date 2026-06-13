@@ -11,33 +11,36 @@ import {
 } from '../index.js'
 
 const events: RunEvent[] = [
-  { type: 'run:start', timestamp: 1, sceneCount: 3 },
+  { type: 'run:start', timestamp: 1, runId: '1', sceneCount: 3 },
   {
     type: 'scene:start',
     timestamp: 2,
+    runId: '1',
     name: 'checkout',
     file: 'checkout.scene.ts',
     actors: ['buyer', 'seller'],
     teamIndex: 0,
     team: { name: 'fr', tags: { locale: 'fr' } },
   },
-  { type: 'action:start', timestamp: 3, actor: 'buyer', action: 'click', target: 'submit' },
-  { type: 'action:end', timestamp: 4, actor: 'buyer', action: 'click', target: 'submit', duration: 12 },
-  { type: 'assertion', timestamp: 5, actor: 'buyer', description: 'cart updated', result: true },
-  { type: 'warning', timestamp: 6, actor: 'buyer', selector: '~banner', message: 'unexpected path' },
+  { type: 'action:start', timestamp: 3, runId: '1', actor: 'buyer', action: 'click', target: 'submit' },
+  { type: 'action:end', timestamp: 4, runId: '1', actor: 'buyer', action: 'click', target: 'submit', duration: 12 },
+  { type: 'assertion', timestamp: 5, runId: '1', actor: 'buyer', description: 'cart updated', result: true },
+  { type: 'warning', timestamp: 6, runId: '1', actor: 'buyer', selector: '~banner', message: 'unexpected path' },
   {
     type: 'scene:end',
     timestamp: 7,
+    runId: '1',
     name: 'checkout',
     status: 'completed',
     duration: 900,
     teamIndex: 0,
     team: {},
   },
-  { type: 'run:progress', timestamp: 8, pct: 60, failing: 1, flaky: 1 },
+  { type: 'run:progress', timestamp: 8, runId: '1', pct: 60, failing: 1, flaky: 1 },
   {
     type: 'run:end',
     timestamp: 9,
+    runId: '1',
     duration: 1000,
     summary: {
       scenes: 3,
@@ -78,9 +81,16 @@ describe('event codec', () => {
   })
 
   it('rejects known types missing required fields', () => {
-    expect(decodeEvent({ type: 'run:start', timestamp: 1 })).toBeNull()
-    expect(decodeEvent({ type: 'assertion', timestamp: 1, description: 'x' })).toBeNull()
-    expect(decodeEvent({ type: 'scene:end', timestamp: 1, name: 'a', status: 'completed', duration: 1, teamIndex: 0, team: { tags: { a: 1 } } })).toBeNull()
+    expect(decodeEvent({ type: 'run:start', timestamp: 1, runId: '1' })).toBeNull()
+    expect(decodeEvent({ type: 'assertion', timestamp: 1, runId: '1', description: 'x' })).toBeNull()
+    expect(decodeEvent({ type: 'scene:end', timestamp: 1, runId: '1', name: 'a', status: 'completed', duration: 1, teamIndex: 0, team: { tags: { a: 1 } } })).toBeNull()
+  })
+
+  it('rejects events missing runId (required on every event, like name/file)', () => {
+    expect(decodeEvent({ type: 'run:start', timestamp: 1, sceneCount: 3 })).toBeNull()
+    expect(decodeEvent({ type: 'assertion', timestamp: 5, actor: 'a', description: 'x', result: true })).toBeNull()
+    // …but the lenient relay envelope still forwards it (it only checks type+timestamp).
+    expect(isEventShaped({ type: 'assertion', timestamp: 5, description: 'x', result: true })).toBe(true)
   })
 
   it('rejects events without a timestamp', () => {

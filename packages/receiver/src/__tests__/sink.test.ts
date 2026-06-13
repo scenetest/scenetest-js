@@ -43,7 +43,7 @@ describe('JsonlSink', () => {
   it('round-trips known event types through decodeEvent()', () => {
     const file = path.join(tmp, 'events.jsonl')
     const sink = new JsonlSink(file)
-    const event = { type: 'run:start', timestamp: 42, sceneCount: 7 }
+    const event = { type: 'run:start', timestamp: 42, runId: '42', sceneCount: 7 }
     sink.write(event)
     sink.close()
 

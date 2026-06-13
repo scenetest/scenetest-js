@@ -102,6 +102,10 @@ export function isEventShaped(value: unknown): value is { type: string; timestam
 /** Strict structural check against the known event vocabulary. */
 export function isRunEvent(value: unknown): value is RunEvent {
   if (!isEventShaped(value)) return false
+  // Every event carries its run id (producers stamp it). Required in the
+  // strict shape — like `name`/`file` — but not in the lenient relay
+  // envelope above, whose job is only to forward unknown event types.
+  if (!str((value as unknown as Raw).runId)) return false
   const validate = EVENT_VALIDATORS[value.type as RunEvent['type']]
   return validate !== undefined && validate(value as unknown as Raw)
 }

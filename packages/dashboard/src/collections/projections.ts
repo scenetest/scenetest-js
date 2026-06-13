@@ -2,15 +2,15 @@ import type { TeamMeta } from '@scenetest/protocol'
 import type { RowOp, RunProjection } from './types.js'
 
 /**
- * `runId` is the timestamp of the `run:start` that opened the run. Rows from
- * every run of a PR live in one collection, partitioned by this id, so the
- * picker / rollups / flaky detection are queries over the rows rather than
- * separate fetches. A new `run:start` opens a new partition — it does **not**
- * truncate (that was the single-run behaviour; see `docs/.../unified-console.md`).
+ * Every event carries its own `runId` (producers stamp it; see
+ * `@scenetest/protocol`). Rows from every run of a PR live in one collection,
+ * partitioned by that id, so the picker / rollups / flaky detection are
+ * queries over the rows rather than separate fetches. A new `run:start` opens
+ * a new partition — it does **not** truncate (that was the single-run
+ * behaviour; see `docs/public/design/unified-console.md`). Because the id is
+ * on the event, projections are stateless and a collection can attach
+ * mid-stream without having seen the run's `run:start`.
  */
-function runIdOf(timestamp: number): string {
-  return String(timestamp)
-}
 
 // ─── scenes ──────────────────────────────────────────────────────────
 
@@ -40,20 +40,15 @@ function sceneKey(runId: string, teamIndex: number, name: string): string {
 }
 
 export function scenesProjection(): RunProjection<SceneRow, string> {
-  let runId = ''
   return {
     id: 'scenes',
     getKey: (row) => row.id,
     project(event, get): Array<RowOp<SceneRow, string>> {
       switch (event.type) {
-        case 'run:start':
-          runId = runIdOf(event.timestamp)
-          return []
-
         case 'scene:start': {
           const row: SceneRow = {
-            id: sceneKey(runId, event.teamIndex, event.name),
-            runId,
+            id: sceneKey(event.runId, event.teamIndex, event.name),
+            runId: event.runId,
             name: event.name,
             file: event.file,
             actors: event.actors.slice(),
@@ -69,7 +64,7 @@ export function scenesProjection(): RunProjection<SceneRow, string> {
         }
 
         case 'scene:end': {
-          const prev = get(sceneKey(runId, event.teamIndex, event.name))
+          const prev = get(sceneKey(event.runId, event.teamIndex, event.name))
           if (!prev) return []
           return [
             {
@@ -109,23 +104,18 @@ export interface AssertionRecord {
 }
 
 export function assertionsProjection(): RunProjection<AssertionRecord, string> {
-  let runId = ''
   let next = 0
   return {
     id: 'assertions',
     getKey: (row) => row.id,
     project(event): Array<RowOp<AssertionRecord, string>> {
-      if (event.type === 'run:start') {
-        runId = runIdOf(event.timestamp)
-        return []
-      }
       if (event.type === 'assertion') {
         return [
           {
             type: 'insert',
             value: {
-              id: `${runId}:${next++}`,
-              runId,
+              id: `${event.runId}:${next++}`,
+              runId: event.runId,
               actor: event.actor ?? null,
               description: event.description,
               result: event.result,
@@ -167,19 +157,17 @@ export interface RunRow {
 }
 
 export function runsProjection(): RunProjection<RunRow, string> {
-  let runId = ''
   return {
     id: 'runs',
     getKey: (row) => row.id,
     project(event, get): Array<RowOp<RunRow, string>> {
       switch (event.type) {
         case 'run:start': {
-          runId = runIdOf(event.timestamp)
           return [
             {
               type: 'insert',
               value: {
-                id: runId,
+                id: event.runId,
                 startTime: event.timestamp,
                 endTime: null,
                 duration: null,
@@ -193,7 +181,7 @@ export function runsProjection(): RunProjection<RunRow, string> {
         }
 
         case 'scene:end': {
-          const prev = get(runId)
+          const prev = get(event.runId)
           if (!prev) return []
           const passed = event.status === 'completed'
           return [
@@ -209,7 +197,7 @@ export function runsProjection(): RunProjection<RunRow, string> {
         }
 
         case 'run:end': {
-          const prev = get(runId)
+          const prev = get(event.runId)
           if (!prev) return []
           return [
             {
