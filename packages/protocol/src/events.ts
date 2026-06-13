@@ -62,6 +62,13 @@ export interface RunSummary {
 export interface RunStartEvent {
   type: 'run:start'
   timestamp: number
+  /**
+   * The run this event belongs to. Producers stamp every event of a run with
+   * the same id (the `run:start` timestamp), so consumers can partition a
+   * whole PR's history by run and resume/attach mid-stream without inferring
+   * the run from event order.
+   */
+  runId: string
   sceneCount: number
 }
 
@@ -69,6 +76,7 @@ export interface RunStartEvent {
 export interface SceneStartEvent {
   type: 'scene:start'
   timestamp: number
+  runId: string
   name: string
   file: string
   actors: string[]
@@ -80,6 +88,7 @@ export interface SceneStartEvent {
 export interface ActionStartEvent {
   type: 'action:start'
   timestamp: number
+  runId: string
   actor: string
   action: string
   target?: string
@@ -89,6 +98,7 @@ export interface ActionStartEvent {
 export interface ActionEndEvent {
   type: 'action:end'
   timestamp: number
+  runId: string
   actor: string
   action: string
   target?: string
@@ -100,6 +110,7 @@ export interface ActionEndEvent {
 export interface AssertionEvent {
   type: 'assertion'
   timestamp: number
+  runId: string
   actor?: string
   description: string
   result: boolean
@@ -109,6 +120,7 @@ export interface AssertionEvent {
 export interface WarningEvent {
   type: 'warning'
   timestamp: number
+  runId: string
   actor: string
   selector: string
   message: string
@@ -118,6 +130,7 @@ export interface WarningEvent {
 export interface SceneEndEvent {
   type: 'scene:end'
   timestamp: number
+  runId: string
   name: string
   status: string
   duration: number
@@ -136,6 +149,7 @@ export interface SceneEndEvent {
 export interface RunProgressEvent {
   type: 'run:progress'
   timestamp: number
+  runId: string
   /** Completion estimate, 0–100. */
   pct: number
   /** Scenes currently failing. */
@@ -148,6 +162,7 @@ export interface RunProgressEvent {
 export interface RunEndEvent {
   type: 'run:end'
   timestamp: number
+  runId: string
   duration: number
   summary: RunSummary
 }

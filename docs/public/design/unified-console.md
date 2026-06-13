@@ -88,10 +88,15 @@ partition instead of wiping).
 
 ## Identity: runId and PR/branch
 
-- **`runId` is a timestamp** — derived from the `run:start` event's
-  `timestamp`. No protocol change: the projection stamps each run's rows with
-  the timestamp of the `run:start` that opened them. Replaying several
-  historical reports works because each begins with its own `run:start`.
+- **`runId` is a timestamp**, and it rides **on every event** — `runId` is a
+  required field of every `RunEvent` (`@scenetest/protocol`), stamped once by
+  the producer at `run:start` time (`dashboardSend` sets it; call sites don't
+  thread it). It's required like `name`/`file`, not optional — deriving it
+  from event order would break on reconnect/mid-stream attach, where a
+  consumer's replay window may not include `run:start`. With it on the event,
+  projections are stateless and partition correctly no matter where a consumer
+  joins. (This is a breaking wire change, taken deliberately while the protocol
+  is pre-1.0 and unused — `PROTOCOL_VERSION` is left at 1.)
 - **PR/branch identity rides in the report filename**, not the protocol:
   `pr-{num}-{timestamp}-{n}-scenes.json` in `scenetest/.reports/`. A
   `scenetest/.reports` folder is one repo, so the loader groups by PR number

@@ -31,19 +31,28 @@ function apply<T extends object, TKey extends string | number>(
   else rows.set(projection.getKey(op.value), op.value)
 }
 
-const runStart = (ts: number, sceneCount = 1): RunEvent => ({ type: 'run:start', timestamp: ts, sceneCount })
-const sceneStart = (name: string, ts: number, teamIndex = 0): RunEvent => ({
+// runId defaults to the run:start timestamp, matching what producers stamp;
+// scene/assertion helpers take the runId of the run they belong to.
+const runStart = (ts: number, sceneCount = 1): RunEvent => ({
+  type: 'run:start',
+  timestamp: ts,
+  runId: String(ts),
+  sceneCount,
+})
+const sceneStart = (runId: string, name: string, ts: number, teamIndex = 0): RunEvent => ({
   type: 'scene:start',
   timestamp: ts,
+  runId,
   name,
   file: `${name}.scene.ts`,
   actors: ['alice'],
   teamIndex,
   team: { name: teamIndex === 0 ? 'fr' : 'de' },
 })
-const sceneEnd = (name: string, status: string, ts: number, teamIndex = 0): RunEvent => ({
+const sceneEnd = (runId: string, name: string, status: string, ts: number, teamIndex = 0): RunEvent => ({
   type: 'scene:end',
   timestamp: ts,
+  runId,
   name,
   status,
   duration: ts,
@@ -55,8 +64,8 @@ describe('scenesProjection (multi-run, runId-partitioned)', () => {
   it('keys scenes by runId and updates in place on scene:end', () => {
     const rows = replay(scenesProjection(), [
       runStart(100),
-      sceneStart('login', 102),
-      sceneEnd('login', 'completed', 140),
+      sceneStart('100', 'login', 102),
+      sceneEnd('100', 'login', 'completed', 140),
     ])
     expect(rows.size).toBe(1)
     expect(rows.get('100:0:login')).toMatchObject({
@@ -70,10 +79,10 @@ describe('scenesProjection (multi-run, runId-partitioned)', () => {
   it('keeps scenes from prior runs when a new run:start arrives (no truncate)', () => {
     const rows = replay(scenesProjection(), [
       runStart(100),
-      sceneStart('a', 101),
-      sceneEnd('a', 'completed', 110),
+      sceneStart('100', 'a', 101),
+      sceneEnd('100', 'a', 'completed', 110),
       runStart(200),
-      sceneStart('a', 201),
+      sceneStart('200', 'a', 201),
     ])
     expect([...rows.keys()].sort()).toEqual(['100:0:a', '200:0:a'])
     expect(rows.get('100:0:a')).toMatchObject({ runId: '100', status: 'completed' })
@@ -81,13 +90,19 @@ describe('scenesProjection (multi-run, runId-partitioned)', () => {
   })
 
   it('keeps same-named scenes from different teams distinct within a run', () => {
-    const rows = replay(scenesProjection(), [runStart(5), sceneStart('home', 6, 0), sceneStart('home', 7, 1)])
+    const rows = replay(scenesProjection(), [runStart(5), sceneStart('5', 'home', 6, 0), sceneStart('5', 'home', 7, 1)])
     expect([...rows.keys()].sort()).toEqual(['5:0:home', '5:1:home'])
   })
 
   it('ignores a scene:end with no matching start', () => {
-    const rows = replay(scenesProjection(), [runStart(5), sceneEnd('ghost', 'failed', 6)])
+    const rows = replay(scenesProjection(), [runStart(5), sceneEnd('5', 'ghost', 'failed', 6)])
     expect(rows.size).toBe(0)
+  })
+
+  it('partitions by the runId on the event, even without a preceding run:start (mid-stream attach)', () => {
+    // A collection attaching after run:start still keys correctly off the event.
+    const rows = replay(scenesProjection(), [sceneStart('900', 'late', 901), sceneEnd('900', 'late', 'completed', 910)])
+    expect(rows.get('900:0:late')).toMatchObject({ runId: '900', status: 'completed' })
   })
 })
 
@@ -95,9 +110,9 @@ describe('assertionsProjection (multi-run)', () => {
   it('appends one row per assertion, keyed and tagged by runId', () => {
     const rows = replay(assertionsProjection(), [
       runStart(100),
-      { type: 'assertion', timestamp: 101, actor: 'alice', description: 'logged in', result: true },
+      { type: 'assertion', timestamp: 101, runId: '100', actor: 'alice', description: 'logged in', result: true },
       runStart(200),
-      { type: 'assertion', timestamp: 201, description: 'cart empty', result: false },
+      { type: 'assertion', timestamp: 201, runId: '200', description: 'cart empty', result: false },
     ])
     expect([...rows.keys()]).toEqual(['100:0', '200:1'])
     expect(rows.get('100:0')).toMatchObject({ runId: '100', actor: 'alice', result: true })
@@ -112,6 +127,7 @@ describe('runsProjection', () => {
       {
         type: 'run:end',
         timestamp: 999,
+        runId: '100',
         duration: 1234,
         summary: { scenes: 2, completed: 1, failed: 1, assertions: { total: 3, passed: 2, failed: 1 }, warnings: 0, consoleErrors: 0 },
       },
@@ -129,7 +145,7 @@ describe('runsProjection', () => {
 
   it('increments pass/fail counts live as scenes finish', () => {
     const proj = runsProjection()
-    const rows = replay(proj, [runStart(100, 2), sceneEnd('a', 'completed', 110), sceneEnd('b', 'failed', 120)])
+    const rows = replay(proj, [runStart(100, 2), sceneEnd('100', 'a', 'completed', 110), sceneEnd('100', 'b', 'failed', 120)])
     expect(rows.get('100')).toMatchObject({ status: 'running', completed: 1, failed: 1 })
   })
 

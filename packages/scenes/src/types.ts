@@ -445,6 +445,18 @@ export interface ErrorSelector {
  */
 export type DashboardEvent = RunEvent
 
+/**
+ * A {@link DashboardEvent} as a producer constructs it — without `runId`.
+ * `dashboardSend()` stamps the current run's id on before fanning it out, so
+ * call sites don't thread the run id through. (Distributive `Omit` so each
+ * member of the union keeps its own discriminated shape.)
+ */
+export type DashboardEventInput = RunEvent extends infer E
+  ? E extends RunEvent
+    ? Omit<E, 'runId'>
+    : never
+  : never
+
 // ─── Swarm Mode Types ────────────────────────────────────────────────
 
 /**
