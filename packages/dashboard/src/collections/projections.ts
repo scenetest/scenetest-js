@@ -2,13 +2,27 @@ import type { TeamMeta } from '@scenetest/protocol'
 import type { RowOp, RunProjection } from './types.js'
 
 /**
- * Derived current-state of one scene — the natural row shape (latest op per
- * key) the proposal contrasts with the raw event timeline. Folded from a
- * scene's `scene:start` / `scene:end` pair.
+ * `runId` is the timestamp of the `run:start` that opened the run. Rows from
+ * every run of a PR live in one collection, partitioned by this id, so the
+ * picker / rollups / flaky detection are queries over the rows rather than
+ * separate fetches. A new `run:start` opens a new partition — it does **not**
+ * truncate (that was the single-run behaviour; see `docs/.../unified-console.md`).
+ */
+function runIdOf(timestamp: number): string {
+  return String(timestamp)
+}
+
+// ─── scenes ──────────────────────────────────────────────────────────
+
+/**
+ * Derived current-state of one scene, scoped to its run. Folded from a
+ * scene's `scene:start` / `scene:end` pair. The live timeline is
+ * `where runId = <latest>`.
  */
 export interface SceneRow {
-  /** `${teamIndex}:${name}` — stable across the scene's start and end. */
+  /** `${runId}:${teamIndex}:${name}` — stable across the scene's start/end. */
   id: string
+  runId: string
   name: string
   file: string
   actors: string[]
@@ -21,29 +35,25 @@ export interface SceneRow {
   teamIndex: number
 }
 
-/** A scene's stable key — name is unique within a team for a run. */
-function sceneKey(teamIndex: number, name: string): string {
-  return `${teamIndex}:${name}`
+function sceneKey(runId: string, teamIndex: number, name: string): string {
+  return `${runId}:${teamIndex}:${name}`
 }
 
-/**
- * Projects scene lifecycle events into one row per scene. `run:start` resets
- * the table; `scene:start` inserts a running row; `scene:end` updates it in
- * place to its terminal status — so a `useLiveQuery` grouping by `status`
- * recomputes incrementally as each scene finishes.
- */
 export function scenesProjection(): RunProjection<SceneRow, string> {
+  let runId = ''
   return {
     id: 'scenes',
     getKey: (row) => row.id,
     project(event, get): Array<RowOp<SceneRow, string>> {
       switch (event.type) {
         case 'run:start':
-          return [{ type: 'reset' }]
+          runId = runIdOf(event.timestamp)
+          return []
 
         case 'scene:start': {
           const row: SceneRow = {
-            id: sceneKey(event.teamIndex, event.name),
+            id: sceneKey(runId, event.teamIndex, event.name),
+            runId,
             name: event.name,
             file: event.file,
             actors: event.actors.slice(),
@@ -59,7 +69,7 @@ export function scenesProjection(): RunProjection<SceneRow, string> {
         }
 
         case 'scene:end': {
-          const prev = get(sceneKey(event.teamIndex, event.name))
+          const prev = get(sceneKey(runId, event.teamIndex, event.name))
           if (!prev) return []
           return [
             {
@@ -82,13 +92,16 @@ export function scenesProjection(): RunProjection<SceneRow, string> {
   }
 }
 
+// ─── assertions ──────────────────────────────────────────────────────
+
 /**
- * One row per inline assertion — the append-only end of the stream, where
- * every intermediate state matters. Rows are keyed by a per-run monotonic
- * index (the stream carries no assertion id), reset on `run:start`.
+ * One row per inline assertion — the append-only end of the stream, scoped
+ * to its run. Keyed by `${runId}:${n}` (a per-projection monotonic index;
+ * the stream carries no assertion id).
  */
 export interface AssertionRecord {
   id: string
+  runId: string
   actor: string | null
   description: string
   result: boolean
@@ -96,21 +109,23 @@ export interface AssertionRecord {
 }
 
 export function assertionsProjection(): RunProjection<AssertionRecord, string> {
+  let runId = ''
   let next = 0
   return {
     id: 'assertions',
     getKey: (row) => row.id,
     project(event): Array<RowOp<AssertionRecord, string>> {
       if (event.type === 'run:start') {
-        next = 0
-        return [{ type: 'reset' }]
+        runId = runIdOf(event.timestamp)
+        return []
       }
       if (event.type === 'assertion') {
         return [
           {
             type: 'insert',
             value: {
-              id: String(next++),
+              id: `${runId}:${next++}`,
+              runId,
               actor: event.actor ?? null,
               description: event.description,
               result: event.result,
@@ -120,6 +135,100 @@ export function assertionsProjection(): RunProjection<AssertionRecord, string> {
         ]
       }
       return []
+    },
+  }
+}
+
+// ─── runs ────────────────────────────────────────────────────────────
+
+/**
+ * One row per run — the picker, the "most recent" rollup, and (later) flaky
+ * detection are all live queries over this table. Folded from `run:start`
+ * (insert), `scene:end` (incremental pass/fail counts so the rollup is live),
+ * and `run:end` (authoritative counts + duration from the summary).
+ *
+ * `pr` / `branch` are stamped by the report loader from the filename
+ * (`pr-{num}-{timestamp}-…`), not the event stream, so they're absent for a
+ * live local run.
+ */
+export interface RunRow {
+  /** runId — the `run:start` timestamp. */
+  id: string
+  startTime: number
+  endTime: number | null
+  duration: number | null
+  status: 'running' | 'finished' | string
+  /** Expected scene count from `run:start`. */
+  sceneCount: number
+  completed: number
+  failed: number
+  pr?: number
+  branch?: string
+}
+
+export function runsProjection(): RunProjection<RunRow, string> {
+  let runId = ''
+  return {
+    id: 'runs',
+    getKey: (row) => row.id,
+    project(event, get): Array<RowOp<RunRow, string>> {
+      switch (event.type) {
+        case 'run:start': {
+          runId = runIdOf(event.timestamp)
+          return [
+            {
+              type: 'insert',
+              value: {
+                id: runId,
+                startTime: event.timestamp,
+                endTime: null,
+                duration: null,
+                status: 'running',
+                sceneCount: event.sceneCount,
+                completed: 0,
+                failed: 0,
+              },
+            },
+          ]
+        }
+
+        case 'scene:end': {
+          const prev = get(runId)
+          if (!prev) return []
+          const passed = event.status === 'completed'
+          return [
+            {
+              type: 'update',
+              value: {
+                ...prev,
+                completed: prev.completed + (passed ? 1 : 0),
+                failed: prev.failed + (passed ? 0 : 1),
+              },
+            },
+          ]
+        }
+
+        case 'run:end': {
+          const prev = get(runId)
+          if (!prev) return []
+          return [
+            {
+              type: 'update',
+              value: {
+                ...prev,
+                status: 'finished',
+                endTime: event.timestamp,
+                duration: event.duration,
+                completed: event.summary?.completed ?? prev.completed,
+                failed: event.summary?.failed ?? prev.failed,
+              },
+            },
+          ]
+        }
+
+        default:
+          return []
+      }
     },
   }
 }

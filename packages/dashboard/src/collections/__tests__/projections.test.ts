@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { RunEvent } from '@scenetest/protocol'
-import { assertionsProjection, scenesProjection } from '../projections.js'
+import { assertionsProjection, runsProjection, scenesProjection } from '../projections.js'
 import type { RowOp, RunProjection } from '../types.js'
 
 /**
  * Replay events through a projection against an in-memory map — the same
- * fold the sync layer performs, but standalone, so projections are testable
+ * fold the sync layer performs, standalone, so projections are testable
  * without TanStack DB.
  */
 function replay<T extends object, TKey extends string | number>(
@@ -31,6 +31,7 @@ function apply<T extends object, TKey extends string | number>(
   else rows.set(projection.getKey(op.value), op.value)
 }
 
+const runStart = (ts: number, sceneCount = 1): RunEvent => ({ type: 'run:start', timestamp: ts, sceneCount })
 const sceneStart = (name: string, ts: number, teamIndex = 0): RunEvent => ({
   type: 'scene:start',
   timestamp: ts,
@@ -50,77 +51,91 @@ const sceneEnd = (name: string, status: string, ts: number, teamIndex = 0): RunE
   team: {},
 })
 
-describe('scenesProjection', () => {
-  it('inserts a running row on scene:start and updates it in place on scene:end', () => {
+describe('scenesProjection (multi-run, runId-partitioned)', () => {
+  it('keys scenes by runId and updates in place on scene:end', () => {
     const rows = replay(scenesProjection(), [
-      sceneStart('login', 2),
-      sceneEnd('login', 'completed', 40),
+      runStart(100),
+      sceneStart('login', 102),
+      sceneEnd('login', 'completed', 140),
     ])
     expect(rows.size).toBe(1)
-    const scene = rows.get('0:login')!
-    expect(scene).toMatchObject({
+    expect(rows.get('100:0:login')).toMatchObject({
+      runId: '100',
       name: 'login',
       status: 'completed',
-      startTime: 2,
-      endTime: 40,
-      duration: 40,
+      duration: 140,
     })
   })
 
-  it('keeps same-named scenes from different teams as distinct rows', () => {
+  it('keeps scenes from prior runs when a new run:start arrives (no truncate)', () => {
     const rows = replay(scenesProjection(), [
-      sceneStart('home', 1, 0),
-      sceneStart('home', 2, 1),
+      runStart(100),
+      sceneStart('a', 101),
+      sceneEnd('a', 'completed', 110),
+      runStart(200),
+      sceneStart('a', 201),
     ])
-    expect([...rows.keys()].sort()).toEqual(['0:home', '1:home'])
+    expect([...rows.keys()].sort()).toEqual(['100:0:a', '200:0:a'])
+    expect(rows.get('100:0:a')).toMatchObject({ runId: '100', status: 'completed' })
+    expect(rows.get('200:0:a')).toMatchObject({ runId: '200', status: 'running' })
+  })
+
+  it('keeps same-named scenes from different teams distinct within a run', () => {
+    const rows = replay(scenesProjection(), [runStart(5), sceneStart('home', 6, 0), sceneStart('home', 7, 1)])
+    expect([...rows.keys()].sort()).toEqual(['5:0:home', '5:1:home'])
   })
 
   it('ignores a scene:end with no matching start', () => {
-    const rows = replay(scenesProjection(), [sceneEnd('ghost', 'failed', 5)])
+    const rows = replay(scenesProjection(), [runStart(5), sceneEnd('ghost', 'failed', 6)])
     expect(rows.size).toBe(0)
-  })
-
-  it('resets every row on run:start', () => {
-    const rows = replay(scenesProjection(), [
-      sceneStart('a', 1),
-      { type: 'run:start', timestamp: 10, sceneCount: 1 },
-      sceneStart('b', 11),
-    ])
-    expect([...rows.keys()]).toEqual(['0:b'])
-  })
-
-  it('carries the failed scene status and error onto the row', () => {
-    const rows = replay(scenesProjection(), [
-      sceneStart('checkout', 1),
-      { type: 'scene:end', timestamp: 5, name: 'checkout', status: 'failed', duration: 4, error: 'boom', teamIndex: 0, team: {} },
-    ])
-    expect(rows.get('0:checkout')).toMatchObject({ status: 'failed', error: 'boom' })
   })
 })
 
-describe('assertionsProjection', () => {
-  it('appends one row per assertion with monotonic keys', () => {
+describe('assertionsProjection (multi-run)', () => {
+  it('appends one row per assertion, keyed and tagged by runId', () => {
     const rows = replay(assertionsProjection(), [
-      { type: 'assertion', timestamp: 1, actor: 'alice', description: 'logged in', result: true },
-      { type: 'assertion', timestamp: 2, description: 'cart empty', result: false },
+      runStart(100),
+      { type: 'assertion', timestamp: 101, actor: 'alice', description: 'logged in', result: true },
+      runStart(200),
+      { type: 'assertion', timestamp: 201, description: 'cart empty', result: false },
     ])
-    expect([...rows.keys()]).toEqual(['0', '1'])
-    expect(rows.get('0')).toMatchObject({ actor: 'alice', description: 'logged in', result: true })
-    expect(rows.get('1')).toMatchObject({ actor: null, description: 'cart empty', result: false })
+    expect([...rows.keys()]).toEqual(['100:0', '200:1'])
+    expect(rows.get('100:0')).toMatchObject({ runId: '100', actor: 'alice', result: true })
+    expect(rows.get('200:1')).toMatchObject({ runId: '200', actor: null, description: 'cart empty' })
+  })
+})
+
+describe('runsProjection', () => {
+  it('inserts a running row on run:start and finalizes it on run:end', () => {
+    const rows = replay(runsProjection(), [
+      runStart(100, 2),
+      {
+        type: 'run:end',
+        timestamp: 999,
+        duration: 1234,
+        summary: { scenes: 2, completed: 1, failed: 1, assertions: { total: 3, passed: 2, failed: 1 }, warnings: 0, consoleErrors: 0 },
+      },
+    ])
+    expect(rows.get('100')).toMatchObject({
+      id: '100',
+      status: 'finished',
+      sceneCount: 2,
+      completed: 1,
+      failed: 1,
+      duration: 1234,
+      endTime: 999,
+    })
   })
 
-  it('resets rows and the key counter on run:start', () => {
-    const rows = replay(assertionsProjection(), [
-      { type: 'assertion', timestamp: 1, description: 'a', result: true },
-      { type: 'run:start', timestamp: 5, sceneCount: 1 },
-      { type: 'assertion', timestamp: 6, description: 'b', result: true },
-    ])
-    expect([...rows.keys()]).toEqual(['0'])
-    expect(rows.get('0')).toMatchObject({ description: 'b' })
+  it('increments pass/fail counts live as scenes finish', () => {
+    const proj = runsProjection()
+    const rows = replay(proj, [runStart(100, 2), sceneEnd('a', 'completed', 110), sceneEnd('b', 'failed', 120)])
+    expect(rows.get('100')).toMatchObject({ status: 'running', completed: 1, failed: 1 })
   })
 
-  it('ignores events that are not assertions', () => {
-    const rows = replay(assertionsProjection(), [sceneStart('x', 1), sceneEnd('x', 'completed', 2)])
-    expect(rows.size).toBe(0)
+  it('tracks one row per run', () => {
+    const rows = replay(runsProjection(), [runStart(100), runStart(200), runStart(300)])
+    expect([...rows.keys()].sort()).toEqual(['100', '200', '300'])
+    expect(rows.get('200')).toMatchObject({ status: 'running' })
   })
 })

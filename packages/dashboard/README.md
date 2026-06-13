@@ -97,10 +97,17 @@ const { data } = useLiveQuery((q) =>
 ```
 
 A projection speaks a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`),
-so `scenesProjection()` / `assertionsProjection()` are testable without TanStack
-DB at all. `@tanstack/db` is a **type-only optional peer dependency** — this
-subpath only `import type`s `CollectionConfig`, so nothing imports it at
-runtime and the widget entry never pulls it in.
+so `scenesProjection()` / `assertionsProjection()` / `runsProjection()` are
+testable without TanStack DB at all. `@tanstack/db` is a **type-only optional
+peer dependency** — this subpath only `import type`s `CollectionConfig`, so
+nothing imports it at runtime and the widget entry never pulls it in.
+
+**Multi-run.** Rows are partitioned by `runId` (the `run:start` timestamp), so
+one collection holds a whole PR's history — a new `run:start` opens a new
+partition rather than truncating. `runsProjection()` gives one row per run
+(status, counts, duration), which is the run picker / "most recent" rollup /
+flaky surface as plain live queries; the live timeline is `where runId = <latest>`.
+See `docs/public/design/unified-console.md`.
 
 History/ordering/de-duplication remain the transport's contract (SSE replay in
 dev, WebSocket `sinceSeq` replay in cloud); the source just consumes `onEvent`
