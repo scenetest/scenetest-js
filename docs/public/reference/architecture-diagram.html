@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenetest Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f0f13;
+    color: #e8e8f0;
+    font-family: 'Berkeley Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 32px 24px 48px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7c7c9a;
+    margin-bottom: 32px;
+  }
+
+  /* ── layout ──────────────────────────────────────────── */
+
+  .diagram {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* shared browser block at top */
+  .shared {
+    background: #16161f;
+    border: 1px solid #2a2a3d;
+    border-radius: 12px 12px 0 0;
+    padding: 20px 24px 24px;
+    position: relative;
+  }
+
+  .shared::before {
+    content: '⬡  @scenetest/dashboard  ·  shared in both environments';
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #5b5b7a;
+    margin-bottom: 16px;
+  }
+
+  .shared-inner {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr 1px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  .divider-v {
+    background: #2a2a3d;
+    align-self: stretch;
+    margin: 0 16px;
+  }
+
+  /* the seam */
+  .seam {
+    background: #1a1226;
+    border-left: 1px solid #2a2a3d;
+    border-right: 1px solid #2a2a3d;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .seam-label {
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .seam-line {
+    flex: 1;
+    height: 1px;
+    background: repeating-linear-gradient(90deg, #6b3fa0 0, #6b3fa0 6px, transparent 6px, transparent 12px);
+  }
+
+  .seam-tag {
+    background: #3d1f66;
+    border: 1px solid #7c4fb5;
+    color: #c59aff;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* two environment columns */
+  .envs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .env {
+    padding: 20px 24px 24px;
+    border: 1px solid #2a2a3d;
+    border-top: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .env.dev { border-radius: 0 0 0 12px; border-right-width: 0; }
+  .env.cloud { border-radius: 0 0 12px 0; }
+
+  .env-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .env.dev .env-label { color: #3b8fd4; }
+  .env.cloud .env-label { color: #e86a3a; }
+
+  /* ── boxes ──────────────────────────────────────────── */
+
+  .box {
+    border-radius: 8px;
+    padding: 10px 14px;
+    position: relative;
+  }
+
+  .box-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .box-sub {
+    font-size: 11px;
+    opacity: 0.65;
+  }
+
+  .box-tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-top: 5px;
+    text-transform: uppercase;
+  }
+
+  /* widget */
+  .box.widget {
+    background: #111826;
+    border: 1px solid #1e3a5f;
+  }
+  .box.widget .box-title { color: #60a5fa; }
+  .box.widget .box-tag { background: #1e3a5f; color: #60a5fa; }
+
+  /* collection */
+  .box.collection {
+    background: #0f1f1a;
+    border: 1px solid #1a4a38;
+  }
+  .box.collection .box-title { color: #34d399; }
+  .box.collection .box-tag { background: #1a4a38; color: #34d399; }
+
+  /* source */
+  .box.source {
+    background: #1a1226;
+    border: 1px solid #3d2060;
+  }
+  .box.source .box-title { color: #a78bfa; }
+  .box.source .box-tag { background: #3d2060; color: #a78bfa; }
+
+  /* transport */
+  .box.transport {
+    background: #1a1226;
+    border: 1px dashed #7c4fb5;
+  }
+  .box.transport .box-title { color: #c59aff; }
+  .box.transport .box-tag { background: #3d1f66; color: #c59aff; }
+
+  /* infra */
+  .box.infra {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+  }
+  .box.infra .box-title { color: #a0a0b0; }
+  .box.infra .box-tag { background: #222; color: #666; }
+
+  /* server */
+  .box.server {
+    background: #191410;
+    border: 1px solid #3d2a10;
+  }
+  .box.server .box-title { color: #fb923c; }
+  .box.server .box-tag { background: #3d2a10; color: #fb923c; }
+
+  /* cli */
+  .box.cli {
+    background: #111820;
+    border: 1px solid #1e3050;
+  }
+  .box.cli .box-title { color: #94a3b8; }
+
+  /* ── arrows ─────────────────────────────────────────── */
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #3a3a52;
+    font-size: 11px;
+    padding: 1px 14px;
+  }
+
+  .arrow-line {
+    flex: 1;
+    height: 1px;
+    background: #2a2a3d;
+    position: relative;
+  }
+
+  .arrow-line::after {
+    content: '▼';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: #3a3a52;
+  }
+
+  .arrow-label {
+    font-size: 10px;
+    color: #4a4a62;
+    letter-spacing: 0.05em;
+  }
+
+  /* shared arrows (full width above seam) */
+  .shared-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3a3a52;
+    font-size: 11px;
+    padding: 2px 0;
+  }
+
+  .shared-arrow::before { content: '↓'; font-size: 14px; }
+
+  /* ── shared panel internals ──────────────────────────── */
+
+  .panel-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .panel-col-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #3a3a52;
+    margin-bottom: 2px;
+  }
+
+  /* ── highlight note ──────────────────────────────────── */
+
+  .note {
+    font-size: 11px;
+    color: #5b5b7a;
+    padding: 6px 10px;
+    border-left: 2px solid #2a2a3d;
+    margin-top: 4px;
+  }
+
+  .note strong { color: #8080a0; font-weight: 500; }
+
+  /* ── legend ─────────────────────────────────────────── */
+
+  .legend {
+    max-width: 960px;
+    margin: 20px auto 0;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: #0c0c10;
+    border: 1px solid #1a1a28;
+    border-radius: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: #6060808;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .same-badge {
+    display: inline-block;
+    background: #1a3326;
+    border: 1px solid #2a5a44;
+    color: #4ade80;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+  }
+
+  .env-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+  }
+  .env-badge.dev { background: #0e2236; color: #3b8fd4; }
+  .env-badge.cloud { background: #2a1608; color: #e86a3a; }
+</style>
+</head>
+<body>
+
+<h1>Scenetest — Event Flow &amp; Transport Architecture</h1>
+
+<div class="diagram">
+
+  <!-- ── SHARED BROWSER CODE ── -->
+  <div class="shared">
+    <div class="shared-inner">
+
+      <div class="panel-col">
+        <div class="panel-col-label">Widget</div>
+        <div class="box widget">
+          <div class="box-title">mountDashboard()</div>
+          <div class="box-sub">Preact component tree<br>renders from store.ts</div>
+          <span class="box-tag">store.ts · applyEvent()</span>
+        </div>
+      </div>
+
+      <div class="divider-v"></div>
+
+      <div class="panel-col">
+        <div class="panel-col-label">Collections <span class="same-badge">shared</span></div>
+        <div class="box collection">
+          <div class="box-title">runCollectionOptions()</div>
+          <div class="box-sub">TanStack DB CollectionConfig<br>sync path, sole writer</div>
+          <span class="box-tag">scenesProjection · assertionsProjection</span>
+        </div>
+        <div class="shared-arrow"></div>
+        <div class="box source">
+          <div class="box-title">createRunSource(transport)</div>
+          <div class="box-sub">fan-out · buffer replay<br>N collections → 1 connection</div>
+          <span class="box-tag">RunSource interface</span>
+        </div>
+      </div>
+
+      <div class="divider-v"></div>
+
+      <div class="panel-col">
+        <div class="panel-col-label">Observer panel</div>
+        <div class="box widget">
+          <div class="box-title">@scenetest/checks/panel</div>
+          <div class="box-sub">floating DOM overlay<br>window.__scenetest_report</div>
+          <span class="box-tag">in-browser · no network</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SEAM ── -->
+  <div class="seam">
+    <div class="seam-label">
+      <div class="seam-line"></div>
+      <div class="seam-tag">Transport interface · our abstraction · the seam</div>
+      <div class="seam-line"></div>
+    </div>
+  </div>
+
+  <!-- ── TWO ENVIRONMENTS ── -->
+  <div class="envs">
+
+    <!-- LOCAL DEV -->
+    <div class="env dev">
+      <div class="env-label">⬡ Local Dev &nbsp;·&nbsp; localhost:5173</div>
+
+      <div class="box transport">
+        <div class="box-title">createDevTransport()</div>
+        <div class="box-sub">fetch + EventSource (SSE)<br>GET /__scenetest/events</div>
+        <span class="box-tag">@scenetest/dashboard</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">SSE stream · buffer replay on connect</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box server">
+        <div class="box-title">EventHub</div>
+        <div class="box-sub">in-memory SSE fan-out<br>2000-event ring buffer</div>
+        <span class="box-tag">implements Sink</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">write(event) · clear() on run:start</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box infra">
+        <div class="box-title">@scenetest/receiver · Hono app</div>
+        <div class="box-sub">POST /__scenetest/events<br>envelope check → fan to sinks</div>
+        <span class="box-tag">JsonlSink (durable log, not SSE)</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">HTTP POST · fire-and-forget</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box cli">
+        <div class="box-title">CLI runner · Playwright (Node)</div>
+        <div class="box-sub">DashboardReporter.send()<br>@scenetest/scenes · dashboardSend()</div>
+      </div>
+
+      <div class="note">
+        <strong>Observer path is separate:</strong> should() / failed() call window.__scenetest_report directly in the browser — no network, no receiver.
+      </div>
+    </div>
+
+    <!-- CLOUD -->
+    <div class="env cloud">
+      <div class="env-label">⬡ Cloud &nbsp;·&nbsp; scenetest-cloud</div>
+
+      <div class="box transport">
+        <div class="box-title">createCloudTransport(runId)</div>
+        <div class="box-sub">PartySocket · auto-reconnect<br>sinceSeq re-evaluated per reconnect</div>
+        <span class="box-tag">scenetest-cloud · partysocket</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">WebSocket · { kind:'event', seq, payload } frames</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box server">
+        <div class="box-title">PrCoordinator Durable Object</div>
+        <div class="box-sub">partyserver · viewer WebSocket channel<br>seq log → replay on reconnect<br>DO SQLite + R2 artifact store</div>
+        <span class="box-tag">Cloudflare DO · hibernation</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">WebSocket · { kind:'events', runId, events[] }</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box infra">
+        <div class="box-title">Box · DigitalOcean runner</div>
+        <div class="box-sub">per-PR ephemeral droplet<br>outbound WS → DO box channel</div>
+        <span class="box-tag">bearer-authed</span>
+      </div>
+
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">runs tests locally on the box</div>
+        <div class="arrow-line"></div>
+      </div>
+
+      <div class="box cli">
+        <div class="box-title">CLI runner · Playwright (Node)</div>
+        <div class="box-sub">same @scenetest/scenes binary<br>events → box WS → DO → viewers</div>
+      </div>
+
+      <div class="note">
+        <strong>sinceSeq dedup:</strong> PartySocket reconnects the socket, not the message stream — the seq cursor and if (seq &lt;= lastSeq) return live in cloudTransport, not in partysocket.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#1e3a5f;border:1px solid #2a5a8a"></div>
+    <span style="color:#60a5fa">Widget / panel</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#1a4a38;border:1px solid #2a6a50"></div>
+    <span style="color:#34d399">Collections (TanStack DB)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#3d2060;border:1px solid #5a3090"></div>
+    <span style="color:#a78bfa">RunSource / Transport seam</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#3d2a10;border:1px solid #5a4020"></div>
+    <span style="color:#fb923c">Server infra (Vite / DO)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#222;border:1px solid #444"></div>
+    <span style="color:#a0a0b0">CLI runner</span>
+  </div>
+  <div style="margin-left:auto;font-size:11px;color:#3a3a52;align-self:center">
+    Everything above the seam is identical in both environments.
+    Only the Transport adapter differs.
+  </div>
+</div>
+
+</body>
+</html>
