@@ -78,14 +78,14 @@
     "preact": "^10.22.0",
     "vue": "^3.5.0",
     "solid-js": "^1.9.11",
-    "svelte": "^5.53.5"
+    "svelte": "^5.55.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "preact": "^10.0.0",
     "vue": "^3.3.0",
     "solid-js": "^1.8.0",
-    "svelte": "^5.53.5"
+    "svelte": "^5.55.7"
   },
   "peerDependenciesMeta": {
     "react": {
