@@ -4,7 +4,7 @@ import type { RunEvent } from '@scenetest/protocol'
 import type { Transport } from '../../types.js'
 import { runCollectionOptions } from '../options.js'
 import { createRunSource } from '../source.js'
-import { scenesProjection, assertionsProjection } from '../projections.js'
+import { scenesProjection, assertionsProjection, runsProjection } from '../projections.js'
 import type { RunSource } from '../types.js'
 
 /** A transport we drive by hand. */
@@ -38,6 +38,8 @@ const sceneCollection = (source: RunSource) =>
   createCollection(runCollectionOptions({ source, projection: scenesProjection() }))
 const assertionCollection = (source: RunSource) =>
   createCollection(runCollectionOptions({ source, projection: assertionsProjection() }))
+const runsCollection = (source: RunSource) =>
+  createCollection(runCollectionOptions({ source, projection: runsProjection() }))
 
 const sceneStart = (name: string, ts: number): RunEvent => ({
   type: 'scene:start',
@@ -72,7 +74,7 @@ describe('run collection (end to end through @tanstack/db)', () => {
     emit({ type: 'assertion', timestamp: 3, actor: 'a', description: 'ok', result: true })
     emit(sceneEnd('login', 'completed', 40))
 
-    expect(scenes.get('0:login')).toMatchObject({ status: 'completed', duration: 40 })
+    expect(scenes.get('1:0:login')).toMatchObject({ runId: '1', status: 'completed', duration: 40 })
     expect(assertions.toArray.map((r) => r.description)).toEqual(['ok'])
   })
 
@@ -128,7 +130,7 @@ describe('run collection (end to end through @tanstack/db)', () => {
     // A second collection created mid-run replays the buffered events.
     const late = sceneCollection(source)
     await late.preload()
-    expect(late.get('0:login')).toMatchObject({ name: 'login', status: 'running' })
+    expect(late.get('1:0:login')).toMatchObject({ name: 'login', status: 'running' })
   })
 
   it('rejects client writes — the projection is the sole writer', async () => {
@@ -139,6 +141,7 @@ describe('run collection (end to end through @tanstack/db)', () => {
     expect(() =>
       scenes.insert({
         id: 'x',
+        runId: 'x',
         name: 'x',
         file: 'x',
         actors: [],
@@ -151,5 +154,29 @@ describe('run collection (end to end through @tanstack/db)', () => {
         teamIndex: 0,
       })
     ).toThrow()
+  })
+
+  it('lists every run of the session as queryable rows (the run picker)', async () => {
+    const { transport, emit } = fakeTransport()
+    const source = createRunSource(transport)
+    const runs = runsCollection(source)
+    await runs.preload()
+
+    emit({ type: 'run:start', timestamp: 100, sceneCount: 1 })
+    emit(sceneStart('a', 101))
+    emit(sceneEnd('a', 'completed', 110))
+    emit({
+      type: 'run:end',
+      timestamp: 120,
+      duration: 20,
+      summary: { scenes: 1, completed: 1, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0, consoleErrors: 0 },
+    })
+    emit({ type: 'run:start', timestamp: 200, sceneCount: 1 })
+
+    expect(runs.toArray.map((r) => [r.id, r.status])).toEqual([
+      ['100', 'finished'],
+      ['200', 'running'],
+    ])
+    expect(runs.get('100')).toMatchObject({ completed: 1, failed: 0, duration: 20 })
   })
 })

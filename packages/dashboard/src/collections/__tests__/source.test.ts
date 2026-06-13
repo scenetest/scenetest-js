@@ -88,7 +88,7 @@ describe('createRunSource', () => {
     expect(late).toHaveLength(3)
   })
 
-  it('drops the prior run buffer on run:start so late subscribers do not replay it', () => {
+  it('retains history across runs so late subscribers replay every run', () => {
     const t = fakeTransport()
     const source = createRunSource(t.transport)
     source.subscribe(vi.fn())
@@ -101,6 +101,8 @@ describe('createRunSource', () => {
     const late: RunEvent[] = []
     source.subscribe((e) => late.push(e))
     expect(late.map((e) => (e.type === 'scene:start' ? e.name : e.type))).toEqual([
+      'run:start',
+      'old',
       'run:start',
       'new',
     ])

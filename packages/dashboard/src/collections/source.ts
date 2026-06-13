@@ -22,24 +22,27 @@ type StatusListener = (status: ConnectionStatus) => void
  * subscribers, and we want the run to keep accumulating across those gaps).
  * Call {@link RunSource.close} to tear it down for good.
  *
+ * The buffer holds **every** event of the connection — across runs — so a
+ * collection attaching mid-session replays the full history (the multi-run
+ * read model wants prior runs, not just the current one). `run:start` does
+ * not clear it; it just marks a new run partition downstream. Cap/eviction
+ * is a future concern; today a session's history is bounded.
+ *
  * History/ordering/de-duplication are the transport's contract — both the
- * dev (SSE) and cloud (WebSocket) adapters replay the run on connect and
- * deliver events in order. The source does not re-derive `seq`; it consumes
- * whatever the subscription delivers.
+ * dev (SSE) and cloud (WebSocket) adapters replay on connect and deliver
+ * events in order. The source does not re-derive `seq`; it consumes whatever
+ * the subscription delivers.
  */
 export function createRunSource(transport: Transport): RunSource {
   const eventListeners = new Set<EventListener>()
   const statusListeners = new Set<StatusListener>()
-  // Buffered events for the current run, replayed to late subscribers.
+  // Buffered events for the whole session, replayed to late subscribers.
   let buffer: RunEvent[] = []
   let status: ConnectionStatus = 'connecting'
   let unsubscribeTransport: (() => void) | null = null
   let closed = false
 
   function onTransportEvent(event: RunEvent): void {
-    // A new run replaces the buffer so late subscribers don't replay a stale
-    // prior run; consumers reset their own state on `run:start` regardless.
-    if (event.type === 'run:start') buffer = []
     buffer.push(event)
     for (const listener of [...eventListeners]) listener(event)
   }

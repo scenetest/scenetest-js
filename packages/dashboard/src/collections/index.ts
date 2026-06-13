@@ -17,8 +17,10 @@ export { runCollectionOptions } from './options.js'
 export {
   scenesProjection,
   assertionsProjection,
+  runsProjection,
   type SceneRow,
   type AssertionRecord,
+  type RunRow,
 } from './projections.js'
 export type {
   RowOp,
