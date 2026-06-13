@@ -66,33 +66,41 @@ separately and is DOM-free — useful for tests, SSR, or computing a rollup:
 ## Collections (`@scenetest/dashboard/collections`)
 
 A read-only [TanStack DB](https://tanstack.com/db) read model over the same
-run stream. `createRunSource(transport)` wraps the transport as one shared,
-fan-out stream; each collection is a projection of it into rows. Several
-collections ride **one** connection — "subscribe to the stream, attach the
-tables" — and each is a server-owned replica: the projection is the sole
-writer, so client `.insert()`/`.update()` throws.
+run stream — for **live queries** (filter / aggregate / sort, recomputed
+incrementally), the read half that gets a Durable Object's WebSocket feed into
+a DB collection in the cloud. (The widget itself doesn't need it — it's already
+reactive via the store; this is about the query engine and a shared read model.)
+
+`createRunSource(transport)` wraps the transport as one shared, fan-out stream;
+`runCollectionOptions({ source, projection })` returns a `CollectionConfig` you
+pass to **your own** `createCollection` — so the collection is built by the same
+`@tanstack/db` instance your `useLiveQuery` uses. Several collections ride
+**one** connection ("subscribe to the stream, attach the tables"), and each is
+a server-owned replica: the projection is the sole writer, so client
+`.insert()`/`.update()` throws.
 
 ```ts
-import { useLiveQuery } from '@tanstack/react-db'
+import { createCollection } from '@tanstack/db'
+import { useLiveQuery, count } from '@tanstack/react-db'
 import { createDevTransport } from '@scenetest/dashboard'
-import { createRunModel } from '@scenetest/dashboard/collections'
+import { createRunSource, runCollectionOptions, scenesProjection, assertionsProjection } from '@scenetest/dashboard/collections'
 
-const { scenes, assertions, close } = createRunModel(createDevTransport())
+const source = createRunSource(createDevTransport())            // one connection…
+const scenes = createCollection(runCollectionOptions({ source, projection: scenesProjection() }))
+const assertions = createCollection(runCollectionOptions({ source, projection: assertionsProjection() })) // …two tables
 
-// live queries — filter / aggregate / sort, recomputed incrementally
 const { data } = useLiveQuery((q) =>
   q.from({ s: scenes }).groupBy(({ s }) => s.status)
     .select(({ s }) => ({ status: s.status, n: count(s.id) }))
 )
-// on teardown: close()
+// on teardown: source.close()
 ```
 
-Lower-level building blocks are exported too: `createRunSource`,
-`runCollectionOptions` / `createRunCollection` (point a projection at a source),
-and the `scenesProjection()` / `assertionsProjection()` reducers. A projection
-speaks a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`), so it is
-testable without TanStack DB. `@tanstack/db` is an **optional peer dependency** —
-only needed if you import this subpath; the widget entry never pulls it in.
+A projection speaks a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`),
+so `scenesProjection()` / `assertionsProjection()` are testable without TanStack
+DB at all. `@tanstack/db` is a **type-only optional peer dependency** — this
+subpath only `import type`s `CollectionConfig`, so nothing imports it at
+runtime and the widget entry never pulls it in.
 
 History/ordering/de-duplication remain the transport's contract (SSE replay in
 dev, WebSocket `sinceSeq` replay in cloud); the source just consumes `onEvent`

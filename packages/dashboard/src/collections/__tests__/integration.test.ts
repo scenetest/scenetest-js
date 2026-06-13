@@ -2,19 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { createCollection, createLiveQueryCollection, count } from '@tanstack/db'
 import type { RunEvent } from '@scenetest/protocol'
 import type { Transport } from '../../types.js'
-import { createRunModel } from '../model.js'
 import { runCollectionOptions } from '../options.js'
 import { createRunSource } from '../source.js'
-import { scenesProjection } from '../projections.js'
+import { scenesProjection, assertionsProjection } from '../projections.js'
+import type { RunSource } from '../types.js'
 
 /** A transport we drive by hand. */
 function fakeTransport() {
   let emit: ((e: RunEvent) => void) | null = null
+  let subscribeCalls = 0
   const transport: Transport = {
     async fetchState() {
       return []
     },
     subscribe(onEvent) {
+      subscribeCalls++
       emit = onEvent
       return () => {
         emit = null
@@ -22,8 +24,20 @@ function fakeTransport() {
     },
     async sendCommand() {},
   }
-  return { transport, emit: (e: RunEvent) => emit?.(e) }
+  return {
+    transport,
+    emit: (e: RunEvent) => emit?.(e),
+    get subscribeCalls() {
+      return subscribeCalls
+    },
+  }
 }
+
+// How a consumer builds a collection: their createCollection + our config.
+const sceneCollection = (source: RunSource) =>
+  createCollection(runCollectionOptions({ source, projection: scenesProjection() }))
+const assertionCollection = (source: RunSource) =>
+  createCollection(runCollectionOptions({ source, projection: assertionsProjection() }))
 
 const sceneStart = (name: string, ts: number): RunEvent => ({
   type: 'scene:start',
@@ -47,7 +61,9 @@ const sceneEnd = (name: string, status: string, ts: number): RunEvent => ({
 describe('run collection (end to end through @tanstack/db)', () => {
   it('folds the stream into queryable scene and assertion rows', async () => {
     const { transport, emit } = fakeTransport()
-    const { scenes, assertions } = createRunModel(transport)
+    const source = createRunSource(transport)
+    const scenes = sceneCollection(source)
+    const assertions = assertionCollection(source)
     await scenes.preload()
     await assertions.preload()
 
@@ -61,30 +77,20 @@ describe('run collection (end to end through @tanstack/db)', () => {
   })
 
   it('shares one transport subscription across both collections', async () => {
-    let subscribeCalls = 0
-    const transport: Transport = {
-      async fetchState() {
-        return []
-      },
-      subscribe() {
-        subscribeCalls++
-        return () => {}
-      },
-      async sendCommand() {},
-    }
-    const model = createRunModel(transport)
+    const t = fakeTransport()
+    const source = createRunSource(t.transport)
+    const scenes = sceneCollection(source)
+    const assertions = assertionCollection(source)
     // Preloading starts each collection's sync, which attaches to the source.
-    await model.scenes.preload()
-    await model.assertions.preload()
-    expect(subscribeCalls).toBe(1)
+    await scenes.preload()
+    await assertions.preload()
+    expect(t.subscribeCalls).toBe(1)
   })
 
   it('recomputes a grouped aggregate incrementally as scenes finish', async () => {
     const { transport, emit } = fakeTransport()
     const source = createRunSource(transport)
-    const scenes = createCollection(
-      runCollectionOptions({ source, projection: scenesProjection() })
-    )
+    const scenes = sceneCollection(source)
     await scenes.preload()
 
     const byStatus = createLiveQueryCollection((q) =>
@@ -114,20 +120,21 @@ describe('run collection (end to end through @tanstack/db)', () => {
     const { transport, emit } = fakeTransport()
     const source = createRunSource(transport)
     // First collection starts the subscription and the run gets underway.
-    const early = createCollection(runCollectionOptions({ source, projection: scenesProjection() }))
+    const early = sceneCollection(source)
     await early.preload()
     emit({ type: 'run:start', timestamp: 1, sceneCount: 1 })
     emit(sceneStart('login', 2))
 
     // A second collection created mid-run replays the buffered events.
-    const late = createCollection(runCollectionOptions({ source, projection: scenesProjection() }))
+    const late = sceneCollection(source)
     await late.preload()
     expect(late.get('0:login')).toMatchObject({ name: 'login', status: 'running' })
   })
 
   it('rejects client writes — the projection is the sole writer', async () => {
     const { transport } = fakeTransport()
-    const { scenes } = createRunModel(transport)
+    const source = createRunSource(transport)
+    const scenes = sceneCollection(source)
     await scenes.preload()
     expect(() =>
       scenes.insert({
