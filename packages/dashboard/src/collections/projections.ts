@@ -93,6 +93,11 @@ export function scenesProjection(): RunProjection<SceneRow, string> {
  * One row per inline assertion — the append-only end of the stream, scoped
  * to its run. Keyed by `${runId}:${n}` (a per-projection monotonic index;
  * the stream carries no assertion id).
+ *
+ * `sceneId` is the owning scene's {@link SceneRow.id} when the producer stamped
+ * `scene`/`teamIndex` on the event (the precise path); it's `null` for runs
+ * recorded before producers did so, where the consumer attributes by
+ * actor+time-window instead (see {@link attributeToScene}).
  */
 export interface AssertionRecord {
   id: string
@@ -101,6 +106,7 @@ export interface AssertionRecord {
   description: string
   result: boolean
   timestamp: number
+  sceneId: string | null
 }
 
 export function assertionsProjection(): RunProjection<AssertionRecord, string> {
@@ -120,6 +126,10 @@ export function assertionsProjection(): RunProjection<AssertionRecord, string> {
               description: event.description,
               result: event.result,
               timestamp: event.timestamp,
+              sceneId:
+                event.scene !== undefined && event.teamIndex !== undefined
+                  ? sceneKey(event.runId, event.teamIndex, event.scene)
+                  : null,
             },
           },
         ]
@@ -127,6 +137,31 @@ export function assertionsProjection(): RunProjection<AssertionRecord, string> {
       return []
     },
   }
+}
+
+/**
+ * Attribute an event row to a scene. Prefers the stamped `sceneId` (precise,
+ * concurrency-safe); falls back to actor + time-window for rows from older
+ * producers: the scene of the same run whose `actors` include `actor` and
+ * whose `[startTime, endTime]` window contains `timestamp`. The window is
+ * open-ended while a scene is still running (`endTime === null`). Returns the
+ * matching scene's id, or `null` when nothing attributes (e.g. an actor-less
+ * inline assertion on an old run).
+ */
+export function attributeToScene(
+  row: { sceneId: string | null; runId: string; actor: string | null; timestamp: number },
+  scenes: Iterable<SceneRow>
+): string | null {
+  if (row.sceneId) return row.sceneId
+  if (!row.actor) return null
+  for (const scene of scenes) {
+    if (scene.runId !== row.runId) continue
+    if (!scene.actors.includes(row.actor)) continue
+    if (row.timestamp < scene.startTime) continue
+    if (scene.endTime !== null && row.timestamp > scene.endTime) continue
+    return scene.id
+  }
+  return null
 }
 
 // ─── runs ────────────────────────────────────────────────────────────

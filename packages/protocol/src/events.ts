@@ -92,6 +92,14 @@ export interface ActionStartEvent {
   actor: string
   action: string
   target?: string
+  /**
+   * The scene this event belongs to, when the producer knows it. Additive
+   * (optional) so older CLIs still validate; consumers attribute by these
+   * when present and fall back to actor+time-window otherwise. `scene` is the
+   * scene name; with `teamIndex` and `runId` it reconstructs the scene's id.
+   */
+  scene?: string
+  teamIndex?: number
 }
 
 /** An actor finished a DSL action. `error` is set when the action failed. */
@@ -104,6 +112,9 @@ export interface ActionEndEvent {
   target?: string
   duration: number
   error?: string
+  /** Owning scene, when known. See {@link ActionStartEvent.scene}. */
+  scene?: string
+  teamIndex?: number
 }
 
 /** An inline assertion (`should()` / `failed()`) resolved in the app under test. */
@@ -114,6 +125,9 @@ export interface AssertionEvent {
   actor?: string
   description: string
   result: boolean
+  /** Owning scene, when known. See {@link ActionStartEvent.scene}. */
+  scene?: string
+  teamIndex?: number
 }
 
 /** A script-level warning — an unexpected path in the test script itself. */
@@ -124,6 +138,9 @@ export interface WarningEvent {
   actor: string
   selector: string
   message: string
+  /** Owning scene, when known. See {@link ActionStartEvent.scene}. */
+  scene?: string
+  teamIndex?: number
 }
 
 /** A scene finished. */
