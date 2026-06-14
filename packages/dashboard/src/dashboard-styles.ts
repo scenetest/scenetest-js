@@ -44,6 +44,7 @@ export const DASHBOARD_STYLES = `
     padding: 5px 12px; background: transparent; color: var(--text2);
     border: 1px solid var(--border); border-radius: 4px;
     font: inherit; cursor: pointer; font-size: 12px;
+    display: inline-block; text-decoration: none;
   }
   .tab:hover { color: var(--text); border-color: var(--text2); }
   .tab.active { background: var(--bg3); color: var(--text); border-color: var(--text2); }
@@ -194,7 +195,7 @@ export const DASHBOARD_STYLES = `
   .index .card {
     display: block; text-align: left; width: 100%; padding: 20px;
     border: 1px solid var(--border); border-radius: 8px; background: var(--bg2);
-    color: var(--text); font: inherit; cursor: pointer;
+    color: var(--text); font: inherit; cursor: pointer; text-decoration: none;
     transition: border-color 0.15s, background 0.15s;
   }
   .index .card:hover { border-color: var(--text2); background: var(--bg3); }

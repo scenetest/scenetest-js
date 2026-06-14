@@ -122,38 +122,47 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  const go = (next: Tab) => {
-    if (next !== tab) {
-      history.pushState(null, '', PATH_FOR_TAB[next] + location.search)
-      setTab(next)
-    }
+  // Client-side navigation via real <a> links. We delegate the click on the app
+  // root — which is *inside* the shadow root, so there's no event retargeting
+  // (a document-level listener, as preact-iso uses, would see the shadow host,
+  // not the <a>). Modifier-clicks fall through to the browser as normal links.
+  const onNavigate = (e: MouseEvent) => {
+    const a = (e.target as Element | null)?.closest('a')
+    const href = a?.getAttribute('href')
+    if (!href || !href.startsWith('/__scenetest')) return
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    history.pushState(null, '', href + location.search)
+    setTab(tabForPath(href))
   }
 
   const send = (command: Command) => {
     void transport.sendCommand(command)
   }
 
+  const tabClass = (t: Tab) => 'tab' + (tab === t ? ' active' : '')
+
   return (
-    <div class="dashboard">
+    <div class="dashboard" onClick={onNavigate}>
       <nav class="dashboard-nav">
         <h1>
           <span class="logo">🎬</span> Scenetest
         </h1>
         <div class="tabs">
-          <button class={'tab' + (tab === 'home' ? ' active' : '')} onClick={() => go('home')}>
+          <a class={tabClass('home')} href={PATH_FOR_TAB.home}>
             Home
-          </button>
-          <button class={'tab' + (tab === 'runner' ? ' active' : '')} onClick={() => go('runner')}>
+          </a>
+          <a class={tabClass('runner')} href={PATH_FOR_TAB.runner}>
             Runner
-          </button>
-          <button class={'tab' + (tab === 'waterfall' ? ' active' : '')} onClick={() => go('waterfall')}>
+          </a>
+          <a class={tabClass('waterfall')} href={PATH_FOR_TAB.waterfall}>
             Waterfall
-          </button>
+          </a>
         </div>
       </nav>
       <div class="view">
         {tab === 'home' ? (
-          <Home onGo={go} />
+          <Home />
         ) : tab === 'runner' ? (
           <RunnerView collections={store} connection={connection} base={base} />
         ) : (
@@ -165,7 +174,7 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
 }
 
 // ── Home ──────────────────────────────────────────────────────────
-function Home({ onGo }: { onGo: (t: Tab) => void }) {
+function Home() {
   return (
     <div class="index">
       <h1>
@@ -173,14 +182,14 @@ function Home({ onGo }: { onGo: (t: Tab) => void }) {
       </h1>
       <p class="lede">Pick a view.</p>
       <div class="cards">
-        <button class="card" onClick={() => onGo('runner')}>
+        <a class="card" href={PATH_FOR_TAB.runner}>
           <div class="name">Scene runner →</div>
           <div class="desc">Live and past runs: scene tree, status, failure log, spec snippets.</div>
-        </button>
-        <button class="card" onClick={() => onGo('waterfall')}>
+        </a>
+        <a class="card" href={PATH_FOR_TAB.waterfall}>
           <div class="name">Waterfall →</div>
           <div class="desc">Live timeline of actors and inline check() / should() assertions.</div>
-        </button>
+        </a>
       </div>
     </div>
   )
