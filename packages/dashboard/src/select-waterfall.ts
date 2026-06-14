@@ -3,22 +3,6 @@ import type { ActionRecord } from './collections/projections.js'
 import type { ActionItem, DashboardState, Lane, Scene } from './types.js'
 import type { RunSlice } from './select-helpers.js'
 
-/** The empty state, before any rows exist. */
-export function initialState(): DashboardState {
-  return {
-    scenes: [],
-    currentSceneIndex: null,
-    runStartTime: null,
-    passCount: 0,
-    failCount: 0,
-    sceneCount: 0,
-    teams: [],
-    running: false,
-    endDurationMs: null,
-    connection: 'connecting',
-  }
-}
-
 function laneStatus(a: ActionRecord): ActionItem['status'] {
   if (a.status === 'running') return 'running'
   if (a.status === 'error') return 'error'
@@ -32,8 +16,11 @@ function laneStatus(a: ActionRecord): ActionItem['status'] {
  * `useRunSlice`'s live-query collections, or by `latestRunSlice` in tests):
  * actions become per-actor lanes, assertions are attributed to their scene
  * (`attributeToScene`), and the run rollup drives the pass/fail/scene counts.
+ *
+ * Returns the projected view data only — `connection` is the host's to supply
+ * (`WaterfallHost` spreads it in), since a pure projection can't know it.
  */
-export function selectWaterfall(slice: RunSlice): DashboardState {
+export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connection'> {
   const viewScenes: Scene[] = slice.scenes.map((s) => {
     const lanes: Lane[] = s.actors.map((actor) => ({ actor, items: [] }))
     const laneFor = (actor: string): Lane => {
@@ -91,7 +78,6 @@ export function selectWaterfall(slice: RunSlice): DashboardState {
     teams,
     running,
     endDurationMs: slice.run?.duration ?? null,
-    connection: 'connecting',
   }
 }
 

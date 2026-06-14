@@ -17,17 +17,12 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
  */
 export interface Transport {
   /**
-   * A snapshot of the run so far, as an ordered list of protocol events the
-   * widget folds into its initial state. Transports that deliver history
-   * through the initial `subscribe` burst instead (e.g. SSE replay) may
-   * return an empty array — the store folds both the same way.
-   */
-  fetchState(): Promise<RunEvent[]>
-
-  /**
-   * Subscribe to live events. `onEvent` receives every event after the
-   * snapshot; `onStatus`, if given, receives connection-liveness changes.
-   * Returns an unsubscribe function that tears down the underlying stream.
+   * Subscribe to the run stream. The transport replays the run history so far
+   * (SSE replays the buffer on connect; the cloud WebSocket replays from a
+   * `sinceSeq`) and then delivers live events through the same `onEvent`, so
+   * the read model folds history and live the same way. `onStatus`, if given,
+   * receives connection-liveness changes. Returns an unsubscribe function that
+   * tears down the underlying stream.
    */
   subscribe(onEvent: (event: RunEvent) => void, onStatus?: (status: ConnectionStatus) => void): () => void
 

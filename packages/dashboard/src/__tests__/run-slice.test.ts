@@ -38,7 +38,6 @@ function assertion(desc: string, t: number, runId: string): RunEvent {
 /** A transport that replays a fixed event list synchronously on subscribe. */
 function replayTransport(events: RunEvent[]): Transport {
   return {
-    fetchState: async () => [],
     subscribe: (onEvent) => {
       for (const e of events) onEvent(e)
       return () => {}

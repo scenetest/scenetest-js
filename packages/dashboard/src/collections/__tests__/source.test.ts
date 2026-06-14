@@ -11,9 +11,6 @@ function fakeTransport() {
   let subscribeCalls = 0
 
   const transport: Transport = {
-    async fetchState() {
-      return []
-    },
     subscribe(onEvent, onStatus) {
       subscribeCalls++
       emit = onEvent

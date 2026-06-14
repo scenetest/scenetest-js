@@ -14,9 +14,9 @@ export interface DevTransportOptions {
 /**
  * Transport adapter for dev mode: the Vite middleware, same-origin.
  *
- * - Live events arrive over the SSE stream at `<base>/events`, which also
- *   replays the buffered events for the current run on connect — so history
- *   comes through `subscribe`, and `fetchState` returns empty.
+ * - History + live events both arrive over the SSE stream at `<base>/events`,
+ *   which replays the buffered events for the current run on connect and then
+ *   streams live ones — all through `subscribe`.
  * - Commands map onto the middleware's existing endpoints:
  *   `run:replay` → POST `<base>/replay` (`{ file?, team? }`),
  *   `run:stop` → POST `<base>/stop`,
@@ -26,11 +26,6 @@ export function createDevTransport(options: DevTransportOptions = {}): Transport
   const base = (options.base ?? '/__scenetest').replace(/\/+$/, '')
 
   return {
-    // SSE replays the run buffer on connect, so there is no separate snapshot.
-    async fetchState(): Promise<RunEvent[]> {
-      return []
-    },
-
     subscribe(onEvent, onStatus): () => void {
       const source = new EventSource(`${base}/events`)
       const status = (s: ConnectionStatus) => onStatus?.(s)
