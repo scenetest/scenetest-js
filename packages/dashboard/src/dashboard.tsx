@@ -10,7 +10,7 @@ import {
   runsProjection,
 } from './collections/index.js'
 import { Waterfall } from './app.js'
-import { selectWaterfall } from './store.js'
+import { selectWaterfall } from './select-waterfall.js'
 import { RunnerView } from './runner.js'
 import { useLiveQuery } from './use-live-query.js'
 import { STYLES } from './styles.js'
@@ -26,7 +26,7 @@ import type { DashboardCollections } from './select-helpers.js'
  *
  *   /__scenetest            → Home
  *   /__scenetest/runner     → Runner (filterable scene log)
- *   /__scenetest/dashboard  → Waterfall (live timeline)
+ *   /__scenetest/waterfall  → Waterfall (live timeline)
  *
  * The collections are the single store: the root builds them from the run
  * stream and every view reads from them (`selectWaterfall`, `selectSnapshot`).
@@ -101,14 +101,14 @@ type Tab = 'home' | 'runner' | 'waterfall'
 
 function tabForPath(pathname: string): Tab {
   if (pathname.startsWith('/__scenetest/runner')) return 'runner'
-  if (pathname.startsWith('/__scenetest/dashboard')) return 'waterfall'
+  if (pathname.startsWith('/__scenetest/waterfall')) return 'waterfall'
   return 'home'
 }
 
 const PATH_FOR_TAB: Record<Tab, string> = {
   home: '/__scenetest',
   runner: '/__scenetest/runner',
-  waterfall: '/__scenetest/dashboard',
+  waterfall: '/__scenetest/waterfall',
 }
 
 // ── Dashboard root ────────────────────────────────────────────────

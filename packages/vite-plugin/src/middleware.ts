@@ -18,10 +18,10 @@ import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
 
 /**
- * The dev console shell, built by Vite to `packages/vite-plugin/dist-app`
- * (see `app/vite.config.ts`) and served as static files at
- * `/__scenetest/dashboard`. Resolved relative to this module so it works both
- * from `dist/` (published) and `src/` (vitest) — the relative path is the same.
+ * The dev dashboard app, built by Vite to `packages/vite-plugin/dist-app`
+ * (see `app/vite.config.ts`) and served as static files under `/__scenetest`.
+ * Resolved relative to this module so it works both from `dist/` (published)
+ * and `src/` (vitest) — the relative path is the same.
  */
 const DEFAULT_APP_DIR = fileURLToPath(new URL('../dist-app', import.meta.url))
 
@@ -203,32 +203,32 @@ export function createScenetestMiddleware(
   }
 
   return async (req, res, next) => {
-    // ── Dev console: the built shell, served as static files ──
-    // One Vite app (app/ → dist-app) serves every view; the client (mountConsole)
-    // routes on location.pathname. Built asset URLs are prefixed with the
-    // `/__scenetest/dashboard/` base, so they come off dist-app; the view paths
-    // (Home / Runner / Waterfall) all return index.html. This replaced the old
-    // raw-ESM serving — no importmap, no vendored-module routes.
+    // ── Dev dashboard: the built app, served as static files ──
+    // One Vite app (app/ → dist-app) serves every view; the client routes on
+    // location.pathname. Built assets live under the `/__scenetest/assets/`
+    // base, served off dist-app; the view paths (Home / Runner / Waterfall) all
+    // return index.html. This replaced the old raw-ESM serving — no importmap,
+    // no vendored-module routes.
     if (req.method === 'GET' && req.url) {
       const pathname = req.url.split('?')[0]
+      if (pathname.startsWith('/__scenetest/assets/')) {
+        const rel = pathname.slice('/__scenetest/'.length)
+        if (serveAppFile(appDir, rel, res)) return
+        res.statusCode = 404
+        res.end('// Asset not found')
+        return
+      }
       const isView =
         pathname === '/__scenetest' ||
         pathname === '/__scenetest/' ||
         pathname === '/__scenetest/runner' ||
         pathname === '/__scenetest/runner/' ||
-        pathname === '/__scenetest/dashboard' ||
-        pathname === '/__scenetest/dashboard/'
+        pathname === '/__scenetest/waterfall' ||
+        pathname === '/__scenetest/waterfall/'
       if (isView) {
         if (serveAppFile(appDir, 'index.html', res)) return
         res.statusCode = 404
-        res.end('// Console not built — run the @scenetest/vite-plugin build')
-        return
-      }
-      if (pathname.startsWith('/__scenetest/dashboard/')) {
-        const rel = pathname.slice('/__scenetest/dashboard/'.length)
-        if (serveAppFile(appDir, rel, res)) return
-        res.statusCode = 404
-        res.end('// Asset not found')
+        res.end('// Dashboard not built — run the @scenetest/vite-plugin build')
         return
       }
     }
