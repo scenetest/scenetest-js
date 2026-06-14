@@ -256,9 +256,6 @@ importers:
       '@tanstack/db':
         specifier: ^0.6.0
         version: 0.6.8(typescript@5.9.3)
-      htm:
-        specifier: ^3.1.1
-        version: 3.1.1
       preact:
         specifier: ^10.22.0
         version: 10.29.1

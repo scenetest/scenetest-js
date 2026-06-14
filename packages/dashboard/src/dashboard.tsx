@@ -1,6 +1,5 @@
-import { h, render } from 'preact'
+import { render } from 'preact'
 import { useState, useEffect, useMemo, useRef } from 'preact/hooks'
-import htm from 'htm'
 import { createCollection } from '@tanstack/db'
 import {
   createRunSource,
@@ -18,8 +17,6 @@ import { DASHBOARD_STYLES } from './dashboard-styles.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardHandle, DashboardTheme, MountOptions, Transport } from './types.js'
 import type { DashboardRows } from './select-helpers.js'
-
-const html = htm.bind(h)
 
 /**
  * Mount the **Dashboard** — the whole app: Home / Runner / Waterfall views over
@@ -49,7 +46,7 @@ export function mountDashboard(element: HTMLElement, options: MountOptions): Das
   root.appendChild(container)
 
   const base = (options.base ?? '/__scenetest').replace(/\/+$/, '')
-  render(h(Dashboard, { transport: options.transport, theme: options.theme, base }), container)
+  render(<Dashboard transport={options.transport} theme={options.theme} base={base} />, container)
 
   return {
     unmount() {
@@ -143,45 +140,57 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
     void transport.sendCommand(command)
   }
 
-  return html`
+  return (
     <div class="dashboard">
       <nav class="dashboard-nav">
-        <h1><span class="logo">🎬</span> Scenetest</h1>
+        <h1>
+          <span class="logo">🎬</span> Scenetest
+        </h1>
         <div class="tabs">
-          <button class=${'tab' + (tab === 'home' ? ' active' : '')} onClick=${() => go('home')}>Home</button>
-          <button class=${'tab' + (tab === 'runner' ? ' active' : '')} onClick=${() => go('runner')}>Runner</button>
-          <button class=${'tab' + (tab === 'waterfall' ? ' active' : '')} onClick=${() => go('waterfall')}>Waterfall</button>
+          <button class={'tab' + (tab === 'home' ? ' active' : '')} onClick={() => go('home')}>
+            Home
+          </button>
+          <button class={'tab' + (tab === 'runner' ? ' active' : '')} onClick={() => go('runner')}>
+            Runner
+          </button>
+          <button class={'tab' + (tab === 'waterfall' ? ' active' : '')} onClick={() => go('waterfall')}>
+            Waterfall
+          </button>
         </div>
       </nav>
       <div class="view">
-        ${tab === 'home'
-          ? html`<${Home} onGo=${go} />`
-          : tab === 'runner'
-            ? html`<${RunnerView} rows=${rows} base=${base} />`
-            : html`<${WaterfallHost} rows=${rows} send=${send} theme=${theme} />`}
+        {tab === 'home' ? (
+          <Home onGo={go} />
+        ) : tab === 'runner' ? (
+          <RunnerView rows={rows} base={base} />
+        ) : (
+          <WaterfallHost rows={rows} send={send} theme={theme} />
+        )}
       </div>
     </div>
-  `
+  )
 }
 
 // ── Home ──────────────────────────────────────────────────────────
 function Home({ onGo }: { onGo: (t: Tab) => void }) {
-  return html`
+  return (
     <div class="index">
-      <h1><span class="logo">🎬</span> Scenetest</h1>
+      <h1>
+        <span class="logo">🎬</span> Scenetest
+      </h1>
       <p class="lede">Pick a view.</p>
       <div class="cards">
-        <button class="card" onClick=${() => onGo('runner')}>
+        <button class="card" onClick={() => onGo('runner')}>
           <div class="name">Scene runner →</div>
           <div class="desc">Live and past runs: scene tree, status, failure log, spec snippets.</div>
         </button>
-        <button class="card" onClick=${() => onGo('waterfall')}>
+        <button class="card" onClick={() => onGo('waterfall')}>
           <div class="name">Waterfall →</div>
           <div class="desc">Live timeline of actors and inline check() / should() assertions.</div>
         </button>
       </div>
     </div>
-  `
+  )
 }
 
 // ── Waterfall view (nested shadow root for style isolation) ────────
@@ -214,8 +223,8 @@ function WaterfallHost({ rows, send, theme }: { rows: DashboardRows; send: (c: C
 
   const state = { ...selectWaterfall(rows.scenes, rows.assertions, rows.actions, rows.runs), connection: rows.connection }
   useEffect(() => {
-    if (containerRef.current) render(h(Waterfall, { state, send }), containerRef.current)
+    if (containerRef.current) render(<Waterfall state={state} send={send} />, containerRef.current)
   })
 
-  return html`<div class="waterfall-host" ref=${hostRef}></div>`
+  return <div class="waterfall-host" ref={hostRef}></div>
 }
