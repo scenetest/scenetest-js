@@ -445,17 +445,15 @@ export interface ErrorSelector {
  */
 export type DashboardEvent = RunEvent
 
+/** `Omit` that distributes over a union, so each member keeps its own shape. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+
 /**
  * A {@link DashboardEvent} as a producer constructs it — without `runId`.
  * `dashboardSend()` stamps the current run's id on before fanning it out, so
- * call sites don't thread the run id through. (Distributive `Omit` so each
- * member of the union keeps its own discriminated shape.)
+ * call sites don't thread the run id through.
  */
-export type DashboardEventInput = RunEvent extends infer E
-  ? E extends RunEvent
-    ? Omit<E, 'runId'>
-    : never
-  : never
+export type DashboardEventInput = DistributiveOmit<RunEvent, 'runId'>
 
 // ─── Swarm Mode Types ────────────────────────────────────────────────
 

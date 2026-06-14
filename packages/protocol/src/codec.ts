@@ -56,7 +56,7 @@ function isRunSummary(v: unknown): boolean {
   return isObject(a) && num(a.total) && num(a.passed) && num(a.failed)
 }
 
-/** Per-type required-field validators. `type` and `timestamp` are pre-checked. */
+/** Per-type required-field validators. `type`/`timestamp`/`runId` are pre-checked. */
 const EVENT_VALIDATORS: Record<RunEvent['type'], (e: Raw) => boolean> = {
   'run:start': (e) => num(e.sceneCount),
   'scene:start': (e) =>
