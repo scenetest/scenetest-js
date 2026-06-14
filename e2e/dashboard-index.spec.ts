@@ -59,7 +59,7 @@ test.describe('/__scenetest Dashboard', () => {
   test('Waterfall card opens the Waterfall view', async ({ page }) => {
     await page.goto('/__scenetest/')
     await page.locator('.index .card', { hasText: 'Waterfall' }).click()
-    await expect(page).toHaveURL(/\/__scenetest\/dashboard$/)
+    await expect(page).toHaveURL(/\/__scenetest\/waterfall(\?|$)/)
     // The Waterfall mounts into a nested shadow root; with no run it shows its
     // empty state — confirms the widget actually rendered from the store.
     await expect(page.locator('.waiting')).toContainText('Waiting for scene run')

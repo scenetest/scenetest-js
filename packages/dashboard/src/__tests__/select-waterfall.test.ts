@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { RunEvent } from '@scenetest/protocol'
-import { selectWaterfall, completedSceneCount } from '../store.js'
+import { selectWaterfall, completedSceneCount } from '../select-waterfall.js'
 import {
   scenesProjection,
   assertionsProjection,

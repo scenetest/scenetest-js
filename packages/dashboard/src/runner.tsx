@@ -5,7 +5,7 @@ import {
   EMPTY_SNAPSHOT,
   type RunnerScene,
   type RunnerSnapshot,
-} from './runner-store.js'
+} from './select-runner.js'
 import { useLiveQuery } from './use-live-query.js'
 import type { DashboardCollections } from './select-helpers.js'
 import type { ConnectionStatus } from './types.js'

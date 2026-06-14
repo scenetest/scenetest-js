@@ -6,12 +6,12 @@ import path from 'path'
 import type { AddressInfo } from 'net'
 import { createScenetestMiddleware } from '../middleware.js'
 
-// The dashboard at /__scenetest/dashboard is the built console shell (a real
-// Vite app, app/ → dist-app), served as static files — no importmap, no
-// vendored modules, no per-file widget serving. We point `appDir` at a fixture
-// so the unit test doesn't need a real Vite build; the actual bundle is covered
-// by the package build + e2e. The browser-side mount is covered by the
-// dashboard package's own tests.
+// The dashboard under /__scenetest is the built app (a real Vite app,
+// app/ → dist-app), served as static files — no importmap, no vendored modules,
+// no per-file widget serving. Views are served as index.html; built assets live
+// under /__scenetest/assets/. We point `appDir` at a fixture so the unit test
+// doesn't need a real Vite build; the actual bundle is covered by the package
+// build + e2e. The browser-side mount is covered by the dashboard's own tests.
 
 function stubServer(): any {
   return {
@@ -27,11 +27,11 @@ let baseUrl: string
 
 beforeEach(() => {
   tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'scenetest-dash-'))
-  // A fake built console: an index.html and one hashed asset under the base.
+  // A fake built app: an index.html and one hashed asset under the base.
   appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scenetest-app-'))
   fs.writeFileSync(
     path.join(appDir, 'index.html'),
-    '<!doctype html><div id="root"></div><script type="module" src="/__scenetest/dashboard/assets/main.js"></script>'
+    '<!doctype html><div id="root"></div><script type="module" src="/__scenetest/assets/main.js"></script>'
   )
   fs.mkdirSync(path.join(appDir, 'assets'))
   fs.writeFileSync(path.join(appDir, 'assets', 'main.js'), 'export const mounted = true')
@@ -58,16 +58,16 @@ afterEach(async () => {
   fs.rmSync(appDir, { recursive: true, force: true })
 })
 
-describe('dashboard: built console shell served as static files', () => {
-  it('serves the built index.html at every console view route', async () => {
+describe('dashboard: built app served as static files', () => {
+  it('serves the built index.html at every view route', async () => {
     // One SPA serves Home / Runner / Waterfall; the client routes by pathname.
     const views = [
       '/__scenetest',
       '/__scenetest/',
       '/__scenetest/runner',
       '/__scenetest/runner/',
-      '/__scenetest/dashboard',
-      '/__scenetest/dashboard/',
+      '/__scenetest/waterfall',
+      '/__scenetest/waterfall/',
       '/__scenetest/?run=report-x',
     ]
     for (const url of views) {
@@ -78,20 +78,20 @@ describe('dashboard: built console shell served as static files', () => {
     }
   })
 
-  it('serves built assets under the base path with the right content-type', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/dashboard/assets/main.js`)
+  it('serves built assets under /__scenetest/assets with the right content-type', async () => {
+    const res = await fetch(`${baseUrl}/__scenetest/assets/main.js`)
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('javascript')
     expect(await res.text()).toContain('mounted')
   })
 
   it('404s a missing asset', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/dashboard/assets/nope.js`)
+    const res = await fetch(`${baseUrl}/__scenetest/assets/nope.js`)
     expect(res.status).toBe(404)
   })
 
   it('blocks path traversal outside the app dir', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/dashboard/..%2f..%2f..%2fpackage.json`)
+    const res = await fetch(`${baseUrl}/__scenetest/assets/..%2f..%2f..%2fpackage.json`)
     expect([403, 404]).toContain(res.status)
   })
 })

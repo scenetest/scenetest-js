@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { Command } from '@scenetest/protocol'
-import { completedSceneCount } from './store.js'
+import { completedSceneCount } from './select-waterfall.js'
 import type { DashboardState, Scene } from './types.js'
 
 /**
