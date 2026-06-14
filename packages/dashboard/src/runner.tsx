@@ -6,7 +6,7 @@ import {
   type RunnerScene,
   type RunnerSnapshot,
 } from './select-runner.js'
-import { useLiveQuery } from './use-live-query.js'
+import { useRunSlice } from './use-run-slice.js'
 import type { DashboardCollections } from './select-helpers.js'
 import type { ConnectionStatus } from './types.js'
 
@@ -45,15 +45,13 @@ function useRunner(
   runId: string,
   base: string
 ): { snap: RunnerSnapshot; connection: string } {
-  // Read the store reactively (live mode); the selector attributes
-  // assertions/actions to scenes and slices to the latest run.
-  const scenes = useLiveQuery(collections.scenes)
-  const assertions = useLiveQuery(collections.assertions)
-  const actions = useLiveQuery(collections.actions)
-  const runs = useLiveQuery(collections.runs)
+  // Read the store reactively (live mode): the latest-run slice is maintained
+  // by live-query collections (`where runId = latest`, ordered); the selector
+  // attributes assertions/actions to scenes and rolls up the summary.
+  const slice = useRunSlice(collections)
   const live = useMemo(
-    () => selectSnapshot(scenes, assertions, actions, runs),
-    [scenes, assertions, actions, runs]
+    () => selectSnapshot(slice),
+    [slice.runId, slice.run, slice.scenes, slice.assertions, slice.actions]
   )
 
   const [past, setPast] = useState<RunnerSnapshot>(EMPTY_SNAPSHOT)

@@ -12,7 +12,7 @@ import {
 import { Waterfall } from './app.js'
 import { selectWaterfall } from './select-waterfall.js'
 import { RunnerView } from './runner.js'
-import { useLiveQuery } from './use-live-query.js'
+import { useRunSlice } from './use-run-slice.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardHandle, DashboardTheme, MountOptions, Transport } from './types.js'
 import type { DashboardCollections } from './select-helpers.js'
@@ -211,11 +211,8 @@ function WaterfallHost({
   connection: ConnectionStatus
   send: (c: Command) => void
 }) {
-  const scenes = useLiveQuery(collections.scenes)
-  const assertions = useLiveQuery(collections.assertions)
-  const actions = useLiveQuery(collections.actions)
-  const runs = useLiveQuery(collections.runs)
-  const state = { ...selectWaterfall(scenes, assertions, actions, runs), connection }
+  const slice = useRunSlice(collections)
+  const state = { ...selectWaterfall(slice), connection }
 
   return (
     <div class="waterfall-host">

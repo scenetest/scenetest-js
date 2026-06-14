@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { RunEvent } from '@scenetest/protocol'
 import { selectWaterfall, completedSceneCount } from '../select-waterfall.js'
+import { latestRunSlice } from '../select-helpers.js'
 import {
   scenesProjection,
   assertionsProjection,
@@ -25,11 +26,17 @@ function fold<T extends object, K extends string | number>(proj: RunProjection<T
 }
 
 function project(events: RunEvent[]) {
+  // The live views feed `selectWaterfall` a latest-run slice built by
+  // `useRunSlice`'s live-query collections; here we build the same slice with
+  // the pure `latestRunSlice` over folded rows, so the selector sees the
+  // identical shape without a live collection.
   return selectWaterfall(
-    fold(scenesProjection(), events),
-    fold(assertionsProjection(), events),
-    fold(actionsProjection(), events),
-    fold(runsProjection(), events)
+    latestRunSlice(
+      fold(scenesProjection(), events),
+      fold(assertionsProjection(), events),
+      fold(actionsProjection(), events),
+      fold(runsProjection(), events)
+    )
   )
 }
 
