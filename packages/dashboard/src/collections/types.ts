@@ -7,7 +7,11 @@ import type { ConnectionStatus, Transport } from '../types.js'
  *
  * - `insert` / `update` → `write({ type, value })` (key derived via `getKey`)
  * - `delete`            → `write({ type: 'delete', key })`
- * - `reset`            → `truncate()` (drop every row — a new run started)
+ * - `reset`            → `truncate()` (drop every row)
+ *
+ * The multi-run projections don't emit `reset` (a new `run:start` opens a new
+ * partition rather than wiping), but it stays in the vocabulary for projections
+ * that need a hard clear — e.g. switching the PR/context a collection tracks.
  *
  * Projections never touch TanStack DB directly; they speak this small,
  * pure vocabulary, which keeps them trivially testable.
