@@ -1,0 +1,878 @@
+/*
+ * Dashboard stylesheet — the whole app (nav · Home · Runner · Waterfall),
+ * scoped under the single root class `.scenetest-dashboard`. There is no shadow
+ * root anymore: this ships as a normal stylesheet the host imports
+ * (`import '@scenetest/dashboard/style.css'`), the way one would style any app.
+ * The Waterfall view's widget styles live under `.waterfall-host` so their
+ * bare-element rules (header, h1, button, …) stay confined to that subtree
+ * instead of leaking into the chrome or the host page.
+ *
+ * Theming surface: a host may set `--st-bg`, `--st-accent`, `--st-font`,
+ * `--st-font-size` on the root element (inline — `mountDashboard({ theme })`
+ * does this — or via CSS). Everything else derives from them or from a fixed
+ * terminal palette. These four are versioned with the widget, like the wire
+ * protocol.
+ */
+.scenetest-dashboard {
+  /* ── Internal palette (derived; not a public surface) ── */
+  --bg: var(--st-bg, #0f1117);
+  --bg2: #1a1d27;
+  --bg3: #252833;
+  --border: #2e3140;
+  --text: #e1e4ed;
+  --text2: #8b8fa3;
+  --text3: #5a5e72;
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--st-font, 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace);
+  font-size: var(--st-font-size, 13px);
+  background: var(--bg);
+  color: var(--text);
+
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* ── Nav ──────────────────────────────────────────────── */
+  .dashboard-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .dashboard-nav h1 {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: rgba(80, 70, 229, 0.15);
+    box-shadow: inset 0 1px 4px rgba(80, 70, 229, 0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .tab {
+    padding: 5px 12px;
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-block;
+    text-decoration: none;
+  }
+  .tab:hover {
+    color: var(--text);
+    border-color: var(--text2);
+  }
+  .tab.active {
+    background: var(--bg3);
+    color: var(--text);
+    border-color: var(--text2);
+  }
+
+  .view {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Runner ───────────────────────────────────────────── */
+  .runner {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .runner-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .run-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .run-picker select {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 12px;
+    min-width: 200px;
+  }
+  .conn {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .conn.connected {
+    background: var(--green);
+  }
+  .conn.disconnected {
+    background: var(--red);
+  }
+  .status-bar {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text2);
+    display: flex;
+    gap: 14px;
+  }
+  .status-bar .ok {
+    color: var(--green);
+  }
+  .status-bar .fail {
+    color: var(--red);
+  }
+
+  .runner main {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) minmax(320px, 420px);
+    flex: 1;
+    min-height: 0;
+  }
+  .runner aside.tree,
+  .runner aside.detail {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow: auto;
+  }
+  .runner aside.detail {
+    border-right: none;
+    border-left: 1px solid var(--border);
+    padding: 14px;
+  }
+  .list-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .filters input[type='search'] {
+    flex: 1;
+    min-width: 180px;
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    font: inherit;
+    font-size: 12px;
+  }
+  .chips {
+    display: flex;
+    gap: 4px;
+  }
+  .chip {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .chip.on {
+    color: var(--text);
+    border-color: var(--text2);
+    background: var(--bg3);
+  }
+  .chip[data-status='failed'].on {
+    color: var(--red);
+    border-color: var(--red);
+  }
+  .chip[data-status='completed'].on {
+    color: var(--green);
+    border-color: var(--green);
+  }
+  .chip[data-status='running'].on {
+    color: var(--blue);
+    border-color: var(--blue);
+  }
+  .chip[data-status='timeout'].on {
+    color: var(--amber);
+    border-color: var(--amber);
+  }
+  select.group-by {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 12px;
+  }
+  .btn {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .btn.subtle {
+    color: var(--text2);
+  }
+  .btn.copied {
+    color: var(--green);
+    border-color: var(--green);
+  }
+  .list {
+    flex: 1;
+    overflow: auto;
+  }
+  .group-header {
+    padding: 8px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text2);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    letter-spacing: 0.04em;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 14px;
+    border-bottom: 1px solid rgba(46, 49, 64, 0.4);
+    cursor: pointer;
+  }
+  .row .row-team {
+    color: var(--blue);
+    font-size: 11px;
+    white-space: nowrap;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .row:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .row.selected {
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .row .icon {
+    font-weight: 700;
+  }
+  .row .icon.completed {
+    color: var(--green);
+  }
+  .row .icon.failed {
+    color: var(--red);
+  }
+  .row .icon.timeout {
+    color: var(--amber);
+  }
+  .row .icon.running {
+    color: var(--blue);
+  }
+  .row .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  .row .meta {
+    color: var(--text2);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .row .file {
+    color: var(--text3);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+  }
+
+  .tree {
+    padding: 10px 0;
+    font-size: 12px;
+  }
+  .tree-file {
+    padding: 4px 14px;
+    color: var(--text2);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .tree-file .fail {
+    color: var(--red);
+  }
+  .tree-scene {
+    padding: 3px 14px 3px 28px;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .tree-scene:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .tree-scene.failed,
+  .tree-scene.timeout {
+    color: var(--red);
+  }
+  .tree-scene.running {
+    color: var(--blue);
+  }
+  .tree-scene.selected {
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  .detail h3 {
+    font-size: 13px;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+  .detail .meta-row {
+    color: var(--text2);
+    font-size: 11px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .detail .meta-row .pill {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1px 8px;
+  }
+  .detail .err {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: var(--red);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 12px;
+  }
+  .detail h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin: 14px 0 6px;
+    letter-spacing: 0.04em;
+  }
+  .detail ul {
+    list-style: none;
+  }
+  .detail .alist li {
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .detail .alist .pass {
+    color: var(--green);
+  }
+  .detail .alist .fail {
+    color: var(--red);
+  }
+  .detail .timeline li {
+    font-size: 11px;
+    color: var(--text2);
+    padding: 2px 0;
+  }
+  .detail .timeline .err-step {
+    color: var(--red);
+  }
+  .detail .actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .detail .empty {
+    color: var(--text2);
+    font-size: 12px;
+  }
+
+  pre.snippet {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 0;
+    font-size: 11px;
+    overflow: auto;
+    max-height: 240px;
+    line-height: 1.45;
+  }
+  pre.snippet .ln {
+    display: inline-block;
+    width: 38px;
+    text-align: right;
+    color: var(--text3);
+    padding-right: 10px;
+    user-select: none;
+  }
+  pre.snippet .row-line {
+    padding: 0 8px;
+    white-space: pre;
+  }
+  pre.snippet .row-line.hl {
+    background: rgba(239, 68, 68, 0.12);
+  }
+
+  /* ── Home ─────────────────────────────────────────────── */
+  .index {
+    padding: 48px 32px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .index h1 {
+    font-size: 22px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .index .lede {
+    color: var(--text2);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  .index .cards {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .index .card {
+    display: block;
+    text-align: left;
+    width: 100%;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg2);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+  }
+  .index .card:hover {
+    border-color: var(--text2);
+    background: var(--bg3);
+  }
+  .index .card .name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .index .card .desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* ── Waterfall view ───────────────────────────────────────
+   * Its own palette (so `--blue` tracks `--st-accent`, as the widget always
+   * has) and bare-element rules, all confined to this subtree. */
+  .waterfall-host {
+    --bg: var(--st-bg, #0f1117);
+    --bg2: #1a1d27;
+    --bg3: #252833;
+    --border: #2e3140;
+    --text: #e1e4ed;
+    --text2: #8b8fa3;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --blue: var(--st-accent, #3b82f6);
+
+    flex: 1;
+    min-height: 0;
+    display: block;
+    overflow: auto;
+    font-family: var(--st-font, 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace);
+    font-size: var(--st-font-size, 13px);
+    color: var(--text);
+    background: var(--bg);
+
+    .root {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    header.running .logo {
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:hover:not(:disabled) {
+      border-color: var(--blue);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .replay-all-btn {
+      color: var(--green);
+    }
+    .stop-btn {
+      color: var(--red);
+    }
+
+    .team-select-wrap {
+      font-size: 12px;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    select {
+      font-family: inherit;
+      font-size: 12px;
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 6px;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+    }
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .stat .label {
+      color: var(--text2);
+    }
+    .stat .value {
+      font-weight: 600;
+    }
+    .stat.pass .value {
+      color: var(--green);
+    }
+    .stat.fail .value {
+      color: var(--red);
+    }
+
+    .conn {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text2);
+    }
+    .conn.connected {
+      background: var(--green);
+    }
+    .conn.disconnected {
+      background: var(--red);
+    }
+
+    .progress {
+      flex-basis: 100%;
+      height: 3px;
+      background: var(--bg3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: var(--blue);
+      transition: width 0.2s ease;
+    }
+    .progress.done .progress-fill {
+      background: var(--green);
+    }
+    .progress.has-failures .progress-fill {
+      background: var(--red);
+    }
+
+    main {
+      padding: 16px 20px;
+    }
+    .waiting {
+      text-align: center;
+      color: var(--text2);
+      padding: 60px 20px;
+    }
+    .waiting h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .waiting code {
+      background: var(--bg3);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .scene {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg2);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .scene.failed {
+      border-color: var(--red);
+    }
+    .scene-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .scene-status {
+      font-weight: 700;
+    }
+    .scene-status.completed {
+      color: var(--green);
+    }
+    .scene-status.failed,
+    .scene-status.timeout {
+      color: var(--red);
+    }
+    .scene-status.running {
+      color: var(--amber);
+    }
+    .scene-name {
+      font-weight: 600;
+    }
+    .scene-file {
+      color: var(--text2);
+      font-size: 11px;
+    }
+    .scene-team {
+      font-size: 11px;
+      color: var(--blue);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .scene-dur {
+      color: var(--text2);
+      font-size: 11px;
+      margin-left: auto;
+    }
+    .copy-btn {
+      padding: 3px 7px;
+      font-size: 11px;
+    }
+    .copy-btn.copied {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    .lanes {
+      padding: 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .lane {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .lane-actor {
+      color: var(--text2);
+      min-width: 90px;
+      font-size: 11px;
+      padding-top: 3px;
+    }
+    .lane-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .pill {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+    }
+    .pill.running {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .pill.success {
+      border-color: var(--green);
+    }
+    .pill.slow {
+      border-color: var(--amber);
+    }
+    .pill.error {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .pill .tgt {
+      color: var(--text2);
+    }
+
+    .assertions {
+      padding: 0 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .assert {
+      font-size: 12px;
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+    }
+    .assert .mark {
+      font-weight: 700;
+    }
+    .assert.ok .mark {
+      color: var(--green);
+    }
+    .assert.bad .mark {
+      color: var(--red);
+    }
+    .assert .who {
+      color: var(--text2);
+    }
+
+    .scene-error {
+      margin: 0 14px 12px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--red);
+      color: var(--red);
+      font-size: 12px;
+      white-space: pre-wrap;
+      cursor: pointer;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}

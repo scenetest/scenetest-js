@@ -6,6 +6,7 @@
  * Built by Vite to `../dist-app` and served by the plugin middleware.
  */
 import { mountDashboard, createDevTransport } from '@scenetest/dashboard'
+import '@scenetest/dashboard/style.css'
 
 const root = document.getElementById('root')
 if (root) mountDashboard(root, { transport: createDevTransport() })
