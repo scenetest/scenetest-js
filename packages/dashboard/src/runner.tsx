@@ -1,6 +1,4 @@
-import { h } from 'preact'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'preact/hooks'
-import htm from 'htm'
 import {
   selectSnapshot,
   mapReportToSnapshot,
@@ -9,8 +7,6 @@ import {
   type RunnerSnapshot,
 } from './runner-store.js'
 import type { DashboardRows } from './select-helpers.js'
-
-const html = htm.bind(h)
 
 const STATUSES = ['failed', 'timeout', 'running', 'completed'] as const
 
@@ -95,30 +91,30 @@ export function RunnerView({ rows, base }: { rows: DashboardRows; base: string }
 
   const scene = snap.scenes.find((s) => s.id === selected)
 
-  return html`
+  return (
     <div class="runner">
-      <${RunnerHeader}
-        runs=${runs}
-        runId=${runId}
-        onRunChange=${setRunId}
-        connection=${connection}
-        summary=${snap.summary}
-        scenes=${snap.scenes}
+      <RunnerHeader
+        runs={runs}
+        runId={runId}
+        onRunChange={setRunId}
+        connection={connection}
+        summary={snap.summary}
+        scenes={snap.scenes}
       />
       <main>
-        <${Tree} scenes=${snap.scenes} selected=${selected} onSelect=${setSelected} />
-        <${ListPane}
-          scenes=${snap.scenes}
-          filters=${filters}
-          onFilters=${setFilters}
-          selected=${selected}
-          onSelect=${setSelected}
-          runId=${runId}
+        <Tree scenes={snap.scenes} selected={selected} onSelect={setSelected} />
+        <ListPane
+          scenes={snap.scenes}
+          filters={filters}
+          onFilters={setFilters}
+          selected={selected}
+          onSelect={setSelected}
+          runId={runId}
         />
-        <${Detail} scene=${scene} base=${base} />
+        <Detail scene={scene} base={base} />
       </main>
     </div>
-  `
+  )
 }
 
 // ── Header (run picker + status) ──────────────────────────────────
@@ -139,23 +135,29 @@ function RunnerHeader({
 }) {
   const completed = scenes.filter((s) => s.status === 'completed').length
   const a = summary.assertions
-  return html`
+  return (
     <div class="runner-bar">
       <div class="run-picker">
         <label for="run-select">Run</label>
-        <select id="run-select" value=${runId} onChange=${(e: Event) => onRunChange((e.target as HTMLSelectElement).value)}>
+        <select id="run-select" value={runId} onChange={(e) => onRunChange((e.target as HTMLSelectElement).value)}>
           <option value="live">Live (current run)</option>
-          ${runs.map((r) => html`<option value=${r.id}>${new Date(r.mtime).toLocaleString()} — ${r.id}</option>`)}
+          {runs.map((r) => (
+            <option key={r.id} value={r.id}>
+              {new Date(r.mtime).toLocaleString()} — {r.id}
+            </option>
+          ))}
         </select>
-        <span class=${'conn ' + connection} title=${connection}></span>
+        <span class={'conn ' + connection} title={connection}></span>
       </div>
       <div class="status-bar">
-        <span>scenes ${completed}/${summary.scenes || scenes.length}</span>
-        <span class="ok">✓ ${a.passed}</span>
-        <span class="fail">✗ ${a.failed}</span>
+        <span>
+          scenes {completed}/{summary.scenes || scenes.length}
+        </span>
+        <span class="ok">✓ {a.passed}</span>
+        <span class="fail">✗ {a.failed}</span>
       </div>
     </div>
-  `
+  )
 }
 
 // ── Tree (scenes grouped by file) ─────────────────────────────────
@@ -178,29 +180,30 @@ function Tree({
     return m
   }, [scenes])
 
-  return html`
+  return (
     <aside class="tree">
-      ${[...byFile.entries()].map(([file, group]) => {
+      {[...byFile.entries()].map(([file, group]) => {
         const fails = group.filter((s) => s.status !== 'completed' && s.status !== 'running').length
-        return html`
-          <div class="tree-file" title=${file}>
-            <span>${shortFile(file)}</span>
-            ${fails ? html`<span class="fail">${fails}</span>` : null}
-          </div>
-          ${group.map(
-            (s) => html`
+        return (
+          <div key={file}>
+            <div class="tree-file" title={file}>
+              <span>{shortFile(file)}</span>
+              {fails ? <span class="fail">{fails}</span> : null}
+            </div>
+            {group.map((s) => (
               <div
-                class=${'tree-scene ' + s.status + (s.id === selected ? ' selected' : '')}
-                onClick=${() => onSelect(s.id)}
+                key={s.id}
+                class={'tree-scene ' + s.status + (s.id === selected ? ' selected' : '')}
+                onClick={() => onSelect(s.id)}
               >
-                ${s.name}
+                {s.name}
               </div>
-            `
-          )}
-        `
+            ))}
+          </div>
+        )
       })}
     </aside>
-  `
+  )
 }
 
 // ── List pane (filters + grouped list) ────────────────────────────
@@ -240,70 +243,72 @@ function ListPane({
     [filters, onFilters]
   )
 
-  return html`
+  return (
     <section class="list-pane">
       <div class="filters">
         <input
           type="search"
           placeholder="Filter by scene, file, or assertion…"
-          value=${filters.text}
-          onInput=${(e: Event) => onFilters({ ...filters, text: (e.target as HTMLInputElement).value })}
+          value={filters.text}
+          onInput={(e) => onFilters({ ...filters, text: (e.target as HTMLInputElement).value })}
         />
         <div class="chips">
-          ${STATUSES.map(
-            (s) => html`
-              <button
-                class=${'chip' + (filters.statuses.has(s) ? ' on' : '')}
-                data-status=${s}
-                onClick=${() => toggleStatus(s)}
-              >
-                ${s[0].toUpperCase() + s.slice(1)}
-              </button>
-            `
-          )}
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              class={'chip' + (filters.statuses.has(s) ? ' on' : '')}
+              data-status={s}
+              onClick={() => toggleStatus(s)}
+            >
+              {s[0].toUpperCase() + s.slice(1)}
+            </button>
+          ))}
         </div>
         <select
           class="group-by"
-          value=${filters.groupBy}
-          onChange=${(e: Event) => onFilters({ ...filters, groupBy: (e.target as HTMLSelectElement).value as GroupBy })}
+          value={filters.groupBy}
+          onChange={(e) => onFilters({ ...filters, groupBy: (e.target as HTMLSelectElement).value as GroupBy })}
         >
           <option value="none">No grouping</option>
           <option value="file">Group by file</option>
           <option value="status">Group by status</option>
           <option value="team">Group by team</option>
         </select>
-        <${CopyButton}
-          label="Copy all failures"
-          getText=${() => formatFailureReport(scenes, runId)}
-        />
-        <${CopyButton} label="Copy all" subtle getText=${() => formatReport(scenes, runId)} />
+        <CopyButton label="Copy all failures" getText={() => formatFailureReport(scenes, runId)} />
+        <CopyButton label="Copy all" subtle getText={() => formatReport(scenes, runId)} />
       </div>
       <div class="list">
-        ${groups.length === 0
-          ? html`<div class="group-header">No scenes match the current filters.</div>`
-          : groups.map(
-              (g) => html`
-                ${filters.groupBy !== 'none' ? html`<div class="group-header">${g.key || ''} · ${g.items.length}</div>` : null}
-                ${g.items.map(
-                  (s) => html`
-                    <div class=${'row' + (s.id === selected ? ' selected' : '')} onClick=${() => onSelect(s.id)}>
-                      <span class=${'icon ' + s.status}>${statusIcon(s.status)}</span>
-                      <span class="name">${s.name}</span>
-                      <span class="row-team" title="Team running this scene">${teamLabel(s)}</span>
-                      <span class="meta">
-                        ${s.assertions.filter((a) => !a.result).length > 0 ? html`<span class="icon failed">✗</span> ` : null}
-                        ${s.assertions.length} check${s.assertions.length === 1 ? '' : 's'}
-                        ${s.duration ? ' · ' + s.duration + 'ms' : ''}
-                      </span>
-                      <span class="file">${shortFile(s.file)}</span>
-                    </div>
-                  `
-                )}
-              `
-            )}
+        {groups.length === 0 ? (
+          <div class="group-header">No scenes match the current filters.</div>
+        ) : (
+          groups.map((g) => (
+            <div key={g.key}>
+              {filters.groupBy !== 'none' ? (
+                <div class="group-header">
+                  {g.key || ''} · {g.items.length}
+                </div>
+              ) : null}
+              {g.items.map((s) => (
+                <div key={s.id} class={'row' + (s.id === selected ? ' selected' : '')} onClick={() => onSelect(s.id)}>
+                  <span class={'icon ' + s.status}>{statusIcon(s.status)}</span>
+                  <span class="name">{s.name}</span>
+                  <span class="row-team" title="Team running this scene">
+                    {teamLabel(s)}
+                  </span>
+                  <span class="meta">
+                    {s.assertions.filter((a) => !a.result).length > 0 ? <span class="icon failed">✗</span> : null}{' '}
+                    {s.assertions.length} check{s.assertions.length === 1 ? '' : 's'}
+                    {s.duration ? ' · ' + s.duration + 'ms' : ''}
+                  </span>
+                  <span class="file">{shortFile(s.file)}</span>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
       </div>
     </section>
-  `
+  )
 }
 
 function groupScenes(scenes: RunnerScene[], groupBy: GroupBy): { key: string; items: RunnerScene[] }[] {
@@ -330,65 +335,80 @@ function groupScenes(scenes: RunnerScene[], groupBy: GroupBy): { key: string; it
 // ── Detail pane (scene + spec snippet) ────────────────────────────
 function Detail({ scene, base }: { scene: RunnerScene | undefined; base: string }) {
   if (!scene) {
-    return html`
+    return (
       <aside class="detail">
         <div class="empty">
           Select a scene on the left to see error details, timeline, and the spec snippet for reproducing it manually.
         </div>
       </aside>
-    `
+    )
   }
 
   const failed = scene.status !== 'completed' && scene.status !== 'running'
   const pills = ['team ' + teamLabel(scene), scene.duration ? scene.duration + 'ms' : '', scene.status].filter(Boolean)
+  const editorHref =
+    `${base.replace(/__scenetest$/, '')}__open-in-editor?file=` +
+    encodeURIComponent(scene.file) +
+    (scene.line ? '&line=' + scene.line : '')
 
-  return html`
+  return (
     <aside class="detail">
       <div class="actions">
-        <${CopyButton} label="Copy" getText=${() => formatScene(scene)} />
-        ${scene.file
-          ? html`<a
-              class="btn subtle"
-              href=${`${base.replace(/__scenetest$/, '')}__open-in-editor?file=` +
-              encodeURIComponent(scene.file) +
-              (scene.line ? '&line=' + scene.line : '')}
-              >Open in editor</a
-            >`
-          : null}
+        <CopyButton label="Copy" getText={() => formatScene(scene)} />
+        {scene.file ? (
+          <a class="btn subtle" href={editorHref}>
+            Open in editor
+          </a>
+        ) : null}
       </div>
-      <h3>${failed ? html`<span class="icon failed">✗</span> ` : null}${scene.name}</h3>
+      <h3>
+        {failed ? <span class="icon failed">✗</span> : null} {scene.name}
+      </h3>
       <div class="meta-row">
-        ${pills.map((t) => html`<span class="pill">${t}</span>`)}
-        ${scene.file
-          ? html`<span class="pill" title=${scene.file}>${shortFile(scene.file)}${scene.line ? ':' + scene.line : ''}</span>`
-          : null}
+        {pills.map((t, i) => (
+          <span class="pill" key={i}>
+            {t}
+          </span>
+        ))}
+        {scene.file ? (
+          <span class="pill" title={scene.file}>
+            {shortFile(scene.file)}
+            {scene.line ? ':' + scene.line : ''}
+          </span>
+        ) : null}
       </div>
-      ${scene.error ? html`<div class="err">${scene.error}</div>` : null}
+      {scene.error ? <div class="err">{scene.error}</div> : null}
       <h4>Assertions</h4>
       <ul class="alist">
-        ${scene.assertions.length === 0
-          ? html`<li>No assertions recorded.</li>`
-          : scene.assertions.map(
-              (a) => html`<li class=${a.result ? 'pass' : 'fail'}>${a.result ? '✓' : '✗'} ${a.description}</li>`
-            )}
+        {scene.assertions.length === 0 ? (
+          <li>No assertions recorded.</li>
+        ) : (
+          scene.assertions.map((a, i) => (
+            <li class={a.result ? 'pass' : 'fail'} key={i}>
+              {a.result ? '✓' : '✗'} {a.description}
+            </li>
+          ))
+        )}
       </ul>
       <h4>Timeline</h4>
       <ul class="timeline">
-        ${scene.timeline.length === 0
-          ? html`<li>(no timeline)</li>`
-          : scene.timeline.map(
-              (t) => html`
-                <li class=${t.error ? 'err-step' : ''}>
-                  ${t.actor}: ${t.action}${t.target ? ' ' + t.target : ''}
-                  ${t.duration != null ? ' (' + t.duration + 'ms)' : ''}${t.error ? ' — ' + t.error : ''}
-                </li>
-              `
-            )}
+        {scene.timeline.length === 0 ? (
+          <li>(no timeline)</li>
+        ) : (
+          scene.timeline.map((t, i) => (
+            <li class={t.error ? 'err-step' : ''} key={i}>
+              {t.actor}: {t.action}
+              {t.target ? ' ' + t.target : ''}
+              {t.duration != null ? ' (' + t.duration + 'ms)' : ''}
+              {t.error ? ' — ' + t.error : ''}
+            </li>
+          ))
+        )}
       </ul>
       <h4>Spec snippet</h4>
-      <${SpecSnippet} file=${scene.file} line=${scene.line} base=${base} />
+      <SpecSnippet file={scene.file} line={scene.line} base={base} />
     </aside>
-  `
+  )
 }
 
 // ── Spec snippet (lazy fetch) ─────────────────────────────────────
@@ -419,23 +439,27 @@ function SpecSnippet({ file, line, base }: { file: string; line?: number; base: 
     return () => ctrl.abort()
   }, [file, line, base])
 
-  if (state.status === 'no-file') return html`<div class="empty">No source file recorded.</div>`
-  if (state.status === 'loading') return html`<div class="empty">Loading…</div>`
-  if (state.status === 'missing') return html`<div class="empty">Source not available (${state.code}).</div>`
-  if (state.status === 'error') return html`<div class="empty">Could not load source.</div>`
+  if (state.status === 'no-file') return <div class="empty">No source file recorded.</div>
+  if (state.status === 'loading') return <div class="empty">Loading…</div>
+  if (state.status === 'missing') return <div class="empty">Source not available ({state.code}).</div>
+  if (state.status === 'error') return <div class="empty">Could not load source.</div>
   if (state.status !== 'loaded') return null
 
   const { start, lines } = state.data
   const target = line || start
-  return html`
+  return (
     <pre class="snippet">
-${lines.map((ln, i) => {
-      const n = start + i
-      const cls = 'row-line' + (n === target ? ' hl' : '')
-      return html`<div class=${cls}><span class="ln">${n}</span>${ln}</div>`
-    })}</pre
-    >
-  `
+      {lines.map((ln, i) => {
+        const n = start + i
+        return (
+          <div class={'row-line' + (n === target ? ' hl' : '')} key={n}>
+            <span class="ln">{n}</span>
+            {ln}
+          </div>
+        )
+      })}
+    </pre>
+  )
 }
 
 // ── Copy button ───────────────────────────────────────────────────
@@ -455,7 +479,11 @@ function CopyButton({ label, getText, subtle }: { label: string; getText: () => 
     })
   }
   const cls = 'btn' + (subtle ? ' subtle' : '') + (copied ? ' copied' : '')
-  return html`<button class=${cls} onClick=${onClick}>${copied ? 'Copied!' : label}</button>`
+  return (
+    <button class={cls} onClick={onClick}>
+      {copied ? 'Copied!' : label}
+    </button>
+  )
 }
 
 // ── Plain-text formatters (clipboard payload) ─────────────────────

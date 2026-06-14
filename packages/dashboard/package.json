@@ -45,7 +45,6 @@
   "dependencies": {
     "@scenetest/protocol": "workspace:*",
     "@tanstack/db": "^0.6.0",
-    "htm": "^3.1.1",
     "preact": "^10.22.0"
   },
   "devDependencies": {
