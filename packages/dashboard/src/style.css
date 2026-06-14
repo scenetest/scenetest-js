@@ -8,9 +8,9 @@
  * instead of leaking into the chrome or the host page.
  *
  * Theming surface: a host may set `--st-bg`, `--st-accent`, `--st-font`,
- * `--st-font-size` on the root element (inline — `mountDashboard({ theme })`
+ * `--st-font-size` on the root element (inline — `<Dashboard theme={…} />`
  * does this — or via CSS). Everything else derives from them or from a fixed
- * terminal palette. These four are versioned with the widget, like the wire
+ * terminal palette. These four are versioned with the component, like the wire
  * protocol.
  */
 .scenetest-dashboard {

@@ -1,4 +1,3 @@
-import { render } from 'preact'
 import { useState, useEffect, useMemo } from 'preact/hooks'
 import { createCollection } from '@tanstack/db'
 import {
@@ -14,29 +13,8 @@ import { selectWaterfall } from './select-waterfall.js'
 import { RunnerView } from './runner.js'
 import { useRunSlice } from './use-run-slice.js'
 import type { Command } from '@scenetest/protocol'
-import type { ConnectionStatus, DashboardHandle, DashboardTheme, MountOptions, Transport } from './types.js'
+import type { ConnectionStatus, DashboardTheme, Transport } from './types.js'
 import type { DashboardCollections } from './select-helpers.js'
-
-/**
- * Mount the **Dashboard** as thin sugar over the `<Dashboard>` component, for
- * hosts that aren't already a Preact tree (the dev shell, scenetest-cloud).
- * Renders into `element` directly — no shadow root; styles come from the shipped
- * stylesheet, which the host imports (`import '@scenetest/dashboard/style.css'`).
- * The `theme`, if given, is applied as inline `--st-*` custom properties on the
- * component's root element. Returns a handle that unmounts.
- *
- * A Preact host can skip this and render `<Dashboard transport={…} />` itself.
- */
-export function mountDashboard(element: HTMLElement, options: MountOptions): DashboardHandle {
-  const base = (options.base ?? '/__scenetest').replace(/\/+$/, '')
-  render(<Dashboard transport={options.transport} theme={options.theme} base={base} />, element)
-
-  return {
-    unmount() {
-      render(null, element)
-    },
-  }
-}
 
 /** Build the inline `--st-*` custom properties for the theming surface. */
 function themeVars(theme?: DashboardTheme): Record<string, string> {
@@ -116,8 +94,10 @@ export function Dashboard({
 }: {
   transport: Transport
   theme?: DashboardTheme
+  /** Base path the middleware is mounted at. Defaults to `/__scenetest`. */
   base?: string
 }) {
+  base = base.replace(/\/+$/, '')
   const { store, connection } = useDashboardStore(transport)
   const [tab, setTab] = useState<Tab>(() => tabForPath(location.pathname))
 

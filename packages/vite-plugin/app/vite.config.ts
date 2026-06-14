@@ -14,6 +14,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   base: '/__scenetest/',
+  // The shell renders the dashboard's Preact component as JSX; transform it
+  // with Preact's automatic runtime (the only JSX in this tiny shell).
+  esbuild: { jsx: 'automatic', jsxImportSource: 'preact' },
   build: {
     outDir: fileURLToPath(new URL('../dist-app', import.meta.url)),
     emptyOutDir: true,
