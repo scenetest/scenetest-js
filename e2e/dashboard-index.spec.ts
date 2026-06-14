@@ -1,29 +1,29 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * E2E tests for the Preact app served by the vite plugin at
- * /__scenetest/. The index lists views; the runner is a sibling
- * route; the legacy assertions dashboard is a separate page.
+ * E2E tests for the Dashboard — the Preact app served by the vite plugin at
+ * /__scenetest/. It's one app (Home / Runner / Waterfall views) over the
+ * read-only TanStack DB read model, routed on the pathname; views render into
+ * a shadow root, which Playwright's CSS locators pierce.
  */
 
-test.describe('/__scenetest index', () => {
-  test('renders two cards linking to runner and dashboard', async ({ page }) => {
+test.describe('/__scenetest Dashboard', () => {
+  test('Home renders two cards (Scene runner, Waterfall)', async ({ page }) => {
     await page.goto('/__scenetest/')
 
     await expect(page.locator('.index h1')).toContainText('Scenetest')
     const cards = page.locator('.index .card')
     await expect(cards).toHaveCount(2)
-
-    const runnerCard = cards.filter({ hasText: 'Scene runner' })
-    const dashboardCard = cards.filter({ hasText: 'Assertions dashboard' })
-    await expect(runnerCard).toHaveAttribute('href', '/__scenetest/runner')
-    await expect(dashboardCard).toHaveAttribute('href', '/__scenetest/dashboard')
+    await expect(cards.filter({ hasText: 'Scene runner' })).toBeVisible()
+    await expect(cards.filter({ hasText: 'Waterfall' })).toBeVisible()
+    // The nav tabs are present on every view.
+    await expect(page.locator('.tabs .tab')).toHaveCount(3)
   })
 
-  test('Scene runner card navigates to /runner without full reload', async ({ page }) => {
+  test('Scene runner card navigates to /runner without a full reload', async ({ page }) => {
     await page.goto('/__scenetest/')
 
-    // Tag the window so we can detect a full reload
+    // Tag the window so we can detect a full reload.
     await page.evaluate(() => {
       ;(window as unknown as { __sentinel: boolean }).__sentinel = true
     })
@@ -31,35 +31,37 @@ test.describe('/__scenetest index', () => {
     await page.locator('.index .card', { hasText: 'Scene runner' }).click()
 
     await expect(page).toHaveURL(/\/__scenetest\/runner(\?|$)/)
-    // Runner header is the analyze app; tabs are part of <App/>
-    await expect(page.locator('header .tabs')).toBeVisible()
+    await expect(page.locator('.runner')).toBeVisible()
 
-    // pushState navigation preserves the sentinel; full reload would clear it
+    // pushState navigation preserves the sentinel; a full reload would clear it.
     const survived = await page.evaluate(
       () => (window as unknown as { __sentinel?: boolean }).__sentinel === true
     )
     expect(survived).toBe(true)
   })
 
-  test('back button returns from runner to the index', async ({ page }) => {
+  test('back button returns from the Runner to Home', async ({ page }) => {
     await page.goto('/__scenetest/')
     await page.locator('.index .card', { hasText: 'Scene runner' }).click()
-    await expect(page.locator('header .tabs')).toBeVisible()
+    await expect(page.locator('.runner')).toBeVisible()
 
     await page.goBack()
     await expect(page).toHaveURL(/\/__scenetest\/?(\?|$)/)
     await expect(page.locator('.index .card')).toHaveCount(2)
   })
 
-  test('direct navigation to /runner renders the analyze app', async ({ page }) => {
+  test('direct navigation to /runner renders the Runner view', async ({ page }) => {
     await page.goto('/__scenetest/runner')
-    await expect(page.locator('header .tabs')).toBeVisible()
+    await expect(page.locator('.runner')).toBeVisible()
     await expect(page.locator('.index')).toHaveCount(0)
   })
 
-  test('Assertions dashboard card opens the legacy page', async ({ page }) => {
+  test('Waterfall card opens the Waterfall view', async ({ page }) => {
     await page.goto('/__scenetest/')
-    await page.locator('.index .card', { hasText: 'Assertions dashboard' }).click()
+    await page.locator('.index .card', { hasText: 'Waterfall' }).click()
     await expect(page).toHaveURL(/\/__scenetest\/dashboard$/)
+    // The Waterfall mounts into a nested shadow root; with no run it shows its
+    // empty state — confirms the widget actually rendered from the store.
+    await expect(page.locator('.waiting')).toContainText('Waiting for scene run')
   })
 })
