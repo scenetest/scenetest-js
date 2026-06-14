@@ -1,17 +1,18 @@
 import type { SceneRow, AssertionRecord, ActionRecord, RunRow } from './collections/projections.js'
-import type { ConnectionStatus } from './types.js'
+import type { ObservableRows } from './use-live-query.js'
 
 /**
- * The reactive rows of the read model, as the Dashboard root reads them from
- * the `@tanstack/db` collections and passes to every view. The views select
- * what they need from these (`selectWaterfall`, `selectSnapshot`).
+ * The read model's collections, created once at the Dashboard root and passed
+ * to every view. Each view reads the tables it needs reactively with
+ * `useLiveQuery`, then selects (`selectWaterfall`, `selectSnapshot`). Typed
+ * structurally ({@link ObservableRows}) so the concrete `@tanstack/db`
+ * `Collection`s satisfy it without leaking their generics.
  */
-export interface DashboardRows {
-  scenes: SceneRow[]
-  assertions: AssertionRecord[]
-  actions: ActionRecord[]
-  runs: RunRow[]
-  connection: ConnectionStatus
+export interface DashboardCollections {
+  scenes: ObservableRows<SceneRow>
+  assertions: ObservableRows<AssertionRecord>
+  actions: ObservableRows<ActionRecord>
+  runs: ObservableRows<RunRow>
 }
 
 /**
