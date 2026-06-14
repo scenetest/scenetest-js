@@ -19,24 +19,22 @@ render `<Dashboard>` directly; there's no imperative mount wrapper.
 
 ## Transport adapter
 
-The only thing that differs between dev and cloud. The dashboard calls the
-adapter to fetch a snapshot and subscribe to live events, and pushes user
-actions back as protocol commands:
+The only thing that differs between dev and cloud. The dashboard subscribes to
+the run stream and pushes user actions back as protocol commands:
 
 ```ts
 interface Transport {
-  fetchState(): Promise<RunEvent[]>
   subscribe(onEvent: (e: RunEvent) => void, onStatus?: (s: ConnectionStatus) => void): () => void
   sendCommand(command: Command): Promise<void>
 }
 ```
 
 Events and commands are the `@scenetest/protocol` vocabulary. `createDevTransport()`
-speaks to the Vite middleware (fetch + SSE); a cloud adapter speaks to the
-worker (fetch + WebSocket). History may arrive through either `fetchState`
-(snapshot) or the initial `subscribe` burst — the read model folds both the
-same way, so a transport picks whichever its backend makes natural (SSE replays
-the buffer through `subscribe`, so the dev adapter's `fetchState` returns empty).
+speaks to the Vite middleware (SSE); a cloud adapter speaks to the worker
+(WebSocket). History and live events both flow through `subscribe`: the
+transport replays the run so far on connect (SSE replays its buffer; the cloud
+WebSocket replays from a `sinceSeq`) and then streams live ones — the read model
+folds both the same way, so there's no separate snapshot fetch.
 
 ## Theming
 
@@ -62,7 +60,7 @@ for tests, SSR, or computing a rollup:
 
 - `selectWaterfall(slice)` / `selectSnapshot(slice)` — project a latest-run `RunSlice` into the Waterfall / Runner view shapes
 - `mapReportToSnapshot(report)` — adapt a past-run JSON report into the Runner shape
-- `initialState()`, `completedSceneCount(state)`
+- `completedSceneCount(state)` — count of finished scenes
 - `sceneSummary(scene)` — the plain-text "copy failures" summary
 
 ## Collections (`@scenetest/dashboard/collections`)

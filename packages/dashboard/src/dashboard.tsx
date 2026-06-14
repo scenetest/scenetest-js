@@ -61,16 +61,21 @@ function useDashboardStore(transport: Transport): { store: DashboardStore; conne
 // ── Routing ───────────────────────────────────────────────────────
 type Tab = 'home' | 'runner' | 'waterfall'
 
+// Both hosts mount the dashboard (and its dev middleware endpoints) here. It's
+// a single constant rather than a prop: the routing and the Runner's data
+// fetches must agree, and nothing in-tree mounts it anywhere else.
+const BASE = '/__scenetest'
+
 function tabForPath(pathname: string): Tab {
-  if (pathname.startsWith('/__scenetest/runner')) return 'runner'
-  if (pathname.startsWith('/__scenetest/waterfall')) return 'waterfall'
+  if (pathname.startsWith(`${BASE}/runner`)) return 'runner'
+  if (pathname.startsWith(`${BASE}/waterfall`)) return 'waterfall'
   return 'home'
 }
 
 const PATH_FOR_TAB: Record<Tab, string> = {
-  home: '/__scenetest',
-  runner: '/__scenetest/runner',
-  waterfall: '/__scenetest/waterfall',
+  home: BASE,
+  runner: `${BASE}/runner`,
+  waterfall: `${BASE}/waterfall`,
 }
 
 /**
@@ -90,14 +95,10 @@ const PATH_FOR_TAB: Record<Tab, string> = {
 export function Dashboard({
   transport,
   theme,
-  base = '/__scenetest',
 }: {
   transport: Transport
   theme?: DashboardTheme
-  /** Base path the middleware is mounted at. Defaults to `/__scenetest`. */
-  base?: string
 }) {
-  base = base.replace(/\/+$/, '')
   const { store, connection } = useDashboardStore(transport)
   const [tab, setTab] = useState<Tab>(() => tabForPath(location.pathname))
 
@@ -112,7 +113,7 @@ export function Dashboard({
   const onNavigate = (e: MouseEvent) => {
     const a = (e.target as Element | null)?.closest('a')
     const href = a?.getAttribute('href')
-    if (!href || !href.startsWith('/__scenetest')) return
+    if (!href || !href.startsWith(BASE)) return
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
     e.preventDefault()
     history.pushState(null, '', href + location.search)
@@ -147,7 +148,7 @@ export function Dashboard({
         {tab === 'home' ? (
           <Home />
         ) : tab === 'runner' ? (
-          <RunnerView collections={store} connection={connection} base={base} />
+          <RunnerView collections={store} connection={connection} base={BASE} />
         ) : (
           <WaterfallHost collections={store} connection={connection} send={send} />
         )}
