@@ -193,7 +193,11 @@ function WaterfallHost({
   send: (c: Command) => void
 }) {
   const slice = useRunSlice(collections)
-  const state = { ...selectWaterfall(slice), connection }
+  const view = useMemo(
+    () => selectWaterfall(slice),
+    [slice.runId, slice.run, slice.scenes, slice.assertions, slice.actions]
+  )
+  const state = { ...view, connection }
 
   return (
     <div class="waterfall-host">

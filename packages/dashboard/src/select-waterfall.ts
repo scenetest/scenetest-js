@@ -1,7 +1,6 @@
-import { attributeToScene } from './collections/projections.js'
 import type { ActionRecord } from './collections/projections.js'
 import type { ActionItem, DashboardState, Lane, Scene } from './types.js'
-import type { RunSlice } from './select-helpers.js'
+import { groupByScene, type RunSlice } from './select-helpers.js'
 
 function laneStatus(a: ActionRecord): ActionItem['status'] {
   if (a.status === 'running') return 'running'
@@ -21,6 +20,9 @@ function laneStatus(a: ActionRecord): ActionItem['status'] {
  * (`WaterfallHost` spreads it in), since a pure projection can't know it.
  */
 export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connection'> {
+  const actionsByScene = groupByScene(slice.actions, slice.scenes)
+  const assertionsByScene = groupByScene(slice.assertions, slice.scenes)
+
   const viewScenes: Scene[] = slice.scenes.map((s) => {
     const lanes: Lane[] = s.actors.map((actor) => ({ actor, items: [] }))
     const laneFor = (actor: string): Lane => {
@@ -31,9 +33,7 @@ export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connecti
       }
       return lane
     }
-    for (const a of slice.actions
-      .filter((ac) => attributeToScene(ac, slice.scenes) === s.id)
-      .sort((x, y) => x.startTime - y.startTime)) {
+    for (const a of (actionsByScene.get(s.id) ?? []).slice().sort((x, y) => x.startTime - y.startTime)) {
       laneFor(a.actor).items.push({
         action: a.action,
         target: a.target ?? undefined,
@@ -49,9 +49,12 @@ export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connecti
       file: s.file,
       actors: s.actors.slice(),
       lanes,
-      assertions: slice.assertions
-        .filter((a) => attributeToScene(a, slice.scenes) === s.id)
-        .map((a) => ({ actor: a.actor ?? undefined, description: a.description, result: a.result, timestamp: a.timestamp })),
+      assertions: (assertionsByScene.get(s.id) ?? []).map((a) => ({
+        actor: a.actor ?? undefined,
+        description: a.description,
+        result: a.result,
+        timestamp: a.timestamp,
+      })),
       startTime: s.startTime,
       endTime: s.endTime,
       status: s.status,

@@ -1,6 +1,5 @@
 import type { TeamMeta } from '@scenetest/protocol'
-import { attributeToScene } from './collections/projections.js'
-import type { RunSlice } from './select-helpers.js'
+import { groupByScene, type RunSlice } from './select-helpers.js'
 
 /**
  * The Runner view's read model — derived from the shared `@tanstack/db`
@@ -84,6 +83,9 @@ function isFailure(status: string): boolean {
 export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
   const { run: latestRun, scenes: runScenes, assertions: runAssertions, actions: runActions } = slice
 
+  const assertionsByScene = groupByScene(runAssertions, runScenes)
+  const actionsByScene = groupByScene(runActions, runScenes)
+
   const view: RunnerScene[] = runScenes.map((s) => ({
     id: s.id,
     name: s.name,
@@ -94,11 +96,14 @@ export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
     team: s.team,
     teamIndex: s.teamIndex,
     actors: s.actors,
-    assertions: runAssertions
-      .filter((a) => attributeToScene(a, runScenes) === s.id)
-      .map((a) => ({ result: a.result, description: a.description, actor: a.actor, timestamp: a.timestamp })),
-    timeline: runActions
-      .filter((ac) => attributeToScene(ac, runScenes) === s.id)
+    assertions: (assertionsByScene.get(s.id) ?? []).map((a) => ({
+      result: a.result,
+      description: a.description,
+      actor: a.actor,
+      timestamp: a.timestamp,
+    })),
+    timeline: (actionsByScene.get(s.id) ?? [])
+      .slice()
       .sort((a, b) => a.startTime - b.startTime)
       .map((ac) => ({
         actor: ac.actor,
