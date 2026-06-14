@@ -6,7 +6,9 @@ import {
   type RunnerScene,
   type RunnerSnapshot,
 } from './runner-store.js'
-import type { DashboardRows } from './select-helpers.js'
+import { useLiveQuery } from './use-live-query.js'
+import type { DashboardCollections } from './select-helpers.js'
+import type { ConnectionStatus } from './types.js'
 
 const STATUSES = ['failed', 'timeout', 'running', 'completed'] as const
 
@@ -37,9 +39,24 @@ function teamLabel(s: RunnerScene): string {
 }
 
 // ── Data: live reads the shared read model; past fetches a report ──
-function useRunner(rows: DashboardRows, runId: string, base: string): { snap: RunnerSnapshot; connection: string } {
-  const [past, setPast] = useState<RunnerSnapshot>(EMPTY_SNAPSHOT)
+function useRunner(
+  collections: DashboardCollections,
+  liveConnection: ConnectionStatus,
+  runId: string,
+  base: string
+): { snap: RunnerSnapshot; connection: string } {
+  // Read the store reactively (live mode); the selector attributes
+  // assertions/actions to scenes and slices to the latest run.
+  const scenes = useLiveQuery(collections.scenes)
+  const assertions = useLiveQuery(collections.assertions)
+  const actions = useLiveQuery(collections.actions)
+  const runs = useLiveQuery(collections.runs)
+  const live = useMemo(
+    () => selectSnapshot(scenes, assertions, actions, runs),
+    [scenes, assertions, actions, runs]
+  )
 
+  const [past, setPast] = useState<RunnerSnapshot>(EMPTY_SNAPSHOT)
   useEffect(() => {
     if (runId === 'live') return
     setPast(EMPTY_SNAPSHOT)
@@ -55,22 +72,25 @@ function useRunner(rows: DashboardRows, runId: string, base: string): { snap: Ru
     }
   }, [runId, base])
 
-  if (runId === 'live') {
-    return {
-      snap: selectSnapshot(rows.scenes, rows.assertions, rows.actions, rows.runs),
-      connection: rows.connection,
-    }
-  }
+  if (runId === 'live') return { snap: live, connection: liveConnection }
   return { snap: past, connection: 'idle' }
 }
 
 // ── Runner view root ──────────────────────────────────────────────
-export function RunnerView({ rows, base }: { rows: DashboardRows; base: string }) {
+export function RunnerView({
+  collections,
+  connection: liveConnection,
+  base,
+}: {
+  collections: DashboardCollections
+  connection: ConnectionStatus
+  base: string
+}) {
   const [runId, setRunId] = useState(() => new URLSearchParams(location.search).get('run') || 'live')
   const [runs, setRuns] = useState<RunInfo[]>([])
   const [filters, setFilters] = useState<Filters>({ text: '', statuses: new Set(STATUSES), groupBy: 'status' })
   const [selected, setSelected] = useState<string | null>(null)
-  const { snap, connection } = useRunner(rows, runId, base)
+  const { snap, connection } = useRunner(collections, liveConnection, runId, base)
 
   useEffect(() => {
     fetch(`${base}/runs`)

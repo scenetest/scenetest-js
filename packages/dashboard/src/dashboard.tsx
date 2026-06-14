@@ -12,11 +12,12 @@ import {
 import { Waterfall } from './app.js'
 import { selectWaterfall } from './store.js'
 import { RunnerView } from './runner.js'
+import { useLiveQuery } from './use-live-query.js'
 import { STYLES } from './styles.js'
 import { DASHBOARD_STYLES } from './dashboard-styles.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardHandle, DashboardTheme, MountOptions, Transport } from './types.js'
-import type { DashboardRows } from './select-helpers.js'
+import type { DashboardCollections } from './select-helpers.js'
 
 /**
  * Mount the **Dashboard** — the whole app: Home / Runner / Waterfall views over
@@ -63,9 +64,16 @@ function applyTheme(el: HTMLElement, theme: DashboardTheme): void {
   if (theme.fontSize) el.style.setProperty('--st-font-size', theme.fontSize)
 }
 
-// ── The read model (one store, read by every view) ────────────────
-function useDashboardRows(transport: Transport): DashboardRows {
-  const store = useMemo(() => {
+// ── The read model (one store, every view reads it via useLiveQuery) ──
+// Created once per transport. The root does NOT subscribe to the row data — it
+// only tracks connection liveness; each view subscribes to the tables it needs
+// through `useLiveQuery`, so re-renders are scoped to the view that changed.
+interface DashboardStore extends DashboardCollections {
+  source: ReturnType<typeof createRunSource>
+}
+
+function useDashboardStore(transport: Transport): { store: DashboardStore; connection: ConnectionStatus } {
+  const store = useMemo<DashboardStore>(() => {
     const source = createRunSource(transport)
     return {
       source,
@@ -76,31 +84,16 @@ function useDashboardRows(transport: Transport): DashboardRows {
     }
   }, [transport])
 
-  const [, setTick] = useState(0)
-  const bump = () => setTick((t) => t + 1)
   const [connection, setConnection] = useState<ConnectionStatus>('connecting')
-
   useEffect(() => {
-    const subs = [store.scenes, store.assertions, store.actions, store.runs].map((c) =>
-      c.subscribeChanges(() => bump())
-    )
-    // A status-only subscription on the shared source (the collections drive
-    // the data; this just surfaces connection liveness for the header).
     const stopStatus = store.source.subscribe(() => {}, setConnection)
     return () => {
-      for (const s of subs) s.unsubscribe()
       stopStatus()
       store.source.close()
     }
   }, [store])
 
-  return {
-    scenes: store.scenes.toArray,
-    assertions: store.assertions.toArray,
-    actions: store.actions.toArray,
-    runs: store.runs.toArray,
-    connection,
-  }
+  return { store, connection }
 }
 
 // ── Routing ───────────────────────────────────────────────────────
@@ -120,7 +113,7 @@ const PATH_FOR_TAB: Record<Tab, string> = {
 
 // ── Dashboard root ────────────────────────────────────────────────
 function Dashboard({ transport, theme, base }: { transport: Transport; theme?: DashboardTheme; base: string }) {
-  const rows = useDashboardRows(transport)
+  const { store, connection } = useDashboardStore(transport)
   const [tab, setTab] = useState<Tab>(() => tabForPath(location.pathname))
 
   useEffect(() => {
@@ -162,9 +155,9 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
         {tab === 'home' ? (
           <Home onGo={go} />
         ) : tab === 'runner' ? (
-          <RunnerView rows={rows} base={base} />
+          <RunnerView collections={store} connection={connection} base={base} />
         ) : (
-          <WaterfallHost rows={rows} send={send} theme={theme} />
+          <WaterfallHost collections={store} connection={connection} send={send} theme={theme} />
         )}
       </div>
     </div>
@@ -198,7 +191,17 @@ function Home({ onGo }: { onGo: (t: Tab) => void }) {
 // its bare element selectors don't bleed into the dashboard chrome — but its
 // data is the shared store, computed by `selectWaterfall` and re-rendered into
 // the nested tree on every change.
-function WaterfallHost({ rows, send, theme }: { rows: DashboardRows; send: (c: Command) => void; theme?: DashboardTheme }) {
+function WaterfallHost({
+  collections,
+  connection,
+  send,
+  theme,
+}: {
+  collections: DashboardCollections
+  connection: ConnectionStatus
+  send: (c: Command) => void
+  theme?: DashboardTheme
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLElement | null>(null)
 
@@ -221,7 +224,12 @@ function WaterfallHost({ rows, send, theme }: { rows: DashboardRows; send: (c: C
     }
   }, [theme])
 
-  const state = { ...selectWaterfall(rows.scenes, rows.assertions, rows.actions, rows.runs), connection: rows.connection }
+  // Read the store reactively; the selector folds it into the Waterfall shape.
+  const scenes = useLiveQuery(collections.scenes)
+  const assertions = useLiveQuery(collections.assertions)
+  const actions = useLiveQuery(collections.actions)
+  const runs = useLiveQuery(collections.runs)
+  const state = { ...selectWaterfall(scenes, assertions, actions, runs), connection }
   useEffect(() => {
     if (containerRef.current) render(<Waterfall state={state} send={send} />, containerRef.current)
   })
