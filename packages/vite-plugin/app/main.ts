@@ -1,11 +1,11 @@
 /**
- * The dev console shell — a thin host around the `@scenetest/dashboard`
- * library's unified console (Home / Runner / Waterfall), exactly analogous to
- * scenetest-cloud's shell. It mounts the console with the SSE dev transport;
- * cloud mounts the same library with a WebSocket transport. Built by Vite to
- * `../dist-app` and served by the plugin middleware at `/__scenetest`.
+ * The dev shell — a thin host around the `@scenetest/dashboard` app (Home /
+ * Runner / Waterfall views over the read-only TanStack DB read model), exactly
+ * analogous to scenetest-cloud's shell. It mounts the dashboard with the SSE
+ * dev transport; cloud mounts the same library with a WebSocket transport.
+ * Built by Vite to `../dist-app` and served by the plugin middleware.
  */
-import { mountConsole, createDevTransport } from '@scenetest/dashboard'
+import { mountDashboard, createDevTransport } from '@scenetest/dashboard'
 
 const root = document.getElementById('root')
-if (root) mountConsole(root, { transport: createDevTransport() })
+if (root) mountDashboard(root, { transport: createDevTransport() })

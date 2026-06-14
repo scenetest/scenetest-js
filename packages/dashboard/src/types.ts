@@ -110,6 +110,8 @@ export interface MountOptions {
   transport: Transport
   /** Optional theme overrides applied as `--st-*` custom properties. */
   theme?: DashboardTheme
+  /** Base path the middleware is mounted at. Defaults to `/__scenetest`. */
+  base?: string
 }
 
 /** Handle returned by `mountDashboard`. */

@@ -1,13 +1,14 @@
 import { h } from 'preact'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'preact/hooks'
 import htm from 'htm'
-import type { Transport } from './types.js'
 import {
-  createRunnerStore,
+  selectSnapshot,
   mapReportToSnapshot,
+  EMPTY_SNAPSHOT,
   type RunnerScene,
   type RunnerSnapshot,
 } from './runner-store.js'
+import type { DashboardRows } from './select-helpers.js'
 
 const html = htm.bind(h)
 
@@ -22,11 +23,6 @@ interface Filters {
   text: string
   statuses: Set<string>
   groupBy: GroupBy
-}
-
-const EMPTY: RunnerSnapshot = {
-  scenes: [],
-  summary: { scenes: 0, completed: 0, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0 },
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -44,48 +40,41 @@ function teamLabel(s: RunnerScene): string {
   return s.team?.name || 'team ' + s.teamIndex
 }
 
-// ── Data hook: live (projections fold) or past run (report map) ───
-function useRunner(transport: Transport, runId: string, base: string): { snap: RunnerSnapshot; connection: string } {
-  const [snap, setSnap] = useState<RunnerSnapshot>(EMPTY)
-  const [connection, setConnection] = useState('idle')
+// ── Data: live reads the shared read model; past fetches a report ──
+function useRunner(rows: DashboardRows, runId: string, base: string): { snap: RunnerSnapshot; connection: string } {
+  const [past, setPast] = useState<RunnerSnapshot>(EMPTY_SNAPSHOT)
 
   useEffect(() => {
-    setSnap(EMPTY)
-    if (runId === 'live') {
-      const store = createRunnerStore()
-      setConnection('connecting')
-      const unsubscribe = transport.subscribe(
-        (event) => {
-          store.ingest(event)
-          setSnap(store.snapshot())
-        },
-        (status) => setConnection(status)
-      )
-      return () => unsubscribe()
-    }
-    setConnection('idle')
+    if (runId === 'live') return
+    setPast(EMPTY_SNAPSHOT)
     let alive = true
     fetch(`${base}/runs/${encodeURIComponent(runId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (alive && data) setSnap(mapReportToSnapshot(data))
+        if (alive && data) setPast(mapReportToSnapshot(data))
       })
       .catch(() => {})
     return () => {
       alive = false
     }
-  }, [transport, runId, base])
+  }, [runId, base])
 
-  return { snap, connection }
+  if (runId === 'live') {
+    return {
+      snap: selectSnapshot(rows.scenes, rows.assertions, rows.actions, rows.runs),
+      connection: rows.connection,
+    }
+  }
+  return { snap: past, connection: 'idle' }
 }
 
 // ── Runner view root ──────────────────────────────────────────────
-export function RunnerView({ transport, base }: { transport: Transport; base: string }) {
+export function RunnerView({ rows, base }: { rows: DashboardRows; base: string }) {
   const [runId, setRunId] = useState(() => new URLSearchParams(location.search).get('run') || 'live')
   const [runs, setRuns] = useState<RunInfo[]>([])
   const [filters, setFilters] = useState<Filters>({ text: '', statuses: new Set(STATUSES), groupBy: 'status' })
   const [selected, setSelected] = useState<string | null>(null)
-  const { snap, connection } = useRunner(transport, runId, base)
+  const { snap, connection } = useRunner(rows, runId, base)
 
   useEffect(() => {
     fetch(`${base}/runs`)

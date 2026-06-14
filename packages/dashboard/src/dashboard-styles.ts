@@ -1,10 +1,10 @@
 /**
- * Console chrome styles, scoped to the console's own shadow root. The Waterfall
- * view is mounted via `mountDashboard` into a *nested* shadow root, so its
+ * Dashboard chrome styles (nav + Runner + Home), scoped to the dashboard's
+ * shadow root. The Waterfall view renders into a *nested* shadow root, so its
  * widget styles (`styles.ts`) stay fully isolated — these rules never reach it.
  * Adapted from the former `analyze-app.ts` inline stylesheet.
  */
-export const CONSOLE_STYLES = `
+export const DASHBOARD_STYLES = `
   :host {
     --bg: var(--st-bg, #0f1117);
     --bg2: #1a1d27;
@@ -26,13 +26,13 @@ export const CONSOLE_STYLES = `
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  .console { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-  .console-nav {
+  .dashboard { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+  .dashboard-nav {
     display: flex; align-items: center; gap: 16px;
     padding: 10px 16px; background: var(--bg2);
     border-bottom: 1px solid var(--border); flex-shrink: 0;
   }
-  .console-nav h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .dashboard-nav h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .logo {
     width: 26px; height: 26px; border-radius: 6px;
     background: rgba(80, 70, 229, 0.15);

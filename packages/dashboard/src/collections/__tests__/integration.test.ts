@@ -135,6 +135,26 @@ describe('run collection (end to end through @tanstack/db)', () => {
     expect(late.get('1:0:login')).toMatchObject({ name: 'login', status: 'running' })
   })
 
+  it('notifies subscribeChanges as rows change — the dashboard reactivity path', async () => {
+    const { transport, emit } = fakeTransport()
+    const source = createRunSource(transport)
+    const scenes = sceneCollection(source)
+    await scenes.preload()
+
+    let notifications = 0
+    const sub = scenes.subscribeChanges(() => {
+      notifications++
+    })
+
+    emit({ type: 'run:start', timestamp: 1, runId: '1', sceneCount: 1 })
+    emit(sceneStart('login', 2))
+    emit(sceneEnd('login', 'completed', 30))
+
+    expect(notifications).toBeGreaterThan(0)
+    expect(scenes.toArray.map((r) => r.status)).toEqual(['completed'])
+    sub.unsubscribe()
+  })
+
   it('rejects client writes — the projection is the sole writer', async () => {
     const { transport } = fakeTransport()
     const source = createRunSource(transport)
