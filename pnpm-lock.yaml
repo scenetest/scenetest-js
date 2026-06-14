@@ -253,6 +253,9 @@ importers:
       '@scenetest/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@tanstack/db':
+        specifier: ^0.6.0
+        version: 0.6.8(typescript@5.9.3)
       htm:
         specifier: ^3.1.1
         version: 3.1.1
@@ -260,9 +263,6 @@ importers:
         specifier: ^10.22.0
         version: 10.29.1
     devDependencies:
-      '@tanstack/db':
-        specifier: ^0.6.0
-        version: 0.6.8(typescript@5.9.3)
       typescript:
         specifier: ^5.3.3
         version: 5.9.3

@@ -1,48 +1,19 @@
 import { h } from 'preact'
-import { useEffect, useReducer, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import htm from 'htm'
-import type { Command, RunEvent } from '@scenetest/protocol'
-import { applyEvent, completedSceneCount, initialState, withConnection } from './store.js'
-import type { ConnectionStatus, DashboardState, Scene, Transport } from './types.js'
+import type { Command } from '@scenetest/protocol'
+import { completedSceneCount } from './store.js'
+import type { DashboardState, Scene } from './types.js'
 
 const html = htm.bind(h)
 
-type Action = { kind: 'event'; event: RunEvent } | { kind: 'status'; status: ConnectionStatus }
-
-function reducer(state: DashboardState, action: Action): DashboardState {
-  return action.kind === 'event'
-    ? applyEvent(state, action.event)
-    : withConnection(state, action.status)
-}
-
 /**
- * The dashboard root. Owns the folded state, drives it from the transport,
- * and turns header controls into protocol commands. The same component
- * renders in dev and cloud — only the injected `transport` differs.
+ * The Waterfall view — the live timeline of actors and inline assertions. It's
+ * a pure view: the Dashboard root computes `state` from the shared read model
+ * (`selectWaterfall` over the collections) and passes it in, along with `send`
+ * for header controls. Same component renders in dev and cloud.
  */
-export function Dashboard({ transport }: { transport: Transport }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState)
-
-  useEffect(() => {
-    let alive = true
-    transport.fetchState().then((events) => {
-      if (!alive) return
-      for (const event of events) dispatch({ kind: 'event', event })
-    })
-    const unsubscribe = transport.subscribe(
-      (event) => dispatch({ kind: 'event', event }),
-      (status) => dispatch({ kind: 'status', status })
-    )
-    return () => {
-      alive = false
-      unsubscribe()
-    }
-  }, [transport])
-
-  const send = (command: Command) => {
-    void transport.sendCommand(command)
-  }
-
+export function Waterfall({ state, send }: { state: DashboardState; send: (c: Command) => void }) {
   return html`
     <div class="root">
       ${Header({ state, send })}

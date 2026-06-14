@@ -1,23 +1,25 @@
-import type { RunEvent, TeamMeta } from '@scenetest/protocol'
+import type { TeamMeta } from '@scenetest/protocol'
 import {
-  scenesProjection,
-  assertionsProjection,
   attributeToScene,
   type SceneRow,
   type AssertionRecord,
+  type ActionRecord,
+  type RunRow,
 } from './collections/projections.js'
+import { latestRunSlice } from './select-helpers.js'
 
 /**
- * The Runner view's read model. Unlike the Waterfall widget (which folds its
- * own `store.ts` shape for lane/timeline rendering), the Runner is built on the
- * shared collection **projections** — the same pure folds the cloud read model
- * uses — plus `attributeToScene`, so per-scene assertions are attributed the
- * way the collections define it (stamped scene id, else actor + time-window),
- * not the old "most-recent-running-scene" guess that breaks under concurrency.
+ * The Runner view's read model — derived from the shared `@tanstack/db`
+ * collections (scenes / assertions / actions / runs) the console builds from
+ * the run stream. The collections are the canonical fold; this module is a
+ * pure *selector* over their rows plus `attributeToScene`, so per-scene
+ * assertions/timeline are attributed the way the collections define it
+ * (stamped scene id, else actor + time-window) rather than the old
+ * "most-recent-running-scene" guess that breaks under concurrency.
  *
- * This deliberately does not pull in `@tanstack/db`: the projections are pure
- * and fold into plain state here for widget reactivity (TanStack DB stays the
- * optional live-query / cloud path — see `collections/`).
+ * `selectSnapshot` is pure (testable without a live collection); `runner.ts`
+ * feeds it `collection.toArray` and re-runs it on change. Past runs bypass the
+ * collections — they're CLI JSON reports — via `mapReportToSnapshot`.
  */
 
 export interface RunnerAssertion {
@@ -64,10 +66,9 @@ export interface RunnerSnapshot {
   summary: RunnerSummary
 }
 
-type ActionEvent = Extract<RunEvent, { type: 'action:start' | 'action:end' }>
-
-function emptySummary(): RunnerSummary {
-  return { scenes: 0, completed: 0, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0 }
+export const EMPTY_SNAPSHOT: RunnerSnapshot = {
+  scenes: [],
+  summary: { scenes: 0, completed: 0, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0 },
 }
 
 function isCompleted(status: string): boolean {
@@ -78,146 +79,64 @@ function isFailure(status: string): boolean {
   return status !== 'completed' && status !== 'running'
 }
 
-/** Pseudo-row so `attributeToScene` can resolve an action event to its scene. */
-function actionAttribution(ev: ActionEvent): {
-  sceneId: string | null
-  runId: string
-  actor: string | null
-  timestamp: number
-} {
-  const sceneId =
-    ev.scene !== undefined && ev.teamIndex !== undefined
-      ? `${ev.runId}:${ev.teamIndex}:${ev.scene}`
-      : null
-  return { sceneId, runId: ev.runId, actor: ev.actor, timestamp: ev.timestamp }
-}
-
-/** Pair start/end action events (per actor+action) into ordered timeline rows. */
-function pairTimeline(events: ActionEvent[]): RunnerTimelineEntry[] {
-  const open = new Map<string, ActionEvent>()
-  const out: RunnerTimelineEntry[] = []
-  for (const ev of events) {
-    const key = ev.actor + ':' + ev.action
-    if (ev.type === 'action:start') {
-      open.set(key, ev)
-    } else {
-      out.push({
-        actor: ev.actor,
-        action: ev.action,
-        target: ev.target,
-        duration: ev.duration,
-        error: ev.error ?? null,
-      })
-      open.delete(key)
-    }
-  }
-  for (const ev of open.values()) {
-    out.push({ actor: ev.actor, action: ev.action + ' (in flight)', target: ev.target, duration: null, error: null })
-  }
-  return out
-}
-
 /**
- * A mutable fold of the live event stream into the Runner read model. Holds the
- * projection instances (which carry id counters), so it lives outside Preact's
- * pure reducer; the hook subscribes and snapshots it.
+ * Build the live snapshot from the collection rows. The collections are
+ * multi-run (they accumulate every run of the session), so the live Runner
+ * shows the **latest** run — the slice `where runId = latest` — exactly as the
+ * unified-console design frames the live timeline.
  */
-export interface RunnerStore {
-  ingest(event: RunEvent): void
-  reset(): void
-  snapshot(): RunnerSnapshot
-}
+export function selectSnapshot(
+  scenes: SceneRow[],
+  assertions: AssertionRecord[],
+  actions: ActionRecord[],
+  runs: RunRow[]
+): RunnerSnapshot {
+  const slice = latestRunSlice(scenes, assertions, actions, runs)
+  const { run: latestRun, scenes: runScenes, assertions: runAssertions, actions: runActions } = slice
 
-export function createRunnerStore(): RunnerStore {
-  let scenesProj = scenesProjection()
-  let assertProj = assertionsProjection()
-  let sceneRows = new Map<string, SceneRow>()
-  let assertions: AssertionRecord[] = []
-  let actions: ActionEvent[] = []
-  let sceneCount = 0
-  let endSummary: RunnerSummary | null = null
+  const view: RunnerScene[] = runScenes.map((s) => ({
+    id: s.id,
+    name: s.name,
+    file: s.file,
+    status: s.status,
+    duration: s.duration,
+    error: s.error,
+    team: s.team,
+    teamIndex: s.teamIndex,
+    actors: s.actors,
+    assertions: runAssertions
+      .filter((a) => attributeToScene(a, runScenes) === s.id)
+      .map((a) => ({ result: a.result, description: a.description, actor: a.actor, timestamp: a.timestamp })),
+    timeline: runActions
+      .filter((ac) => attributeToScene(ac, runScenes) === s.id)
+      .sort((a, b) => a.startTime - b.startTime)
+      .map((ac) => ({
+        actor: ac.actor,
+        action: ac.status === 'running' ? ac.action + ' (in flight)' : ac.action,
+        target: ac.target ?? undefined,
+        duration: ac.duration,
+        error: ac.error,
+      })),
+  }))
 
-  function reset(): void {
-    scenesProj = scenesProjection()
-    assertProj = assertionsProjection()
-    sceneRows = new Map()
-    assertions = []
-    actions = []
-    sceneCount = 0
-    endSummary = null
+  const summary: RunnerSummary = {
+    scenes: Math.max(latestRun?.sceneCount ?? 0, view.length),
+    completed: latestRun?.completed ?? view.filter((s) => isCompleted(s.status)).length,
+    failed: latestRun?.failed ?? view.filter((s) => isFailure(s.status)).length,
+    assertions: {
+      total: runAssertions.length,
+      passed: runAssertions.filter((a) => a.result).length,
+      failed: runAssertions.filter((a) => !a.result).length,
+    },
+    warnings: 0,
   }
-
-  function ingest(event: RunEvent): void {
-    if (event.type === 'run:start') {
-      reset()
-      sceneCount = event.sceneCount
-    }
-    for (const op of scenesProj.project(event, (k) => sceneRows.get(k))) {
-      if (op.type === 'reset') sceneRows.clear()
-      else if (op.type === 'delete') sceneRows.delete(op.key)
-      else sceneRows.set(scenesProj.getKey(op.value), op.value)
-    }
-    for (const op of assertProj.project(event, () => undefined)) {
-      if (op.type === 'insert') assertions.push(op.value)
-    }
-    if (event.type === 'action:start' || event.type === 'action:end') {
-      actions.push(event)
-    }
-    if (event.type === 'run:end' && event.summary) {
-      const s = event.summary
-      endSummary = {
-        scenes: s.scenes,
-        completed: s.completed,
-        failed: s.failed,
-        assertions: { ...s.assertions },
-        warnings: s.warnings,
-      }
-    }
-  }
-
-  function snapshot(): RunnerSnapshot {
-    const scenes = [...sceneRows.values()].sort((a, b) => a.startTime - b.startTime)
-    const view: RunnerScene[] = scenes.map((s) => {
-      const sceneAssertions = assertions
-        .filter((a) => attributeToScene(a, scenes) === s.id)
-        .map((a) => ({ result: a.result, description: a.description, actor: a.actor, timestamp: a.timestamp }))
-      const sceneActions = actions.filter((ev) => attributeToScene(actionAttribution(ev), scenes) === s.id)
-      return {
-        id: s.id,
-        name: s.name,
-        file: s.file,
-        status: s.status,
-        duration: s.duration,
-        error: s.error,
-        team: s.team,
-        teamIndex: s.teamIndex,
-        actors: s.actors,
-        assertions: sceneAssertions,
-        timeline: pairTimeline(sceneActions),
-      }
-    })
-
-    const computed: RunnerSummary = {
-      scenes: Math.max(sceneCount, view.length),
-      completed: view.filter((s) => isCompleted(s.status)).length,
-      failed: view.filter((s) => isFailure(s.status)).length,
-      assertions: {
-        total: assertions.length,
-        passed: assertions.filter((a) => a.result).length,
-        failed: assertions.filter((a) => !a.result).length,
-      },
-      warnings: 0,
-    }
-    return { scenes: view, summary: endSummary ?? computed }
-  }
-
-  return { ingest, reset, snapshot }
+  return { scenes: view, summary }
 }
 
 // ─── Past-run reports ────────────────────────────────────────────────
 //
 // Past runs are CLI JSON reports (`/__scenetest/runs/:id`), not event logs, so
-// they bypass the projections — the report already nests assertions/timeline
+// they bypass the collections — the report already nests assertions/timeline
 // per scene (attributed by the runner that wrote it). Map defensively into the
 // same view shape so the Runner renders live and past runs identically.
 
@@ -227,7 +146,7 @@ const asStr = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d)
 const asNum = (v: unknown): number | null => (typeof v === 'number' ? v : null)
 
 export function mapReportToSnapshot(report: unknown): RunnerSnapshot {
-  if (!isObj(report)) return { scenes: [], summary: emptySummary() }
+  if (!isObj(report)) return EMPTY_SNAPSHOT
   const rawScenes = Array.isArray(report.scenes) ? report.scenes : []
   const scenes: RunnerScene[] = rawScenes.filter(isObj).map((s, i) => {
     const team = isObj(s.team) ? (s.team as TeamMeta) : {}

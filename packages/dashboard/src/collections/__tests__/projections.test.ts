@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { RunEvent } from '@scenetest/protocol'
 import {
   assertionsProjection,
+  actionsProjection,
   runsProjection,
   scenesProjection,
   attributeToScene,
@@ -208,6 +209,42 @@ describe('attributeToScene', () => {
     expect(
       attributeToScene({ sceneId: null, runId: '100', actor: 'alice', timestamp: 150 }, scenes)
     ).toBeNull()
+  })
+})
+
+describe('actionsProjection', () => {
+  it('pairs action:start/end into one row with duration, status, and stamped sceneId', () => {
+    const rows = replay(actionsProjection(), [
+      { type: 'action:start', timestamp: 10, runId: '1', actor: 'a', action: 'click', target: 'go', scene: 'login', teamIndex: 0 },
+      { type: 'action:end', timestamp: 25, runId: '1', actor: 'a', action: 'click', target: 'go', duration: 15 },
+    ])
+    expect([...rows.values()]).toHaveLength(1)
+    expect(rows.get('1:0')).toMatchObject({
+      actor: 'a',
+      action: 'click',
+      startTime: 10,
+      endTime: 25,
+      duration: 15,
+      status: 'success',
+      sceneId: '1:0:login',
+    })
+  })
+
+  it('marks an errored action and leaves an unfinished one running', () => {
+    const rows = replay(actionsProjection(), [
+      { type: 'action:start', timestamp: 1, runId: '1', actor: 'a', action: 'fill' },
+      { type: 'action:end', timestamp: 2, runId: '1', actor: 'a', action: 'fill', duration: 1, error: 'boom' },
+      { type: 'action:start', timestamp: 3, runId: '1', actor: 'a', action: 'wait' },
+    ])
+    expect(rows.get('1:0')).toMatchObject({ status: 'error', error: 'boom' })
+    expect(rows.get('1:1')).toMatchObject({ status: 'running', endTime: null, sceneId: null })
+  })
+
+  it('ignores an action:end with no matching open start', () => {
+    const rows = replay(actionsProjection(), [
+      { type: 'action:end', timestamp: 2, runId: '1', actor: 'a', action: 'ghost', duration: 1 },
+    ])
+    expect(rows.size).toBe(0)
   })
 })
 
