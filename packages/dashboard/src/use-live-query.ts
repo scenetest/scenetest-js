@@ -18,12 +18,19 @@ export interface ObservableRows<T> {
  * a hand-rolled `subscribeChanges` + force-update in every component. Pass a
  * stable collection (created once, e.g. via `useMemo` or at the app root); a
  * fresh collection each render would resubscribe every time.
+ *
+ * The returned array keeps a **stable identity between changes** (`collection.toArray`
+ * builds a fresh array on every access, so we snapshot it only when a change
+ * actually fires). That's what lets downstream `useMemo`s over these rows
+ * (`selectSnapshot`, the Runner's filter/group memos) hit instead of recomputing
+ * every render.
  */
 export function useLiveQuery<T>(collection: ObservableRows<T>): T[] {
-  const [, setTick] = useState(0)
+  const [rows, setRows] = useState<T[]>(() => collection.toArray)
   useEffect(() => {
-    const sub = collection.subscribeChanges(() => setTick((t) => t + 1))
+    setRows(collection.toArray) // resync in case it changed before we subscribed
+    const sub = collection.subscribeChanges(() => setRows(collection.toArray))
     return () => sub.unsubscribe()
   }, [collection])
-  return collection.toArray
+  return rows
 }

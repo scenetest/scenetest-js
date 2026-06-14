@@ -50,16 +50,16 @@ export function runSliceCollections(
         .from({ scene: scenes })
         .where(({ scene }) => eq(scene.runId, key))
         .orderBy(({ scene }) => scene.startTime)
-    ) as unknown as ObservableRows<SceneRow>,
+    ),
     assertions: createLiveQueryCollection((q) =>
       q.from({ assertion: assertions }).where(({ assertion }) => eq(assertion.runId, key))
-    ) as unknown as ObservableRows<AssertionRecord>,
+    ),
     actions: createLiveQueryCollection((q) =>
       q
         .from({ action: actions })
         .where(({ action }) => eq(action.runId, key))
         .orderBy(({ action }) => action.startTime)
-    ) as unknown as ObservableRows<ActionRecord>,
+    ),
   }
 }
 

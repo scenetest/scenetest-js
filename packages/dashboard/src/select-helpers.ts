@@ -1,4 +1,5 @@
 import type { SceneRow, AssertionRecord, ActionRecord, RunRow } from './collections/projections.js'
+import { attributeToScene } from './collections/projections.js'
 import type { ObservableRows } from './use-live-query.js'
 
 /**
@@ -42,6 +43,28 @@ export function latestRunId(runs: RunRow[], scenes: SceneRow[] = []): string | u
   if (run) return run.id
   if (scenes.length === 0) return undefined
   return scenes.reduce((m, s) => (s.startTime > m.startTime ? s : m)).runId
+}
+
+/**
+ * Bucket assertion/action rows by the scene they attribute to, in **one pass**
+ * over the rows. Both selectors then read each scene's rows by id instead of
+ * re-filtering the whole list per scene through `attributeToScene` (which itself
+ * scans the scenes) — turning the O(scenes² × rows) per-scene filter into one
+ * O(rows × scenes) pass. Rows that attribute to no scene are dropped.
+ */
+export function groupByScene<T extends { sceneId: string | null; runId: string; actor: string | null; timestamp: number }>(
+  rows: T[],
+  scenes: SceneRow[]
+): Map<string, T[]> {
+  const byScene = new Map<string, T[]>()
+  for (const row of rows) {
+    const id = attributeToScene(row, scenes)
+    if (id === null) continue
+    const bucket = byScene.get(id)
+    if (bucket) bucket.push(row)
+    else byScene.set(id, [row])
+  }
+  return byScene
 }
 
 export function latestRunSlice(
