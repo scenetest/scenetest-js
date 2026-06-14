@@ -1,7 +1,7 @@
 import { attributeToScene } from './collections/projections.js'
-import type { SceneRow, AssertionRecord, ActionRecord, RunRow } from './collections/projections.js'
+import type { ActionRecord } from './collections/projections.js'
 import type { ActionItem, DashboardState, Lane, Scene } from './types.js'
-import { latestRunSlice } from './select-helpers.js'
+import type { RunSlice } from './select-helpers.js'
 
 /** The empty state, before any rows exist. */
 export function initialState(): DashboardState {
@@ -26,21 +26,14 @@ function laneStatus(a: ActionRecord): ActionItem['status'] {
 }
 
 /**
- * Project the read model (the `@tanstack/db` collection rows) into the
- * Waterfall view's shape. This is the Waterfall reading from the one store —
- * it replaced the bespoke `applyEvent` fold. Actions become per-actor lanes,
- * assertions are attributed to their scene (`attributeToScene`), and the run
- * rollup drives the pass/fail/scene counts. Like the old fold, it shows the
- * latest run.
+ * Project the read model into the Waterfall view's shape. This is the
+ * Waterfall reading from the one store — it replaced the bespoke `applyEvent`
+ * fold. It takes the latest-run {@link RunSlice} (built incrementally by
+ * `useRunSlice`'s live-query collections, or by `latestRunSlice` in tests):
+ * actions become per-actor lanes, assertions are attributed to their scene
+ * (`attributeToScene`), and the run rollup drives the pass/fail/scene counts.
  */
-export function selectWaterfall(
-  scenes: SceneRow[],
-  assertions: AssertionRecord[],
-  actions: ActionRecord[],
-  runs: RunRow[]
-): DashboardState {
-  const slice = latestRunSlice(scenes, assertions, actions, runs)
-
+export function selectWaterfall(slice: RunSlice): DashboardState {
   const viewScenes: Scene[] = slice.scenes.map((s) => {
     const lanes: Lane[] = s.actors.map((actor) => ({ actor, items: [] }))
     const laneFor = (actor: string): Lane => {

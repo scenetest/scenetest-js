@@ -1,12 +1,6 @@
 import type { TeamMeta } from '@scenetest/protocol'
-import {
-  attributeToScene,
-  type SceneRow,
-  type AssertionRecord,
-  type ActionRecord,
-  type RunRow,
-} from './collections/projections.js'
-import { latestRunSlice } from './select-helpers.js'
+import { attributeToScene } from './collections/projections.js'
+import type { RunSlice } from './select-helpers.js'
 
 /**
  * The Runner view's read model — derived from the shared `@tanstack/db`
@@ -80,18 +74,14 @@ function isFailure(status: string): boolean {
 }
 
 /**
- * Build the live snapshot from the collection rows. The collections are
- * multi-run (they accumulate every run of the session), so the live Runner
+ * Build the live snapshot from the latest-run {@link RunSlice}. The collections
+ * are multi-run (they accumulate every run of the session), so the live Runner
  * shows the **latest** run — the slice `where runId = latest` — exactly as the
- * unified-console design frames the live timeline.
+ * unified-console design frames the live timeline. The slice is built
+ * incrementally by `useRunSlice`'s live-query collections (or by
+ * `latestRunSlice` in tests); this selector only attributes and rolls up.
  */
-export function selectSnapshot(
-  scenes: SceneRow[],
-  assertions: AssertionRecord[],
-  actions: ActionRecord[],
-  runs: RunRow[]
-): RunnerSnapshot {
-  const slice = latestRunSlice(scenes, assertions, actions, runs)
+export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
   const { run: latestRun, scenes: runScenes, assertions: runAssertions, actions: runActions } = slice
 
   const view: RunnerScene[] = runScenes.map((s) => ({

@@ -29,6 +29,21 @@ export interface RunSlice {
   actions: ActionRecord[]
 }
 
+/**
+ * The latest run's id — the newest `run:start` (max `startTime`). "Latest" is a
+ * reactive aggregate, not a static predicate, so the live `useRunSlice` reads
+ * it to key its derived collections, and `latestRunSlice` reuses it for the
+ * pure (test) path. Falls back to the most-recent scene's `runId` only when no
+ * run row exists yet — a window that doesn't occur in practice, since
+ * `run:start` always precedes the first scene and seeds a run row.
+ */
+export function latestRunId(runs: RunRow[], scenes: SceneRow[] = []): string | undefined {
+  const run = runs.reduce<RunRow | undefined>((m, r) => (!m || r.startTime > m.startTime ? r : m), undefined)
+  if (run) return run.id
+  if (scenes.length === 0) return undefined
+  return scenes.reduce((m, s) => (s.startTime > m.startTime ? s : m)).runId
+}
+
 export function latestRunSlice(
   scenes: SceneRow[],
   assertions: AssertionRecord[],
@@ -36,8 +51,8 @@ export function latestRunSlice(
   runs: RunRow[]
 ): RunSlice {
   const byStart = [...scenes].sort((a, b) => a.startTime - b.startTime)
-  const run = runs.reduce<RunRow | undefined>((m, r) => (!m || r.startTime > m.startTime ? r : m), undefined)
-  const runId = run?.id ?? (byStart.length ? byStart[byStart.length - 1].runId : undefined)
+  const runId = latestRunId(runs, scenes)
+  const run = runs.find((r) => r.id === runId)
   return {
     runId,
     run,
