@@ -1,4 +1,5 @@
 export { mountDashboard } from './mount.js'
+export { mountConsole, type ConsoleOptions } from './console.js'
 export { createDevTransport, type DevTransportOptions } from './dev-transport.js'
 export {
   applyEvent,

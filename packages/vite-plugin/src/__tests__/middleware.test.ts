@@ -101,37 +101,9 @@ describe('scenetest middleware', () => {
     fs.rmSync(tmp, { recursive: true, force: true })
   })
 
-  describe('GET /__scenetest/', () => {
-    it('returns the analyze app HTML at the bare path', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/')
-      expect(res.statusCode).toBe(200)
-      expect(res.headers['content-type']).toContain('text/html')
-      expect(res.body).toContain('<!DOCTYPE html>')
-      expect(res.body).toContain('importmap')
-    })
-
-    it('handles /__scenetest (no trailing slash)', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest')
-      expect(res.statusCode).toBe(200)
-      expect(res.body).toContain('<!DOCTYPE html>')
-    })
-
-    it('handles /__scenetest/?run=foo', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/?run=report-x')
-      expect(res.statusCode).toBe(200)
-    })
-
-    it('serves the same HTML at /__scenetest/runner', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/runner')
-      expect(res.statusCode).toBe(200)
-      expect(res.headers['content-type']).toContain('text/html')
-      expect(res.body).toContain('importmap')
-    })
-  })
+  // The console shell served at the view routes (/__scenetest, /runner,
+  // /dashboard) + its assets is covered in middleware-dashboard.test.ts
+  // against a fixture appDir, so it needs no real Vite build.
 
   describe('GET /__scenetest/runs', () => {
     it('returns an empty list when reportsDir does not exist', async () => {
@@ -221,38 +193,6 @@ describe('scenetest middleware', () => {
       } finally {
         fs.rmSync(outside, { recursive: true, force: true })
       }
-    })
-  })
-
-  describe('GET /__scenetest/vendor/:name', () => {
-    it('serves preact ESM as JavaScript', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/vendor/preact.js')
-      expect(res.statusCode).toBe(200)
-      expect(res.headers['content-type']).toContain('javascript')
-      // Sanity: real preact bundle contains its export footer
-      expect(res.body).toMatch(/export\{/)
-    })
-
-    it('serves preact-hooks ESM', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/vendor/preact-hooks.js')
-      expect(res.statusCode).toBe(200)
-      // hooks bundle imports from "preact" via bare specifier
-      expect(res.body).toContain('from"preact"')
-    })
-
-    it('serves htm ESM', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/vendor/htm.js')
-      expect(res.statusCode).toBe(200)
-      expect(res.headers['content-type']).toContain('javascript')
-    })
-
-    it('returns 404 for unknown vendor names', async () => {
-      const mw = createScenetestMiddleware(stubServer(), tmp)
-      const res = await call(mw, 'GET', '/__scenetest/vendor/react.js')
-      expect(res.statusCode).toBe(404)
     })
   })
 

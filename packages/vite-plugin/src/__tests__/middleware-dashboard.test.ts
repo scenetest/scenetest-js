@@ -59,8 +59,18 @@ afterEach(async () => {
 })
 
 describe('dashboard: built console shell served as static files', () => {
-  it('serves the built index.html at the dashboard page', async () => {
-    for (const url of ['/__scenetest/dashboard', '/__scenetest/dashboard/']) {
+  it('serves the built index.html at every console view route', async () => {
+    // One SPA serves Home / Runner / Waterfall; the client routes by pathname.
+    const views = [
+      '/__scenetest',
+      '/__scenetest/',
+      '/__scenetest/runner',
+      '/__scenetest/runner/',
+      '/__scenetest/dashboard',
+      '/__scenetest/dashboard/',
+      '/__scenetest/?run=report-x',
+    ]
+    for (const url of views) {
       const res = await fetch(`${baseUrl}${url}`)
       expect(res.status, url).toBe(200)
       expect(res.headers.get('content-type')).toContain('text/html')

@@ -12,45 +12,10 @@ import { spawn, type ChildProcess } from 'child_process'
 import type { ServerResponse } from 'http'
 import fs from 'fs'
 import path from 'path'
-import { createRequire } from 'module'
 import { fileURLToPath } from 'node:url'
 import { VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
-import { generateAnalyzeAppHtml } from './analyze-app.js'
-
-/**
- * Map of /__scenetest/vendor/<name> → bare specifier in the plugin's own
- * node_modules. The middleware reads each module's ESM build off disk and
- * serves it so the analyze app can `import` Preact / htm without a build
- * step or a CDN. The HTML page contains a corresponding <script type="importmap">
- * so that bare specifiers inside these modules (e.g. `from "preact"` inside
- * preact/hooks) resolve to the vendor URL.
- */
-// Map of /__scenetest/vendor/<name> → bare specifier whose ESM build we
-// serve. We resolve via `import.meta.resolve` from the plugin's own module
-// context so each package's `exports` map (with the `import` condition)
-// gives us a real ESM file path inside the plugin's node_modules.
-const VENDOR_MODULES: Record<string, string> = {
-  'preact.js': 'preact',
-  'preact-hooks.js': 'preact/hooks',
-  'htm.js': 'htm',
-}
-
-/**
- * Resolve a bare specifier to a file path on disk, picking the ESM build
- * the package advertises under its `import` condition.
- *
- * We don't use `import.meta.resolve` because vitest's module runner doesn't
- * implement it. Instead we walk the package's `exports` manifest manually:
- *
- *   1. require.resolve('<pkg>/package.json') — locate the package root.
- *   2. Look up `exports[<subpath>]`, prefer the `import` condition.
- *   3. Fall back to `module` then `main` for older packages.
- *
- * Returns an absolute path or null if the spec can't be resolved.
- */
-const vendorRequire = createRequire(import.meta.url)
 
 /**
  * The dev console shell, built by Vite to `packages/vite-plugin/dist-app`
@@ -95,92 +60,6 @@ function serveAppFile(appDir: string, relPath: string, res: ServerResponse): boo
   res.end(body)
   return true
 }
-
-function resolveVendor(specifier: string): string | null {
-  // Split "preact/hooks" → ["preact", "./hooks"], "preact" → ["preact", "."]
-  const slash = specifier.indexOf('/')
-  const pkg = slash === -1 ? specifier : specifier.slice(0, slash)
-  const sub = slash === -1 ? '.' : '.' + specifier.slice(slash)
-
-  // Find the package root. We can't always resolve `<pkg>/package.json`
-  // directly — some packages (e.g. htm) don't export it. Resolving the
-  // bare specifier returns *some* file inside the package; walk up from
-  // there until we find a package.json whose `name` matches.
-  let resolvedFile: string
-  try {
-    resolvedFile = vendorRequire.resolve(pkg)
-  } catch {
-    return null
-  }
-
-  const pkgRoot = findPackageRoot(resolvedFile, pkg)
-  if (!pkgRoot) return null
-
-  let manifest: Record<string, unknown>
-  try {
-    manifest = JSON.parse(fs.readFileSync(path.join(pkgRoot, 'package.json'), 'utf-8'))
-  } catch {
-    return null
-  }
-
-  const file = pickExport(manifest, sub)
-  if (!file) return null
-  return path.resolve(pkgRoot, file)
-}
-
-function findPackageRoot(startFile: string, expectedName: string): string | null {
-  let dir = path.dirname(startFile)
-  // Bound the walk to avoid runaway loops on broken filesystems.
-  for (let i = 0; i < 30; i++) {
-    const pj = path.join(dir, 'package.json')
-    if (fs.existsSync(pj)) {
-      try {
-        const m = JSON.parse(fs.readFileSync(pj, 'utf-8')) as { name?: string }
-        if (m.name === expectedName) return dir
-      } catch {
-        // ignore malformed package.json and keep walking
-      }
-    }
-    const parent = path.dirname(dir)
-    if (parent === dir) return null
-    dir = parent
-  }
-  return null
-}
-
-/**
- * Pick the file for a given subpath out of a package.json. Honors the
- * `exports` field with conditional resolution (prefer `import`, fall back
- * to `browser`/`default`), then `module`, then `main`.
- */
-function pickExport(manifest: Record<string, unknown>, sub: string): string | null {
-  const exports = manifest.exports as unknown
-  if (exports && typeof exports === 'object') {
-    const entry = (exports as Record<string, unknown>)[sub]
-    const resolved = pickCondition(entry)
-    if (resolved) return resolved
-  }
-  // No exports for this subpath — fall back to module/main only when sub === '.'
-  if (sub === '.') {
-    if (typeof manifest.module === 'string') return manifest.module
-    if (typeof manifest.main === 'string') return manifest.main
-  }
-  return null
-}
-
-function pickCondition(entry: unknown): string | null {
-  if (typeof entry === 'string') return entry
-  if (!entry || typeof entry !== 'object') return null
-  const obj = entry as Record<string, unknown>
-  // Conditional resolution order matches what most ESM consumers do.
-  for (const key of ['import', 'browser', 'default', 'module']) {
-    const v = obj[key]
-    const resolved = pickCondition(v)
-    if (resolved) return resolved
-  }
-  return null
-}
-
 
 /**
  * AsyncLocalStorage for collecting assertion results within a serverFn execution
@@ -324,62 +203,25 @@ export function createScenetestMiddleware(
   }
 
   return async (req, res, next) => {
-    // ── Preact app shell (index + runner) ───────────────────
-    // Same HTML for /__scenetest (index) and /__scenetest/runner
-    // (current analyze view); the client routes on location.pathname.
+    // ── Dev console: the built shell, served as static files ──
+    // One Vite app (app/ → dist-app) serves every view; the client (mountConsole)
+    // routes on location.pathname. Built asset URLs are prefixed with the
+    // `/__scenetest/dashboard/` base, so they come off dist-app; the view paths
+    // (Home / Runner / Waterfall) all return index.html. This replaced the old
+    // raw-ESM serving — no importmap, no vendored-module routes.
     if (req.method === 'GET' && req.url) {
       const pathname = req.url.split('?')[0]
-      if (
+      const isView =
         pathname === '/__scenetest' ||
         pathname === '/__scenetest/' ||
         pathname === '/__scenetest/runner' ||
-        pathname === '/__scenetest/runner/'
-      ) {
-        res.statusCode = 200
-        res.setHeader('Content-Type', 'text/html; charset=utf-8')
-        res.end(generateAnalyzeAppHtml())
-        return
-      }
-    }
-
-    // ── Vendored ESM modules (preact, preact/hooks, htm) ────
-    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/vendor/')) {
-      const name = req.url.slice('/__scenetest/vendor/'.length).split('?')[0]
-      const target = VENDOR_MODULES[name]
-      if (!target) {
-        res.statusCode = 404
-        res.end('Not found')
-        return
-      }
-      const resolved = resolveVendor(target)
-      if (!resolved) {
-        res.statusCode = 500
-        res.end('// Vendor module could not be resolved')
-        return
-      }
-      try {
-        const code = fs.readFileSync(resolved, 'utf-8')
-        res.statusCode = 200
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
-        res.setHeader('Cache-Control', 'public, max-age=86400')
-        res.end(code)
-      } catch {
-        res.statusCode = 500
-        res.end('// Vendor module read failed')
-      }
-      return
-    }
-
-    // ── Dashboard: the built console shell, served as static files ──
-    // The shell is a real Vite app (app/) built to dist-app; its asset URLs
-    // are prefixed with the `/__scenetest/dashboard/` base. The page itself
-    // (no sub-path) returns index.html; everything under it is an asset.
-    if (req.method === 'GET' && req.url) {
-      const pathname = req.url.split('?')[0]
-      if (pathname === '/__scenetest/dashboard' || pathname === '/__scenetest/dashboard/') {
+        pathname === '/__scenetest/runner/' ||
+        pathname === '/__scenetest/dashboard' ||
+        pathname === '/__scenetest/dashboard/'
+      if (isView) {
         if (serveAppFile(appDir, 'index.html', res)) return
         res.statusCode = 404
-        res.end('// Dashboard not built — run the @scenetest/vite-plugin build')
+        res.end('// Console not built — run the @scenetest/vite-plugin build')
         return
       }
       if (pathname.startsWith('/__scenetest/dashboard/')) {

@@ -1,8 +1,9 @@
 # Unified Console (dev + cloud)
 
-**STATUS: Design + foundation in progress.** This doc records the target
-architecture; the first code step (the multi-run collection model) lands
-alongside it. The view extraction and the report loader are follow-ups.
+**STATUS: Dev console landed; cloud + report loader pending.** Phases 1
+(multi-run collection model) and 3 (`mountConsole` with Home/Runner/Waterfall,
+replacing the inline `analyze-app.ts`) are done. The PR-history report loader
+(phase 2) and the cloud transport / URL reorg (phase 4) are the remaining work.
 
 ---
 
@@ -115,18 +116,22 @@ partition instead of wiping).
 
 ## Phasing
 
-1. **(this PR)** Multi-run collection model: rows carry `runId`, projections
+1. **✅ Done.** Multi-run collection model: rows carry `runId`, projections
    partition instead of truncate, add the `runs` projection. + this doc.
-2. **Report loader**: parse `pr-{num}-{timestamp}-…` filenames, replay each
-   report's events into the collection, stamp PR/branch on the `runs` row.
-   Cumulative rollups (most-recent, flaky) become live queries.
-3. **Extract `mountConsole`**: turn `analyze-app.ts`'s inline string into a
-   real Preact app in `@scenetest/dashboard`, with Home/Runner/Waterfall
-   views over the shared read model. Collapse the duplicated `applyEvent`.
-   Requires the Vite plugin to **bundle** the app (esbuild) rather than serve
-   raw single-file ESM — same prerequisite as the widget migration (#215).
-4. **Cloud**: implement the data source against D1/R2/DO behind `Transport`;
-   reorganize URLs run → PR; embed `mountConsole`.
+2. **Report loader** (pending): parse `pr-{num}-{timestamp}-…` filenames, replay
+   each report's events into the collection, stamp PR/branch on the `runs` row.
+   Cumulative rollups (most-recent, flaky) become live queries. (The Runner's
+   past-run picker currently fetches a single report via `/__scenetest/runs/:id`
+   and maps it directly — `mapReportToSnapshot` — rather than replaying all of a
+   PR's history into the collection.)
+3. **✅ Done.** `mountConsole` in `@scenetest/dashboard` — a real Preact app with
+   Home/Runner/Waterfall views, served by the Vite plugin's bundled shell (the
+   `analyze-app.ts` inline string + its raw-ESM `/__scenetest/vendor/*` routes
+   are deleted). The Waterfall is the existing widget demoted to a nested-shadow
+   view. The Runner folds the shared collection **projections** + `attributeToScene`
+   directly into Preact state (the bundling prerequisite, #215, landed first).
+4. **Cloud** (pending): implement the data source against D1/R2/DO behind
+   `Transport`; reorganize URLs run → PR; embed `mountConsole`.
 
 ## What stays out of `Transport`
 
