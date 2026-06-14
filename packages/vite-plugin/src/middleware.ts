@@ -9,13 +9,14 @@ import type {
 import { createReceiverApp, toNodeHandler, JsonlSink, type Sink } from '@scenetest/receiver'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
+import type { ServerResponse } from 'http'
 import fs from 'fs'
 import path from 'path'
 import { createRequire } from 'module'
+import { fileURLToPath } from 'node:url'
 import { VIRTUAL_MODULE_ID } from './virtual-module.js'
 import { loadConfig } from './config.js'
 import { EventHub } from './event-hub.js'
-import { generateDashboardHtml } from './dashboard.js'
 import { generateAnalyzeAppHtml } from './analyze-app.js'
 
 /**
@@ -52,37 +53,47 @@ const VENDOR_MODULES: Record<string, string> = {
 const vendorRequire = createRequire(import.meta.url)
 
 /**
- * Workspace packages whose built ESM the dashboard shell loads directly off
- * disk. `/__scenetest/widget/<key>/<file>` serves files from the package's
- * `dist` dir, so the widget's relative imports (`./store.js`) and its
- * bare imports (resolved by the page's importmap) work without a build step.
+ * The dev console shell, built by Vite to `packages/vite-plugin/dist-app`
+ * (see `app/vite.config.ts`) and served as static files at
+ * `/__scenetest/dashboard`. Resolved relative to this module so it works both
+ * from `dist/` (published) and `src/` (vitest) — the relative path is the same.
  */
-const WIDGET_PACKAGES: Record<string, string> = {
-  dashboard: '@scenetest/dashboard',
-  protocol: '@scenetest/protocol',
+const DEFAULT_APP_DIR = fileURLToPath(new URL('../dist-app', import.meta.url))
+
+const MIME_BY_EXT: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.map': 'application/json; charset=utf-8',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
 }
 
-const widgetDistCache = new Map<string, string | null>()
-
 /**
- * Resolve a widget package's `dist` directory. We resolve its
- * `package.json` (each exposes `"./package.json"`) rather than its entry,
- * because the entry's `exports` map only carries an `import` condition and
- * CJS `require.resolve` can't follow it.
+ * Serve one file from the built app dir, constrained to it (no traversal).
+ * Returns false if the file isn't there, so the caller can fall through.
  */
-function resolveWidgetDistDir(key: string): string | null {
-  if (widgetDistCache.has(key)) return widgetDistCache.get(key) ?? null
-  const pkg = WIDGET_PACKAGES[key]
-  let dir: string | null = null
-  if (pkg) {
-    try {
-      dir = path.join(path.dirname(vendorRequire.resolve(`${pkg}/package.json`)), 'dist')
-    } catch {
-      dir = null
-    }
+function serveAppFile(appDir: string, relPath: string, res: ServerResponse): boolean {
+  const target = path.resolve(appDir, relPath)
+  if (target !== appDir && !target.startsWith(appDir + path.sep)) {
+    res.statusCode = 403
+    res.end('// Forbidden')
+    return true
   }
-  widgetDistCache.set(key, dir)
-  return dir
+  let body: Buffer
+  try {
+    body = fs.readFileSync(target)
+  } catch {
+    return false
+  }
+  res.statusCode = 200
+  res.setHeader('Content-Type', MIME_BY_EXT[path.extname(target)] ?? 'application/octet-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.end(body)
+  return true
 }
 
 function resolveVendor(specifier: string): string | null {
@@ -269,9 +280,16 @@ async function createServerModuleLoader(server: ViteDevServer): Promise<ServerMo
 export function createScenetestMiddleware(
   server: ViteDevServer,
   root: string,
-  options: { reportsDir?: string; jsonl?: boolean | string; serverCheckTimeout?: number } = {}
+  options: {
+    reportsDir?: string
+    jsonl?: boolean | string
+    serverCheckTimeout?: number
+    /** Override the built console dir (tests point this at a fixture). */
+    appDir?: string
+  } = {}
 ): Connect.NextHandleFunction {
   const eventHub = new EventHub()
+  const appDir = options.appDir ?? DEFAULT_APP_DIR
   let activeReplay: ChildProcess | null = null
   let paused = false
 
@@ -352,44 +370,25 @@ export function createScenetestMiddleware(
       return
     }
 
-    // ── Dashboard widget ESM (@scenetest/dashboard + deps) ──
-    if (req.method === 'GET' && req.url?.startsWith('/__scenetest/widget/')) {
-      const rest = req.url.slice('/__scenetest/widget/'.length).split('?')[0]
-      const slash = rest.indexOf('/')
-      const key = slash === -1 ? rest : rest.slice(0, slash)
-      const relPath = slash === -1 ? '' : rest.slice(slash + 1)
-      const distDir = resolveWidgetDistDir(key)
-      if (!distDir || !relPath) {
+    // ── Dashboard: the built console shell, served as static files ──
+    // The shell is a real Vite app (app/) built to dist-app; its asset URLs
+    // are prefixed with the `/__scenetest/dashboard/` base. The page itself
+    // (no sub-path) returns index.html; everything under it is an asset.
+    if (req.method === 'GET' && req.url) {
+      const pathname = req.url.split('?')[0]
+      if (pathname === '/__scenetest/dashboard' || pathname === '/__scenetest/dashboard/') {
+        if (serveAppFile(appDir, 'index.html', res)) return
         res.statusCode = 404
-        res.end('// Widget module not found')
+        res.end('// Dashboard not built — run the @scenetest/vite-plugin build')
         return
       }
-      // Constrain to the package's dist dir — never serve outside it.
-      const target = path.resolve(distDir, relPath)
-      if (target !== distDir && !target.startsWith(distDir + path.sep)) {
-        res.statusCode = 403
-        res.end('// Forbidden')
+      if (pathname.startsWith('/__scenetest/dashboard/')) {
+        const rel = pathname.slice('/__scenetest/dashboard/'.length)
+        if (serveAppFile(appDir, rel, res)) return
+        res.statusCode = 404
+        res.end('// Asset not found')
         return
       }
-      try {
-        const code = fs.readFileSync(target, 'utf-8')
-        res.statusCode = 200
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
-        res.setHeader('Cache-Control', 'no-cache')
-        res.end(code)
-      } catch {
-        res.statusCode = 404
-        res.end('// Widget module read failed')
-      }
-      return
-    }
-
-    // ── Dashboard page ──────────────────────────────────────
-    if (req.method === 'GET' && req.url === '/__scenetest/dashboard') {
-      res.statusCode = 200
-      res.setHeader('Content-Type', 'text/html; charset=utf-8')
-      res.end(generateDashboardHtml())
-      return
     }
 
     // ── List past run reports (JSON files in reportsDir) ────
