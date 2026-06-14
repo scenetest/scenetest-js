@@ -18,6 +18,7 @@ export {
   scenesProjection,
   assertionsProjection,
   runsProjection,
+  attributeToScene,
   type SceneRow,
   type AssertionRecord,
   type RunRow,

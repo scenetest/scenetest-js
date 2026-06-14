@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import type { RunEvent } from '@scenetest/protocol'
-import { assertionsProjection, runsProjection, scenesProjection } from '../projections.js'
+import {
+  assertionsProjection,
+  runsProjection,
+  scenesProjection,
+  attributeToScene,
+  type SceneRow,
+} from '../projections.js'
 import type { RowOp, RunProjection } from '../types.js'
 
 /**
@@ -115,8 +121,93 @@ describe('assertionsProjection (multi-run)', () => {
       { type: 'assertion', timestamp: 201, runId: '200', description: 'cart empty', result: false },
     ])
     expect([...rows.keys()]).toEqual(['100:0', '200:1'])
-    expect(rows.get('100:0')).toMatchObject({ runId: '100', actor: 'alice', result: true })
-    expect(rows.get('200:1')).toMatchObject({ runId: '200', actor: null, description: 'cart empty' })
+    expect(rows.get('100:0')).toMatchObject({ runId: '100', actor: 'alice', result: true, sceneId: null })
+    expect(rows.get('200:1')).toMatchObject({ runId: '200', actor: null, description: 'cart empty', sceneId: null })
+  })
+
+  it('derives sceneId when the producer stamped scene + teamIndex', () => {
+    const rows = replay(assertionsProjection(), [
+      runStart(100),
+      { type: 'assertion', timestamp: 101, runId: '100', actor: 'alice', description: 'x', result: true, scene: 'login', teamIndex: 1 },
+    ])
+    expect(rows.get('100:0')).toMatchObject({ sceneId: '100:1:login' })
+  })
+
+  it('leaves sceneId null when only one of scene/teamIndex is present', () => {
+    const rows = replay(assertionsProjection(), [
+      { type: 'assertion', timestamp: 1, runId: '100', description: 'x', result: true, scene: 'login' },
+    ])
+    expect(rows.get('100:0')).toMatchObject({ sceneId: null })
+  })
+})
+
+describe('attributeToScene', () => {
+  const scene = (over: Partial<SceneRow>): SceneRow => ({
+    id: '100:0:login',
+    runId: '100',
+    name: 'login',
+    file: 'login.scene.ts',
+    actors: ['alice'],
+    status: 'completed',
+    startTime: 100,
+    endTime: 200,
+    duration: 100,
+    error: null,
+    team: {},
+    teamIndex: 0,
+    ...over,
+  })
+
+  it('prefers a stamped sceneId without consulting scenes', () => {
+    const id = attributeToScene(
+      { sceneId: '100:0:login', runId: '100', actor: null, timestamp: 0 },
+      []
+    )
+    expect(id).toBe('100:0:login')
+  })
+
+  it('falls back to actor + time-window for unstamped rows', () => {
+    const scenes = [scene({})]
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: 'alice', timestamp: 150 }, scenes)
+    ).toBe('100:0:login')
+  })
+
+  it('does not attribute outside the scene window', () => {
+    const scenes = [scene({})]
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: 'alice', timestamp: 250 }, scenes)
+    ).toBeNull()
+  })
+
+  it('treats a still-running scene (endTime null) as open-ended', () => {
+    const scenes = [scene({ endTime: null, status: 'running' })]
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: 'alice', timestamp: 9999 }, scenes)
+    ).toBe('100:0:login')
+  })
+
+  it('matches by actor across concurrent scenes of the same run', () => {
+    const scenes = [
+      scene({ id: '100:0:login', actors: ['alice'], teamIndex: 0 }),
+      scene({ id: '100:1:checkout', name: 'checkout', actors: ['bob'], teamIndex: 1 }),
+    ]
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: 'bob', timestamp: 150 }, scenes)
+    ).toBe('100:1:checkout')
+  })
+
+  it('returns null for an actor-less unstamped assertion (ambient)', () => {
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: null, timestamp: 150 }, [scene({})])
+    ).toBeNull()
+  })
+
+  it('does not attribute across runs', () => {
+    const scenes = [scene({ runId: '999' })]
+    expect(
+      attributeToScene({ sceneId: null, runId: '100', actor: 'alice', timestamp: 150 }, scenes)
+    ).toBeNull()
   })
 })
 
