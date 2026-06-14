@@ -116,6 +116,6 @@ export interface MountOptions {
 
 /** Handle returned by `mountDashboard`. */
 export interface DashboardHandle {
-  /** Tear down the widget, its subscription, and its shadow root contents. */
+  /** Tear down the app and its subscription, clearing the mount element. */
   unmount(): void
 }

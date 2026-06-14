@@ -1,5 +1,5 @@
 import { render } from 'preact'
-import { useState, useEffect, useMemo, useRef } from 'preact/hooks'
+import { useState, useEffect, useMemo } from 'preact/hooks'
 import { createCollection } from '@tanstack/db'
 import {
   createRunSource,
@@ -13,55 +13,39 @@ import { Waterfall } from './app.js'
 import { selectWaterfall } from './select-waterfall.js'
 import { RunnerView } from './runner.js'
 import { useLiveQuery } from './use-live-query.js'
-import { STYLES } from './styles.js'
-import { DASHBOARD_STYLES } from './dashboard-styles.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardHandle, DashboardTheme, MountOptions, Transport } from './types.js'
 import type { DashboardCollections } from './select-helpers.js'
 
 /**
- * Mount the **Dashboard** — the whole app: Home / Runner / Waterfall views over
- * one read-only `@tanstack/db` read model, routed on `location.pathname`. Dev
- * and cloud mount the same app; only the injected `transport` differs.
+ * Mount the **Dashboard** as thin sugar over the `<Dashboard>` component, for
+ * hosts that aren't already a Preact tree (the dev shell, scenetest-cloud).
+ * Renders into `element` directly — no shadow root; styles come from the shipped
+ * stylesheet, which the host imports (`import '@scenetest/dashboard/style.css'`).
+ * The `theme`, if given, is applied as inline `--st-*` custom properties on the
+ * component's root element. Returns a handle that unmounts.
  *
- *   /__scenetest            → Home
- *   /__scenetest/runner     → Runner (filterable scene log)
- *   /__scenetest/waterfall  → Waterfall (live timeline)
- *
- * The collections are the single store: the root builds them from the run
- * stream and every view reads from them (`selectWaterfall`, `selectSnapshot`).
- * The Waterfall renders into a nested shadow root so its widget styles stay
- * isolated from the dashboard chrome — but its data comes from the same store.
+ * A Preact host can skip this and render `<Dashboard transport={…} />` itself.
  */
 export function mountDashboard(element: HTMLElement, options: MountOptions): DashboardHandle {
-  const root = element.shadowRoot ?? element.attachShadow({ mode: 'open' })
-  root.innerHTML = ''
-
-  const style = document.createElement('style')
-  style.textContent = DASHBOARD_STYLES
-  root.appendChild(style)
-
-  if (options.theme) applyTheme(root.host as HTMLElement, options.theme)
-
-  const container = document.createElement('div')
-  root.appendChild(container)
-
   const base = (options.base ?? '/__scenetest').replace(/\/+$/, '')
-  render(<Dashboard transport={options.transport} theme={options.theme} base={base} />, container)
+  render(<Dashboard transport={options.transport} theme={options.theme} base={base} />, element)
 
   return {
     unmount() {
-      render(null, container)
-      root.innerHTML = ''
+      render(null, element)
     },
   }
 }
 
-function applyTheme(el: HTMLElement, theme: DashboardTheme): void {
-  if (theme.bg) el.style.setProperty('--st-bg', theme.bg)
-  if (theme.accent) el.style.setProperty('--st-accent', theme.accent)
-  if (theme.font) el.style.setProperty('--st-font', theme.font)
-  if (theme.fontSize) el.style.setProperty('--st-font-size', theme.fontSize)
+/** Build the inline `--st-*` custom properties for the theming surface. */
+function themeVars(theme?: DashboardTheme): Record<string, string> {
+  const vars: Record<string, string> = {}
+  if (theme?.bg) vars['--st-bg'] = theme.bg
+  if (theme?.accent) vars['--st-accent'] = theme.accent
+  if (theme?.font) vars['--st-font'] = theme.font
+  if (theme?.fontSize) vars['--st-font-size'] = theme.fontSize
+  return vars
 }
 
 // ── The read model (one store, every view reads it via useLiveQuery) ──
@@ -111,8 +95,29 @@ const PATH_FOR_TAB: Record<Tab, string> = {
   waterfall: '/__scenetest/waterfall',
 }
 
-// ── Dashboard root ────────────────────────────────────────────────
-function Dashboard({ transport, theme, base }: { transport: Transport; theme?: DashboardTheme; base: string }) {
+/**
+ * The Dashboard app — Home / Runner / Waterfall views over one read-only
+ * `@tanstack/db` read model, routed on `location.pathname`. A plain Preact
+ * component rendering into the light DOM under a single `.scenetest-dashboard`
+ * root class; the shipped stylesheet scopes everything to it. Dev and cloud
+ * render the same component — only the injected `transport` differs.
+ *
+ *   /__scenetest            → Home
+ *   /__scenetest/runner     → Runner (filterable scene log)
+ *   /__scenetest/waterfall  → Waterfall (live timeline)
+ *
+ * The collections are the single store: the component builds them from the run
+ * stream and every view reads from them (`selectWaterfall`, `selectSnapshot`).
+ */
+export function Dashboard({
+  transport,
+  theme,
+  base = '/__scenetest',
+}: {
+  transport: Transport
+  theme?: DashboardTheme
+  base?: string
+}) {
   const { store, connection } = useDashboardStore(transport)
   const [tab, setTab] = useState<Tab>(() => tabForPath(location.pathname))
 
@@ -122,10 +127,8 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // Client-side navigation via real <a> links. We delegate the click on the app
-  // root — which is *inside* the shadow root, so there's no event retargeting
-  // (a document-level listener, as preact-iso uses, would see the shadow host,
-  // not the <a>). Modifier-clicks fall through to the browser as normal links.
+  // Client-side navigation via real <a> links, delegated on the app root.
+  // Modifier-clicks fall through to the browser as normal links.
   const onNavigate = (e: MouseEvent) => {
     const a = (e.target as Element | null)?.closest('a')
     const href = a?.getAttribute('href')
@@ -143,7 +146,7 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
   const tabClass = (t: Tab) => 'tab' + (tab === t ? ' active' : '')
 
   return (
-    <div class="dashboard" onClick={onNavigate}>
+    <div class="scenetest-dashboard" style={themeVars(theme)} onClick={onNavigate}>
       <nav class="dashboard-nav">
         <h1>
           <span class="logo">🎬</span> Scenetest
@@ -166,7 +169,7 @@ function Dashboard({ transport, theme, base }: { transport: Transport; theme?: D
         ) : tab === 'runner' ? (
           <RunnerView collections={store} connection={connection} base={base} />
         ) : (
-          <WaterfallHost collections={store} connection={connection} send={send} theme={theme} />
+          <WaterfallHost collections={store} connection={connection} send={send} />
         )}
       </div>
     </div>
@@ -195,53 +198,28 @@ function Home() {
   )
 }
 
-// ── Waterfall view (nested shadow root for style isolation) ────────
-// The widget keeps its own stylesheet (`styles.ts`) in a nested shadow root so
-// its bare element selectors don't bleed into the dashboard chrome — but its
-// data is the shared store, computed by `selectWaterfall` and re-rendered into
-// the nested tree on every change.
+// ── Waterfall view ─────────────────────────────────────────────────
+// A pure Preact subtree now — its widget styles are scoped to `.waterfall-host`
+// by the stylesheet, so it no longer needs a nested shadow root. Reads the
+// shared store reactively; `selectWaterfall` folds it into the Waterfall shape.
 function WaterfallHost({
   collections,
   connection,
   send,
-  theme,
 }: {
   collections: DashboardCollections
   connection: ConnectionStatus
   send: (c: Command) => void
-  theme?: DashboardTheme
 }) {
-  const hostRef = useRef<HTMLDivElement | null>(null)
-  const containerRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    const host = hostRef.current
-    if (!host) return
-    const sr = host.shadowRoot ?? host.attachShadow({ mode: 'open' })
-    sr.innerHTML = ''
-    const style = document.createElement('style')
-    style.textContent = STYLES
-    sr.appendChild(style)
-    if (theme) applyTheme(host, theme)
-    const container = document.createElement('div')
-    sr.appendChild(container)
-    containerRef.current = container
-    return () => {
-      render(null, container)
-      sr.innerHTML = ''
-      containerRef.current = null
-    }
-  }, [theme])
-
-  // Read the store reactively; the selector folds it into the Waterfall shape.
   const scenes = useLiveQuery(collections.scenes)
   const assertions = useLiveQuery(collections.assertions)
   const actions = useLiveQuery(collections.actions)
   const runs = useLiveQuery(collections.runs)
   const state = { ...selectWaterfall(scenes, assertions, actions, runs), connection }
-  useEffect(() => {
-    if (containerRef.current) render(<Waterfall state={state} send={send} />, containerRef.current)
-  })
 
-  return <div class="waterfall-host" ref={hostRef}></div>
+  return (
+    <div class="waterfall-host">
+      <Waterfall state={state} send={send} />
+    </div>
+  )
 }

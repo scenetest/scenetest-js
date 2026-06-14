@@ -4,7 +4,8 @@ import { test, expect } from '@playwright/test'
  * E2E tests for the Dashboard — the Preact app served by the vite plugin at
  * /__scenetest/. It's one app (Home / Runner / Waterfall views) over the
  * read-only TanStack DB read model, routed on the pathname; views render into
- * a shadow root, which Playwright's CSS locators pierce.
+ * the light DOM under a `.scenetest-dashboard` root, styled by the shipped
+ * stylesheet.
  */
 
 test.describe('/__scenetest Dashboard', () => {
@@ -60,8 +61,8 @@ test.describe('/__scenetest Dashboard', () => {
     await page.goto('/__scenetest/')
     await page.locator('.index .card', { hasText: 'Waterfall' }).click()
     await expect(page).toHaveURL(/\/__scenetest\/waterfall(\?|$)/)
-    // The Waterfall mounts into a nested shadow root; with no run it shows its
-    // empty state — confirms the widget actually rendered from the store.
+    // With no run the Waterfall shows its empty state — confirms the view
+    // actually rendered from the store.
     await expect(page.locator('.waiting')).toContainText('Waiting for scene run')
   })
 })

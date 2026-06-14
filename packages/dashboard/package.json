@@ -1,7 +1,7 @@
 {
   "name": "@scenetest/dashboard",
   "version": "0.11.0",
-  "description": "Mountable Preact dashboard widget for scenetest — renders a live run into a shadow root, fed by a pluggable transport adapter",
+  "description": "Mountable Preact dashboard app for scenetest — Home/Runner/Waterfall views over a read-only read model, fed by a pluggable transport adapter",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -28,6 +28,7 @@
       "types": "./dist/collections/index.d.ts",
       "import": "./dist/collections/index.js"
     },
+    "./style.css": "./dist/style.css",
     "./package.json": "./package.json"
   },
   "files": [
@@ -37,7 +38,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/style.css dist/style.css",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
