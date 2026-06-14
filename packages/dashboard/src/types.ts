@@ -105,17 +105,3 @@ export interface DashboardTheme {
   /** Base font size (e.g. `'13px'`). */
   fontSize?: string
 }
-
-export interface MountOptions {
-  transport: Transport
-  /** Optional theme overrides applied as `--st-*` custom properties. */
-  theme?: DashboardTheme
-  /** Base path the middleware is mounted at. Defaults to `/__scenetest`. */
-  base?: string
-}
-
-/** Handle returned by `mountDashboard`. */
-export interface DashboardHandle {
-  /** Tear down the app and its subscription, clearing the mount element. */
-  unmount(): void
-}
