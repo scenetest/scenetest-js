@@ -6,11 +6,12 @@ import path from 'path'
 import type { AddressInfo } from 'net'
 import { createScenetestMiddleware } from '../middleware.js'
 
-// The dashboard at /__scenetest/dashboard is now a thin shell that mounts the
-// @scenetest/dashboard widget, whose built ESM (and its protocol dep) the
-// middleware serves off disk under /__scenetest/widget/. Verify the shell and
-// the module-serving route over real HTTP — the browser-side mount itself is
-// covered by the widget package's own store tests plus build/typecheck.
+// The dashboard at /__scenetest/dashboard is the built console shell (a real
+// Vite app, app/ → dist-app), served as static files — no importmap, no
+// vendored modules, no per-file widget serving. We point `appDir` at a fixture
+// so the unit test doesn't need a real Vite build; the actual bundle is covered
+// by the package build + e2e. The browser-side mount is covered by the
+// dashboard package's own tests.
 
 function stubServer(): any {
   return {
@@ -20,12 +21,22 @@ function stubServer(): any {
 }
 
 let tmpRoot: string
+let appDir: string
 let server: http.Server
 let baseUrl: string
 
 beforeEach(() => {
   tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'scenetest-dash-'))
-  const middleware = createScenetestMiddleware(stubServer(), tmpRoot)
+  // A fake built console: an index.html and one hashed asset under the base.
+  appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scenetest-app-'))
+  fs.writeFileSync(
+    path.join(appDir, 'index.html'),
+    '<!doctype html><div id="root"></div><script type="module" src="/__scenetest/dashboard/assets/main.js"></script>'
+  )
+  fs.mkdirSync(path.join(appDir, 'assets'))
+  fs.writeFileSync(path.join(appDir, 'assets', 'main.js'), 'export const mounted = true')
+
+  const middleware = createScenetestMiddleware(stubServer(), tmpRoot, { appDir })
   server = http.createServer((req, res) => {
     void middleware(req, res, () => {
       res.statusCode = 404
@@ -44,43 +55,33 @@ afterEach(async () => {
   server.closeAllConnections()
   await new Promise((resolve) => server.close(resolve))
   fs.rmSync(tmpRoot, { recursive: true, force: true })
+  fs.rmSync(appDir, { recursive: true, force: true })
 })
 
-describe('dashboard shell and widget serving', () => {
-  it('serves a shell that imports the widget and wires the dev transport', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/dashboard`)
-    expect(res.status).toBe(200)
-    expect(res.headers.get('content-type')).toContain('text/html')
-    const html = await res.text()
-    expect(html).toContain('type="importmap"')
-    expect(html).toContain('"@scenetest/dashboard": "/__scenetest/widget/dashboard/index.js"')
-    expect(html).toContain('"@scenetest/protocol": "/__scenetest/widget/protocol/index.js"')
-    expect(html).toContain('mountDashboard')
-    expect(html).toContain('createDevTransport')
-  })
-
-  it('serves the widget entry and its relative-imported modules as JS', async () => {
-    for (const file of ['index.js', 'store.js', 'mount.js', 'dev-transport.js']) {
-      const res = await fetch(`${baseUrl}/__scenetest/widget/dashboard/${file}`)
-      expect(res.status, file).toBe(200)
-      expect(res.headers.get('content-type')).toContain('javascript')
-      expect((await res.text()).length).toBeGreaterThan(0)
+describe('dashboard: built console shell served as static files', () => {
+  it('serves the built index.html at the dashboard page', async () => {
+    for (const url of ['/__scenetest/dashboard', '/__scenetest/dashboard/']) {
+      const res = await fetch(`${baseUrl}${url}`)
+      expect(res.status, url).toBe(200)
+      expect(res.headers.get('content-type')).toContain('text/html')
+      expect(await res.text()).toContain('<div id="root">')
     }
   })
 
-  it('serves the protocol dep the widget imports by bare specifier', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/widget/protocol/index.js`)
+  it('serves built assets under the base path with the right content-type', async () => {
+    const res = await fetch(`${baseUrl}/__scenetest/dashboard/assets/main.js`)
     expect(res.status).toBe(200)
-    expect(await res.text()).toContain('export')
+    expect(res.headers.get('content-type')).toContain('javascript')
+    expect(await res.text()).toContain('mounted')
   })
 
-  it('blocks path traversal outside a widget package dist dir', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/widget/dashboard/..%2f..%2f..%2fpackage.json`)
-    expect([403, 404]).toContain(res.status)
-  })
-
-  it('404s an unknown widget package key', async () => {
-    const res = await fetch(`${baseUrl}/__scenetest/widget/nonesuch/index.js`)
+  it('404s a missing asset', async () => {
+    const res = await fetch(`${baseUrl}/__scenetest/dashboard/assets/nope.js`)
     expect(res.status).toBe(404)
+  })
+
+  it('blocks path traversal outside the app dir', async () => {
+    const res = await fetch(`${baseUrl}/__scenetest/dashboard/..%2f..%2f..%2fpackage.json`)
+    expect([403, 404]).toContain(res.status)
   })
 })
