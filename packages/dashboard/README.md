@@ -19,7 +19,7 @@ render `<Dashboard>` directly; there's no imperative mount wrapper.
 
 ## Transport adapter
 
-The only thing that differs between dev and cloud. The widget calls the
+The only thing that differs between dev and cloud. The dashboard calls the
 adapter to fetch a snapshot and subscribe to live events, and pushes user
 actions back as protocol commands:
 
@@ -34,9 +34,9 @@ interface Transport {
 Events and commands are the `@scenetest/protocol` vocabulary. `createDevTransport()`
 speaks to the Vite middleware (fetch + SSE); a cloud adapter speaks to the
 worker (fetch + WebSocket). History may arrive through either `fetchState`
-(snapshot) or the initial `subscribe` burst — the store folds both the same
-way, so a transport picks whichever its backend makes natural (SSE replays the
-buffer through `subscribe`, so the dev adapter's `fetchState` returns empty).
+(snapshot) or the initial `subscribe` burst — the read model folds both the
+same way, so a transport picks whichever its backend makes natural (SSE replays
+the buffer through `subscribe`, so the dev adapter's `fetchState` returns empty).
 
 ## Theming
 
@@ -67,11 +67,11 @@ for tests, SSR, or computing a rollup:
 
 ## Collections (`@scenetest/dashboard/collections`)
 
-A read-only [TanStack DB](https://tanstack.com/db) read model over the same
-run stream — for **live queries** (filter / aggregate / sort, recomputed
-incrementally), the read half that gets a Durable Object's WebSocket feed into
-a DB collection in the cloud. (The widget itself doesn't need it — it's already
-reactive via the store; this is about the query engine and a shared read model.)
+A read-only [TanStack DB](https://tanstack.com/db) read model over the run
+stream — **the store `<Dashboard>` itself reads from** (dev and cloud), with
+**live queries** (filter / aggregate / sort, recomputed incrementally). It's
+also a subpath export so a cloud consumer can build the same collections with
+**its own** `@tanstack/db` instance (e.g. fed by a Durable Object's WebSocket).
 
 `createRunSource(transport)` wraps the transport as one shared, fan-out stream;
 `runCollectionOptions({ source, projection })` returns a `CollectionConfig` you
@@ -82,8 +82,8 @@ a server-owned replica: the projection is the sole writer, so client
 `.insert()`/`.update()` throws.
 
 ```ts
-import { createCollection } from '@tanstack/db'
-import { useLiveQuery, count } from '@tanstack/react-db'
+import { createCollection, count } from '@tanstack/db'
+import { useLiveQuery } from '@tanstack/react-db'
 import { createDevTransport } from '@scenetest/dashboard'
 import { createRunSource, runCollectionOptions, scenesProjection, assertionsProjection } from '@scenetest/dashboard/collections'
 
@@ -100,9 +100,11 @@ const { data } = useLiveQuery((q) =>
 
 A projection speaks a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`),
 so `scenesProjection()` / `assertionsProjection()` / `runsProjection()` are
-testable without TanStack DB at all. `@tanstack/db` is a **type-only optional
-peer dependency** — this subpath only `import type`s `CollectionConfig`, so
-nothing imports it at runtime and the widget entry never pulls it in.
+testable without TanStack DB at all. `@tanstack/db` is a **runtime dependency**
+of the package (the dashboard calls `createCollection` to build its store), but
+this `./collections` subpath itself only `import type`s `CollectionConfig` — so
+a cloud consumer can build the collections with its own `@tanstack/db` instance
+(one instance, so its `useLiveQuery` can join across them).
 
 **Multi-run.** Rows are partitioned by `runId` (the `run:start` timestamp), so
 one collection holds a whole PR's history — a new `run:start` opens a new
