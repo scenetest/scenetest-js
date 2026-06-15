@@ -9,7 +9,7 @@ import type { HLJSApi, Language, Mode } from 'highlight.js'
 
 export default function scenetestSpec(_hljs: HLJSApi): Language {
   const ACTIONS_RE =
-    /(?:openTo|seeInView|seeText|seeToast|notSee|see|click|typeInto|check|select|wait|emit|waitFor|warnIf|up|prev|scrollToBottom|if)\b/
+    /(?:openTo|seeInView|seeText|seeToast|expectConsoleError|notSee|see|click|typeInto|check|select|wait|emit|waitFor|warnIf|up|prev|scrollToBottom|if)\b/
 
   const INTERPOLATION: Mode = {
     scope: 'template-variable',

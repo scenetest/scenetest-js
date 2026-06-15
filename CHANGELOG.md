@@ -4,6 +4,14 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## Unreleased
+
+### @scenetest/scenes
+
+* **`expectConsoleError(pattern)` — assert an expected console error.** Scenes that deliberately exercise an error path (a wrong-password login, an invalid submit) can now declare the resulting browser console error / uncaught exception as a *success* rather than a problem. The action waits (up to the action timeout) for a captured error matching `pattern` (a case-insensitive substring, or a `RegExp` — `/regex/` in the text DSL), marks it **expected**, and fails the scene if none arrives. Expected errors are reported as `✓ N expected console error(s)` and excluded from the `🔴 browser console error(s)` surface and the run summary's count. Available on the actor handle, `ActionChain`, the reactive `scene()` model, and the text/`.spec.md` DSL. Each call claims a single error (the earliest unclaimed match for that actor).
+
+---
+
 ## 2026-06-22 — monorepo 0.17.0 · @scenetest/scenes 0.16.0, @scenetest/vite-plugin 0.17.0, @scenetest/dashboard 0.14.0, @scenetest/protocol 0.12.0, @scenetest/receiver 0.12.0
 
 **Dashboard control plane.** The dashboard can pause/resume/stop a run and re-run a team. Directions reach the CLI the same way in dev and cloud (receiver → `onCommand` → the run) and their effects come back as events. Commands target the active run; the only protocol change is two events plus a flag.

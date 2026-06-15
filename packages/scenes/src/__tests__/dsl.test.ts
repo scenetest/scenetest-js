@@ -73,6 +73,7 @@ function createSpyTarget(): DslTarget & { calls: string[] } {
     notSee(s: string) { calls.push(`notSee:${s}`); return this },
     seeText(t: string) { calls.push(`seeText:${t}`); return this },
     seeToast(s: string) { calls.push(`seeToast:${s}`); return this },
+    expectConsoleError(p: string | RegExp) { calls.push(`expectConsoleError:${String(p)}`); return this },
     scope(s: string) { calls.push(`scope:${s}`); return this },
     click(s?: string) { calls.push(`click:${s ?? '(scope)'}`); return this },
     typeInto(s: string, v: string) { calls.push(`typeInto:${s}=${v}`); return this },
@@ -100,6 +101,15 @@ describe('parseAction', () => {
     expect(parseAction('seeText Hello World')).toEqual({ action: 'seeText', value: 'Hello World' })
     expect(parseAction('wait 500')).toEqual({ action: 'wait', value: '500' })
     expect(parseAction('emit user-ready')).toEqual({ action: 'emit', value: 'user-ready' })
+  })
+
+  it('parses expectConsoleError with a multi-word pattern', () => {
+    expect(parseAction('expectConsoleError Invalid login credentials')).toEqual({
+      action: 'expectConsoleError', value: 'Invalid login credentials',
+    })
+    expect(parseAction('expectConsoleError /status of 4\\d\\d/i')).toEqual({
+      action: 'expectConsoleError', value: '/status of 4\\d\\d/i',
+    })
   })
 
   it('parses selector-only actions (see, seeInView, notSee, click, check, seeToast, up, ifClick)', () => {
@@ -317,6 +327,21 @@ describe('applyDslAction', () => {
   it('throws when ifClick is missing selector', () => {
     const target = createSpyTarget()
     expect(() => applyDslAction(target, { action: 'ifClick' })).toThrow('ifClick requires a selector')
+  })
+
+  it('dispatches expectConsoleError, parsing literal and /regex/ patterns', () => {
+    const target = createSpyTarget()
+    applyDslAction(target, { action: 'expectConsoleError', value: 'Invalid login credentials' })
+    applyDslAction(target, { action: 'expectConsoleError', value: '/status of 4\\d\\d/i' })
+    expect(target.calls).toEqual([
+      'expectConsoleError:Invalid login credentials',
+      `expectConsoleError:${String(/status of 4\d\d/i)}`,
+    ])
+  })
+
+  it('throws when expectConsoleError is missing a pattern', () => {
+    const target = createSpyTarget()
+    expect(() => applyDslAction(target, { action: 'expectConsoleError' })).toThrow('expectConsoleError requires a pattern')
   })
 
   it('throws on unknown action', () => {

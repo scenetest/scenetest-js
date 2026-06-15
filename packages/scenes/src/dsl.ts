@@ -1,4 +1,5 @@
 import type { DslTarget, Selector } from './types.js'
+import { parseConsoleErrorPattern } from './console-errors.js'
 
 /**
  * Text DSL Grammar:
@@ -18,6 +19,9 @@ import type { DslTarget, Selector } from './types.js'
  *   notSee <selector>               - Wait for element hidden
  *   seeText <text>                  - Wait for text visible
  *   seeToast <selector>             - Wait for element appear then disappear
+ *   expectConsoleError <pattern>    - Expect a console error/uncaught exception
+ *                                     matching <pattern> (substring or /regex/),
+ *                                     marking it a success not a problem
  *
  * Scope (changes current scope):
  *   scope <selector>                - Wait for element visible and SET as current scope
@@ -134,7 +138,7 @@ export function parseAction(line: string): ParsedAction {
   const selectorOnlyActions = ['see', 'seeInView', 'notSee', 'click', 'check', 'seeToast', 'up', 'ifClick', 'scope']
 
   // Actions that take a value only (no selector)
-  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice', 'pressKey']
+  const valueOnlyActions = ['openTo', 'seeText', 'wait', 'emit', 'waitFor', 'switchDevice', 'pressKey', 'expectConsoleError']
 
   // Actions that take selector + value (everything after first selector word is value)
   const selectorValueActions = ['typeInto', 'select', 'warnIf']
@@ -237,6 +241,11 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
     case 'seeToast':
       if (!selector) throw new Error('seeToast requires a selector')
       target.seeToast(selector)
+      break
+
+    case 'expectConsoleError':
+      if (!value) throw new Error('expectConsoleError requires a pattern')
+      target.expectConsoleError(parseConsoleErrorPattern(value))
       break
 
     case 'scope':

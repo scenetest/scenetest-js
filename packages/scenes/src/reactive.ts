@@ -69,6 +69,7 @@ import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOptio
 import { MessageBus } from './message-bus.js'
 import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
+import { waitForConsoleError, describeMissingConsoleError } from './console-errors.js'
 import { registerScene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
@@ -547,6 +548,16 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       const locator = resolveSelector(this.page, selector)
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
+    })
+  }
+
+  expectConsoleError(pattern: string | RegExp): this {
+    const target = typeof pattern === 'string' ? pattern : String(pattern)
+    return this.push('expectConsoleError', target, async () => {
+      const claimed = await waitForConsoleError(this.consoleErrors, this.role, pattern, this.actionTimeout)
+      if (!claimed) {
+        throw new Error(describeMissingConsoleError(this.consoleErrors, this.role, pattern, this.actionTimeout))
+      }
     })
   }
 

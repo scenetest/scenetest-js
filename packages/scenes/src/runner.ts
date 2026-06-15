@@ -404,14 +404,19 @@ export class SceneRunner {
             else soundFail()
           }
 
-          if (report.consoleErrors.length > 0) {
-            console.log(`    ⚠ ${report.consoleErrors.length} console error(s)`)
-            for (const ce of report.consoleErrors.slice(0, 5)) {
+          const unexpectedErrors = report.consoleErrors.filter((ce) => !ce.expected)
+          const expectedErrors = report.consoleErrors.filter((ce) => ce.expected)
+          if (expectedErrors.length > 0) {
+            console.log(`    ✓ ${expectedErrors.length} expected console error(s)`)
+          }
+          if (unexpectedErrors.length > 0) {
+            console.log(`    ⚠ ${unexpectedErrors.length} console error(s)`)
+            for (const ce of unexpectedErrors.slice(0, 5)) {
               const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
               console.log(formatConsoleEntry(ce.actor, label, ce.message, 200))
             }
-            if (report.consoleErrors.length > 5) {
-              console.log(`      └─ ... and ${report.consoleErrors.length - 5} more`)
+            if (unexpectedErrors.length > 5) {
+              console.log(`      └─ ... and ${unexpectedErrors.length - 5} more`)
             }
           }
         } finally {
@@ -437,7 +442,12 @@ export class SceneRunner {
     )
     const failedAssertions = totalAssertions - passedAssertions
     const totalWarnings = sceneReports.reduce((sum, r) => sum + r.warnings.length, 0)
-    const totalConsoleErrors = sceneReports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
+    // Expected errors (claimed via expectConsoleError) are successes, not
+    // problems — keep them out of the summary's console-error count.
+    const totalConsoleErrors = sceneReports.reduce(
+      (sum, r) => sum + r.consoleErrors.filter((ce) => !ce.expected).length,
+      0
+    )
 
     const report: RunReport = {
       timestamp: new Date().toISOString(),
@@ -796,17 +806,26 @@ export function printSummary(report: RunReport): void {
     console.log(`\n  ⚠ ${report.summary.assertions.failed} assertion(s) failed`)
   }
 
+  const totalExpectedErrors = report.scenes.reduce(
+    (sum, s) => sum + s.consoleErrors.filter((ce) => ce.expected).length,
+    0
+  )
+  if (totalExpectedErrors > 0) {
+    console.log(`\n  ✓ ${totalExpectedErrors} expected console error(s)`)
+  }
+
   if (report.summary.consoleErrors > 0) {
     console.log(`\n  🔴 ${report.summary.consoleErrors} browser console error(s)`)
     for (const scene of report.scenes) {
-      if (scene.consoleErrors.length > 0) {
-        console.log(`    ${scene.name}: ${scene.consoleErrors.length} error(s)`)
-        for (const ce of scene.consoleErrors.slice(0, 3)) {
+      const unexpected = scene.consoleErrors.filter((ce) => !ce.expected)
+      if (unexpected.length > 0) {
+        console.log(`    ${scene.name}: ${unexpected.length} error(s)`)
+        for (const ce of unexpected.slice(0, 3)) {
           const label = ce.source === 'selector' ? `error-selector(${ce.selector})` : ce.source === 'pageerror' ? 'uncaught' : ce.type === 'warning' ? 'console.warn' : 'console.error'
           console.log(formatConsoleEntry(ce.actor, label, ce.message, 150))
         }
-        if (scene.consoleErrors.length > 3) {
-          console.log(`      └─ ... and ${scene.consoleErrors.length - 3} more`)
+        if (unexpected.length > 3) {
+          console.log(`      └─ ... and ${unexpected.length - 3} more`)
         }
       }
     }

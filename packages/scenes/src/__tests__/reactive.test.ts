@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
-import type { TimelineEntry, ScriptWarning } from '../types.js'
+import type { TimelineEntry, ScriptWarning, ConsoleError } from '../types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers — minimal Playwright mocks
@@ -48,6 +48,7 @@ function createTestActor(
   const bus = overrides?.bus ?? new MessageBus()
   const timeline: TimelineEntry[] = []
   const warnings: ScriptWarning[] = []
+  const consoleErrors: ConsoleError[] = []
   const page = overrides?.page ?? mockPage()
 
   const actor = new ConcurrentActorHandleImpl(
@@ -57,12 +58,12 @@ function createTestActor(
     bus,
     timeline,
     warnings,
-    /* consoleErrors */ [],
+    consoleErrors,
     /* actionTimeout */ 5000,
     /* warnAfter */ 60000 // high so warnings don't fire during tests
   )
 
-  return { actor, bus, timeline, warnings, page }
+  return { actor, bus, timeline, warnings, consoleErrors, page }
 }
 
 /**
@@ -596,6 +597,59 @@ describe('drainAll', () => {
     expect(events.indexOf('alice-work')).toBeLessThan(
       events.indexOf('bob-after-alice')
     )
+  })
+})
+
+describe('expectConsoleError()', () => {
+  it('claims a matching error already in the buffer, marking it expected', async () => {
+    const { actor, consoleErrors } = createTestActor('learner')
+    consoleErrors.push({
+      message: 'Invalid login credentials',
+      actor: 'learner',
+      timestamp: Date.now(),
+      type: 'error',
+      source: 'pageerror',
+    })
+
+    actor.expectConsoleError('Invalid login credentials')
+    await drainAll([actor])
+
+    expect(consoleErrors[0].expected).toBe(true)
+  })
+
+  it('waits for an error that arrives after the action starts', async () => {
+    const { actor, consoleErrors } = createTestActor('learner')
+
+    actor.expectConsoleError(/status of 4\d\d/)
+    setTimeout(() => {
+      consoleErrors.push({
+        message: 'Failed to load resource: the server responded with a status of 400',
+        actor: 'learner',
+        timestamp: Date.now(),
+        type: 'error',
+        source: 'console',
+      })
+    }, 20)
+
+    await drainAll([actor])
+    expect(consoleErrors[0].expected).toBe(true)
+  })
+
+  it('aborts the scene when no matching error appears', async () => {
+    // Tiny action timeout so the wait fails fast.
+    const fast = new ConcurrentActorHandleImpl(
+      'learner',
+      { key: 'learner-1' },
+      mockPage() as any,
+      new MessageBus(),
+      [],
+      [],
+      [],
+      30,
+      60000
+    )
+    fast.expectConsoleError('never happens')
+    await expect(drainAll([fast])).rejects.toThrow(/no console error matching "never happens"/)
   })
 })
 
