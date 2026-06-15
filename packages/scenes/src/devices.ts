@@ -1,4 +1,3 @@
-import { devices as playwrightDevices } from 'playwright'
 import type { BrowserContextOptions } from 'playwright'
 
 /**
@@ -15,16 +14,17 @@ export interface DeviceProfile {
 }
 
 /**
- * Built-in device profiles covering a range of form factors.
- * Uses Playwright's device descriptors where available,
- * with custom desktop profiles added.
+ * Built-in device profiles covering a range of form factors. The descriptors
+ * are inlined (in Playwright's `BrowserContextOptions` shape) rather than read
+ * from Playwright's `devices` map, so this module — imported widely across the
+ * package — carries no runtime dependency on Playwright, which is a peer.
  */
 export const builtinDevices: DeviceProfile[] = [
   // Mobile phones
   {
     name: 'iPhone 14',
     category: 'mobile',
-    contextOptions: playwrightDevices['iPhone 14'] ?? {
+    contextOptions: {
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 3,
       isMobile: true,
@@ -35,7 +35,7 @@ export const builtinDevices: DeviceProfile[] = [
   {
     name: 'iPhone 12',
     category: 'mobile',
-    contextOptions: playwrightDevices['iPhone 12'] ?? {
+    contextOptions: {
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 3,
       isMobile: true,
@@ -46,7 +46,7 @@ export const builtinDevices: DeviceProfile[] = [
   {
     name: 'Pixel 7',
     category: 'mobile',
-    contextOptions: playwrightDevices['Pixel 7'] ?? {
+    contextOptions: {
       viewport: { width: 412, height: 915 },
       deviceScaleFactor: 2.625,
       isMobile: true,
@@ -57,7 +57,7 @@ export const builtinDevices: DeviceProfile[] = [
   {
     name: 'Galaxy S9+',
     category: 'mobile',
-    contextOptions: playwrightDevices['Galaxy S9+'] ?? {
+    contextOptions: {
       viewport: { width: 320, height: 658 },
       deviceScaleFactor: 4.5,
       isMobile: true,
@@ -69,7 +69,7 @@ export const builtinDevices: DeviceProfile[] = [
   {
     name: 'iPad Pro 11',
     category: 'tablet',
-    contextOptions: playwrightDevices['iPad Pro 11'] ?? {
+    contextOptions: {
       viewport: { width: 834, height: 1194 },
       deviceScaleFactor: 2,
       isMobile: true,
@@ -80,7 +80,7 @@ export const builtinDevices: DeviceProfile[] = [
   {
     name: 'iPad Mini',
     category: 'tablet',
-    contextOptions: playwrightDevices['iPad Mini'] ?? {
+    contextOptions: {
       viewport: { width: 768, height: 1024 },
       deviceScaleFactor: 2,
       isMobile: true,

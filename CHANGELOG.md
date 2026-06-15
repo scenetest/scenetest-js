@@ -4,6 +4,29 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-06-15 — @scenetest/scenes 0.16.0
+
+**Playwright is now a peer dependency.** `@scenetest/scenes` drives the
+consumer's Playwright instead of bundling its own copy, so a project that
+already uses Playwright (for its own tests, or another tool) shares **one**
+version and **one** set of browser binaries — no duplicate install, and no
+ambiguity about which version `playwright install` targets.
+
+### @scenetest/scenes 0.16.0
+
+* **Breaking — `playwright` moved from a dependency to a `peerDependency`**
+  (`^1.40.0`). Add it to your project (`pnpm add -D playwright`) and install a
+  browser (`pnpm exec playwright install chromium`); see the README. pnpm with
+  `auto-install-peers` (the default) pulls it in for you; npm/yarn users add it
+  explicitly.
+* **Actionable preflight on a missing peer or browser.** The CLI now turns the
+  two failure modes into a one-line instruction instead of a raw module/launch
+  trace: a missing `playwright` package → "install it + a browser"; a missing
+  browser binary → the exact `playwright install <browser>` to run. Playwright
+  is resolved lazily at launch (and `devices.ts` no longer imports it at all —
+  its device descriptors are inlined), so a missing peer surfaces as that
+  message rather than a load-time crash.
+
 ## 2026-06-15 — @scenetest/dashboard 0.12.0, @scenetest/vite-plugin 0.15.0
 
 **Dashboard modernization.** `@scenetest/dashboard` becomes a plain, embeddable Preact component over the TanStack DB read model — light-DOM, reactive, with the latest-run slice maintained by the database rather than re-folded in JS. `@scenetest/dashboard` (breaking) bumps to 0.12.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.15.0; other packages are unchanged. (Versions are now per-package semver, not a shared release number.)
