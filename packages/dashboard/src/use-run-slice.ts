@@ -4,24 +4,6 @@ import { useLiveQuery, type ObservableRows } from './use-live-query.js'
 import { latestRunId, type DashboardCollections, type RunSlice } from './select-helpers.js'
 import type { SceneRow, AssertionRecord, ActionRecord } from './collections/projections.js'
 
-/**
- * Build the latest-run slice the live views render — `where runId = latest`,
- * scenes/actions `orderBy startTime` — as **`@tanstack/db` live-query
- * collections** derived from the base tables, rather than re-scanning every
- * run's rows in JS each render (the old `latestRunSlice` fold). The DB
- * maintains the filter/sort incrementally; the views read the result through
- * `useLiveQuery` and hand it to the pure selectors (`selectWaterfall`,
- * `selectSnapshot`), which now take an already-sliced {@link RunSlice}.
- *
- * "Latest" is a reactive aggregate (the newest `run:start`), so it can't be a
- * static predicate. We read the small `runs` table to pick it, then key the
- * derived collections on it — they rebuild only when a *new run* starts (rare),
- * not on every scene/action/assertion event. The interactive filters (status
- * chips, text search) and the assertion→scene attribution stay reactive
- * selectors downstream: the chips must not move the header summary, and the
- * attribution is an actor + time-window fallback, not an equi-join.
- */
-
 /** The live-query collections of one run's rows, the heart of {@link useRunSlice}. */
 export interface RunSliceCollections {
   scenes: ObservableRows<SceneRow>
@@ -30,11 +12,11 @@ export interface RunSliceCollections {
 }
 
 /**
- * Build the three derived live-query collections for `runId` — `where runId =
- * <runId>`, scenes/actions `orderBy startTime`. A pure builder (no hooks) so it
- * can be tested against `latestRunSlice` directly; `useRunSlice` memoizes it.
- * Before the first run, `runId` is undefined and we filter on a sentinel that
- * matches no real row (run ids are timestamps), so the slice is simply empty.
+ * Build the three derived live-query collections for `runId` (`where runId = …`,
+ * scenes/actions `orderBy startTime`). A pure builder (no hooks) so it can be
+ * tested against `latestRunSlice` directly. Before the first run `runId` is
+ * undefined, so we filter on a sentinel that matches no real row (ids are
+ * timestamps) and the slice comes back empty.
  */
 export function runSliceCollections(
   collections: DashboardCollections,
@@ -63,6 +45,12 @@ export function runSliceCollections(
   }
 }
 
+/**
+ * The latest-run slice the live views render, maintained incrementally by
+ * `@tanstack/db` rather than re-scanned in JS each render. Picks the latest run
+ * from the small `runs` table and rebuilds the derived collections only when a
+ * new run starts; the views hand the result to the pure selectors.
+ */
 export function useRunSlice(collections: DashboardCollections): RunSlice {
   const runs = useLiveQuery(collections.runs)
   const runId = latestRunId(runs)

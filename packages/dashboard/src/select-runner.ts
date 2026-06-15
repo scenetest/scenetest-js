@@ -2,17 +2,9 @@ import type { TeamMeta } from '@scenetest/protocol'
 import { groupByScene, type RunSlice } from './select-helpers.js'
 
 /**
- * The Runner view's read model — derived from the shared `@tanstack/db`
- * collections (scenes / assertions / actions / runs) the console builds from
- * the run stream. The collections are the canonical fold; this module is a
- * pure *selector* over their rows plus `attributeToScene`, so per-scene
- * assertions/timeline are attributed the way the collections define it
- * (stamped scene id, else actor + time-window) rather than the old
- * "most-recent-running-scene" guess that breaks under concurrency.
- *
- * `selectSnapshot` is pure (testable without a live collection); `runner.ts`
- * feeds it `collection.toArray` and re-runs it on change. Past runs bypass the
- * collections — they're CLI JSON reports — via `mapReportToSnapshot`.
+ * The Runner view's read model — pure selectors over the latest-run `RunSlice`.
+ * `selectSnapshot` is the live path; `mapReportToSnapshot` adapts past-run CLI
+ * JSON reports into the same shape so live and past runs render identically.
  */
 
 export interface RunnerAssertion {
@@ -72,14 +64,7 @@ function isFailure(status: string): boolean {
   return status !== 'completed' && status !== 'running'
 }
 
-/**
- * Build the live snapshot from the latest-run {@link RunSlice}. The collections
- * are multi-run (they accumulate every run of the session), so the live Runner
- * shows the **latest** run — the slice `where runId = latest` — exactly as the
- * unified-console design frames the live timeline. The slice is built
- * incrementally by `useRunSlice`'s live-query collections (or by
- * `latestRunSlice` in tests); this selector only attributes and rolls up.
- */
+/** Build the live snapshot from the latest-run slice: attribute assertions/actions to scenes and roll up the summary. */
 export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
   const { run: latestRun, scenes: runScenes, assertions: runAssertions, actions: runActions } = slice
 
