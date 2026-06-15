@@ -70,8 +70,8 @@ live run (Transport.subscribe) ──┘            │
 ### What this changes about the single-run collection (#214)
 
 The collection shipped in #214 is **single-run**: it truncates on
-`run:start` (matching the cloud's one-Durable-Object-per-run proposal). A
-PR-history collection must not wipe when the next run begins. So:
+`run:start` (matching the cloud's *original* one-Durable-Object-**per-run**
+sketch). A PR-history collection must not wipe when the next run begins. So:
 
 - **`run:start` no longer truncates.** It opens a **new run partition**.
 - **Rows carry a `runId`.** Scenes are keyed `(runId, teamIndex, name)`,
@@ -113,6 +113,32 @@ partition instead of wiping).
 | identity | filename `pr-{num}-{timestamp}-…` | D1 runId + PR row |
 | URL | one page per dev session | `/pr/:owner/:repo/:number` (run = picker, not URL) |
 | mount | `mountConsole` | `mountConsole` (same app) |
+
+### Cloud storage granularity: per-PR, not per-run
+
+The cloud has converged on the **PR** as the unit of coordination *and*
+storage — which is exactly what this read model wants. The dashboard reads
+**one multi-run collection per PR** (runs are partitions inside it), so the
+server-side store should be per-PR too, not fragmented per-run and reassembled
+on read:
+
+- **One Durable Object per PR** — *done*. The PR object coordinates the box,
+  fans out to viewers, and holds the command queue; runs are partitions within
+  it, not separate objects. This supersedes the per-run-DO sketch noted above —
+  there is no fan-in across run objects to reconstruct a PR's history.
+- **R2 archive per PR** — *in progress*. Today R2 holds a per-run `.jsonl`
+  written at end-of-run (`runs/<repo>/<runId>.jsonl`); the move underway is to
+  treat R2 as the **cold archive of a retired (merged/closed) PR's** accumulated
+  history, with the PR's Durable Object holding the hot store, rather than R2
+  being a per-run live event log.
+
+This is the server-side mirror of the client decision: PR is the aggregate, the
+run is a partition. The authoritative spec for the cloud side is
+scenetest-cloud's `architecture.md`; this note only records the alignment so the
+two repos don't drift on what "the unit" is. (Heads-up for whoever syncs that
+doc: it still describes the dashboard as a shadow-root `mountDashboard()` widget
+with a `fetchState`-based transport — all removed in `@scenetest/dashboard`
+0.12.0, which is *our* package's contract to state, not theirs.)
 
 ## Phasing
 
