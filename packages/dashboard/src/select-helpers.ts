@@ -17,10 +17,11 @@ export interface DashboardCollections {
 }
 
 /**
- * The one read model is multi-run (the collections accumulate every run of the
- * session). The live views — Waterfall and Runner — show the **latest** run,
- * i.e. the `where runId = latest` slice. This helper computes that slice once,
- * so both selectors share the same "current run" definition.
+ * The read model is multi-run — the collections accumulate every run of the
+ * session — so the live views (Waterfall, Runner) render the **latest** run:
+ * the `where runId = latest` slice. `RunSlice` is that slice, shared by both
+ * selectors so they agree on the "current run". Built incrementally by
+ * `useRunSlice` (live), or by `latestRunSlice` (the pure reference, for tests).
  */
 export interface RunSlice {
   runId: string | undefined
@@ -31,12 +32,9 @@ export interface RunSlice {
 }
 
 /**
- * The latest run's id — the newest `run:start` (max `startTime`). "Latest" is a
- * reactive aggregate, not a static predicate, so the live `useRunSlice` reads
- * it to key its derived collections, and `latestRunSlice` reuses it for the
- * pure (test) path. Falls back to the most-recent scene's `runId` only when no
- * run row exists yet — a window that doesn't occur in practice, since
- * `run:start` always precedes the first scene and seeds a run row.
+ * The latest run's id — the newest `run:start` (max `startTime`). Falls back to
+ * the most-recent scene's `runId` only when no run row exists yet (a window that
+ * doesn't occur in practice, since `run:start` precedes the first scene).
  */
 export function latestRunId(runs: RunRow[], scenes: SceneRow[] = []): string | undefined {
   const run = runs.reduce<RunRow | undefined>((m, r) => (!m || r.startTime > m.startTime ? r : m), undefined)

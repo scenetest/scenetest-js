@@ -9,15 +9,10 @@ function laneStatus(a: ActionRecord): ActionItem['status'] {
 }
 
 /**
- * Project the read model into the Waterfall view's shape. This is the
- * Waterfall reading from the one store — it replaced the bespoke `applyEvent`
- * fold. It takes the latest-run {@link RunSlice} (built incrementally by
- * `useRunSlice`'s live-query collections, or by `latestRunSlice` in tests):
- * actions become per-actor lanes, assertions are attributed to their scene
- * (`attributeToScene`), and the run rollup drives the pass/fail/scene counts.
- *
- * Returns the projected view data only — `connection` is the host's to supply
- * (`WaterfallHost` spreads it in), since a pure projection can't know it.
+ * Project the latest-run slice into the Waterfall's shape: actions become
+ * per-actor lanes, assertions are attributed to their scene, and the run rollup
+ * drives the counts. Returns the view data only — `connection` is the host's to
+ * supply (`WaterfallHost` spreads it in), since a pure projection can't know it.
  */
 export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connection'> {
   const actionsByScene = groupByScene(slice.actions, slice.scenes)
