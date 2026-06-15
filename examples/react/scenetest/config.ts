@@ -19,6 +19,12 @@ export default defineConfig({
   timeout: 30000,
   actionTimeout: 5000,
 
+  // Name the console errors our scenes deliberately trigger, so specs can
+  // claim them by domain term: `expectConsoleError name-taken`.
+  consoleErrorAliases: {
+    'name-taken': 'already in use',
+  },
+
   server: {
     validateEmail: (email: string): boolean => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

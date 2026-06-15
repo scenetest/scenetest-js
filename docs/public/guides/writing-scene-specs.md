@@ -61,6 +61,15 @@ learner:
 
 It waits for a browser console error (or uncaught exception) matching the pattern — a case-insensitive substring, or a `/regex/` — and **fails the scene if none appears**. Matched errors are reported as `✓ expected console error(s)` and kept out of the run's error surface. Each call claims one error, so add one line per console message the failure emits.
 
+You can also name expected errors in `scenetest/config.ts` and reference them by domain term — handy when several specs expect the same error:
+
+```ts
+consoleErrorAliases: {
+  'bad-password': 'Invalid login credentials',
+}
+// then in a spec:  - expectConsoleError bad-password
+```
+
 ## Scope Navigation
 
 `scope` narrows the actor's **current scope** — subsequent actions search within the matched element. `see` is a pure assertion that checks visibility but does **not** change scope.

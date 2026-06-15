@@ -18,6 +18,14 @@ export type { MarkdownScene, ActorBlock, SceneAction } from './markdown-scene.js
 // Selector utilities
 export { setAliases, getAliases, clearAliases, explainSelector } from './selectors.js'
 
+// Console-error expectation utilities
+export {
+  setConsoleErrorAliases,
+  getConsoleErrorAliases,
+  clearConsoleErrorAliases,
+} from './console-errors.js'
+export type { ConsoleErrorAliases } from './console-errors.js'
+
 // Device rotation
 export { DeviceRotation, builtinDevices, findDevice } from './devices.js'
 export type { DeviceProfile } from './devices.js'

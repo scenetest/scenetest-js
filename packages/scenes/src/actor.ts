@@ -5,7 +5,7 @@ import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOptio
 import { MessageBus } from './message-bus.js'
 import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
-import { waitForConsoleError, describeMissingConsoleError } from './console-errors.js'
+import { waitForConsoleError, describeMissingConsoleError, resolveConsoleErrorPattern } from './console-errors.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
@@ -316,10 +316,11 @@ class ActionChainImpl implements ActionChain {
   expectConsoleError(pattern: string | RegExp): ActionChain {
     const target = typeof pattern === 'string' ? pattern : String(pattern)
     return this.addAction('expectConsoleError', target, async () => {
+      const resolved = resolveConsoleErrorPattern(pattern)
       const errors = this.actor.getConsoleErrors()
-      const claimed = await waitForConsoleError(errors, this.actor.role, pattern, this.actionTimeout)
+      const claimed = await waitForConsoleError(errors, this.actor.role, resolved, this.actionTimeout)
       if (!claimed) {
-        throw new Error(describeMissingConsoleError(errors, this.actor.role, pattern, this.actionTimeout))
+        throw new Error(describeMissingConsoleError(errors, this.actor.role, resolved, this.actionTimeout))
       }
     })
   }

@@ -84,6 +84,65 @@ export function parseConsoleErrorPattern(text: string): string | RegExp {
   return text
 }
 
+// ─── Alias registry ──────────────────────────────────────────────────
+//
+// Like selector aliases, a scene config can name the console errors a suite
+// expects up front, so specs read in domain terms instead of repeating brittle
+// message fragments:
+//
+//   defineConfig({
+//     consoleErrorAliases: {
+//       'bad-password': 'Invalid login credentials',
+//       'not-found': /status of 404/,
+//     },
+//   })
+//
+//   - expectConsoleError bad-password     # bare name resolves to the alias
+//   - expectConsoleError ~bad-password    # explicit ~ form (errors on a typo)
+
+/** Map of alias name → console-error pattern (substring or RegExp). */
+export type ConsoleErrorAliases = Record<string, string | RegExp>
+
+let globalConsoleErrorAliases: ConsoleErrorAliases = {}
+
+/** Replace the global console-error alias registry (called from config). */
+export function setConsoleErrorAliases(aliases: ConsoleErrorAliases): void {
+  globalConsoleErrorAliases = aliases
+}
+
+/** Read the current console-error alias registry. */
+export function getConsoleErrorAliases(): ConsoleErrorAliases {
+  return globalConsoleErrorAliases
+}
+
+/** Clear all console-error aliases. */
+export function clearConsoleErrorAliases(): void {
+  globalConsoleErrorAliases = {}
+}
+
+/**
+ * Resolve an `expectConsoleError` argument against the alias registry:
+ * - a `RegExp` passes through unchanged;
+ * - a `~name` string is an explicit alias reference (throws if undefined);
+ * - a bare string that exactly names an alias resolves to its pattern;
+ * - anything else is returned as-is (a literal substring).
+ */
+export function resolveConsoleErrorPattern(pattern: string | RegExp): string | RegExp {
+  if (typeof pattern !== 'string') return pattern
+  if (pattern.startsWith('~')) {
+    const name = pattern.slice(1)
+    const resolved = globalConsoleErrorAliases[name]
+    if (resolved === undefined) {
+      const known = Object.keys(globalConsoleErrorAliases)
+      const hint = known.length ? ` Known aliases: ${known.join(', ')}.` : ''
+      throw new Error(`Unknown console-error alias: ${name}.${hint}`)
+    }
+    return resolved
+  }
+  const alias = globalConsoleErrorAliases[pattern]
+  return alias !== undefined ? alias : pattern
+}
+
 /**
  * Build the error thrown when an expected console error never arrives. Lists
  * the unclaimed errors actually seen for the actor, so the mismatch is obvious.

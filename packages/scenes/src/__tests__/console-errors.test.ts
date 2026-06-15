@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   consoleErrorMatches,
   claimConsoleError,
   waitForConsoleError,
   parseConsoleErrorPattern,
   describeMissingConsoleError,
+  setConsoleErrorAliases,
+  clearConsoleErrorAliases,
+  resolveConsoleErrorPattern,
 } from '../console-errors.js'
 import type { ConsoleError } from '../types.js'
 
@@ -96,6 +99,41 @@ describe('parseConsoleErrorPattern', () => {
 
   it('falls back to a literal when the regex body is invalid', () => {
     expect(parseConsoleErrorPattern('/(/')).toBe('/(/')
+  })
+})
+
+describe('resolveConsoleErrorPattern (aliases)', () => {
+  afterEach(() => clearConsoleErrorAliases())
+
+  it('resolves a bare name that matches a defined alias', () => {
+    setConsoleErrorAliases({ 'bad-password': 'Invalid login credentials' })
+    expect(resolveConsoleErrorPattern('bad-password')).toBe('Invalid login credentials')
+  })
+
+  it('resolves a RegExp alias', () => {
+    const re = /status of 4\d\d/
+    setConsoleErrorAliases({ 'client-error': re })
+    expect(resolveConsoleErrorPattern('client-error')).toBe(re)
+  })
+
+  it('resolves an explicit ~name reference', () => {
+    setConsoleErrorAliases({ 'bad-password': 'Invalid login credentials' })
+    expect(resolveConsoleErrorPattern('~bad-password')).toBe('Invalid login credentials')
+  })
+
+  it('throws on an unknown ~name reference', () => {
+    setConsoleErrorAliases({ 'bad-password': 'Invalid login credentials' })
+    expect(() => resolveConsoleErrorPattern('~typo')).toThrow(/Unknown console-error alias: typo/)
+  })
+
+  it('passes through a literal substring that is not an alias', () => {
+    setConsoleErrorAliases({ 'bad-password': 'Invalid login credentials' })
+    expect(resolveConsoleErrorPattern('Failed to load resource')).toBe('Failed to load resource')
+  })
+
+  it('passes a RegExp argument through unchanged', () => {
+    const re = /4\d\d/
+    expect(resolveConsoleErrorPattern(re)).toBe(re)
   })
 })
 

@@ -592,6 +592,25 @@ see login-form
     expect(scenes[1].blocks[0].role).toBe('returning-user')
   })
 
+  it('parses expectConsoleError as a DSL action, not a macro', () => {
+    const content = `
+## wrong password shows an error
+
+learner:
+- click sign-in
+- expectConsoleError bad-password
+- seeText Wrong password
+`
+    const scenes = parseMarkdownScenes(content, '/test/expect-error.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    const expectAction = actions.find(
+      (a) => a.type === 'action' && a.line.startsWith('expectConsoleError')
+    )
+    expect(expectAction).toBeDefined()
+    // It must NOT be misclassified as a macro invocation.
+    expect(actions.some((a) => a.type === 'macro')).toBe(false)
+  })
+
   it('parses cleanup: directive before actor cues', () => {
     const content = `
 ## learner creates a new deck

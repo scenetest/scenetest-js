@@ -172,6 +172,23 @@ export interface ScenetestConfig extends BaseConfig {
    */
   aliases?: Record<string, string>
 
+  /**
+   * Console-error aliases — name the browser console errors a suite expects,
+   * so specs can claim them by domain term with `expectConsoleError`. A pattern
+   * is a case-insensitive substring or a `RegExp`. Reference an alias by bare
+   * name, or with a `~` prefix to fail loudly on a typo.
+   *
+   * @example
+   * ```ts
+   * consoleErrorAliases: {
+   *   'bad-password': 'Invalid login credentials',
+   *   'not-found': /status of 404/,
+   * }
+   * // in a scene:  - expectConsoleError bad-password
+   * ```
+   */
+  consoleErrorAliases?: Record<string, string | RegExp>
+
   /** Report output directory */
   reportDir?: string
 

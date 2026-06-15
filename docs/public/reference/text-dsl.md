@@ -80,6 +80,27 @@ learner:
 
 The pattern is a **case-insensitive substring** by default, or a `/regex/flags` literal for finer control. Each call claims a **single** error (the earliest unclaimed match for that actor), so write one `expectConsoleError` per console message a failure emits — a failed request that logs both a resource error and an uncaught exception needs two.
 
+#### Named aliases
+
+Like selector aliases, you can name the console errors a suite expects in config, so specs read in domain terms instead of repeating brittle message fragments:
+
+```ts
+// scenetest/config.ts
+export default defineConfig({
+  consoleErrorAliases: {
+    'bad-password': 'Invalid login credentials',
+    'not-found': /status of 404/,
+  },
+})
+```
+
+```scenetest
+- expectConsoleError bad-password     # bare name resolves to the alias
+- expectConsoleError ~bad-password    # explicit ~ form — errors on a typo
+```
+
+A bare argument that exactly matches an alias name resolves to its pattern; otherwise it's treated as a literal substring. Prefix with `~` to force alias resolution (a `~typo` that names no alias throws, catching mistakes early).
+
 **Selector resolution is strict.** Selectors resolve against the current scope only; if nothing matches, you get a diagnostic error naming the action, the selector, and the scope rather than a silent fallback. If you need to reach an element outside the current scope, widen with `up` or `prev` first. If multiple elements match in scope, resolution is also strict — disambiguate with an Nth-element token (`#1`, `#2`, `#3`…) appended to the selector.
 
 ### Nested selectors

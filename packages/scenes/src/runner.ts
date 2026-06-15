@@ -10,6 +10,7 @@ import { NavigationModeRotation } from './keyboard.js'
 import type { NavigationMode } from './keyboard.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
 import { setAliases } from './selectors.js'
+import { setConsoleErrorAliases } from './console-errors.js'
 import { importFile } from './loader.js'
 import { loadMarkdownScene } from './markdown-scene.js'
 import { SwarmTrigger, runSwarm } from './swarm.js'
@@ -135,6 +136,11 @@ export class SceneRunner {
     // Apply aliases from config
     if (config.aliases) {
       setAliases(config.aliases)
+    }
+
+    // Apply console-error aliases from config (named, expectable errors)
+    if (config.consoleErrorAliases) {
+      setConsoleErrorAliases(config.consoleErrorAliases)
     }
 
     // Register built-in macros if configured
