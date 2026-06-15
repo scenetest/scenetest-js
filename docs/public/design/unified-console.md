@@ -1,7 +1,7 @@
 # Unified Console (dev + cloud)
 
 **STATUS: Dev console landed; cloud + report loader pending.** Phases 1
-(multi-run collection model) and 3 (`mountConsole` with Home/Runner/Waterfall,
+(multi-run collection model) and 3 (`<Dashboard>` with Home/Runner/Waterfall,
 replacing the inline `analyze-app.ts`) are done. The PR-history report loader
 (phase 2) and the cloud transport / URL reorg (phase 4) are the remaining work.
 
@@ -18,26 +18,26 @@ front-ends** that only link to each other:
   `RunReport` shape) and talks straight to middleware routes
   (`/__scenetest/runs`, `/runs/:id`, `/events`, `/source`).
 - **`packages/vite-plugin/src/dashboard.ts`** — the "Waterfall" page, a thin
-  shell that mounts the extracted **`@scenetest/dashboard`** widget.
+  shell that renders the extracted **`@scenetest/dashboard`** component.
 
 They're glued by `<a href="/__scenetest/dashboard">`. Two apps, two folds,
 two mounts.
 
-The cloud has the same split worse: it's organized **by run**
-(`/r/:runId/*`), one page per run, while everything else in the product is
-organized **by PR**. To browse runs you leave the page.
+The product is organized **by PR** — runs are iterations within a PR — so the
+console should be too. A run-centric console (one page per run) fragments that:
+to browse a PR's run history you leave the page.
 
 ## The target
 
-**One mountable app, many views, organized around a PR.** A PR is the stable
-identity; runs are iterations inside it. One `mountConsole(el, …)` owns the
+**One app, many views, organized around a PR.** A PR is the stable
+identity; runs are iterations inside it. One `<Dashboard>` component owns the
 views as tabs — **Home** (index), **Runner** (the filterable scene log), and
-**Waterfall** (the live timeline, which is today's `@scenetest/dashboard`
-widget demoted from a *page* to a *view component*). Dev and cloud mount the
-**same** app; only the data source differs.
+**Waterfall** (the live timeline, the `@scenetest/dashboard` Waterfall demoted
+from a *page* to a *view*). Dev and cloud render the **same** component; only
+the data source differs.
 
 ```
-                       mountConsole(el, { source })
+                       <Dashboard transport={…} />
                        ┌───────────────────────────────┐
                        │  Home   │  Runner  │ Waterfall │   ← views (tabs)
                        └───────────────────────────────┘
@@ -112,33 +112,25 @@ partition instead of wiping).
 | live run | SSE (`/__scenetest/events`) | WebSocket (Durable Object) |
 | identity | filename `pr-{num}-{timestamp}-…` | D1 runId + PR row |
 | URL | one page per dev session | `/pr/:owner/:repo/:number` (run = picker, not URL) |
-| mount | `mountConsole` | `mountConsole` (same app) |
+| mount | `<Dashboard>` | `<Dashboard>` (same component) |
 
 ### Cloud storage granularity: per-PR, not per-run
 
-The cloud has converged on the **PR** as the unit of coordination *and*
-storage — which is exactly what this read model wants. The dashboard reads
-**one multi-run collection per PR** (runs are partitions inside it), so the
-server-side store should be per-PR too, not fragmented per-run and reassembled
-on read:
+The cloud organizes coordination *and* storage around the **PR** — which is
+exactly what this read model wants. The dashboard reads **one multi-run
+collection per PR** (runs are partitions inside it), so the server-side store is
+per-PR too, not fragmented per-run and reassembled on read:
 
-- **One Durable Object per PR** — *done*. The PR object coordinates the box,
-  fans out to viewers, and holds the command queue; runs are partitions within
-  it, not separate objects. This supersedes the per-run-DO sketch noted above —
-  there is no fan-in across run objects to reconstruct a PR's history.
-- **R2 archive per PR** — *in progress*. Today R2 holds a per-run `.jsonl`
-  written at end-of-run (`runs/<repo>/<runId>.jsonl`); the move underway is to
-  treat R2 as the **cold archive of a retired (merged/closed) PR's** accumulated
-  history, with the PR's Durable Object holding the hot store, rather than R2
-  being a per-run live event log.
+- **One Durable Object per PR** coordinates the box, fans out to viewers, and
+  holds the command queue; runs are partitions within it, not separate objects,
+  so there is no fan-in across run objects to reconstruct a PR's history. This
+  supersedes the per-run-DO sketch noted above.
+- **R2 is the cold archive of a retired (merged/closed) PR's history**, with the
+  PR's Durable Object as the hot store — not a per-run live event log.
 
-This is the server-side mirror of the client decision: PR is the aggregate, the
-run is a partition. The authoritative spec for the cloud side is
-scenetest-cloud's `architecture.md`; this note only records the alignment so the
-two repos don't drift on what "the unit" is. (Heads-up for whoever syncs that
-doc: it still describes the dashboard as a shadow-root `mountDashboard()` widget
-with a `fetchState`-based transport — all removed in `@scenetest/dashboard`
-0.12.0, which is *our* package's contract to state, not theirs.)
+This is the server-side mirror of the client decision: the PR is the aggregate,
+the run is a partition. The cloud side is specified authoritatively in
+scenetest-cloud's `architecture.md`.
 
 ## Phasing
 
@@ -150,14 +142,14 @@ with a `fetchState`-based transport — all removed in `@scenetest/dashboard`
    past-run picker currently fetches a single report via `/__scenetest/runs/:id`
    and maps it directly — `mapReportToSnapshot` — rather than replaying all of a
    PR's history into the collection.)
-3. **✅ Done.** `mountConsole` in `@scenetest/dashboard` — a real Preact app with
+3. **✅ Done.** `<Dashboard>` in `@scenetest/dashboard` — a real Preact app with
    Home/Runner/Waterfall views, served by the Vite plugin's bundled shell (the
    `analyze-app.ts` inline string + its raw-ESM `/__scenetest/vendor/*` routes
-   are deleted). The Waterfall is the existing widget demoted to a nested-shadow
+   are deleted). The Waterfall is the existing component demoted to a nested
    view. The Runner folds the shared collection **projections** + `attributeToScene`
    directly into Preact state (the bundling prerequisite, #215, landed first).
 4. **Cloud** (pending): implement the data source against D1/R2/DO behind
-   `Transport`; reorganize URLs run → PR; embed `mountConsole`.
+   `Transport`; reorganize URLs run → PR; render `<Dashboard>`.
 
 ## What stays out of `Transport`
 
