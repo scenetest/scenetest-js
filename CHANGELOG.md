@@ -4,6 +4,24 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-06-15 — @scenetest/dashboard 0.12.0, @scenetest/vite-plugin 0.15.0
+
+**Dashboard modernization.** `@scenetest/dashboard` becomes a plain, embeddable Preact component over the TanStack DB read model — light-DOM, reactive, with the latest-run slice maintained by the database rather than re-folded in JS. `@scenetest/dashboard` (breaking) bumps to 0.12.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.15.0; other packages are unchanged. (Versions are now per-package semver, not a shared release number.)
+
+### @scenetest/dashboard 0.12.0
+
+* **Breaking — component-only API.** The package now exports the `<Dashboard>` Preact component; render it directly (`render(<Dashboard transport={…} />, el)`). Removed `mountDashboard()` (both hosts are Preact), `Transport.fetchState()` (history flows through the `subscribe` replay in both transports), the `<Dashboard base>` prop (the mount path is a single internal constant), and the dead `initialState()` export.
+* **Light-DOM app + shipped stylesheet.** No shadow root anymore — the dashboard renders into the light DOM under a `.scenetest-dashboard` root, and its CSS ships as a stylesheet the host imports (`import '@scenetest/dashboard/style.css'`, a new `./style.css` export). The observer panel in `@scenetest/checks/panel` keeps its own shadow root; the dashboard does not.
+* **TSX views, reactive reads, real navigation.** Views migrated from htm to TSX/JSX and read the read model reactively via a `useLiveQuery` hook (no hand-rolled `subscribeChanges`); navigation is real `<a>` links with client-side routing, and the timeline view moved to the `/__scenetest/waterfall` route.
+* **Latest-run slice maintained in the DB.** The live views' `where runId = latest` slice (scenes/actions ordered by start time) is now a `createLiveQueryCollection` derived collection, maintained incrementally, instead of re-scanning every run's rows in JS each render.
+* **Performance.** `useLiveQuery` returns a stable array identity between changes, so downstream `useMemo`s actually hit; assertions/actions are attributed to scenes in one pass instead of a per-scene re-filter.
+
+### @scenetest/vite-plugin 0.15.0
+
+* **Dev dashboard rebuilt as a real Vite app.** The `/__scenetest` shell now renders the `<Dashboard>` component (bundling `@tanstack/db` and Preact natively — no hand-rolled esbuild, importmap, or vendored-module routes), serves the dashboard's `style.css`, and serves the Home/Runner/Waterfall views as static files, including the new `/__scenetest/waterfall` route. No change to the plugin's consumer API (`strip` / `devPanel` / `demo` / `csp`).
+
+---
+
 ## [0.15.0] — 2026-06-12
 
 **`@scenetest/scenes` gains a pluggable report destination.** The CLI can now stream its protocol events to any HTTP endpoint as a run executes — the "speaking" half of the receiver/sink design — unblocking direct-to-cloud and bring-your-own-runner CI reporting. Only `@scenetest/scenes` bumps (to 0.15.0); other packages are unchanged.
