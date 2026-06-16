@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Durable Streams → Collections — architecture</title>
+<title>Durable Streams → TanStack DB — collection-options family</title>
 <style>
   :root{
-    --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --ink:#e6edf3; --dim:#9aa7b4;
+    --bg:#0d1117; --panel:#161b22; --ink:#e6edf3; --dim:#9aa7b4;
     --line:#30363d; --accent:#58a6ff;
     --adopt:#2ea043; --adopt-bg:#0f2417; --adopt-br:#1f6f37;
     --contrib:#d29922; --contrib-bg:#241c08; --contrib-br:#8a6d1c;
@@ -18,35 +18,35 @@
   *{box-sizing:border-box}
   body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#13202e,var(--bg));
     color:var(--ink);font-family:var(--sans);line-height:1.5;padding:32px 20px 56px}
-  .wrap{max-width:1120px;margin:0 auto}
-  h1{font-size:24px;margin:0 0 4px;letter-spacing:-.3px}
-  .sub{color:var(--dim);font-size:14px;margin:0 0 22px}
+  .wrap{max-width:1140px;margin:0 auto}
+  h1{font-size:23px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--dim);font-size:14px;margin:0 0 20px;max-width:760px}
   .sub code{font-family:var(--mono);color:var(--accent)}
-  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
   .tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
     padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
   .dot{width:9px;height:9px;border-radius:50%;flex:none}
   .d-adopt{background:var(--adopt)} .d-contrib{background:var(--contrib)}
   .d-build{background:var(--build)} .d-app{background:var(--app)}
 
-  .grid{display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:start}
-  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .grid{display:grid;grid-template-columns:1fr 306px;gap:22px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
 
-  .stack{display:flex;flex-direction:column;gap:0}
+  .stack{display:flex;flex-direction:column}
   .layer{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel);
-    padding:14px 16px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset}
-  .layer + .arrow{height:30px;display:flex;align-items:center;justify-content:center}
-  .arrow span{color:var(--dim);font-size:11px;font-family:var(--mono);
-    background:var(--bg);padding:2px 8px;border:1px solid var(--line);border-radius:999px}
-  .arrow::before{content:"";position:absolute}
-  .arrowline{width:2px;height:30px;background:linear-gradient(var(--line),var(--accent));margin:0 auto}
+    padding:13px 16px}
+  .arrow{height:28px;display:flex;align-items:center;justify-content:center}
+  .arrowline{width:2px;height:28px;background:linear-gradient(var(--line),var(--accent));position:absolute}
+  .arrow span{color:var(--dim);font-size:11px;font-family:var(--mono);z-index:1;
+    background:var(--bg);padding:2px 9px;border:1px solid var(--line);border-radius:999px}
 
   .layer .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .layer h3{margin:0;font-size:15px}
-  .layer .where{font-size:11px;color:var(--dim);font-family:var(--mono)}
-  .layer p{margin:6px 0 0;font-size:13px;color:var(--dim)}
-  .layer p code,.layer .where code{font-family:var(--mono);color:var(--accent);font-size:12px}
-  .pill{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  .layer h3{margin:0;font-size:14.5px}
+  .layer h3 code{font-family:var(--mono);font-size:13px}
+  .layer .where{font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:2px}
+  .layer p{margin:6px 0 0;font-size:12.5px;color:var(--dim)}
+  .layer p code,.layer .where code{font-family:var(--mono);color:var(--accent);font-size:11.5px}
+  .pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
     padding:3px 8px;border-radius:6px;white-space:nowrap}
   .L-adopt{border-color:var(--adopt-br);background:linear-gradient(var(--adopt-bg),var(--panel))}
   .L-adopt .pill{color:var(--adopt);background:var(--adopt-bg);border:1px solid var(--adopt-br)}
@@ -57,145 +57,139 @@
   .L-app{border-color:var(--app-br);background:linear-gradient(var(--app-bg),var(--panel))}
   .L-app .pill{color:var(--app);background:var(--app-bg);border:1px solid var(--app-br)}
 
-  /* two transports side by side */
+  /* family chips */
+  .family{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chip{font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:7px;
+    border:1px solid var(--line);background:#0e141b;color:var(--dim)}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.have{border-color:var(--adopt-br)} .chip.have::before{content:"✓ ";color:var(--adopt)}
+  .chip.you{border-color:var(--build-br);background:var(--build-bg)}
+  .chip.you b{color:var(--build)} .chip.you::before{content:"＋ ";color:var(--build)}
+
+  /* transports */
   .split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
   @media (max-width:560px){.split{grid-template-columns:1fr}}
   .mini{border:1px dashed var(--line);border-radius:9px;padding:10px 12px;background:#0e141b}
-  .mini h4{margin:0 0 3px;font-size:13px}
+  .mini h4{margin:0 0 3px;font-size:12.5px}
   .mini.sse h4{color:var(--adopt)} .mini.ws h4{color:var(--build)}
-  .mini p{margin:0;font-size:11.5px;color:var(--dim)}
-  .mini .badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+  .mini p{margin:0;font-size:11px;color:var(--dim)}
+  .mini .badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
     padding:2px 6px;border-radius:5px;float:right}
   .mini.sse .badge{color:var(--adopt);border:1px solid var(--adopt-br)}
   .mini.ws .badge{color:var(--build);border:1px solid var(--build-br)}
 
-  /* side column */
-  .side{display:flex;flex-direction:column;gap:16px;position:sticky;top:24px}
-  .card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px 16px}
-  .card h3{margin:0 0 8px;font-size:13px;letter-spacing:.3px;text-transform:uppercase;color:var(--dim)}
-  .card.jsonl{border-color:#243; background:linear-gradient(#0c1a14,var(--panel))}
-  .jsonl-log{font-family:var(--mono);font-size:11px;background:#06090d;border:1px solid var(--line);
-    border-radius:8px;padding:8px 10px;color:#7ee2a8;overflow:auto}
-  .jsonl-log .off{color:#4b86c4;user-select:none}
-  .card p{margin:8px 0 0;font-size:12.5px;color:var(--dim)}
+  /* side */
+  .side{display:flex;flex-direction:column;gap:15px;position:sticky;top:22px}
+  .card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:13px 15px}
+  .card h3{margin:0 0 8px;font-size:12.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--dim)}
+  .card p{margin:8px 0 0;font-size:12px;color:var(--dim)}
   .card p:first-of-type{margin-top:0}
-  .card code{font-family:var(--mono);color:var(--accent);font-size:11.5px}
+  .card code{font-family:var(--mono);color:var(--accent);font-size:11px}
+  .fork{border-color:#3a2d52;background:linear-gradient(#15102099,var(--panel))}
+  .fork h3{color:#b88bff}
+  .fork .row{display:flex;gap:8px;align-items:flex-start;margin-top:7px;font-size:12px}
+  .fork .k{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;
+    white-space:nowrap;flex:none}
+  .fork .k.no{color:#b88bff;border:1px solid #4a3a6b}
+  .fork .k.yes{color:var(--build);border:1px solid var(--build-br)}
   .warn{border-color:var(--contrib-br);background:linear-gradient(var(--contrib-bg),var(--panel))}
   .warn h3{color:var(--contrib)}
-  .foot{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+  .foot{margin-top:24px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
   .foot code{font-family:var(--mono);color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Durable Streams&nbsp;→&nbsp;TanStack DB collections</h1>
-  <p class="sub">One stream, read top→bottom. Data flows <strong>up</strong> from the durable log; you depend <strong>down</strong>. The whole thing "feels like tailing a <code>.jsonl</code> log" — because the offset <em>is</em> the line number.</p>
+  <h1>Durable Streams&nbsp;→&nbsp;TanStack DB — the collection-options family</h1>
+  <p class="sub">No bespoke facade. The integration is a <code>*CollectionOptions(config)</code> factory — the next member of an existing family (<code>electric</code>, <code>powerSync</code>). The only real new work lives inside the <strong>stream client</strong>: a hibernating-WebSocket transport on a Durable Object.</p>
 
   <div class="legend">
-    <span class="tag"><span class="dot d-adopt"></span>Adopt as-is — Durable Streams / ElectricSQL</span>
+    <span class="tag"><span class="dot d-adopt"></span>Adopt as-is — Durable Streams / TanStack DB</span>
     <span class="tag"><span class="dot d-contrib"></span>Contribute upstream — transport seam</span>
-    <span class="tag"><span class="dot d-build"></span>Build — yours (WS-on-DO + facade)</span>
-    <span class="tag"><span class="dot d-app"></span>Application — scenetest</span>
+    <span class="tag"><span class="dot d-build"></span>Build — WS-on-DO transport &amp; server</span>
+    <span class="tag"><span class="dot d-app"></span>Userspace</span>
   </div>
 
   <div class="grid">
-    <!-- STACK -->
     <div class="stack">
 
       <div class="layer L-app">
-        <div class="top"><h3>① Application — scenetest</h3><span class="pill">your app</span></div>
-        <div class="where">dashboard · <code>useLiveQuery</code> · Waterfall / Runner</div>
-        <p>Reads materialized current truth reactively. Knows nothing about the wire. Just an application of the tech below.</p>
+        <div class="top"><h3>① Userspace — the client application</h3><span class="pill">your code</span></div>
+        <div class="where">components that <b>define &amp; query</b> TanStack DB collections · <code>useLiveQuery</code></div>
+        <p>Reads materialized current truth reactively. Generic — scenetest is just one such consumer. Knows nothing below this line.</p>
       </div>
-      <div class="arrow"><div class="arrowline"></div><span>useLiveQuery</span></div>
+      <div class="arrow"><div class="arrowline"></div><span>createCollection(…)</span></div>
 
       <div class="layer L-build">
-        <div class="top"><h3>② <code>createTransportDB(config, collectionConfigs)</code></h3><span class="pill">build · your shape</span></div>
-        <div class="where">one connection → fan-out → N collections → returns <code>{ db }</code> map</div>
-        <p>Your ergonomic facade. Picks the transport, opens <strong>one</strong> connection, fans it out, applies an <strong>optional thin projection</strong> per collection, hands back a map of live collections. You like this shape better than Electric's — so you keep it and wrap their client.</p>
+        <div class="top"><h3>② <code>durableStreamCollectionOptions(config)</code></h3><span class="pill">build · conforms to convention</span></div>
+        <div class="where">a collection-options factory → <code>CollectionConfig</code> with <code>sync:{ begin / write / commit }</code></div>
+        <p>The integration primitive — <b>not</b> a facade, not StreamDB. Same shape as the two that already ship; <b>yours is the simplest</b> (read-only replica: no <code>onInsert/Update/Delete</code>, no txid/await-match, no diff triggers — just stream → write).</p>
+        <div class="family">
+          <span class="chip have"><b>electricCollectionOptions</b> · ShapeStream/HTTP</span>
+          <span class="chip have"><b>powerSyncCollectionOptions</b> · local SQLite + triggers</span>
+          <span class="chip you"><b>durableStreamCollectionOptions</b> · you</span>
+        </div>
       </div>
-      <div class="arrow"><div class="arrowline"></div><span>collection map</span></div>
-
-      <div class="layer L-adopt">
-        <div class="top"><h3>③ State Protocol — materialization</h3><span class="pill">adopt as-is</span></div>
-        <div class="where"><code>@durable-streams/state</code> → TanStack DB <code>sync: begin/write/commit</code></div>
-        <p>Ordered offset-tagged bytes → <code>insert / update / delete</code> → materialized rows. <strong>Transport-agnostic by nature</strong> — it doesn't care how bytes arrived. This is the part you do <em>not</em> fork.</p>
-      </div>
-      <div class="arrow"><div class="arrowline"></div><span>ordered (offset, bytes)</span></div>
+      <div class="arrow"><div class="arrowline"></div><span>subscribe(msgs ⇒ …)</span></div>
 
       <div class="layer L-contrib">
-        <div class="top"><h3>④ Client reader — the transport seam</h3><span class="pill">contribute upstream</span></div>
-        <div class="where">today: hardwired HTTP GET + SSE/long-poll &nbsp;·&nbsp; goal: pluggable</div>
-        <p>The <strong>only</strong> spot that needs changing. Factor the reader so the live-tail transport is swappable. Upstream PR first; a thin fork of <em>just the reader</em> is the fallback — never the State layer above.</p>
+        <div class="top"><h3>③ Stream client &nbsp;<span style="color:var(--dim);font-weight:400;font-size:12px">(the <code>ShapeStream</code> analogue)</span></h3><span class="pill">adopt + transport seam</span></div>
+        <div class="where">ordered <code>(offset, change|control)</code> messages · persists resume <code>offset</code>+<code>handle</code> · <code>must-refetch ⇒ truncate</code></div>
+        <p>This is where the transport lives — and the <b>only</b> spot to change. Factor the live-tail transport so it's swappable. Layer ② above never notices.</p>
       </div>
-      <div class="arrow"><div class="arrowline"></div><span>same offset / control events</span></div>
+      <div class="arrow"><div class="arrowline"></div><span>same offset / control framing</span></div>
 
       <div class="layer L-build">
-        <div class="top"><h3>⑤ Live-tail transport</h3><span class="pill">SSE = adopt · WS = build</span></div>
-        <div class="where">identical <code>streamNextOffset · streamCursor · upToDate · streamClosed</code> framing</div>
+        <div class="top"><h3>④ Live-tail transport</h3><span class="pill">SSE = adopt · WS = build</span></div>
         <div class="split">
-          <div class="mini sse">
-            <span class="badge">spec default</span>
-            <h4>SSE / long-poll</h4>
-            <p>HTTP-native, CDN-friendly, stateless, request-collapsing. The protocol's whole thesis.</p>
-          </div>
-          <div class="mini ws">
-            <span class="badge">your contribution</span>
-            <h4>Hibernating WS (partysocket)</h4>
-            <p>Better <em>on Cloudflare</em>: no wall-clock cost while idle, survives DO eviction, cheap to hold many.</p>
-          </div>
+          <div class="mini sse"><span class="badge">spec default</span><h4>SSE / long-poll</h4>
+            <p>HTTP-native, CDN-friendly, stateless, request-collapsing. The protocol's thesis.</p></div>
+          <div class="mini ws"><span class="badge">your contribution</span><h4>Hibernating WS · partysocket</h4>
+            <p>Wins <em>on Cloudflare</em>: no wall-clock cost idle, survives DO eviction, cheap to hold many.</p></div>
         </div>
       </div>
       <div class="arrow"><div class="arrowline"></div><span>GET ?offset=X · tail · resume</span></div>
 
       <div class="layer L-adopt">
-        <div class="top"><h3>⑥ Durable log — offset-addressable</h3><span class="pill">adopt · storage-agnostic</span></div>
+        <div class="top"><h3>⑤ Durable log — offset-addressable</h3><span class="pill">adopt as-is</span></div>
         <div class="where">append-only · opaque lexicographic offsets · <code>Stream-Next-Offset</code> · idempotent producers</div>
-        <p>Catch-up (<code>?offset=X</code>), live tail, resume-on-reconnect from last offset — already solved. Storage unspecified by the spec.</p>
+        <p>Catch-up (<code>?offset=X</code>), live tail, resume-from-last-offset — already solved. Storage unspecified by the spec.</p>
       </div>
       <div class="arrow"><div class="arrowline"></div><span>persisted on</span></div>
 
       <div class="layer L-build">
-        <div class="top"><h3>⑦ Cloudflare Durable Object server</h3><span class="pill">build · DO server</span></div>
-        <div class="where">DO SQLite / R2 as the log · hibernating-WS tail endpoint · Hono / receiver</div>
-        <p>A Durable-Streams-compliant server on a DO. Ingest = your <code>@scenetest/receiver</code> events (the <code>.jsonl</code> sink, but durable). Reference Workers+DO+R2 servers already exist — you add the hibernating-WS tail.</p>
+        <div class="top"><h3>⑥ Cloudflare Durable Object server</h3><span class="pill">build · DO server</span></div>
+        <div class="where">DO SQLite / R2 as the log · hibernating-WS tail endpoint · ingest = <code>@scenetest/receiver</code></div>
+        <p>A Durable-Streams-compliant server on a DO. Well-trodden ground — <b>PowerSync already runs on a DO</b>, and reference Workers+DO+R2 stream servers exist. You add the hibernating-WS tail.</p>
       </div>
 
     </div>
 
-    <!-- SIDE -->
     <aside class="side">
-      <div class="card jsonl">
-        <h3>The mental model</h3>
-        <div class="jsonl-log">
-<span class="off">0042</span> {"type":"scene:start", …}<br>
-<span class="off">0043</span> {"type":"assertion", …}<br>
-<span class="off">0044</span> {"type":"scene:end", …}<br>
-<span class="off">0045</span> ▌<span style="color:#4b86c4">&lt;tail&gt;</span>
-        </div>
-        <p><strong>offset = line number.</strong> A file you <code>tail -f</code> and a live socket are the <em>same log</em> — only durability &amp; liveness differ. "Catch me up from X→Y" is just "read lines X→Y".</p>
+      <div class="card fork">
+        <h3>“Is ② a StreamDB?”</h3>
+        <div class="row"><span class="k no">StreamDB</span><span>Their <b>own</b> reactive DB on the State Protocol — a <b>sibling to TanStack DB</b>. A fork in the road, not a layer. On the TanStack path you don't use it.</span></div>
+        <div class="row"><span class="k yes">②&nbsp;factory</span><span>The TanStack integration: a <code>*CollectionOptions</code> function. This is what replaces the old facade.</span></div>
       </div>
 
       <div class="card">
-        <h3>What you do / don't touch</h3>
-        <p><span style="color:var(--adopt)">●</span> <strong>Adopt:</strong> log, offsets, resume, State→collections.</p>
-        <p><span style="color:var(--contrib)">●</span> <strong>Contribute:</strong> a pluggable transport seam in the client reader.</p>
-        <p><span style="color:var(--build)">●</span> <strong>Build:</strong> the hibernating-WS DO transport + server, and your <code>createTransportDB</code> facade.</p>
+        <h3>Why this shape</h3>
+        <p>Maintainers already maintain two of these. A third that <em>conforms to the same convention</em> and is the <b>simplest of the three</b> (read-only) is a small, legible ask — not a new abstraction.</p>
       </div>
 
       <div class="card warn">
         <h3>Honest tradeoff</h3>
-        <p>A WS tail <strong>gives up</strong> CDN-cacheability &amp; request-collapsing — each socket is a stateful upstream. So pitch it as a <strong>Cloudflare deployment transport</strong>, not a protocol-core change. You're not fighting their thesis; you're adding the one transport that wins where statelessness doesn't.</p>
+        <p>A WS tail <b>gives up</b> CDN-cacheability &amp; request-collapsing — each socket is stateful upstream. Pitch it as a <b>Cloudflare deployment transport</b>, not a protocol-core change.</p>
       </div>
 
       <div class="card">
         <h3>Decisive unknown</h3>
-        <p>How factored is the client reader <em>today</em>? That single fact = <strong>upstream PR</strong> vs <strong>thin fork</strong>. Next step: read <code>@durable-streams/state</code> + client source, locate the seam.</p>
+        <p>How factored is the stream client's transport <em>today</em>? That single fact = <b>upstream PR</b> vs <b>thin fork of the client</b> (never ②). Next: read the <code>@durable-streams</code> client source, find the seam.</p>
       </div>
     </aside>
   </div>
 
-  <p class="foot">scenetest is just one consumer (①). Everything ②–⑦ is a reusable <code>server-to-collection</code> primitive: tell the server what to replicate &amp; how to publish; the client figures out the transport, materializes N collections, hands back a map.</p>
+  <p class="foot">Read top→bottom: data flows <b>up</b> from the log; you depend <b>down</b>. Green is almost everything. The new surface is one transport (⑥/④) and, if upstream won't take the seam, a thin client fork (③) — plus a factory (②) that merely conforms to an existing TanStack convention.</p>
 </div>
 </body>
 </html>
