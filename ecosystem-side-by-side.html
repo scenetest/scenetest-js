@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Side by side — PartyKit vs Durable vs Ours, per step</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#0e141b; --ink:#e6edf3; --dim:#9aa7b4;
+    --line:#30363d; --accent:#58a6ff;
+    --party:#f778ba; --party-br:#8a4a6b;
+    --dur:#b88bff; --dur-br:#4a3a6b;
+    --ours:#39c5cf; --ours-br:#266b70;
+    --have:#2ea043; --part:#d29922; --none:#3a434d;
+    --swap:#d29922;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#13202e,var(--bg));
+    color:var(--ink);font-family:var(--sans);line-height:1.4;padding:28px 18px 50px}
+  .wrap{max-width:1160px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 14px;max-width:860px}
+  .sub code{font-family:var(--mono);color:var(--accent)}
+  .key{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:11.5px;color:var(--dim)}
+  .key span{display:inline-flex;align-items:center;gap:6px}
+  .ic{width:15px;text-align:center;font-weight:800}
+  .ic.h{color:var(--have)} .ic.p{color:var(--part)} .ic.n{color:var(--none)}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+  th,td{padding:7px 9px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  thead th{position:sticky;top:0;background:var(--panel);z-index:2;font-size:11px;letter-spacing:.3px}
+  thead th.s{color:var(--dim)}
+  thead th.party{color:var(--party)} thead th.dur{color:var(--dur)} thead th.ours{color:var(--ours)}
+  thead th .pkg{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);font-weight:400;margin-top:1px}
+  col.cstep{width:23%} col.ceco{width:25.6%}
+  th.party,td.party{background:rgba(247,120,186,.05)}
+  th.dur,td.dur{background:rgba(184,139,255,.05)}
+  th.ours,td.ours{background:rgba(57,197,207,.05)}
+
+  td.step{font-weight:600}
+  td.step .nm{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-right:6px}
+  td.step .lyr{float:right;font-family:var(--mono);font-size:9px;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+  .cell{display:flex;gap:7px;align-items:flex-start}
+  .cell .ic{flex:none;font-size:13px;line-height:1.3}
+  .cell .ic.h{color:var(--have)} .cell .ic.p{color:var(--part)} .cell .ic.n{color:var(--none)}
+  .cell .tx{font-size:11.5px}
+  .cell .tx code{font-family:var(--mono);color:var(--accent);font-size:10.5px}
+  .cell.no .tx{color:var(--none)}
+
+  tr.wire td{background:linear-gradient(90deg,transparent,rgba(210,153,34,.12),transparent);
+    text-align:center;font-family:var(--mono);font-size:10px;color:var(--swap);padding:5px;letter-spacing:.5px}
+  tr.swap td.step .lyr{color:var(--swap);border-color:var(--swap)}
+
+  tfoot td{border-top:2px solid var(--line);border-bottom:none;font-size:11.5px;padding-top:10px}
+  tfoot .owns{font-weight:700;margin-bottom:3px}
+  tfoot td.party .owns{color:var(--party)} tfoot td.dur .owns{color:var(--dur)} tfoot td.ours .owns{color:var(--ours)}
+  tfoot td span{color:var(--dim)}
+
+  .takeaways{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:18px}
+  @media (max-width:820px){.takeaways{grid-template-columns:1fr}}
+  .ta{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--panel)}
+  .ta.a{border-color:var(--ours-br)} .ta.b{border-color:var(--dur-br)} .ta.c{border-color:var(--swap)}
+  .ta h3{margin:0 0 6px;font-size:12.5px}
+  .ta.a h3{color:var(--ours)} .ta.b h3{color:var(--dur)} .ta.c h3{color:var(--swap)}
+  .ta p{margin:0;font-size:12px;color:var(--dim)} .ta p b{color:var(--ink)}
+  .ta code{font-family:var(--mono);color:var(--accent);font-size:10.5px}
+  .foot{margin-top:16px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+  .foot b{color:var(--ink)} .foot code{font-family:var(--mono);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Per-step side-by-side — where each ecosystem has an implementation</h1>
+  <p class="sub">The 15 steps × three columns: <b>(a) PartyKit</b>, <b>(b) Durable Streams / State</b>, <b>(c) ours, already in existence</b>. The reveal: PartyKit owns only the <span style="color:var(--swap)">pipe (5–8)</span>; Durable owns nearly everything else; ours already spans the whole thing via SSE. They're <b>complementary</b>, not competing.</p>
+
+  <div class="key">
+    <span><span class="ic h">●</span> has it</span>
+    <span><span class="ic p">◐</span> partial / substrate only</span>
+    <span><span class="ic n">○</span> not its concern</span>
+  </div>
+
+  <table>
+    <colgroup><col class="cstep"><col class="ceco"><col class="ceco"><col class="ceco"></colgroup>
+    <thead><tr>
+      <th class="s">Step</th>
+      <th class="party">a · PartyKit<span class="pkg">partyserver · partysocket</span></th>
+      <th class="dur">b · Durable Streams / State<span class="pkg">@durable-streams/* · StreamDB</span></th>
+      <th class="ours">c · Ours (exists)<span class="pkg">@scenetest/*</span></th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td class="step"><span class="nm">1</span>Change capture<span class="lyr">L1</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">app logic on the runtime</span></div></td>
+        <td class="dur"><div class="cell no"><span class="ic n">○</span><span class="tx">app appends to the stream</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>@scenetest/receiver</code></span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">2</span>Verb encode<span class="lyr">L2</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">message-agnostic</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx"><code>@durable-streams/state</code> — the State Protocol</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>RowOp</code> + projections</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">3</span>Durable log + offset<span class="lyr">L3a</span></td>
+        <td class="party"><div class="cell"><span class="ic p">◐</span><span class="tx">DO SQLite/R2 <em>substrate</em></span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">Durable Streams server / log</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic p">◐</span><span class="tx"><code>JsonlSink</code> (append, no offset read)</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">4</span>Catch-up read (from offset)<span class="lyr">L3a</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">—</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx"><code>GET ?offset=X</code></span></div></td>
+        <td class="ours"><div class="cell"><span class="ic p">◐</span><span class="tx">run reports + SSE replay buffer</span></div></td>
+      </tr>
+
+      <tr class="swap">
+        <td class="step"><span class="nm">5</span>Live fan-out<span class="lyr">L3b</span></td>
+        <td class="party"><div class="cell"><span class="ic h">●</span><span class="tx">partyserver broadcast</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">server live tail (multi-reader)</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">SSE <code>EventHub</code></span></div></td>
+      </tr>
+      <tr class="swap">
+        <td class="step"><span class="nm">6</span>Wire framing<span class="lyr">L3b</span></td>
+        <td class="party"><div class="cell"><span class="ic h">●</span><span class="tx">partyserver send (WS)</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">SSE data/control framing</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">SSE writer (protocol events)</span></div></td>
+      </tr>
+      <tr class="swap">
+        <td class="step"><span class="nm">7</span>Connection · hibernation · auth<span class="lyr">L3b</span></td>
+        <td class="party"><div class="cell"><span class="ic h">●</span><span class="tx">partyserver — hibernating DO</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">stateless HTTP server</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">Vite middleware / our DO impl</span></div></td>
+      </tr>
+
+      <tr class="wire"><td colspan="4">⇅ THE WIRE — SSE ⇄ WS — only steps 5–9 cross it</td></tr>
+
+      <tr class="swap">
+        <td class="step"><span class="nm">8</span>Connect + reconnect<span class="lyr">L3b</span></td>
+        <td class="party"><div class="cell"><span class="ic h">●</span><span class="tx">partysocket (WS)</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx"><code>@durable-streams/client</code></span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>createDevTransport</code> (EventSource)</span></div></td>
+      </tr>
+      <tr class="swap">
+        <td class="step"><span class="nm">9</span>Deframe / decode<span class="lyr">L3b</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">raw messages — you decode</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">client <code>parseSSEStream</code></span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">onmessage + <code>isEventShaped</code></span></div></td>
+      </tr>
+
+      <tr>
+        <td class="step"><span class="nm">10</span>Offset track / resume<span class="lyr">L3a</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">reconnect only, no replay</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">client offset + handle resume</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic p">◐</span><span class="tx">session buffer (no cross-reconnect offset)</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">11</span>Transport boundary (subscribe)<span class="lyr">L3c</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">raw socket</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">client <code>stream()/.subscribe*</code></span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>Transport</code> interface</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">12</span>Fan-out → collections<span class="lyr">L3c</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">—</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">StreamDB multiplex (route by type)</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>createRunSource</code> + projection/attribution</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">13</span>Verb apply<span class="lyr">L2</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">—</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">StreamDB sync</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx"><code>runCollectionOptions.sync()</code></span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">14</span>Schema validate + store<span class="lyr">L1</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">—</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">StreamDB schema → TanStack DB</span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">row types → TanStack DB</span></div></td>
+      </tr>
+      <tr>
+        <td class="step"><span class="nm">15</span>Reactive query<span class="lyr">L1</span></td>
+        <td class="party"><div class="cell no"><span class="ic n">○</span><span class="tx">—</span></div></td>
+        <td class="dur"><div class="cell"><span class="ic h">●</span><span class="tx">TanStack DB <code>useLiveQuery</code></span></div></td>
+        <td class="ours"><div class="cell"><span class="ic h">●</span><span class="tx">TanStack DB <code>useLiveQuery</code></span></div></td>
+      </tr>
+    </tbody>
+    <tfoot><tr>
+      <td>columns, summarized →</td>
+      <td class="party"><div class="owns">the pipe · 5–8</div><span>connection, fan-out, framing, hibernation. Nothing above or below.</span></td>
+      <td class="dur"><div class="owns">all-but-pipe · 2–4, 9–15</div><span>verbs, log, offset, client, multiplex, materialize, schema. (Its pipe is HTTP/SSE only.)</span></td>
+      <td class="ours"><div class="owns">full path via SSE</div><span>with gaps: no WS pipe (5–8), partial offset (10) &amp; offset-read (3·4).</span></td>
+    </tr></tfoot>
+  </table>
+
+  <div class="takeaways">
+    <div class="ta a">
+      <h3>Path A reads as…</h3>
+      <p>The <b>ours</b> column, top to bottom — <code>+</code> borrow PartyKit's <b>5–8</b> for the WS pipe. We already have everything else (via SSE).</p>
+    </div>
+    <div class="ta b">
+      <h3>Path B reads as…</h3>
+      <p>The <b>Durable</b> column for <b>2–15</b> (its HTTP/SSE pipe included). You'd ride their releases; <b>no WS / hibernation</b>.</p>
+    </div>
+    <div class="ta c">
+      <h3>Path C reads as…</h3>
+      <p>PartyKit's <b>5–8</b> <code>+</code> Durable's <b>2–4, 9–15</b>. Clean precisely because the two columns <b>don't overlap</b> — each used only where it's strongest.</p>
+    </div>
+  </div>
+
+  <p class="foot"><b>Correctness fix confirmed:</b> if you adopt Durable State at step 2, the durable ecosystem also owns <b>9·10·11·12·13</b> (decode → resume → normalize → fan-out → apply) — StreamDB multiplexes one stream into many collections and joins from any offset. My earlier "your noun" tags on 11–12 were Path-A-only. The deeper point: <b>PartyKit ⟂ Durable</b> (they barely touch), and <b>ours already overlaps both</b> through the SSE path — so the only thing we lack outright is the <span style="color:var(--swap)">WS pipe (5–8)</span>, which is exactly the one band PartyKit hands us.</p>
+</div>
+</body>
+</html>
