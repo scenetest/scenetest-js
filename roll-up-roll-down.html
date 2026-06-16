@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roll-up / roll-down — the three format layers</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#0e141b; --ink:#e6edf3; --dim:#9aa7b4;
+    --line:#30363d; --accent:#58a6ff;
+    --l1:#58a6ff; --l1-bg:#0d1f33; --l1-br:#1f4f86;   /* row / schema */
+    --l2:#2ea043; --l2-bg:#0f2417; --l2-br:#1f6f37;   /* verb / op */
+    --l3:#d29922; --l3-bg:#241c08; --l3-br:#8a6d1c;   /* wire */
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#13202e,var(--bg));
+    color:var(--ink);font-family:var(--sans);line-height:1.5;padding:30px 20px 52px}
+  .wrap{max-width:1120px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--dim);font-size:13.5px;margin:0 0 16px;max-width:820px}
+  .sub code{font-family:var(--mono);color:var(--accent)}
+
+  .note{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:var(--dim)}
+  .note b{color:var(--ink)} .note code{font-family:var(--mono);color:var(--accent);font-size:11.5px}
+  .tg{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;padding:2px 6px;border-radius:5px;vertical-align:middle}
+  .tg.build{color:var(--accent);border:1px solid var(--l1-br)}
+  .tg.use{color:var(--l2);border:1px solid var(--l2-br)}
+  .tg.app{color:var(--dim);border:1px solid var(--line)}
+
+  .colhead{display:grid;grid-template-columns:182px 1fr 1fr;gap:0 14px;margin-bottom:6px}
+  .colhead div{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .colhead .s{color:var(--l2)} .colhead .c{color:var(--l1)}
+
+  .matrix{display:grid;grid-template-columns:182px 1fr 1fr;gap:9px 14px;align-items:stretch}
+  .lab{border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
+  .lab.L1{background:linear-gradient(var(--l1-bg),transparent);border-color:var(--l1-br)}
+  .lab.L2{background:linear-gradient(var(--l2-bg),transparent);border-color:var(--l2-br)}
+  .lab.L3{background:linear-gradient(var(--l3-bg),transparent);border-color:var(--l3-br)}
+  .lab .n{font-weight:700;font-size:13px}
+  .lab.L1 .n{color:var(--l1)} .lab.L2 .n{color:var(--l2)} .lab.L3 .n{color:var(--l3)}
+  .lab .by{font-size:10.5px;color:var(--dim);margin-top:3px}
+  .lab .by b{color:var(--ink)}
+
+  .cell{border-radius:10px;padding:10px 12px;border:1px solid var(--line);background:var(--panel)}
+  .cell.L1{border-left:3px solid var(--l1)} .cell.L2{border-left:3px solid var(--l2)} .cell.L3{border-left:3px solid var(--l3)}
+  .cell .t{font-size:12.5px;font-weight:600}
+  .cell .d{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:2px}
+  .cell.you{box-shadow:inset 0 0 0 1px rgba(88,166,255,.35)}
+  .cell .mk{float:right;font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.3px}
+  .cell.you .mk{color:var(--accent)} .cell.use .mk{color:var(--l2)}
+
+  .arrow{grid-column:2 / 4;display:grid;grid-template-columns:1fr 1fr;gap:0 14px;height:20px;margin:-3px 0}
+  .arrow .up,.arrow .dn{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  .arrow .dn{justify-content:flex-start;color:var(--l2)}
+  .arrow .up{justify-content:flex-end;color:var(--l1)}
+
+  .wire{margin-top:12px;border:1px solid var(--l3-br);border-radius:12px;
+    background:linear-gradient(180deg,var(--l3-bg),var(--panel));padding:12px 16px}
+  .wire .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .wire h3{margin:0;font-size:13px;color:var(--l3)}
+  .wire .top .sm{font-size:11px;color:var(--dim)}
+  .wire .opts{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .opt{border:1px dashed var(--line);border-radius:8px;padding:7px 11px;background:var(--panel2);font-size:11.5px}
+  .opt b{color:var(--ink)} .opt code{font-family:var(--mono);color:var(--accent);font-size:10.5px}
+  .opt.sse{border-color:var(--l1-br)} .opt.ws{border-color:var(--l3-br)}
+  .wire .only{margin-top:9px;font-size:12px;color:var(--l3)}
+  .wire .only b{color:var(--ink)}
+  .flowrow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:4px}
+  .flowrow .l{color:var(--l2)} .flowrow .r{color:var(--l1)}
+
+  /* ownership table */
+  .own{margin-top:20px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .own .oh{padding:10px 15px;border-bottom:1px solid var(--line);background:var(--panel);font-size:12.5px;color:var(--dim)}
+  .own .oh b{color:var(--ink)}
+  .own table{width:100%;border-collapse:collapse;font-size:12px}
+  .own th,.own td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  .own th{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim);font-weight:600;background:var(--panel2)}
+  .own td:first-child{font-weight:700}
+  .own .pa{color:var(--l2)} .own .pb{color:#b88bff} .own .pc{color:var(--l3)}
+  .own code{font-family:var(--mono);color:var(--accent);font-size:10.5px}
+  .own .h1c{color:var(--l1)} .own .h2c{color:var(--l2)} .own .h3c{color:var(--l3)}
+  .own .yours{color:var(--accent);font-weight:600}
+
+  .foot{margin-top:18px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:13px}
+  .foot code{font-family:var(--mono);color:var(--accent)} .foot b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Roll-up · roll-down — three format layers, two sides</h1>
+  <p class="sub">The server <b>rolls rows up</b> into verb-envelopes and frames them onto a wire; the client <b>unrolls them down</b> back into schema-validated rows. Three layers, mirrored. <code>SSE ⇄ WS</code> only swaps the bottom one.</p>
+
+  <div class="note">
+    <b>What you build = the two adapters</b>, not the libraries. <span class="tg build">BUILD</span> = your glue · <span class="tg use">USE</span> = existing lib (partysocket, EventSource, TanStack DB — you already have these) · <span class="tg app">APP</span> = userspace schema. partysocket/partyserver/TanStack DB are <b>used</b>, never rebuilt.
+  </div>
+
+  <div class="colhead">
+    <div></div><div class="s">▼ server — roll up</div><div class="c">▲ client — roll down</div>
+  </div>
+
+  <div class="matrix">
+    <!-- L1 -->
+    <div class="lab L1"><div class="n">L1 · Row / schema</div><div class="by">dictated by <b>userspace</b> — schemas &amp; types</div></div>
+    <div class="cell L1"><span class="mk">APP</span><div class="t">rows</div><div class="d">the records, as your types define them</div></div>
+    <div class="cell L1 use"><span class="mk">USE</span><div class="t">validate → insert</div><div class="d">TanStack DB checks the schema, materializes</div></div>
+
+    <div class="arrow"><div class="dn">▼ wrap each row with a verb</div><div class="up">schema-checked rows ▲</div></div>
+
+    <!-- L2 -->
+    <div class="lab L2"><div class="n">L2 · Verb / op</div><div class="by">dictated by <b>the state spec</b> — your RowOp · or <code style="color:var(--l2)">@durable-streams/state</code></div></div>
+    <div class="cell L2 you"><span class="mk">BUILD</span><div class="t">wrap verbs + batch</div><div class="d">insert / update / delete envelopes</div></div>
+    <div class="cell L2 you"><span class="mk">BUILD</span><div class="t">unwrap → sync pile</div><div class="d">begin / write / commit</div></div>
+
+    <div class="arrow"><div class="dn">▼ frame + offset onto the wire</div><div class="up">verb-envelopes ▲</div></div>
+
+    <!-- L3 -->
+    <div class="lab L3"><div class="n">L3 · Wire / stream</div><div class="by">dictated by <b>the wire spec</b> — your envelope + partysocket · or <code style="color:var(--l3)">@durable-streams/client</code></div></div>
+    <div class="cell L3 you"><span class="mk">BUILD</span><div class="t">server emitter</div><div class="d">batch · frame · (offset/resume = optional)</div></div>
+    <div class="cell L3 you"><span class="mk">BUILD</span><div class="t">Transport adapter</div><div class="d">decode frames → onEvent()</div></div>
+  </div>
+
+  <!-- the wire -->
+  <div class="wire">
+    <div class="top">
+      <h3>⇅ THE WIRE — this is all that SSE-vs-WS changes</h3>
+      <span class="sm">L3 connection half · the offset/resume half is a separate, deferrable feature</span>
+    </div>
+    <div class="opts">
+      <div class="opt sse"><b>SSE</b> · EventSource <span class="tg use">USE</span> — dev server today (“partysse”)</div>
+      <div class="opt ws"><b>WS</b> · partysocket <span class="tg use">USE</span> ↔ partyserver — prod, hibernating on a DO</div>
+    </div>
+    <div class="flowrow"><span class="l">server emits ↓ into the wire</span><span class="r">↑ client reads from the wire</span></div>
+    <div class="only">Both carry the <b>identical</b> protocol envelope (your “jsonl line”). Swap the wire → <b>L1 and L2 never move</b>; nothing above the <code style="color:var(--accent)">Transport</code> line notices.</div>
+  </div>
+
+  <!-- ownership across paths -->
+  <div class="own">
+    <div class="oh">Same three layers, three paths — <b>“at which layer do you switch from your spec to theirs?”</b></div>
+    <table>
+      <thead><tr>
+        <th>Path</th>
+        <th class="h1c">L1 · row/schema</th>
+        <th class="h2c">L2 · verb/state</th>
+        <th class="h3c">L3 · wire/transport</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="pa">A · native ▶</td>
+          <td class="yours">your types</td>
+          <td class="yours">your RowOp projection</td>
+          <td class="yours">your envelope + partysocket / SSE <span style="color:var(--dim)">(no offsets v1)</span></td>
+        </tr>
+        <tr>
+          <td class="pb">B · DS lib</td>
+          <td>StreamDB StandardSchema</td>
+          <td><code>@durable-streams/state</code></td>
+          <td><code>@durable-streams/client</code> <span style="color:var(--dim)">(HTTP/SSE, offsets)</span></td>
+        </tr>
+        <tr>
+          <td class="pc">C · bridge</td>
+          <td>StreamDB schema</td>
+          <td><code>@durable-streams/state</code></td>
+          <td class="yours">partyserver WS + partysocket-as-their-transport</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="foot">Read it as a <b>U</b>: down the server (rows → verbs → wire), across the wire, up the client (wire → verbs → rows). The <span style="color:var(--accent)">two BUILD cells per side</span> are the only glue you write — the emitter and the Transport adapter at L2/L3. <b>Path A = own all three layers</b>; B swaps all three for theirs; C keeps your L3 socket but adopts their L1+L2. The path choice is purely <em>how far down the stack your spec reaches</em>.</p>
+</div>
+</body>
+</html>
