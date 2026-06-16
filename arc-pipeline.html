@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The arc — roll up · cross the wire · roll down</title>
+<title>The arc — append-only facts up · projection down</title>
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#0e141b; --ink:#e6edf3; --dim:#9aa7b4;
@@ -21,14 +21,13 @@
     color:var(--ink);font-family:var(--sans);line-height:1.4;padding:28px 18px 50px}
   .wrap{max-width:1080px;margin:0 auto}
   h1{font-size:21px;margin:0 0 4px;letter-spacing:-.3px}
-  .sub{color:var(--dim);font-size:12.5px;margin:0 0 16px;max-width:880px}
-  .sub code{font-family:var(--mono);color:var(--accent)}
+  .sub{color:var(--dim);font-size:12.5px;margin:0 0 16px;max-width:900px}
+  .sub code{font-family:var(--mono);color:var(--accent)} .sub b{color:var(--ink)}
   .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-size:11px}
   .lg{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 9px;color:var(--dim)}
   .sw{width:10px;height:10px;border-radius:3px;flex:none}
   .sw.d{background:var(--ours)} .sw.c{background:var(--cloud)} .sw.i{background:var(--iface)} .sw.s{background:var(--shared)}
 
-  /* apex / keystone */
   .keystone{border:1px solid var(--iface-br);border-radius:14px 14px 6px 6px;
     background:linear-gradient(180deg,#241c08,var(--panel));padding:11px 16px}
   .keystone .kt{font-size:12.5px;font-weight:800;color:var(--iface);letter-spacing:.3px;text-align:center}
@@ -40,13 +39,11 @@
   .wbox b{font-size:11.5px} .wbox.dev b{color:var(--ours)} .wbox.cloud b{color:var(--cloud)}
   .wbox .m{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
 
-  /* divergence line */
   .diverge{display:flex;align-items:center;gap:10px;margin:13px 2px 7px}
   .diverge .ln{flex:1;height:0;border-top:2px dashed var(--cloud)}
   .diverge .tx{font-size:10.5px;font-family:var(--mono);color:var(--cloud);white-space:nowrap}
 
-  /* legs */
-  .legs{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:start}
+  .legs{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:stretch}
   @media (max-width:760px){.legs{grid-template-columns:1fr;gap:14px}}
   .leg{display:flex;flex-direction:column}
   .leg.left{text-align:right} .leg.right{text-align:left}
@@ -58,22 +55,31 @@
   .node .impl{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
   .node .impl .ok{color:var(--ours)} .node .impl .pend{color:var(--cloud)}
   .node .opt{font-family:var(--mono);font-size:9.5px;margin-top:3px;color:var(--dur)}
+  .node .warn{font-family:var(--mono);font-size:9.5px;margin-top:3px;color:var(--iface)}
   .node.wirenode{border-color:var(--cloud-br);background:linear-gradient(180deg,rgba(240,136,62,.06),var(--panel))}
-  .node.shared{border-color:var(--shared-br);background:linear-gradient(180deg,#0f2417,var(--panel))}
-  .node.shared .t{color:var(--shared)}
   .node.iface{border-color:var(--iface-br);box-shadow:0 0 16px -6px var(--iface)}
   .node.iface .t{color:var(--iface)}
+  .node.proj{border-color:var(--iface-br)}
 
-  /* interface contracts — un-boxed labels between nodes */
+  /* green application feet */
+  .foot-green{border:1.5px solid var(--shared-br);border-radius:10px;
+    background:linear-gradient(180deg,#0f2417,var(--panel));padding:10px 12px;margin-top:auto}
+  .foot-green .t{font-size:12.5px;font-weight:700;color:var(--shared)}
+  .foot-green .d{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
+  .foot-green .ab{font-family:var(--mono);font-size:9px;font-weight:800;color:var(--shared);letter-spacing:.5px}
+  .leg.left .foot-green .ab{float:left} .leg.right .foot-green .ab{float:right}
+
   .conn{font-family:var(--mono);font-size:9.5px;color:var(--iface);margin:5px 0}
   .conn small{color:var(--dim)}
   .leg.left .conn::after{content:" ↑"} .leg.right .conn::before{content:"↓ "}
+  .conn.fact{color:var(--shared)}
 
-  .ground{border:1px dashed var(--line);border-radius:9px;padding:7px 11px;background:var(--panel2);margin-top:7px}
-  .ground .t{font-size:11.5px;font-weight:600;color:var(--ink)}
-  .ground .d{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:1px}
+  /* A↔B tie under the feet */
+  .tie{margin-top:9px;border:1px dashed var(--shared-br);border-radius:9px;background:rgba(46,160,67,.06);
+    padding:8px 13px;text-align:center;font-size:11.5px;color:var(--shared)}
+  .tie b{color:var(--ink)} .tie code{font-family:var(--mono);color:var(--accent);font-size:10.5px}
 
-  .answers{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .answers{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
   @media (max-width:760px){.answers{grid-template-columns:1fr}}
   .ans{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:11px 13px}
   .ans h3{margin:0 0 5px;font-size:12px;color:var(--accent)}
@@ -81,110 +87,106 @@
   .ans p{margin:6px 0 0;font-size:11.5px;color:var(--dim)} .ans p:first-of-type{margin-top:0}
   .ans code{font-family:var(--mono);color:var(--accent);font-size:10.5px} .ans b{color:var(--ink)}
 
-  .foot{margin-top:16px;color:var(--dim);font-size:11.5px;border-top:1px solid var(--line);padding-top:12px}
+  .foot{margin-top:15px;color:var(--dim);font-size:11.5px;border-top:1px solid var(--line);padding-top:12px}
   .foot b{color:var(--ink)} .foot code{font-family:var(--mono);color:var(--accent)}
-  .foot .i{color:var(--iface)} .foot .c{color:var(--cloud)}
+  .foot .i{color:var(--iface)} .foot .c{color:var(--cloud)} .foot .g{color:var(--shared)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>The arc — info rolls <span style="color:var(--ours)">up</span> the test side, crosses the wire, rolls <span style="color:var(--ours)">down</span> to the dashboard</h1>
-  <p class="sub">Same lingo on both legs. Un-boxed <span style="color:var(--iface)">interface contracts</span> (ENVELOPE · OP · ROW) connect the boxes — they're the real spec; the boxes are just impls. <b>The keystone <em>and its two carriers</em> are the only dev/cloud difference.</b> Everything below the dashed line is shared, wire-blind, and built.</p>
+  <h1>The arc — <span style="color:var(--shared)">append-only facts</span> up · <span style="color:var(--iface)">projection</span> down</h1>
+  <p class="sub">The wire is <b>append-only facts</b> — no verbs, ever. <b>insert/update/delete exist in exactly one box</b> (the projection inside TransportDB), where they're <em>derived</em>, never sent. The two <span style="color:var(--shared)">green feet</span> are your application (A→B); everything between is generic, domain-blind plumbing. Only the keystone + its carriers differ dev/cloud.</p>
 
   <div class="legend">
+    <span class="lg"><span class="sw s"></span>your app · the point (A→B)</span>
     <span class="lg"><span class="sw d"></span>built now (dev / ours)</span>
-    <span class="lg"><span class="sw c"></span>differs / pending in cloud</span>
-    <span class="lg"><span class="sw i"></span>interface contract (the spec)</span>
-    <span class="lg"><span class="sw s"></span>shared — identical everywhere</span>
+    <span class="lg"><span class="sw c"></span>differs / pending (cloud)</span>
+    <span class="lg"><span class="sw i"></span>where verbs are derived</span>
   </div>
 
-  <!-- APEX -->
   <div class="keystone">
-    <div class="kt">⌂ TOP OF THE ARCH — THE WIRE</div>
-    <div class="ks">envelopes cross here · the <em>only</em> place dev and cloud differ · no single lib spans both ⇒ your <code>Transport</code> hides it</div>
+    <div class="kt">⌂ TOP OF THE ARCH — THE WIRE &nbsp;·&nbsp; carries append-only FACTS</div>
+    <div class="ks">the DO = a <b>generic append-log + fanout</b> · serializes all appends (single-threaded) ⇒ <b>not a CRDT</b> · the only place dev/cloud differ</div>
     <div class="wires">
-      <div class="wbox dev"><b>dev · SSE</b> &nbsp;EventHub ⇄ EventSource<div class="m">built ✓ · same-origin Vite mw</div></div>
-      <div class="wbox cloud"><b>cloud · WS</b> &nbsp;partyserver ⇄ partysocket<div class="m">PartyKit is WS-only · pending</div></div>
+      <div class="wbox dev"><b>dev · SSE</b> &nbsp;EventHub ⇄ EventSource<div class="m">built ✓</div></div>
+      <div class="wbox cloud"><b>cloud · WS</b> &nbsp;partyserver ⇄ partysocket<div class="m">WS-only · pending</div></div>
     </div>
   </div>
 
-  <!-- CARRIERS ZONE (above the line — wire-specific) -->
+  <!-- CARRIERS (wire-specific) -->
   <div class="legs">
     <div class="leg left">
       <div class="legcap">▲ test side · roll up</div>
-      <div class="conn">ENVELOPE — protocol event onto the wire</div>
+      <div class="conn fact">FACT — append a protocol event</div>
       <div class="node wirenode">
-        <div class="t">Server emitter</div>
-        <div class="impl"><span class="ok">dev: receiver + EventHub ✓</span></div>
-        <div class="impl"><span class="pend">cloud: partyserver broadcast — pending</span></div>
+        <div class="t">DO sink / emitter</div>
+        <div class="impl"><span class="ok">dev: EventHub ✓</span></div>
+        <div class="impl"><span class="pend">cloud: partyserver — pending</span></div>
       </div>
     </div>
     <div class="leg right">
       <div class="legcap">dashboard side · roll down ▼</div>
-      <div class="conn">ENVELOPE — protocol event off the wire</div>
+      <div class="conn fact">FACT — receive a protocol event</div>
       <div class="node wirenode iface">
         <div class="t">Client Transport ⟵ the interface</div>
-        <div class="impl"><span class="ok">dev: EventSource (createDevTransport) ✓</span></div>
-        <div class="impl"><span class="pend">cloud: partysocket adapter — pending</span></div>
+        <div class="impl"><span class="ok">dev: EventSource ✓</span></div>
+        <div class="impl"><span class="pend">cloud: partysocket — pending</span></div>
       </div>
     </div>
   </div>
 
-  <div class="diverge"><span class="ln"></span><span class="tx">↑ above = the wire + its two carriers (dev/cloud-specific) · below = shared, wire-blind base ↓</span><span class="ln"></span></div>
+  <div class="diverge"><span class="ln"></span><span class="tx">↑ wire + carriers (dev/cloud-specific) · below = shared, wire-blind, append-only ↓</span><span class="ln"></span></div>
 
-  <!-- SHARED BASE ZONE (below the line — wire-blind) -->
+  <!-- SHARED BASE -->
   <div class="legs">
     <div class="leg left">
-      <div class="conn">OP — insert / update / delete <small>· the verb contract</small></div>
+      <div class="conn fact">FACT — append-only event <small>· no verbs</small></div>
       <div class="node">
-        <div class="t">Verb encode</div>
-        <div class="impl"><span class="ok">RowOp + projections ✓ (shared)</span></div>
-        <div class="opt">opt spec: @durable-streams/state</div>
+        <div class="t">Receiver + sinks</div>
+        <div class="impl"><span class="ok">fan-out to sinks ✓</span></div>
+        <div class="impl" style="color:var(--dim)">JsonlSink (append) + DOSink (→ up)</div>
       </div>
-      <div class="conn">ROW — record + what changed</div>
-      <div class="ground">
+      <div class="conn fact">FACT — “a thing that happened”</div>
+      <div class="foot-green">
+        <span class="ab">A</span>
         <div class="t">⬚ the test box / app</div>
-        <div class="d">emits ROW changes</div>
+        <div class="d">emits facts: scene:start, assertion, scene:end…</div>
       </div>
     </div>
 
     <div class="leg right">
-      <div class="conn">ENVELOPE — the <b style="color:var(--iface)">Transport contract</b>: <code>subscribe()</code> → an ever-updating stream of envelopes <small>(11↔12)</small></div>
-      <div class="node tall">
-        <div class="t">TransportDB — the configured DB</div>
+      <div class="conn fact">FACT — <code style="color:var(--shared)">Transport.subscribe()</code> stream <small>(11↔12)</small></div>
+      <div class="node tall proj">
+        <div class="t">TransportDB — the projection</div>
         <div class="impl"><span class="ok">createRunSource + runCollectionOptions ✓</span></div>
-        <div class="impl" style="color:var(--dim)">(needs the createTransportDB sugar)</div>
-        <div class="impl" style="color:var(--dim)">inside: ENVELOPE → OP → ROW · fan-out</div>
+        <div class="warn">⚑ the ONLY place verbs exist — folds facts → rows,</div>
+        <div class="warn">&nbsp;&nbsp;&nbsp;derives insert/update/delete by key. Never sent.</div>
         <div class="opt">alt: StreamDB — same role</div>
       </div>
-      <div class="conn">ROW — typed record</div>
-      <div class="node shared">
+      <div class="conn">ROW — typed current state</div>
+      <div class="foot-green">
+        <span class="ab">B</span>
         <div class="t">Schema + reactive collections</div>
-        <div class="impl"><span style="color:var(--shared)">zod + TanStack DB · validate · store · query</span></div>
-        <div class="opt" style="color:var(--shared)">identical: dev = cloud = SSE = WS = RowOp/StreamDB</div>
-      </div>
-      <div class="ground">
-        <div class="t">⬚ the dashboard / userspace</div>
-        <div class="d">reads ROW via useLiveQuery</div>
+        <div class="d">zod + TanStack DB · the dashboard · useLiveQuery</div>
       </div>
     </div>
   </div>
+
+  <div class="tie"><b>A → B is the whole point.</b> Same application facts, source to screen. <code>scene:start</code> + <code>scene:end</code> are two appended facts; the scene <b>row is a projection</b> over them — they never share a row on the wire. Everything between A and B is generic, append-only plumbing we're abstracting away.</div>
 
   <!-- ANSWERS -->
   <div class="answers">
-    <div class="ans no">
-      <h3>Q: a “partysse” — one PartyKit client for both wires?</h3>
-      <p><b>No.</b> PartySocket / PartyServer are <b>WebSocket-only</b> (per PartyKit docs). durable-streams/client is <b>SSE-only</b>. So <b>no third-party lib spans both wires</b>.</p>
-      <p>⇒ the thing that unifies dev+cloud is <b>your <code>Transport</code> interface</b> — one interface, two thin carriers (EventSource · partysocket). You already have the SSE one.</p>
-    </div>
     <div class="ans yes">
-      <h3>Q: one spec for both legs &amp; both wires?</h3>
-      <p><b>Yes — and you already own it.</b> The <b>verb vocab</b> (RowOp) and the <b>envelope format</b> (<code>@scenetest/protocol</code> / “jsonl line”) are wire-agnostic — same on SSE &amp; WS, roll-up &amp; roll-down.</p>
-      <p>Durable's <b>State</b> protocol is an optional standard diction for the verb layer; their <b>Streams</b> (wire) protocol is SSE-bound, so it <b>can't</b> be the shared keystone.</p>
+      <h3>Where do verbs live? → one box</h3>
+      <p><b>Only inside TransportDB's projection</b>, client-side, <b>derived</b> (<code>key exists ? update : insert</code>). The wire, the sinks, the DO, the log are all <b>append-only facts</b>. This is option (c): facts up, verbs once at the bottom.</p>
+    </div>
+    <div class="ans no">
+      <h3>Is it a CRDT? → no</h3>
+      <p>The DO is a <b>single-threaded serializer</b> = one total order; clients are <b>read-only</b> deterministic projections of it. No concurrent multi-writer merge ⇒ no CRDT. (That's what <code>y-durable-streams</code> is for; you don't need it.)</p>
     </div>
   </div>
 
-  <p class="foot"><b>The collapse:</b> only the <span class="c">keystone + its two carriers</span> (server emitter · client Transport) are dev/cloud-specific. Below the line everything is one shared, wire-blind thing you already built — the verb + envelope spec is <b>yours</b>, <span class="i">TransportDB ⟷ StreamDB</span> are the same role, and the two feet are one <span style="color:var(--shared)">zod + TanStack DB</span>. <b>You don't need durable-streams to ship cloud</b> — just a partysocket <code>Transport</code> and a partyserver emitter at the keystone; the base underneath doesn't even know the wire changed.</p>
+  <p class="foot"><b>The simplification:</b> stop putting verbs on the up-leg — there is no “verb encode” step. Producers <span class="g">append facts</span>; the <span class="c">DO is a generic append-log</span>; the projection at <b>B</b> derives verbs once. That makes the entire transport domain-blind — the reusable primitive from message #1 — and keeps your partial events (start/end) and the Waterfall timeline intact. <b>Not (a) row-ops everywhere, not (b) DO-materializes — (c): append facts, project at the edge.</b></p>
 </div>
 </body>
 </html>
