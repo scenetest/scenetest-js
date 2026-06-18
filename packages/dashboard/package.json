@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/dashboard",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Embeddable Preact dashboard component for scenetest — Home/Runner/Waterfall views over a read-only read model, fed by a pluggable transport adapter",
   "type": "module",
   "license": "MIT",

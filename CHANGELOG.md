@@ -4,6 +4,23 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-06-18 — @scenetest/dashboard 0.13.0, @scenetest/vite-plugin 0.16.0
+
+**Embedded routing fix.** `<Dashboard>` no longer runs its own router against a hardcoded `/__scenetest` base — it defers to the host's `preact-iso` router, so it embeds correctly inside another app (scenetest-cloud, mounted per-PR at `/repo/:owner/:name/pr/:number`) without rewriting the browser URL. `@scenetest/dashboard` (breaking) bumps to 0.13.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.16.0; other packages are unchanged.
+
+### @scenetest/dashboard 0.13.0
+
+* **Breaking — routing is owned by the host's `preact-iso` `LocationProvider`.** The dashboard mounts on a single route with an optional trailing param, `{base}/:view?`, which matches the base *and* each view in one pattern; it reads the matched view from `useRoute().params.view` and never touches `history`/`location` itself. This replaces the old hardcoded `/__scenetest` routing + in-widget `pushState`, which rewrote the host's URL when the dashboard was embedded (tab clicks lied; reload / deep-link 404'd). `preact-iso` is now a runtime dependency.
+* **`basePath` is now required**, and only builds the absolute, deep-linkable tab hrefs (view selection is the route param). `apiBase` (default `basePath`) bases the Runner's server-endpoint fetches, decoupled because an embedding host's API may live elsewhere than its router. The old internal `BASE` constant and the unreleased `viewForPath` / `viewHref` helpers are gone.
+* **New `BrowserDashboard` export** — the standalone entry point that supplies the one `LocationProvider` + `Router` a top-level app must own: `render(<BrowserDashboard transport={…} />)`. An app that already owns a `LocationProvider` (cloud) renders the bare `<Dashboard basePath={…} />` under its own `:view?` route instead.
+* **Stable mount across views.** Because every view matches the one route, `<Dashboard>` stays mounted when you switch tabs, so the TanStack DB read model and the event stream are built once and survive navigation — no reconnect, re-fold, or lost filter state.
+
+### @scenetest/vite-plugin 0.16.0
+
+* **Dev dashboard shell renders `BrowserDashboard`** and ships the rebuilt dashboard with host-owned routing. No change to the plugin's consumer API (`strip` / `devPanel` / `demo` / `csp`).
+
+---
+
 ## 2026-06-15 — @scenetest/dashboard 0.12.0, @scenetest/vite-plugin 0.15.0
 
 **Dashboard modernization.** `@scenetest/dashboard` becomes a plain, embeddable Preact component over the TanStack DB read model — light-DOM, reactive, with the latest-run slice maintained by the database rather than re-folded in JS. `@scenetest/dashboard` (breaking) bumps to 0.12.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.15.0; other packages are unchanged. (Versions are now per-package semver, not a shared release number.)
