@@ -4,7 +4,7 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## 2026-06-18 — @scenetest/dashboard 0.13.0, @scenetest/vite-plugin 0.16.0
+## 2026-06-18 — monorepo 0.16.0 · @scenetest/dashboard 0.13.0, @scenetest/vite-plugin 0.16.0
 
 **Embedded routing fix.** `<Dashboard>` no longer runs its own router against a hardcoded `/__scenetest` base — it defers to the host's `preact-iso` router, so it embeds correctly inside another app (scenetest-cloud, mounted per-PR at `/repo/:owner/:name/pr/:number`) without rewriting the browser URL. `@scenetest/dashboard` (breaking) bumps to 0.13.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.16.0; other packages are unchanged.
 
