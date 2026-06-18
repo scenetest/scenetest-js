@@ -1,4 +1,5 @@
 export { Dashboard } from './dashboard.js'
+export { BrowserDashboard } from './browser-dashboard.js'
 export { createDevTransport, type DevTransportOptions } from './dev-transport.js'
 export { selectWaterfall, completedSceneCount } from './select-waterfall.js'
 export { selectSnapshot, mapReportToSnapshot } from './select-runner.js'

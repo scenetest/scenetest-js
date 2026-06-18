@@ -46,9 +46,11 @@
   "dependencies": {
     "@scenetest/protocol": "workspace:*",
     "@tanstack/db": "^0.6.0",
-    "preact": "^10.22.0"
+    "preact": "^10.22.0",
+    "preact-iso": "^2.12.0"
   },
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "typescript": "^5.3.3",
     "vite": "^6.4.2",
     "vitest": "^4.1.4"
