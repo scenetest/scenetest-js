@@ -21,6 +21,17 @@ pnpm typecheck        # Type check all packages
 pnpm -r test          # Run all unit tests across packages
 ```
 
+## Releasing & Versioning
+
+**Per-package semver, with a monorepo accumulator.** Each published package is versioned by its own change — bump only the packages a release actually touches, in their `package.json`. (Pre-1.0, a breaking change rides the **minor** slot, e.g. `0.12.0 → 0.13.0`; additive changes are also minor; fixes are patch.) Cross-package deps are `workspace:*`, so a bump never forces a range update elsewhere.
+
+The private root `scenetest-monorepo` `version` is a marker (never published) that **bumps by the strongest bump in each release**: any package minor → root minor (`0.16.0 → 0.17.0`); a patch-only release → root patch (`0.16.0 → 0.16.1`). It therefore stays at or ahead of the highest package version by construction — don't compute it as `max(versions)` (a single fast-moving package could outrun that); accumulate it per release.
+
+Per release:
+1. Bump the changed packages' versions (+ the root per the rule above).
+2. Add a dated, per-package entry at the top of `CHANGELOG.md` in the existing form: `## <date> — monorepo <v> · @scenetest/<pkg> <v>, …`, with an `### @scenetest/<pkg> <v>` subsection per bumped package.
+3. Commit as `release: monorepo <v> (@scenetest/<pkg> <v>, …)` — a standalone commit on top of the work it ships. This is a manual convention; nothing tools it.
+
 ## Package Structure
 
 ```
