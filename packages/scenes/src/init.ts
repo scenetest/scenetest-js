@@ -57,5 +57,5 @@ export default [
   }
 
   console.log('Created scenetest/ directory')
-  console.log('Run `pnpm scenetest` to start running scene specs.')
+  console.log('Run `npx scenetest` to start running scene specs.')
 }

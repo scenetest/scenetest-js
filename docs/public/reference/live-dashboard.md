@@ -6,7 +6,7 @@ The live dashboard streams scene execution events in real-time to a browser-base
 
 1. Start your dev server (`pnpm dev` or equivalent)
 2. Open `http://localhost:5173/__scenetest/dashboard` in your browser
-3. Run scenes: `pnpm scenetest scenetest/scenes/my-scene.spec.md`
+3. Run scenes: `npx scenetest scenetest/scenes/my-scene.spec.md`
 4. Watch the timeline populate in real-time
 
 The dashboard URL is also printed to the terminal when scenes start:
