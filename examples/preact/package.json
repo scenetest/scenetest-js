@@ -16,6 +16,6 @@
     "@preact/preset-vite": "^2.9.0",
     "@scenetest/vite-plugin": "workspace:*",
     "typescript": "^5.3.3",
-    "vite": "^6.4.2"
+    "vite": "^6.4.3"
   }
 }
