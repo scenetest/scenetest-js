@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "github-remote": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/x/issues",
+      "headers": {
+        "Authorization": "Bearer ${GH_TOKEN}"
+      }
+    }
+  }
+}
