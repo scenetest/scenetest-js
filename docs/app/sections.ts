@@ -68,7 +68,7 @@ export const reference: SectionItem[] = [
     slug: 'live-dashboard',
     title: 'Live Dashboard',
     description:
-      'Real-time swim-lane timeline at /__scenetest/dashboard showing actor actions, assertions, and timing as scenes run.',
+      'Real-time swim-lane timeline at /__scenetest showing actor actions, assertions, and timing as scenes run.',
   },
 ]
 
