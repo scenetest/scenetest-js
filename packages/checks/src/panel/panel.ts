@@ -57,7 +57,7 @@ function getPanelHTML(): string {
         <button class="scenetest-btn scenetest-audio-btn" id="scenetest-play" title="Play symphony">\u25B6</button>
       </div>
       <span class="scenetest-separator"></span>
-      <a class="scenetest-btn" id="scenetest-dashboard" href="/__scenetest/dashboard" target="_blank" title="Live dashboard">dashboard</a>
+      <a class="scenetest-btn" id="scenetest-dashboard" href="/__scenetest" target="_blank" title="Live dashboard">dashboard</a>
       <button class="scenetest-btn" id="scenetest-fullscreen">fullscreen</button>
       <button class="scenetest-btn" id="scenetest-clear">clear</button>
     </div>
@@ -445,6 +445,17 @@ export function createPanel(): void {
   panelEl.querySelector('#scenetest-fullscreen')?.addEventListener('click', (e) => {
     e.stopPropagation()
     openFullscreen()
+  })
+
+  // Dashboard button: normally an <a> to the live dashboard (/__scenetest),
+  // served only under a dev server. In demo mode (e.g. the docs site, where
+  // there is no dev server) there's nothing at that URL, so pop the fullscreen
+  // assertion viewer instead — the same window an assertion click opens.
+  panelEl.querySelector('#scenetest-dashboard')?.addEventListener('click', (e) => {
+    if (typeof window !== 'undefined' && window.__scenetest_demo) {
+      e.preventDefault()
+      openFullscreen()
+    }
   })
 
   // Audio: Mute toggle

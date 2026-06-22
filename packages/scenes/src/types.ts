@@ -438,7 +438,7 @@ export interface ErrorSelector {
 
 /**
  * Events streamed from the CLI runner to the Vite dev server
- * for the live dashboard at /__scenetest/dashboard.
+ * for the live dashboard at /__scenetest.
  *
  * The vocabulary is defined by `@scenetest/protocol` (where it is named
  * `RunEvent`); this alias is kept for backwards compatibility.
