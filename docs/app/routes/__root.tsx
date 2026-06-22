@@ -6,6 +6,11 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import '@scenetest/checks/panel'
+
+// The docs site has no dev server behind it, so the panel's live-dashboard
+// link (/__scenetest) has nothing to point at. Demo mode makes the panel's
+// "dashboard" button pop the fullscreen assertion viewer instead.
+if (typeof window !== 'undefined') window.__scenetest_demo = true
 import { SectionNav } from '../components/SectionNav'
 import { LinkCard } from '../components/LinkCard'
 import { Footer } from '../components/Footer'

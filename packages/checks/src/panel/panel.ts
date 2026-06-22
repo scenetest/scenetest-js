@@ -447,6 +447,17 @@ export function createPanel(): void {
     openFullscreen()
   })
 
+  // Dashboard button: normally an <a> to the live dashboard (/__scenetest),
+  // served only under a dev server. In demo mode (e.g. the docs site, where
+  // there is no dev server) there's nothing at that URL, so pop the fullscreen
+  // assertion viewer instead — the same window an assertion click opens.
+  panelEl.querySelector('#scenetest-dashboard')?.addEventListener('click', (e) => {
+    if (typeof window !== 'undefined' && window.__scenetest_demo) {
+      e.preventDefault()
+      openFullscreen()
+    }
+  })
+
   // Audio: Mute toggle
   panelEl.querySelector('#scenetest-mute')?.addEventListener('click', (e) => {
     e.stopPropagation()

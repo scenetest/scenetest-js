@@ -4,11 +4,13 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## 2026-06-22 — monorepo 0.16.1 · @scenetest/checks 0.13.1
+## 2026-06-22 — monorepo 0.17.0 · @scenetest/checks 0.14.0
 
-### @scenetest/checks 0.13.1
+### @scenetest/checks 0.14.0
 
-**Fix the observer panel's "dashboard" button.** The button linked to `/__scenetest/dashboard`, a path that stopped existing when the dashboard's views were renamed — the live dashboard (Home) now mounts at the base `/__scenetest`, with `/__scenetest/runner` and `/__scenetest/waterfall` for the other views. The button now points at `/__scenetest` so it opens the live dashboard again instead of 404'ing. (Reference docs that pointed at the old URL are corrected too.)
+**Fix the observer panel's "dashboard" button + add a demo mode.** The button linked to `/__scenetest/dashboard`, a path that stopped existing when the dashboard's views were renamed — the live dashboard (Home) now mounts at the base `/__scenetest`, with `/__scenetest/runner` and `/__scenetest/waterfall` for the other views. The button now points at `/__scenetest`, so under a dev server it opens the live dashboard again instead of 404'ing. (Reference docs that pointed at the old URL are corrected too.)
+
+For standalone hosts with no dev server behind them (the docs site), set `window.__scenetest_demo = true` and the "dashboard" button pops the fullscreen assertion viewer — the same window an assertion click opens — instead of following the dead link. The flag is read at click time, so it can be set any time after the panel mounts.
 
 ---
 
