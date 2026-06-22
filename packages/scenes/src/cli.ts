@@ -213,7 +213,7 @@ async function writeReport(
   fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2))
   const id = path.basename(jsonPath, '.json')
   console.log(`Report written to: ${jsonPath}`)
-  console.log(`Open in browser:    /__scenetest/?run=${id}`)
+  console.log(`Open in browser:    /__scenetest/runner?run=${id}`)
 
   if (format === 'html') {
     console.log(
