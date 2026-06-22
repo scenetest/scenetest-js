@@ -179,7 +179,14 @@ function RunnerHeader({
 }
 
 // ── Tree (scenes grouped by file) ─────────────────────────────────
-function Tree({
+// A file is "done" once none of its scenes are still running; finished files
+// auto-fold so the sidebar stays focused on what's still in flight. Clicking a
+// file header sets a manual override that wins over the auto rule.
+export function fileIsDone(group: RunnerScene[]): boolean {
+  return group.length > 0 && group.every((s) => s.status !== 'running')
+}
+
+export function Tree({
   scenes,
   selected,
   onSelect,
@@ -198,25 +205,39 @@ function Tree({
     return m
   }, [scenes])
 
+  // Per-file manual collapse overrides. A file not present here follows the
+  // auto rule (fold once finished); a click pins it open or closed.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const toggle = useCallback(
+    (file: string, collapsed: boolean) => setOverrides((o) => ({ ...o, [file]: !collapsed })),
+    []
+  )
+
   return (
     <aside class="tree">
       {[...byFile.entries()].map(([file, group]) => {
         const fails = group.filter((s) => s.status !== 'completed' && s.status !== 'running').length
+        const collapsed = file in overrides ? overrides[file] : fileIsDone(group)
         return (
-          <div key={file}>
-            <div class="tree-file" title={file}>
-              <span>{shortFile(file)}</span>
+          <div key={file} class={'tree-group' + (collapsed ? ' collapsed' : '')}>
+            <div class="tree-file" title={file} onClick={() => toggle(file, collapsed)}>
+              <span class="tree-caret" aria-hidden="true">
+                {collapsed ? '▸' : '▾'}
+              </span>
+              <span class="tree-name">{shortFile(file)}</span>
               {fails ? <span class="fail">{fails}</span> : null}
             </div>
-            {group.map((s) => (
-              <div
-                key={s.id}
-                class={'tree-scene ' + s.status + (s.id === selected ? ' selected' : '')}
-                onClick={() => onSelect(s.id)}
-              >
-                {s.name}
-              </div>
-            ))}
+            {collapsed
+              ? null
+              : group.map((s) => (
+                  <div
+                    key={s.id}
+                    class={'tree-scene ' + s.status + (s.id === selected ? ' selected' : '')}
+                    onClick={() => onSelect(s.id)}
+                  >
+                    {s.name}
+                  </div>
+                ))}
           </div>
         )
       })}
