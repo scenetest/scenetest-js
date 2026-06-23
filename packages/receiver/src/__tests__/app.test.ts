@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import type { Command } from '@scenetest/protocol'
 import { createReceiverApp } from '../app.js'
+import type { CommandMeta } from '../command.js'
 import type { Sink, SinkEvent } from '../sink.js'
 
 function recordingSink(): Sink & { events: SinkEvent[]; cleared: number } {
@@ -99,5 +101,78 @@ describe('createReceiverApp', () => {
     }
     expect(sink.events).toEqual([])
     expect(sink.cleared).toBe(0)
+  })
+})
+
+function postCommand(app: ReturnType<typeof createReceiverApp>, body: string) {
+  return app.request('/commands', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  })
+}
+
+describe('createReceiverApp — /commands', () => {
+  it('decodes a wrapped command and dispatches it to onCommand with runId metadata', async () => {
+    const seen: Array<{ command: Command; meta: CommandMeta }> = []
+    const app = createReceiverApp({ sinks: [], onCommand: (command, meta) => void seen.push({ command, meta }) })
+
+    const res = await postCommand(app, JSON.stringify({ command: { type: 'run:stop' }, runId: '1700000000000' }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(seen).toEqual([{ command: { type: 'run:stop' }, meta: { runId: '1700000000000' } }])
+  })
+
+  it('accepts a bare command object (no envelope) and leaves runId undefined', async () => {
+    const seen: Array<{ command: Command; meta: CommandMeta }> = []
+    const app = createReceiverApp({ sinks: [], onCommand: (command, meta) => void seen.push({ command, meta }) })
+
+    const res = await postCommand(app, JSON.stringify({ type: 'run:replay', file: 'chat.spec.ts' }))
+
+    expect(await res.json()).toEqual({ ok: true })
+    expect(seen).toEqual([{ command: { type: 'run:replay', file: 'chat.spec.ts' }, meta: { runId: undefined } }])
+  })
+
+  it('acts on the active run without a runId — run-agnostic commands Just Work', async () => {
+    const types: string[] = []
+    const app = createReceiverApp({ sinks: [], onCommand: (command) => void types.push(command.type) })
+
+    for (const type of ['run:stop', 'run:pause', 'run:resume']) {
+      const res = await postCommand(app, JSON.stringify({ command: { type } }))
+      expect(await res.json()).toEqual({ ok: true })
+    }
+    expect(types).toEqual(['run:stop', 'run:pause', 'run:resume'])
+  })
+
+  it('responds ok:true without a handler (well-formed no-op)', async () => {
+    const app = createReceiverApp({ sinks: [] })
+    const res = await postCommand(app, JSON.stringify({ command: { type: 'run:stop' } }))
+    expect(await res.json()).toEqual({ ok: true })
+  })
+
+  it('responds ok:false for malformed JSON, unknown command types, and non-commands without calling onCommand', async () => {
+    let calls = 0
+    const app = createReceiverApp({ sinks: [], onCommand: () => void calls++ })
+
+    for (const body of ['{not json', '{"command":{"type":"run:explode"}}', '{"command":42}', 'null', '[]']) {
+      const res = await postCommand(app, body)
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ ok: false })
+    }
+    expect(calls).toBe(0)
+  })
+
+  it('responds ok:false when the handler throws (never a 5xx)', async () => {
+    const app = createReceiverApp({
+      sinks: [],
+      onCommand: () => {
+        throw new Error('actuation failed')
+      },
+    })
+
+    const res = await postCommand(app, JSON.stringify({ command: { type: 'run:stop' } }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: false })
   })
 })
