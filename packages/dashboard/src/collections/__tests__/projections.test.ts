@@ -268,7 +268,25 @@ describe('runsProjection', () => {
       failed: 1,
       duration: 1234,
       endTime: 999,
+      cancelled: false,
     })
+  })
+
+  it('marks the run cancelled when run:end carries cancelled (a stop), keeping its counts', () => {
+    const rows = replay(runsProjection(), [
+      runStart(100, 3),
+      sceneEnd('100', 'a', 'completed', 110),
+      {
+        type: 'run:end',
+        timestamp: 200,
+        runId: '100',
+        duration: 100,
+        // The stop's run:end carries the partial summary the CLI built.
+        summary: { scenes: 1, completed: 1, failed: 0, assertions: { total: 2, passed: 2, failed: 0 }, warnings: 0, consoleErrors: 0 },
+        cancelled: true,
+      },
+    ])
+    expect(rows.get('100')).toMatchObject({ status: 'finished', cancelled: true, completed: 1, failed: 0 })
   })
 
   it('increments pass/fail counts live as scenes finish', () => {
@@ -281,5 +299,16 @@ describe('runsProjection', () => {
     const rows = replay(runsProjection(), [runStart(100), runStart(200), runStart(300)])
     expect([...rows.keys()].sort()).toEqual(['100', '200', '300'])
     expect(rows.get('200')).toMatchObject({ status: 'running' })
+  })
+
+  it('reflects run:paused / run:resumed on the run row', () => {
+    const paused = { type: 'run:paused', timestamp: 110, runId: '100' } as const
+    const resumed = { type: 'run:resumed', timestamp: 120, runId: '100' } as const
+
+    expect(replay(runsProjection(), [runStart(100, 1)]).get('100')).toMatchObject({ paused: false })
+    expect(replay(runsProjection(), [runStart(100, 1), paused]).get('100')).toMatchObject({ paused: true })
+    expect(replay(runsProjection(), [runStart(100, 1), paused, resumed]).get('100')).toMatchObject({
+      paused: false,
+    })
   })
 })

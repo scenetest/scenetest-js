@@ -79,9 +79,13 @@ export interface DashboardState {
   passCount: number
   failCount: number
   sceneCount: number
-  /** Distinct team names seen in `scene:start`, for the replay filter. */
+  /** Team names for the replay filter — configured teams when available, else those seen in `scene:start`. */
   teams: string[]
   running: boolean
+  /** Whether the active run is currently paused (from `run:paused`/`run:resumed`). */
+  paused: boolean
+  /** Whether the run ended via a stop (from `run:end`'s `cancelled`). */
+  cancelled: boolean
   /** Final run duration once `run:end` arrives, else null. */
   endDurationMs: number | null
   /** Latest `run:progress` rollup, when the producer emits one. */

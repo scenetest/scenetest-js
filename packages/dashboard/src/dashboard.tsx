@@ -143,7 +143,7 @@ export function Dashboard({
         {view === 'runner' ? (
           <RunnerView collections={store} connection={connection} base={apiB} />
         ) : view === 'waterfall' ? (
-          <WaterfallHost collections={store} connection={connection} send={send} />
+          <WaterfallHost collections={store} connection={connection} send={send} apiBase={apiB} />
         ) : (
           <Home basePath={base} />
         )}
@@ -182,21 +182,46 @@ function WaterfallHost({
   collections,
   connection,
   send,
+  apiBase,
 }: {
   collections: DashboardCollections
   connection: ConnectionStatus
   send: (c: Command) => void
+  apiBase: string
 }) {
   const slice = useRunSlice(collections)
   const view = useMemo(
     () => selectWaterfall(slice),
     [slice.runId, slice.run, slice.scenes, slice.assertions, slice.actions]
   )
-  const state = { ...view, connection }
+  // Configured teams for the replay picker (so it lists teams that haven't run
+  // yet). Falls back to teams observed in events when the endpoint is absent.
+  const configuredTeams = useConfiguredTeams(apiBase)
+  const teams = configuredTeams.length ? configuredTeams : view.teams
+  const state = { ...view, teams, connection }
 
   return (
     <div class="waterfall-host">
       <Waterfall state={state} send={send} />
     </div>
   )
+}
+
+/** Fetch configured team names from `<apiBase>/teams` once. Empty on failure. */
+function useConfiguredTeams(apiBase: string): string[] {
+  const [teams, setTeams] = useState<string[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${apiBase}/teams`)
+      .then((r) => r.json())
+      .then((data: { teams?: Array<{ name?: string }> }) => {
+        if (cancelled || !Array.isArray(data?.teams)) return
+        setTeams(data.teams.map((t) => t.name).filter((n): n is string => !!n))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [apiBase])
+  return teams
 }

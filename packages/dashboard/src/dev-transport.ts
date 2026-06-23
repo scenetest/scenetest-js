@@ -20,7 +20,7 @@ export interface DevTransportOptions {
  * - Commands map onto the middleware's existing endpoints:
  *   `run:replay` → POST `<base>/replay` (`{ file?, team? }`),
  *   `run:stop` → POST `<base>/stop`,
- *   `run:pause`/`run:resume` → POST `<base>/pause` (a toggle the server owns).
+ *   `run:pause` → POST `<base>/pause`, `run:resume` → POST `<base>/resume`.
  */
 export function createDevTransport(options: DevTransportOptions = {}): Transport {
   const base = (options.base ?? '/__scenetest').replace(/\/+$/, '')
@@ -67,10 +67,11 @@ export function createDevTransport(options: DevTransportOptions = {}): Transport
         case 'run:stop':
           await post('/stop')
           return
-        // The dev server exposes pause as a single toggle; both map to it.
         case 'run:pause':
-        case 'run:resume':
           await post('/pause')
+          return
+        case 'run:resume':
+          await post('/resume')
           return
       }
     },

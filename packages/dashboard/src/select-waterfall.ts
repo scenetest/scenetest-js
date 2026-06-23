@@ -75,6 +75,8 @@ export function selectWaterfall(slice: RunSlice): Omit<DashboardState, 'connecti
     sceneCount: Math.max(slice.run?.sceneCount ?? 0, viewScenes.length),
     teams,
     running,
+    paused: slice.run?.paused ?? false,
+    cancelled: slice.run?.cancelled ?? false,
     endDurationMs: slice.run?.duration ?? null,
   }
 }
