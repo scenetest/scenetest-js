@@ -4,6 +4,28 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-06-22 — monorepo 0.17.0 · @scenetest/scenes 0.16.0, @scenetest/vite-plugin 0.17.0, @scenetest/dashboard 0.14.0, @scenetest/protocol 0.12.0, @scenetest/receiver 0.12.0
+
+**Dashboard control plane.** The dashboard can pause/resume/stop a run and re-run a team. Directions reach the CLI the same way in dev and cloud (receiver → `onCommand` → the run) and their effects come back as events. Commands target the active run; the only protocol change is two events plus a flag.
+
+### @scenetest/protocol 0.12.0
+* `run:paused` / `run:resumed` events, and an optional `cancelled` flag on `run:end` (set when a run is stopped; the summary still reflects what ran). Additive; `PROTOCOL_VERSION` unchanged.
+
+### @scenetest/scenes 0.16.0
+* `--command-file` (and `SCENETEST_COMMAND_FILE`) tails a JSONL file for inbound commands: pause/resume park/release at scene boundaries; stop ends cooperatively, emitting the final `run:end` (partial summary + `cancelled`) so it's never lost; replay relaunches.
+* New `RunController`, `watchCommandFile()`, `SceneRunner.attachController()`, and a `teams --json` subcommand.
+
+### @scenetest/vite-plugin 0.17.0
+* Dashboard pause/resume/stop now work — routed to the CLI via `--command-file` (matching cloud), replacing the old `SIGSTOP`-the-shell that never reached the process. Adds `GET /__scenetest/teams` and the unified `POST /__scenetest/commands`. No consumer-API change.
+
+### @scenetest/receiver 0.12.0
+* `createReceiverApp({ sinks, onCommand? })` + `POST /commands` — decode a `Command`, hand it to `onCommand` (`runId` is metadata, never the address). Always 200. New `CommandHandler`/`CommandMeta`.
+
+### @scenetest/dashboard 0.14.0
+* Pause/Resume toggle and a "stopped" marker driven by the new events/flag; the replay team picker lists configured teams from `GET /__scenetest/teams` instead of only those seen in events.
+
+---
+
 ## 2026-06-22 — monorepo 0.16.1 · @scenetest/checks 0.13.1
 
 ### @scenetest/checks 0.13.1

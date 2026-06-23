@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/receiver",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Framework-agnostic receiver core for scenetest protocol events - a Hono app that accepts events and fans them out to sinks",
   "type": "module",
   "license": "MIT",
