@@ -13,6 +13,8 @@ export {
   type SceneEndEvent,
   type RunProgressEvent,
   type RunEndEvent,
+  type RunPausedEvent,
+  type RunResumedEvent,
 } from './events.js'
 
 export {

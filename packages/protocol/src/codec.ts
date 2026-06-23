@@ -38,6 +38,10 @@ function optStr(v: unknown): boolean {
   return v === undefined || str(v)
 }
 
+function optBool(v: unknown): boolean {
+  return v === undefined || typeof v === 'boolean'
+}
+
 function isTeamMeta(v: unknown): boolean {
   if (!isObject(v)) return false
   if (!optStr(v.name)) return false
@@ -79,7 +83,9 @@ const EVENT_VALIDATORS: Record<RunEvent['type'], (e: Raw) => boolean> = {
     num(e.teamIndex) &&
     isTeamMeta(e.team),
   'run:progress': (e) => num(e.pct) && num(e.failing) && num(e.flaky),
-  'run:end': (e) => num(e.duration) && isRunSummary(e.summary),
+  'run:end': (e) => num(e.duration) && isRunSummary(e.summary) && optBool(e.cancelled),
+  'run:paused': () => true,
+  'run:resumed': () => true,
 }
 
 const COMMAND_VALIDATORS: Record<Command['type'], (c: Raw) => boolean> = {
