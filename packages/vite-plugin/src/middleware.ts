@@ -6,11 +6,13 @@ import type {
   ServerCheckHelpers,
   ServerContext,
 } from '@scenetest/checks'
-import { createReceiverApp, toNodeHandler, JsonlSink, type Sink } from '@scenetest/receiver'
+import { createReceiverApp, toNodeHandler, JsonlSink, type Sink, type CommandHandler } from '@scenetest/receiver'
+import type { Command } from '@scenetest/protocol'
 import { AsyncLocalStorage } from 'async_hooks'
 import { spawn, type ChildProcess } from 'child_process'
 import type { ServerResponse } from 'http'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import { VIRTUAL_MODULE_ID } from './virtual-module.js'
@@ -170,7 +172,10 @@ export function createScenetestMiddleware(
   const eventHub = new EventHub()
   const appDir = options.appDir ?? DEFAULT_APP_DIR
   let activeReplay: ChildProcess | null = null
-  let paused = false
+  // The spawned CLI tails this file for pause/resume (the same `--command-file`
+  // transport cloud uses), so dev and cloud honor the verbs through the CLI's
+  // RunController identically. stop stays a fast process-kill (no file).
+  const commandFilePath = path.join(os.tmpdir(), `scenetest-dev-${process.pid}.commands.jsonl`)
 
   // Where to look for past JSON run reports. Defaults to the same path the
   // CLI writes to. Resolved against the consumer's project root.
@@ -189,7 +194,72 @@ export function createScenetestMiddleware(
         : path.join(reportsDir, 'events.jsonl')
     sinks.push(new JsonlSink(jsonlPath))
   }
-  const receiverHandler = toNodeHandler(createReceiverApp({ sinks }))
+
+  // Hard-kill the current run's process group. Used to discard a prior run when
+  // a new replay starts — NOT for the Stop verb, which is cooperative (see
+  // writeCommand below) so the CLI can emit its final run:end.
+  const stopRun = (): void => {
+    const child = activeReplay
+    activeReplay = null
+    if (child?.pid && child.exitCode === null) {
+      // Child is its own group leader (detached) — kill the whole group so the
+      // browser goes with it.
+      try {
+        process.kill(-child.pid, 'SIGTERM')
+      } catch {
+        try {
+          child.kill()
+        } catch {
+          /* already gone */
+        }
+      }
+    }
+  }
+  const startReplay = (file?: string, team?: string): void => {
+    stopRun()
+    // Fresh command file per run so stale pause/resume don't carry over.
+    try {
+      fs.writeFileSync(commandFilePath, '')
+    } catch {
+      /* best-effort */
+    }
+    const args = ['scenetest', '--command-file', commandFilePath]
+    if (team) args.push('--team', team)
+    // file is relative to scenetest/scenes/ — resolve to a full path.
+    if (file) args.push(path.resolve(root, 'scenetest', 'scenes', file))
+    activeReplay = spawn('npx', args, { cwd: root, stdio: 'ignore', detached: true })
+    activeReplay.on('error', () => {
+      // Silently ignore spawn errors
+    })
+  }
+  // stop/pause/resume reach the running CLI by appending to the command file it
+  // tails. stop is cooperative: the CLI breaks its scene loop and emits a real
+  // run:end (with the partial summary + cancelled:true), then exits on its own —
+  // so the summary is never lost. The kill above is only for discarding a prior
+  // run on replay; scene timeouts bound how long a cooperative stop can take.
+  const writeCommand = (command: Command): void => {
+    try {
+      fs.appendFileSync(commandFilePath, JSON.stringify(command) + '\n')
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  // Commands act on the active run; runId (if any) is metadata, never gates.
+  const onCommand: CommandHandler = (command) => {
+    switch (command.type) {
+      case 'run:replay':
+        startReplay(command.file, command.team)
+        break
+      case 'run:stop':
+      case 'run:pause':
+      case 'run:resume':
+        writeCommand(command)
+        break
+    }
+  }
+
+  const receiverHandler = toNodeHandler(createReceiverApp({ sinks, onCommand }))
 
   // Per-serverCheck() execution deadline for /__scenetest/run.
   const serverCheckTimeoutMs = options.serverCheckTimeout ?? DEFAULT_SERVER_CHECK_TIMEOUT_MS
@@ -289,6 +359,15 @@ export function createScenetestMiddleware(
       return
     }
 
+    // ── Inbound commands (unified) → receiver /commands → onCommand ──
+    // The legacy verb endpoints below still serve the dashboard's dev-transport;
+    // both drive the same helpers.
+    if (req.method === 'POST' && req.url === '/__scenetest/commands') {
+      req.url = '/commands'
+      await receiverHandler(req, res)
+      return
+    }
+
     // ── Replay endpoint ──────────────────────────────────────
     if (req.method === 'POST' && req.url === '/__scenetest/replay') {
       let body = ''
@@ -306,66 +385,39 @@ export function createScenetestMiddleware(
         // No body or invalid JSON — replay all
       }
 
-      // If a replay is already running, kill it first
-      if (activeReplay && activeReplay.exitCode === null) {
-        activeReplay.kill()
-      }
-
-      // Build the CLI args
-      const args: string[] = []
-      if (team) {
-        args.push('--team', team)
-      }
-      if (file) {
-        // file is relative to scenetest/scenes/, resolve to full path
-        args.push(path.resolve(root, 'scenetest', 'scenes', file))
-      }
-
-      // Spawn the scenetest CLI as a child process
-      activeReplay = spawn('npx', ['scenetest', ...args], {
-        cwd: root,
-        stdio: 'ignore',
-        shell: true,
-      })
-
-      activeReplay.on('error', () => {
-        // Silently ignore spawn errors
-      })
-
-      paused = false
+      startReplay(file, team)
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ ok: true }))
       return
     }
 
-    // ── Stop running tests ──────────────────────────────────
+    // ── Stop running tests (cooperative — the CLI emits the final run:end) ──
     if (req.method === 'POST' && req.url === '/__scenetest/stop') {
-      if (activeReplay && activeReplay.exitCode === null) {
-        activeReplay.kill()
-        activeReplay = null
-      }
-      paused = false
+      writeCommand({ type: 'run:stop' })
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ ok: true }))
       return
     }
 
-    // ── Pause / resume running tests ────────────────────────
-    if (req.method === 'POST' && req.url === '/__scenetest/pause') {
-      if (activeReplay && activeReplay.exitCode === null && activeReplay.pid) {
-        if (paused) {
-          process.kill(activeReplay.pid, 'SIGCONT')
-          paused = false
-        } else {
-          process.kill(activeReplay.pid, 'SIGSTOP')
-          paused = true
-        }
-      }
+    // ── Pause / resume — written to the CLI's command file ──
+    if (req.method === 'POST' && (req.url === '/__scenetest/pause' || req.url === '/__scenetest/resume')) {
+      writeCommand({ type: req.url === '/__scenetest/pause' ? 'run:pause' : 'run:resume' })
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ ok: true, paused }))
+      res.end(JSON.stringify({ ok: true }))
+      return
+    }
+
+    // ── Configured teams (for the dashboard picker) ─────────
+    // Sourced from the CLI's `teams --json` so the picker shows all configured
+    // teams, not just those seen in run events.
+    if (req.method === 'GET' && req.url === '/__scenetest/teams') {
+      const body = await fetchTeamsJson(root)
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(body)
       return
     }
 
@@ -516,6 +568,40 @@ export function createScenetestMiddleware(
 
     respond({ success: true, results })
   }
+}
+
+/**
+ * Run `scenetest teams --json` in the consumer's project and return its stdout
+ * (an extensible `{ teams: [...] }` object). The CLI is the source of truth for
+ * team discovery, so the dev server doesn't reimplement config loading. On any
+ * failure, returns an empty team list — the picker just falls back to teams
+ * observed in run events.
+ */
+function fetchTeamsJson(root: string): Promise<string> {
+  return new Promise((resolve) => {
+    const empty = '{"teams":[]}'
+    let out = ''
+    let child: ChildProcess
+    try {
+      child = spawn('npx', ['scenetest', 'teams', '--json'], { cwd: root })
+    } catch {
+      resolve(empty)
+      return
+    }
+    child.stdout?.on('data', (chunk) => {
+      out += chunk
+    })
+    child.on('error', () => resolve(empty))
+    child.on('close', () => {
+      const trimmed = out.trim()
+      try {
+        JSON.parse(trimmed)
+        resolve(trimmed)
+      } catch {
+        resolve(empty)
+      }
+    })
+  })
 }
 
 // ─── Run report helpers (dev-only, local read) ──────────────────────
