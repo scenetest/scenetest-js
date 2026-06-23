@@ -268,6 +268,10 @@ export interface RunRow {
   endTime: number | null
   duration: number | null
   status: 'running' | 'finished' | string
+  /** Whether the run is currently paused (from `run:paused`/`run:resumed`). */
+  paused: boolean
+  /** Whether the run ended via a `run:stop` (from `run:end`'s `cancelled`). */
+  cancelled: boolean
   /** Expected scene count from `run:start`. */
   sceneCount: number
   completed: number
@@ -292,12 +296,21 @@ export function runsProjection(): RunProjection<RunRow, string> {
                 endTime: null,
                 duration: null,
                 status: 'running',
+                paused: false,
+                cancelled: false,
                 sceneCount: event.sceneCount,
                 completed: 0,
                 failed: 0,
               },
             },
           ]
+        }
+
+        case 'run:paused':
+        case 'run:resumed': {
+          const prev = get(event.runId)
+          if (!prev) return []
+          return [{ type: 'update', value: { ...prev, paused: event.type === 'run:paused' } }]
         }
 
         case 'scene:end': {
@@ -325,6 +338,8 @@ export function runsProjection(): RunProjection<RunRow, string> {
               value: {
                 ...prev,
                 status: 'finished',
+                paused: false,
+                cancelled: event.cancelled ?? false,
                 endTime: event.timestamp,
                 duration: event.duration,
                 completed: event.summary?.completed ?? prev.completed,

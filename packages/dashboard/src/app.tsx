@@ -78,7 +78,9 @@ function Header({ state, send }: { state: DashboardState; send: (c: Command) => 
           ))}
         </select>
       </label>
-      <button onClick={() => send({ type: 'run:pause' })}>❚❚ Pause</button>
+      <button onClick={() => send({ type: state.paused ? 'run:resume' : 'run:pause' })}>
+        {state.paused ? '▶ Resume' : '❚❚ Pause'}
+      </button>
       <button class="stop-btn" onClick={() => send({ type: 'run:stop' })}>
         ■ Stop
       </button>
@@ -102,6 +104,11 @@ function Header({ state, send }: { state: DashboardState; send: (c: Command) => 
           <span class="label">Time:</span>
           <span class="value">{elapsed}</span>
         </div>
+        {state.cancelled ? (
+          <div class="stat stopped" title="Run stopped before completing">
+            <span class="value">■ stopped</span>
+          </div>
+        ) : null}
         <div class={'conn ' + state.connection} title={'SSE ' + state.connection}></div>
       </div>
       {state.sceneCount > 0 ? (
