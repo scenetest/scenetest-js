@@ -1,54 +1,94 @@
 import { Hono } from 'hono'
-import { isEventShaped } from '@scenetest/protocol'
+import { decodeCommand, isEventShaped } from '@scenetest/protocol'
 import type { Sink, SinkEvent } from './sink.js'
+import type { CommandHandler } from './command.js'
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 /**
- * Create the framework-agnostic receiver core: a Hono app that accepts
- * protocol events over HTTP and fans them out to the given sinks.
+ * Create the framework-agnostic receiver core: a Hono app accepting protocol
+ * events over HTTP (fanned out to `sinks`) and protocol commands over the
+ * reverse path (handed to an optional `onCommand`).
  *
  * Routes:
- * - `POST /events` — one JSON event per request. Validated with
- *   `isEventShaped()` only (envelope check, NOT strict `decodeEvent`):
- *   the receiver is a relay and must pass through event types newer
- *   than itself. On `run:start`, each sink's `clear?.()` runs before
- *   the event is written.
+ * - `POST /events` — one event per request, validated with `isEventShaped()`
+ *   only (relay semantics: pass through types newer than this package).
+ *   `run:start` triggers each sink's `clear?.()` before the event is written.
+ * - `POST /commands` — body `{ command, runId? }` or a bare command, decoded
+ *   strictly via `decodeCommand`. `runId` is optional metadata (active-run, not
+ *   addressed). Dispatched to `onCommand` when valid and wired.
  *
- * Responses are always HTTP 200 — `{"ok":true}` for accepted events,
- * `{"ok":false}` for malformed or non-event bodies. The CLI's reporter
- * is fire-and-forget, and old CLIs must never be broken by an error
- * status.
- *
- * Routes are defined with method chaining so the inferred app type
- * carries the route schema for `hono/client` typed transports.
+ * Always responds HTTP 200 (`ok:true`/`ok:false`) — both producers are
+ * fire-and-forget, and old peers must never break on an error status. Routes
+ * chain so the app type carries the schema for `hono/client`.
  */
-export function createReceiverApp({ sinks }: { sinks: Sink[] }) {
-  const app = new Hono().post('/events', async (c) => {
-    let body: unknown
-    try {
-      body = await c.req.json()
-    } catch {
-      return c.json({ ok: false })
-    }
-
-    if (!isEventShaped(body)) {
-      return c.json({ ok: false })
-    }
-
-    const event = body as SinkEvent
-
-    // New run: let live-state sinks reset before the run:start lands.
-    if (event.type === 'run:start') {
-      for (const sink of sinks) {
-        sink.clear?.()
+export function createReceiverApp({
+  sinks,
+  onCommand,
+}: {
+  sinks: Sink[]
+  onCommand?: CommandHandler
+}) {
+  const app = new Hono()
+    .post('/events', async (c) => {
+      let body: unknown
+      try {
+        body = await c.req.json()
+      } catch {
+        return c.json({ ok: false })
       }
-    }
 
-    for (const sink of sinks) {
-      sink.write(event)
-    }
+      if (!isEventShaped(body)) {
+        return c.json({ ok: false })
+      }
 
-    return c.json({ ok: true })
-  })
+      const event = body as SinkEvent
+
+      // New run: let live-state sinks reset before the run:start lands.
+      if (event.type === 'run:start') {
+        for (const sink of sinks) {
+          sink.clear?.()
+        }
+      }
+
+      for (const sink of sinks) {
+        sink.write(event)
+      }
+
+      return c.json({ ok: true })
+    })
+    .post('/commands', async (c) => {
+      let body: unknown
+      try {
+        body = await c.req.json()
+      } catch {
+        return c.json({ ok: false })
+      }
+
+      // Accept `{ command, runId? }` (the cloud wire shape) or a bare command.
+      const wrapped = isObject(body) && 'command' in body
+      const command = decodeCommand(wrapped ? (body as { command: unknown }).command : body)
+      if (!command) {
+        return c.json({ ok: false })
+      }
+
+      const runId =
+        wrapped && typeof (body as { runId?: unknown }).runId === 'string'
+          ? (body as { runId: string }).runId
+          : undefined
+
+      if (onCommand) {
+        try {
+          await onCommand(command, { runId })
+        } catch {
+          return c.json({ ok: false })
+        }
+      }
+
+      return c.json({ ok: true })
+    })
 
   return app
 }
