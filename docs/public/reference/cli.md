@@ -21,6 +21,7 @@ scenetest --swarm              # Run swarm mode (all teams, all scenes)
 | `--report <dir>` | Report output directory (default: `./scenetest-reports`) |
 | `--format <fmt>` | Report format: `html`, `json`, or `both` (default: `html`) |
 | `--report-url <url>` | POST batched protocol events to an HTTP endpoint as the run executes (see [Live report URL](#live-report-url)) |
+| `--command-file <path>` | Tail a JSONL file for inbound protocol commands acting on the active run (see [Inbound command channel](#inbound-command-channel)) |
 | `--devices` | Enable device rotation (assign rotating mobile/tablet/desktop devices to actors) |
 | `--no-keyboard-actor` | Disable keyboard-only actor rotation (keyboard navigation is ON by default) |
 | `--fuzzy-fingers` | Enable fuzzy-finger touch simulation (imprecise human touch, ~1 in 5 clicks miss) |
@@ -307,6 +308,56 @@ over `reportUrl` in the config file.
   never fails the run. Reporting is observability, not a gate.
 - **Auth** — set `SCENETEST_REPORT_TOKEN` (or `reportToken` in config) to send
   an `Authorization: Bearer <token>` header, for the direct-to-cloud case.
+
+## Inbound command channel
+
+`--command-file <path>` is the **inbound mirror of `--report-url`**: where the
+run *speaks* protocol events out as JSON lines, it *listens* for protocol
+commands as JSON lines here. A driver (a cloud runner box agent, a script)
+appends one encoded [`Command`](/reference/protocol) per line; the CLI tails the
+file and applies each to the **active run**.
+
+```sh
+scenetest --command-file /tmp/run.commands.jsonl
+# or via env var:
+SCENETEST_COMMAND_FILE=/tmp/run.commands.jsonl scenetest
+```
+
+```jsonl
+{"type":"run:pause"}
+{"type":"run:resume"}
+{"type":"run:stop"}
+```
+
+**Commands target the active run.** There is no run id in the address — a
+run-agnostic `run:stop` just stops whatever is running. A `runId` may ride
+along as metadata (e.g. on the HTTP `/commands` route) but is never required.
+
+**Behavior.**
+
+- **Cooperative, at scene boundaries** — the watcher is live for the duration of
+  the run. `run:pause` parks the runner before its next scene; `run:resume`
+  releases it; `run:stop` ends the run gracefully after the in-flight scene and
+  emits `run:end` with whatever completed (and `cancelled: true`), so the run
+  summary is preserved rather than lost to a kill.
+- **Observable** — `run:pause` / `run:resume` emit `run:paused` / `run:resumed`
+  events (past-tense facts) so a dashboard reflects the paused state and the log
+  records it.
+- **`run:replay` relaunches** — a one-shot CLI can't re-register its
+  module-cached scene files, so replay starts a *fresh* run by launching
+  `scenetest` again. This is the driver's job, exactly the way the Vite dev
+  middleware spawns a new process for replay. (`RunController` from
+  `@scenetest/scenes` still parses `run:replay` via `waitForReplay()` for a
+  long-lived embedder that runs its own loop.)
+- **Robust tail** — the file need not exist yet; appended lines are tailed by
+  byte offset, a partial trailing line is buffered until its newline, and
+  malformed/unknown lines are skipped.
+
+The same intake is also exposed over HTTP by `@scenetest/receiver`'s
+`POST /commands` route (body `{ command, runId? }`), which the Vite dev server
+mounts at `POST /__scenetest/commands`. File and HTTP are parallel transports
+over one command vocabulary — the mirror of the event path's report-url + JSONL
+sinks.
 
 ## Exit Codes
 
