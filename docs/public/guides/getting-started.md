@@ -129,7 +129,7 @@ A few things to notice:
 Run it:
 
 ```bash
-pnpm scenetest
+npx scenetest
 ```
 
 The runner discovers `.spec.md` files, launches a browser for each actor, and runs through the action queues. If a selector can't be found, the test fails with a clear message about what it was looking for.
@@ -288,7 +288,7 @@ For each file you modify, show the before and after for the changed lines. At th
 1. Paste it into an LLM conversation along with your spec files and component source
 2. Review the suggested changes -- the markers are purely additive, so they won't affect your app's behavior
 3. Apply the changes
-4. Run `pnpm scenetest` and watch specs start passing
+4. Run `npx scenetest` and watch specs start passing
 
 This step gets easier over time. Once you're in the habit of adding `data-testid` to new components as you build them, the specs just work.
 
