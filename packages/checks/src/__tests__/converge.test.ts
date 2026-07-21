@@ -46,11 +46,11 @@ function harness() {
   return { deps, reports, tick, pendingTimers: () => timers.length }
 }
 
-describe('createConverger — pair form', () => {
+describe('createConverger — single pair', () => {
   it('passes immediately when values already match on first observation', () => {
     const h = harness()
     const c = createConverger('cart syncs', {}, {}, h.deps)
-    c.observe([5, 5])
+    c.observe([[5, 5]])
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({
       type: 'pass',
@@ -63,10 +63,10 @@ describe('createConverger — pair form', () => {
   it('passes with the elapsed time when values converge mid-window', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     expect(h.reports).toHaveLength(0)
     h.tick(500)
-    c.observe([5, 5])
+    c.observe([[5, 5]])
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({ type: 'pass' })
     expect(h.reports[0].context).toMatchObject({ convergedInMs: 500 })
@@ -76,7 +76,7 @@ describe('createConverger — pair form', () => {
   it('fails with a {client, target} diff when the window elapses', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     h.tick(2500)
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({ type: 'fail', result: false })
@@ -90,9 +90,9 @@ describe('createConverger — pair form', () => {
   it('reports fail with the LATEST values, not the ones seen at window start', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     h.tick(1000)
-    c.observe([5, 6])
+    c.observe([[5, 6]])
     h.tick(2000)
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0].context).toMatchObject({ client: 5, target: 6 })
@@ -101,9 +101,9 @@ describe('createConverger — pair form', () => {
   it('starts a fresh window when the client value (pair[0]) changes', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     h.tick(1500)
-    c.observe([9, 8])
+    c.observe([[9, 8]])
     h.tick(1500)
     expect(h.reports).toHaveLength(0)
     h.tick(1000)
@@ -115,10 +115,10 @@ describe('createConverger — pair form', () => {
   it('does not re-resolve after passing, even if values later diverge', () => {
     const h = harness()
     const c = createConverger('cart syncs', {}, {}, h.deps)
-    c.observe([5, 5])
+    c.observe([[5, 5]])
     expect(h.reports).toHaveLength(1)
-    c.observe([5, 6])
-    c.observe([5, 5])
+    c.observe([[5, 6]])
+    c.observe([[5, 5]])
     h.tick(5000)
     expect(h.reports).toHaveLength(1)
   })
@@ -126,16 +126,16 @@ describe('createConverger — pair form', () => {
   it('leaves no timer pending after passing', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     expect(h.pendingTimers()).toBe(1)
-    c.observe([5, 5])
+    c.observe([[5, 5]])
     expect(h.pendingTimers()).toBe(0)
   })
 
   it('dispose() clears a pending timer', () => {
     const h = harness()
     const c = createConverger('cart syncs', { timeout: 2000 }, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     expect(h.pendingTimers()).toBe(1)
     c.dispose()
     expect(h.pendingTimers()).toBe(0)
@@ -146,7 +146,7 @@ describe('createConverger — pair form', () => {
   it('defaults timeout to 2000ms when not specified', () => {
     const h = harness()
     const c = createConverger('cart syncs', {}, {}, h.deps)
-    c.observe([5, 4])
+    c.observe([[5, 4]])
     h.tick(1999)
     expect(h.reports).toHaveLength(0)
     h.tick(2)
@@ -156,57 +156,82 @@ describe('createConverger — pair form', () => {
   })
 })
 
-describe('createConverger — predicate form', () => {
-  it('passes when the predicate flips true within the window', () => {
+describe('createConverger — multiple pairs', () => {
+  it('passes only when every pair matches', () => {
     const h = harness()
-    const c = createConverger('all sync', { timeout: 2000 }, {}, h.deps)
-    let flag = false
-    c.observe(() => flag)
+    const c = createConverger('all fields sync', { timeout: 2000 }, {}, h.deps)
+    c.observe([
+      [1, 1],
+      [2, 3],
+    ])
+    expect(h.reports).toHaveLength(0)
     h.tick(500)
-    flag = true
-    c.observe(() => flag)
+    c.observe([
+      [1, 1],
+      [2, 2],
+    ])
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({ type: 'pass' })
   })
 
-  it('fails with a generic note when the predicate never returns true', () => {
+  it('fails with only the unmatched pairs in a `mismatches` list', () => {
     const h = harness()
-    const c = createConverger('all sync', { timeout: 1000 }, {}, h.deps)
-    c.observe(() => false)
+    const c = createConverger('all fields sync', { timeout: 1000 }, {}, h.deps)
+    c.observe([
+      ['a', 'a'],
+      ['b', 'c'],
+      [4, 5],
+    ])
     h.tick(1500)
+    expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({ type: 'fail' })
     expect(h.reports[0].context).toMatchObject({
-      note: 'convergence predicate never returned true',
+      mismatches: [
+        { index: 1, client: 'b', target: 'c' },
+        { index: 2, client: 4, target: 5 },
+      ],
       timeoutMs: 1000,
     })
   })
 
-  it('treats a throwing predicate as a mismatch (does not resolve)', () => {
+  it('starts a fresh window when ANY client value changes', () => {
     const h = harness()
-    const c = createConverger('all sync', { timeout: 1000 }, {}, h.deps)
-    let shouldThrow = true
-    c.observe(() => {
-      if (shouldThrow) throw new Error('not ready')
-      return true
-    })
-    h.tick(500)
-    shouldThrow = false
-    c.observe(() => {
-      if (shouldThrow) throw new Error('not ready')
-      return true
-    })
-    expect(h.reports[0]).toMatchObject({ type: 'pass' })
-  })
-
-  it('does not auto-reset across observations (no client value to key on)', () => {
-    const h = harness()
-    const c = createConverger('all sync', { timeout: 2000 }, {}, h.deps)
-    c.observe(() => false)
+    const c = createConverger('all fields sync', { timeout: 2000 }, {}, h.deps)
+    c.observe([
+      [1, 2],
+      [3, 4],
+    ])
     h.tick(1500)
-    c.observe(() => false)
+    // Only pair[1][0] changed — should still restart.
+    c.observe([
+      [1, 2],
+      [99, 4],
+    ])
+    h.tick(1500)
+    expect(h.reports).toHaveLength(0)
     h.tick(1000)
     expect(h.reports).toHaveLength(1)
     expect(h.reports[0]).toMatchObject({ type: 'fail' })
+  })
+
+  it('treats a fresh array of the same client values as the same window', () => {
+    const h = harness()
+    const c = createConverger('all fields sync', { timeout: 2000 }, {}, h.deps)
+    c.observe([
+      [1, 2],
+      [3, 4],
+    ])
+    h.tick(1000)
+    // Same client values in a brand-new array — no window reset.
+    c.observe([
+      [1, 2],
+      [3, 4],
+    ])
+    h.tick(1500)
+    expect(h.reports).toHaveLength(1)
+    expect(h.reports[0]).toMatchObject({ type: 'fail' })
+    // Elapsed reflects the ORIGINAL window start.
+    expect(h.reports[0].context).toMatchObject({ elapsedMs: 2000 })
   })
 })
 
@@ -214,12 +239,24 @@ describe('createConverger — resetKey', () => {
   it('opens a new window when the explicit resetKey changes', () => {
     const h = harness()
     const c = createConverger('title', { timeout: 2000 }, {}, h.deps)
-    c.observe([1, 2], { resetKey: 'v1' })
+    c.observe([[1, 2]], { resetKey: 'v1' })
     h.tick(1500)
-    c.observe([1, 2], { resetKey: 'v2' })
+    c.observe([[1, 2]], { resetKey: 'v2' })
     h.tick(1500)
     expect(h.reports).toHaveLength(0)
     h.tick(1000)
     expect(h.reports).toHaveLength(1)
+  })
+
+  it('holds the same window when resetKey is unchanged even if client values change', () => {
+    const h = harness()
+    const c = createConverger('title', { timeout: 2000 }, {}, h.deps)
+    c.observe([[1, 2]], { resetKey: 'stable' })
+    h.tick(1500)
+    // Different client value, but resetKey is stable — no restart.
+    c.observe([[9, 2]], { resetKey: 'stable' })
+    h.tick(1000)
+    expect(h.reports).toHaveLength(1)
+    expect(h.reports[0]).toMatchObject({ type: 'fail' })
   })
 })

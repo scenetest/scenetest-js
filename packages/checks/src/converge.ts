@@ -1,39 +1,30 @@
 /**
  * Core state machine for `useConverge()` — eventual-equality checks for
- * local-first UIs. Framework-agnostic and side-effect-free by construction:
- * timers, time, and the reporter are injected so the same logic drives the
- * React hook in production and the unit tests here in vitest.
+ * local-first UIs. Conceptually this is `match()` with a tolerance window:
+ * within the window, mismatches are allowed while the target catches up.
  *
- * See `react.ts` for the hook wrapper and public docs.
+ * Framework-agnostic and side-effect-free by construction: timers, time,
+ * and the reporter are injected so the same logic drives the React hook
+ * in production and the vitest suite here.
  */
 
 import type { AssertionResult } from './types.js'
 
-/**
- * A convergence check is either a `[client, target]` pair (strict equality),
- * or an arbitrary predicate — useful with `match()` for multi-field checks.
- */
-export type ConvergeCheck = readonly [unknown, unknown] | (() => boolean)
+export type ConvergePair = readonly [unknown, unknown]
 
 export interface ConvergeOptions {
-  /**
-   * How long the values have to converge before the check fails.
-   * Defaults to 2000ms.
-   */
+  /** How long the values have to converge before the check fails. Default 2000ms. */
   timeout?: number
   /**
    * Key that identifies the current "attempt". When it changes, a new
-   * convergence window opens (fresh timeout, fresh chance to pass). When
-   * omitted:
-   * - pair form: defaults to the first element (the client value), so mutating
-   *   the client re-arms the check while the target lags.
-   * - predicate form: no auto-reset within a single mount.
+   * convergence window opens. Defaults to the array of client values
+   * (each `pair[0]`), so mutating any client re-arms the check while its
+   * target lags. Compared element-wise when both sides are arrays.
    */
   resetKey?: unknown
 }
 
 export interface ConvergeMeta {
-  /** Captured at the hook call site so the panel can jump to source. */
   stack?: string
   location?: AssertionResult['location']
 }
@@ -46,40 +37,39 @@ export interface ConvergeDeps {
 }
 
 export interface ObserveOptions {
-  /**
-   * Per-observation reset key. `undefined` means "use the default" (pair[0]
-   * for pair form, `null` for predicate form). Pass any other value —
-   * including `null` — to override.
-   */
   resetKey?: unknown
 }
 
 export interface Converger {
-  observe(check: ConvergeCheck, opts?: ObserveOptions): void
+  observe(pairs: readonly ConvergePair[], opts?: ObserveOptions): void
   /** Cancel any pending timer. Call on unmount. */
   dispose(): void
 }
 
-function evaluate(check: ConvergeCheck): boolean {
-  if (typeof check === 'function') {
-    try {
-      return !!check()
-    } catch {
-      return false
-    }
-  }
-  return check[0] === check[1]
+function evaluate(pairs: readonly ConvergePair[]): boolean {
+  return pairs.every(([a, b]) => a === b)
 }
 
-function diff(check: ConvergeCheck): Record<string, unknown> {
-  if (typeof check === 'function') {
-    return { note: 'convergence predicate never returned true' }
+function diff(pairs: readonly ConvergePair[]): Record<string, unknown> {
+  if (pairs.length === 1) {
+    return { client: pairs[0][0], target: pairs[0][1] }
   }
-  return { client: check[0], target: check[1] }
+  const mismatches = pairs
+    .map(([client, target], index) => ({ index, client, target }))
+    .filter(({ client, target }) => client !== target)
+  return { mismatches }
 }
 
-function defaultKey(check: ConvergeCheck): unknown {
-  return typeof check === 'function' ? null : check[0]
+function defaultKey(pairs: readonly ConvergePair[]): readonly unknown[] {
+  return pairs.map((p) => p[0])
+}
+
+function keyEqual(prev: unknown, next: unknown): boolean {
+  if (prev === next) return true
+  if (Array.isArray(prev) && Array.isArray(next) && prev.length === next.length) {
+    return prev.every((v, i) => v === next[i])
+  }
+  return false
 }
 
 export function createConverger(
@@ -90,7 +80,7 @@ export function createConverger(
 ): Converger {
   const timeout = options.timeout ?? 2000
 
-  let currentCheck: ConvergeCheck | null = null
+  let currentPairs: readonly ConvergePair[] | null = null
   let windowKey: unknown = undefined
   let hasWindow = false
   let resolved = false
@@ -104,7 +94,7 @@ export function createConverger(
     }
   }
 
-  function report(type: 'pass' | 'fail', check: ConvergeCheck) {
+  function report(type: 'pass' | 'fail', pairs: readonly ConvergePair[]) {
     resolved = true
     clearTimer()
     const elapsed = deps.now() - windowStartedAt
@@ -118,55 +108,53 @@ export function createConverger(
       context:
         type === 'pass'
           ? { convergedInMs: elapsed }
-          : { ...diff(check), timeoutMs: timeout, elapsedMs: elapsed },
+          : { ...diff(pairs), timeoutMs: timeout, elapsedMs: elapsed },
     })
   }
 
-  function openWindow(check: ConvergeCheck) {
+  function openWindow() {
     clearTimer()
     resolved = false
     windowStartedAt = deps.now()
     timer = deps.setTimeout(() => {
       timer = null
       if (resolved) return
-      const check = currentCheck
-      if (!check) return
-      if (evaluate(check)) {
-        report('pass', check)
+      const pairs = currentPairs
+      if (!pairs) return
+      if (evaluate(pairs)) {
+        report('pass', pairs)
       } else {
-        report('fail', check)
+        report('fail', pairs)
       }
     }, timeout)
   }
 
   return {
-    observe(check, opts) {
-      currentCheck = check
-      const key = opts && 'resetKey' in opts && opts.resetKey !== undefined
-        ? opts.resetKey
-        : defaultKey(check)
+    observe(pairs, opts) {
+      currentPairs = pairs
+      const key =
+        opts && 'resetKey' in opts && opts.resetKey !== undefined
+          ? opts.resetKey
+          : defaultKey(pairs)
       const first = !hasWindow
-      const keyChanged = hasWindow && key !== windowKey
+      const keyChanged = hasWindow && !keyEqual(key, windowKey)
       windowKey = key
       hasWindow = true
 
       if (first || keyChanged) {
-        // New window. If the values already match, resolve immediately.
-        if (evaluate(check)) {
+        if (evaluate(pairs)) {
           windowStartedAt = deps.now()
-          report('pass', check)
+          report('pass', pairs)
         } else {
-          openWindow(check)
+          openWindow()
         }
         return
       }
 
-      // Same window. If already resolved, we're done for this attempt.
       if (resolved) return
 
-      // Still open — did the values just now converge?
-      if (evaluate(check)) {
-        report('pass', check)
+      if (evaluate(pairs)) {
+        report('pass', pairs)
       }
     },
     dispose() {

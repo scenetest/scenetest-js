@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import type { AssertionResult } from './types.js'
 import {
   createConverger,
-  type ConvergeCheck,
   type ConvergeOptions,
+  type ConvergePair,
   type Converger,
 } from './converge.js'
 import { isValidFilePath } from './assertions.js'
@@ -40,41 +40,44 @@ export function useCheck(
 }
 
 /**
- * Assert that a `[client, target]` pair converges within a bounded window.
- *
- * Designed for local-first UIs where a locally-mutated value updates the DOM
- * before a derived / server-mirrored value catches up — the check tolerates
- * the gap while it exists, and fails only if it persists past `timeout`.
+ * Assert that one or more `[client, target]` pairs converge within a bounded
+ * window — think of it as `match()` with a tolerance for local-first UIs
+ * where a locally-mutated value updates the DOM before its derived / mirrored
+ * counterpart catches up.
  *
  * @example
  * ```tsx
- * // Pair form — the common case. Auto-restarts when `cartTotal` changes.
- * useConverge('cart total reflects last item added', [cartTotal, derivedTotal], {
+ * // Single pair — auto-restarts when `cartTotal` changes.
+ * useConverge('cart total propagates to derived', [cartTotal, derivedTotal], {
  *   timeout: 2000,
  * })
  *
- * // Predicate form — pairs with match() for multi-field checks.
+ * // Multiple pairs — variadic, mirrors match(). All must line up for a pass.
  * useConverge(
  *   'all deck fields sync',
- *   () => match([local.cards, mirror.cards], [local.updated_at, mirror.updated_at]),
+ *   [local.cards, mirror.cards],
+ *   [local.updated_at, mirror.updated_at],
  *   { timeout: 2000 }
  * )
  * ```
  *
- * On timeout, the failed assertion's `context` carries `{ client, target,
- * timeoutMs, elapsedMs }` so the panel tooltip shows what didn't line up.
- * On success, it carries `{ convergedInMs }`.
+ * On timeout, the failed assertion's `context` carries the last-seen values —
+ * `{ client, target, timeoutMs, elapsedMs }` for the single-pair case, or
+ * `{ mismatches: [{ index, client, target }], timeoutMs, elapsedMs }` for
+ * multi-pair. On success it carries `{ convergedInMs }`.
  *
  * The hook re-reads the current values on every render and stashes them in a
- * ref, so the timeout callback always sees the latest values — you don't need
- * an explicit deps array. If the natural reset trigger isn't `pair[0]`, pass
- * `options.resetKey` instead.
+ * ref, so the timeout callback always sees the latest values — no deps array
+ * needed. A new window opens automatically whenever any client value
+ * (`pair[i][0]`) changes; override with `options.resetKey` if the natural
+ * reset trigger is something else.
  */
-export function useConverge<A, B>(
+export function useConverge(
   title: string,
-  check: readonly [A, B] | (() => boolean),
-  options?: ConvergeOptions
+  ...args: ReadonlyArray<ConvergePair | ConvergeOptions>
 ): void {
+  const { pairs, options } = splitArgs(args)
+
   const metaRef = useRef<{ stack?: string; location?: AssertionResult['location'] } | null>(null)
   if (metaRef.current === null) {
     const stack = captureStack()
@@ -98,7 +101,7 @@ export function useConverge<A, B>(
   const resetKey = options?.resetKey
 
   useEffect(() => {
-    convergerRef.current!.observe(check as ConvergeCheck, { resetKey })
+    convergerRef.current!.observe(pairs, { resetKey })
   })
 
   useEffect(() => {
@@ -106,6 +109,22 @@ export function useConverge<A, B>(
       convergerRef.current?.dispose()
     }
   }, [])
+}
+
+function splitArgs(
+  args: ReadonlyArray<ConvergePair | ConvergeOptions>
+): { pairs: readonly ConvergePair[]; options?: ConvergeOptions } {
+  if (args.length === 0) return { pairs: [] }
+  const last = args[args.length - 1]
+  // Pairs are arrays; options is a plain object — cleanly discriminated even
+  // when the pair values themselves happen to be arrays.
+  if (last !== undefined && !Array.isArray(last)) {
+    return {
+      pairs: args.slice(0, -1) as readonly ConvergePair[],
+      options: last as ConvergeOptions,
+    }
+  }
+  return { pairs: args as readonly ConvergePair[] }
 }
 
 function captureStack(): string | undefined {
