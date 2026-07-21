@@ -47,16 +47,18 @@ export function useCheck(
  *
  * @example
  * ```tsx
- * // Single pair — auto-restarts when `cartTotal` changes.
- * useConverge('cart total propagates to derived', [cartTotal, derivedTotal], {
+ * // Single pair.
+ * useConverge('cart total propagates', [[cartTotal, derivedTotal]], {
  *   timeout: 2000,
  * })
  *
- * // Multiple pairs — variadic, mirrors match(). All must line up for a pass.
+ * // Multiple pairs. All must line up for a pass.
  * useConverge(
  *   'all deck fields sync',
- *   [local.cards, mirror.cards],
- *   [local.updated_at, mirror.updated_at],
+ *   [
+ *     [local.cards, mirror.cards],
+ *     [local.updated_at, mirror.updated_at],
+ *   ],
  *   { timeout: 2000 }
  * )
  * ```
@@ -74,10 +76,9 @@ export function useCheck(
  */
 export function useConverge(
   title: string,
-  ...args: ReadonlyArray<ConvergePair | ConvergeOptions>
+  pairs: readonly ConvergePair[],
+  options?: ConvergeOptions
 ): void {
-  const { pairs, options } = splitArgs(args)
-
   const metaRef = useRef<{ stack?: string; location?: AssertionResult['location'] } | null>(null)
   if (metaRef.current === null) {
     const stack = captureStack()
@@ -109,22 +110,6 @@ export function useConverge(
       convergerRef.current?.dispose()
     }
   }, [])
-}
-
-function splitArgs(
-  args: ReadonlyArray<ConvergePair | ConvergeOptions>
-): { pairs: readonly ConvergePair[]; options?: ConvergeOptions } {
-  if (args.length === 0) return { pairs: [] }
-  const last = args[args.length - 1]
-  // Pairs are arrays; options is a plain object — cleanly discriminated even
-  // when the pair values themselves happen to be arrays.
-  if (last !== undefined && !Array.isArray(last)) {
-    return {
-      pairs: args.slice(0, -1) as readonly ConvergePair[],
-      options: last as ConvergeOptions,
-    }
-  }
-  return { pairs: args as readonly ConvergePair[] }
 }
 
 function captureStack(): string | undefined {
