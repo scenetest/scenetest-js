@@ -1,12 +1,12 @@
 # Live Dashboard
 
-The live dashboard streams scene execution events in real-time to a browser-based timeline at `/__scenetest/dashboard`. It shows swim lanes per actor with action bars, assertion markers, and timing data as scenes run.
+The live dashboard streams scene execution events in real-time to a browser-based timeline at `/__scenetest`. It shows swim lanes per actor with action bars, assertion markers, and timing data as scenes run.
 
 ## Quick Start
 
 1. Start your dev server (`pnpm dev` or equivalent)
-2. Open `http://localhost:5173/__scenetest/dashboard` in your browser
-3. Run scenes: `pnpm scenetest scenetest/scenes/my-scene.spec.md`
+2. Open `http://localhost:5173/__scenetest` in your browser
+3. Run scenes: `npx scenetest scenetest/scenes/my-scene.spec.md`
 4. Watch the timeline populate in real-time
 
 The dashboard URL is also printed to the terminal when scenes start:
@@ -16,7 +16,7 @@ Running 2 scene file(s)...
 
 Found 2 scene(s)
 
-Dashboard: http://localhost:5173/__scenetest/dashboard
+Dashboard: http://localhost:5173/__scenetest
 ```
 
 You can also open it from the floating dev panel — click the **dashboard** button in the action bar.
@@ -117,7 +117,7 @@ export default defineConfig({
 })
 ```
 
-The dashboard routes (`/__scenetest/dashboard` and `/__scenetest/events`) are registered automatically in dev mode. They are not included in production builds.
+The dashboard routes (`/__scenetest` and `/__scenetest/events`) are registered automatically in dev mode. They are not included in production builds.
 
 ## Relationship to Reports
 
@@ -126,7 +126,7 @@ The live dashboard and static HTML reports serve different purposes:
 | | Live Dashboard | HTML Reports |
 |---|---|---|
 | **When** | During test execution | After run completes |
-| **Where** | `/__scenetest/dashboard` in browser | `scenetest/.reports/report-*.html` on disk |
+| **Where** | `/__scenetest` in browser | `scenetest/.reports/report-*.html` on disk |
 | **Data** | Real-time event stream | Complete run summary |
 | **Use case** | Watching test progress, debugging slow actions | Sharing results, CI artifacts, historical comparison |
 

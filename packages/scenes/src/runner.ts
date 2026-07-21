@@ -16,6 +16,7 @@ import { SwarmTrigger, runSwarm } from './swarm.js'
 import { registerBuiltinMacros, registerSelectedMacros } from './builtin-macros.js'
 import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashboard-reporter.js'
 import { tick as soundTick, fail as soundFail } from './sound.js'
+import type { RunController } from './run-controller.js'
 
 function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
   const name = meta?.name
@@ -126,6 +127,7 @@ export class SceneRunner {
   private browser: Browser | null = null
   private teamManager: TeamManager
   private swarmTrigger: SwarmTrigger | null = null
+  private controller: RunController | null = null
 
   constructor(private config: ScenetestConfig, teams: ResolvedTeam[]) {
     this.teamManager = new TeamManager(teams)
@@ -160,6 +162,11 @@ export class SceneRunner {
     if (config.swarm) {
       this.swarmTrigger = new SwarmTrigger(config.swarm)
     }
+  }
+
+  /** Attach a run controller, consulted at each scene boundary in `runAll()`. */
+  attachController(controller: RunController): void {
+    this.controller = controller
   }
 
   /**
@@ -273,6 +280,16 @@ export class SceneRunner {
     dashboardSend({ type: 'run:start', timestamp: Date.now(), sceneCount: sceneRegistry.length })
 
     for (const registered of sceneRegistry) {
+      // Command checkpoint: gate() parks while paused; stop ends the run
+      // gracefully, falling through to run:end with whatever completed.
+      if (this.controller) {
+        await this.controller.gate()
+        if (this.controller.isStopped) {
+          console.log(`\n■ Run stopped after ${sceneReports.length} scene(s).`)
+          break
+        }
+      }
+
       // Run beforeEach hook
       if (this.config.beforeEach) {
         await this.config.beforeEach({ name: registered.name, file: registered.file })
@@ -472,6 +489,9 @@ export class SceneRunner {
       timestamp: Date.now(),
       duration: report.duration,
       summary: report.summary,
+      // A run:stop broke the scene loop early — the summary above still reflects
+      // everything that ran, and `cancelled` marks why the run ended.
+      cancelled: this.controller?.isStopped ?? false,
     })
 
     // Record run for swarm trigger evaluation

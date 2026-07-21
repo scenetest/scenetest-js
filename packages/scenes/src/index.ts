@@ -32,6 +32,12 @@ export { registerBuiltinMacros, registerSelectedMacros, builtinMacroDefinitions 
 // Swarm mode
 export { SwarmTrigger } from './swarm.js'
 
+// Inbound command channel — receive protocol commands and steer the active run
+export { RunController } from './run-controller.js'
+export type { RunControllerState, RunControllerHooks } from './run-controller.js'
+export { watchCommandFile } from './command-channel.js'
+export type { WatchCommandFileOptions } from './command-channel.js'
+
 // Warmup
 export type { StorageState } from './warmup.js'
 

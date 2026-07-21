@@ -12,6 +12,9 @@ import {
   setReportUrlReporter,
   drainReportUrlReporter,
 } from './report-url-reporter.js'
+import { RunController } from './run-controller.js'
+import { watchCommandFile } from './command-channel.js'
+import { dashboardSend, currentRunId } from './dashboard-reporter.js'
 import { finish as soundFinish, resolveSoundEnabled } from './sound.js'
 import {
   gatherProjectContext,
@@ -38,6 +41,7 @@ program
   .option('--report <dir>', 'Report output directory')
   .option('--format <format>', 'Report format (html, json, both)')
   .option('--report-url <url>', 'POST batched protocol events to this HTTP endpoint as the run executes (also honors SCENETEST_REPORT_URL)')
+  .option('--command-file <path>', 'Tail this JSONL file for inbound protocol commands (run:stop/pause/resume) steering the active run at scene boundaries (also honors SCENETEST_COMMAND_FILE)')
   .option('--config <path>', 'Path to config file')
   .option('--devices', 'Enable device rotation (assign each actor a rotating mobile/tablet/desktop device)')
   .option('--no-keyboard-actor', 'Disable keyboard-only actor rotation (keyboard navigation is ON by default)')
@@ -111,6 +115,28 @@ program
       // Initialize browser
       await runner.init()
 
+      // Inbound command channel (the mirror of --report-url): tail a file for
+      // commands and dispatch them to a RunController the runner consults.
+      const commandFile = options.commandFile ?? process.env.SCENETEST_COMMAND_FILE
+      let controller: RunController | null = null
+      let stopWatching: (() => void) | null = null
+      if (commandFile) {
+        // Emit paused/resumed facts on real transitions (guarded so a stray
+        // pause before run:start doesn't emit a run-less event).
+        controller = new RunController({
+          onPaused: () => {
+            if (currentRunId()) dashboardSend({ type: 'run:paused', timestamp: Date.now() })
+          },
+          onResumed: () => {
+            if (currentRunId()) dashboardSend({ type: 'run:resumed', timestamp: Date.now() })
+          },
+        })
+        runner.attachController(controller)
+        const resolved = path.resolve(commandFile)
+        stopWatching = watchCommandFile(resolved, (command) => controller!.dispatch(command))
+        console.log(`Listening for commands on: ${resolved}\n`)
+      }
+
       let exitCode = 0
 
       try {
@@ -137,6 +163,10 @@ program
           }
         } else {
           // ── Normal run ──
+          // A command channel (if attached) is live for this run, so
+          // stop/pause/resume steer it. run:replay relaunches the CLI (the
+          // driver's job, as dev does) — a one-shot process can't re-register
+          // its module-cached scenes.
           const report = await runner.run(sceneFiles)
           printSummary(report)
           await writeReport(report, config.reportDir!, config.reportFormat!)
@@ -165,6 +195,7 @@ program
       } finally {
         // Final synchronous flush so the tail of the run — including run:end —
         // is delivered before we exit.
+        stopWatching?.()
         await drainReportUrlReporter()
         if (!options.ui) {
           await runner.close()
@@ -213,7 +244,7 @@ async function writeReport(
   fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2))
   const id = path.basename(jsonPath, '.json')
   console.log(`Report written to: ${jsonPath}`)
-  console.log(`Open in browser:    /__scenetest/?run=${id}`)
+  console.log(`Open in browser:    /__scenetest/runner?run=${id}`)
 
   if (format === 'html') {
     console.log(
@@ -268,6 +299,39 @@ program
         console.error(`Prompt written to: ${options.output}`)
       } else {
         console.log(output)
+      }
+    } catch (err) {
+      console.error('Error:', err instanceof Error ? err.message : err)
+      process.exit(1)
+    }
+  })
+
+program
+  .command('teams')
+  .description('List configured actor teams')
+  .option('--json', 'Output the team list as JSON')
+  .option('--config <path>', 'Path to config file')
+  .action(async (options: { json?: boolean; config?: string }) => {
+    try {
+      const { teams } = await loadConfig(options.config)
+      // Extensible object shape — room to add scenes / eligibility later (#234).
+      const list = teams.map((t, index) => ({
+        index,
+        name: t.meta?.name,
+        roles: Object.keys(t.actors),
+        tags: t.meta?.tags,
+      }))
+      if (options.json) {
+        // Only the JSON on stdout — consumers (the dev `/teams` endpoint) parse it.
+        process.stdout.write(JSON.stringify({ teams: list }) + '\n')
+        return
+      }
+      if (list.length === 0) {
+        console.log('No teams configured.')
+        return
+      }
+      for (const t of list) {
+        console.log(`#${t.index} ${t.name ?? '(unnamed)'} — roles: ${t.roles.join(', ') || '(none)'}`)
       }
     } catch (err) {
       console.error('Error:', err instanceof Error ? err.message : err)

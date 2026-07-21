@@ -218,7 +218,7 @@ The short version:
 1. Read your spec files to find every selector token
 2. Find the corresponding element in your source
 3. Add `data-testid` for static elements and list containers, `aria-label` for interactive elements, `data-key` for items inside a container
-4. Run `pnpm scenetest` and watch specs start passing
+4. Run `npx scenetest` and watch specs start passing
 
 ## The Handoff: Reporting to Engineers
 

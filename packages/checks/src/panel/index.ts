@@ -44,6 +44,11 @@ declare global {
     __scenetest_panel?: boolean
     __scenetest_no_panel?: boolean
     __scenetest_force_panel?: boolean
+    // When set, the panel's "dashboard" button opens the fullscreen assertion
+    // viewer instead of linking to the live dashboard at /__scenetest (which
+    // only exists under a dev server). Used by the docs demo. Read at click
+    // time, so it can be set any time after the panel mounts.
+    __scenetest_demo?: boolean
     // __scenetest_report is declared in ../types.ts (ScenetestReporter)
     __scenetest_openInEditor?: typeof openInEditor
     __scenetest_openFullscreenToGroup?: typeof openFullscreenToGroup

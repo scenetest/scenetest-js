@@ -90,7 +90,7 @@ user:
 **4. Run tests:**
 
 ```bash
-pnpm scenetest
+npx scenetest
 ```
 
 ## Documentation

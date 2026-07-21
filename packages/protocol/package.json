@@ -1,6 +1,6 @@
 {
   "name": "@scenetest/protocol",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Typed event and command vocabulary shared by the scenetest CLI, Vite plugin, dashboard, and cloud service",
   "type": "module",
   "license": "MIT",

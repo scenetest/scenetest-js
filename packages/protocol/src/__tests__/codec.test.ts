@@ -37,6 +37,8 @@ const events: RunEvent[] = [
     team: {},
   },
   { type: 'run:progress', timestamp: 8, runId: '1', pct: 60, failing: 1, flaky: 1 },
+  { type: 'run:paused', timestamp: 10, runId: '1' },
+  { type: 'run:resumed', timestamp: 11, runId: '1' },
   {
     type: 'run:end',
     timestamp: 9,
@@ -50,6 +52,21 @@ const events: RunEvent[] = [
       warnings: 1,
       consoleErrors: 0,
     },
+  },
+  {
+    type: 'run:end',
+    timestamp: 12,
+    runId: '1',
+    duration: 400,
+    summary: {
+      scenes: 3,
+      completed: 1,
+      failed: 0,
+      assertions: { total: 4, passed: 4, failed: 0 },
+      warnings: 0,
+      consoleErrors: 0,
+    },
+    cancelled: true,
   },
 ]
 
@@ -84,6 +101,13 @@ describe('event codec', () => {
     expect(decodeEvent({ type: 'run:start', timestamp: 1, runId: '1' })).toBeNull()
     expect(decodeEvent({ type: 'assertion', timestamp: 1, runId: '1', description: 'x' })).toBeNull()
     expect(decodeEvent({ type: 'scene:end', timestamp: 1, runId: '1', name: 'a', status: 'completed', duration: 1, teamIndex: 0, team: { tags: { a: 1 } } })).toBeNull()
+  })
+
+  it('rejects a run:end whose optional cancelled is not a boolean', () => {
+    const base = { type: 'run:end', timestamp: 1, runId: '1', duration: 5, summary: { scenes: 0, completed: 0, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0, consoleErrors: 0 } }
+    expect(decodeEvent({ ...base, cancelled: 'yes' })).toBeNull()
+    expect(decodeEvent({ ...base, cancelled: true })).not.toBeNull()
+    expect(decodeEvent(base)).not.toBeNull()
   })
 
   it('rejects events missing runId (required on every event, like name/file)', () => {

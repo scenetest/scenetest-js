@@ -60,6 +60,11 @@ export function setDashboardReporter(reporter: DashboardReporter | null): void {
 // which can attach mid-stream and must read `runId` off the event.
 let _currentRunId = ''
 
+/** The run currently being emitted, or '' before `run:start`. */
+export function currentRunId(): string {
+  return _currentRunId
+}
+
 export function dashboardSend(event: DashboardEventInput): void {
   if (event.type === 'run:start') _currentRunId = String(event.timestamp)
   const stamped = { ...event, runId: _currentRunId } as DashboardEvent

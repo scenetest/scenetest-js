@@ -438,7 +438,7 @@ export interface ErrorSelector {
 
 /**
  * Events streamed from the CLI runner to the Vite dev server
- * for the live dashboard at /__scenetest/dashboard.
+ * for the live dashboard at /__scenetest.
  *
  * The vocabulary is defined by `@scenetest/protocol` (where it is named
  * `RunEvent`); this alias is kept for backwards compatibility.
@@ -1147,6 +1147,14 @@ export interface CLIOptions {
 
   /** Live report HTTP endpoint — POST batched protocol events as the run executes */
   reportUrl?: string
+
+  /**
+   * Inbound command channel (mirror of `--report-url`): a JSONL file to tail
+   * for protocol commands acting on the active run. `run:stop`/`pause`/`resume`
+   * steer the live run; `run:replay` relaunches the CLI. Also honors
+   * `SCENETEST_COMMAND_FILE`.
+   */
+  commandFile?: string
 
   /** Config file path */
   config?: string

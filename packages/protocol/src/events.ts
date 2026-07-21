@@ -182,6 +182,30 @@ export interface RunEndEvent {
   runId: string
   duration: number
   summary: RunSummary
+  /**
+   * True when the run ended because it was stopped (a `run:stop` command),
+   * rather than running every scene to completion. The summary still reflects
+   * everything that ran up to the stop. Absent/false on a normal finish.
+   */
+  cancelled?: boolean
+}
+
+/**
+ * The run was paused (past-tense fact). Emitted by the consumer when it enacts
+ * a `run:pause` command, so viewers reflect the paused state and the log
+ * records it. Distinct from the imperative `run:pause` command.
+ */
+export interface RunPausedEvent {
+  type: 'run:paused'
+  timestamp: number
+  runId: string
+}
+
+/** The run resumed (the past-tense counterpart of `RunPausedEvent`). */
+export interface RunResumedEvent {
+  type: 'run:resumed'
+  timestamp: number
+  runId: string
 }
 
 /**
@@ -200,6 +224,8 @@ export type RunEvent =
   | SceneEndEvent
   | RunProgressEvent
   | RunEndEvent
+  | RunPausedEvent
+  | RunResumedEvent
 
 /** All known event type tags. */
 export const EVENT_TYPES = [
@@ -212,4 +238,6 @@ export const EVENT_TYPES = [
   'scene:end',
   'run:progress',
   'run:end',
+  'run:paused',
+  'run:resumed',
 ] as const satisfies readonly RunEvent['type'][]

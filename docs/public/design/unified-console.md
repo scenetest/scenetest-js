@@ -2,8 +2,12 @@
 
 **STATUS: Dev console landed; cloud + report loader pending.** Phases 1
 (multi-run collection model) and 3 (`<Dashboard>` with Home/Runner/Waterfall,
-replacing the inline `analyze-app.ts`) are done. The PR-history report loader
-(phase 2) and the cloud transport / URL reorg (phase 4) are the remaining work.
+replacing the inline `analyze-app.ts`) are done. Routing rides on one
+`preact-iso` `LocationProvider` owned by the host (see
+[Routing](#routing-one-preact-iso-router-owned-by-the-host)): dev wraps it in
+`BrowserDashboard`, cloud renders the bare `<Dashboard>` under its own route. The
+PR-history report loader (phase 2) and the cloud transport / shell (phase 4) are
+the remaining work.
 
 ---
 
@@ -89,20 +93,36 @@ partition instead of wiping).
 
 ## Identity: runId and PR/branch
 
-- **`runId` is a timestamp**, and it rides **on every event** — `runId` is a
-  required field of every `RunEvent` (`@scenetest/protocol`), stamped once by
-  the producer at `run:start` time (`dashboardSend` sets it; call sites don't
-  thread it). It's required like `name`/`file`, not optional — deriving it
-  from event order would break on reconnect/mid-stream attach, where a
-  consumer's replay window may not include `run:start`. With it on the event,
-  projections are stateless and partition correctly no matter where a consumer
-  joins. (This is a breaking wire change, taken deliberately while the protocol
-  is pre-1.0 and unused — `PROTOCOL_VERSION` is left at 1.)
-- **PR/branch identity rides in the report filename**, not the protocol:
-  `pr-{num}-{timestamp}-{n}-scenes.json` in `scenetest/.reports/`. A
-  `scenetest/.reports` folder is one repo, so the loader groups by PR number
-  from the filename and stamps `pr` / `branch` onto the `runs` row when it
-  replays. (Live dev runs without a PR are just ungrouped, "local".)
+The unit is the **PR**; `runId` is just a within-PR key we use where one is
+handy — **not** an organizing concept, and crucially **not an API or route
+surface**. There are no `runId`-specific endpoints or app routes: the Runner's
+run picker is a `?run=` query param over a `runs` *table* (a live query, see
+above), past runs are reports keyed by id, and the cloud URL is per-PR with the
+run chosen in-page. Where `runId` actually earns its keep:
+
+- **Storage layout.** It's how we partition the on-disk archive and the
+  `.jsonl` event logs, and (later) how a **chunked restore** streams a PR's
+  history back in file by file rather than all at once.
+- **Aggregate cache.** On `run:start` / `run:end` we report rollup stats to the
+  Cloudflare worker's **D1**. That's a UI concern (the picker/most-recent/flaky
+  summaries) and a caching one — precomputed aggregates so a viewer doesn't
+  re-fold a PR's whole history on every load.
+
+It still rides **on every event** — `runId` is a required field of every
+`RunEvent` (`@scenetest/protocol`), stamped once by the producer at `run:start`
+time (`dashboardSend` sets it; call sites don't thread it). It's required like
+`name`/`file`, not optional — deriving it from event order would break on
+reconnect/mid-stream attach, where a consumer's replay window may not include
+`run:start`. With it on the event, projections are stateless and slice
+correctly (`where runId = latest`) no matter where a consumer joins. (This was
+a breaking wire change, taken deliberately while the protocol is pre-1.0 and
+unused — `PROTOCOL_VERSION` is left at 1.)
+
+**PR/branch identity**, by contrast, rides in the report filename, not the
+protocol: `pr-{num}-{timestamp}-{n}-scenes.json` in `scenetest/.reports/`. A
+`scenetest/.reports` folder is one repo, so the loader groups by PR number from
+the filename and stamps `pr` / `branch` onto the `runs` row when it replays.
+(Live dev runs without a PR are just ungrouped, "local".)
 
 ## Dev ↔ cloud mapping
 
@@ -111,8 +131,9 @@ partition instead of wiping).
 | run history | replay `scenetest/.reports/*.json` for the branch/PR | replay from D1 (metadata) + R2 (event log) |
 | live run | SSE (`/__scenetest/events`) | WebSocket (Durable Object) |
 | identity | filename `pr-{num}-{timestamp}-…` | D1 runId + PR row |
-| URL | one page per dev session | `/pr/:owner/:repo/:number` (run = picker, not URL) |
-| mount | `<Dashboard>` | `<Dashboard>` (same component) |
+| URL | `/__scenetest{/runner,/waterfall}` (run = `?run=` picker) | `/repo/:owner/:name/pr/:number{/runner,/waterfall}` (run = picker) |
+| routing | `BrowserDashboard` supplies the `LocationProvider` | host's own `LocationProvider` (preact-iso) |
+| mount | `<BrowserDashboard transport>` | `<Dashboard transport basePath>` (same component) |
 
 ### Cloud storage granularity: per-PR, not per-run
 
@@ -132,6 +153,47 @@ This is the server-side mirror of the client decision: the PR is the aggregate,
 the run is a partition. The cloud side is specified authoritatively in
 scenetest-cloud's `architecture.md`.
 
+## Routing: one preact-iso router, owned by the host
+
+There is **one** router — `preact-iso`, the same router scenetest-cloud already
+uses — and the host app owns its single `LocationProvider`. The dashboard does
+not bring a second one. It mounts on a **single route with an optional trailing
+param, `{base}/:view?`**, which matches the base *and* each view in one pattern
+(`:view?` is the accepted way a scoped router handles its own exact base — no
+separate "index" route, no redirect). preact-iso hands the matched segment back
+as a param; the dashboard reads `useRoute().params.view` and renders it. Because
+the view is a route param, the *same* `<Dashboard>` works whether it's the whole
+app or mounted on a per-PR route of a bigger app, and it stays mounted across
+view changes (the store survives) since every view matches the one route.
+
+- **Dev / standalone** — render **`BrowserDashboard`**, which supplies the one
+  `LocationProvider` (scoped to `basePath`) and a `Router` mounting `<Dashboard
+  path={`${base}/:view?`} />`. The provider intercepts the tab `<a>` clicks for
+  client-side nav and serves reloads / deep-links; the middleware returns the app
+  at every view route. The dev shell is `render(<BrowserDashboard transport={…} />)`.
+- **Embedded (cloud)** — cloud already owns a `LocationProvider`, so it adds
+  `:view?` to its own PR route, `/repo/:owner/:name/pr/:number/:view?`, and renders
+  `<Dashboard basePath={prMount} />` under it. The dashboard reads the same
+  `useRoute().params.view` and nests with no extra wiring — the whole point of
+  using the router cloud already has.
+
+`LocationProvider` does the hard parts (history, scoped `<a>`-click interception);
+the matcher extracts the view; the dashboard's only view↔URL logic is reading the
+param, so there's no `viewForPath`/`viewHref` scheme to drift. Two props shape the
+URLs without coupling to a router:
+
+- **`basePath`** (default `/__scenetest`) — only builds the absolute, deep-linkable
+  tab `<a>` hrefs. View *selection* is the route param, so cloud's per-PR mount
+  needs nothing more. Cloud passes its PR mount.
+- **`apiBase`** (defaults to `basePath`) — the base for the Runner's
+  server-endpoint fetches (`/runs`, `/source`, `/__open-in-editor`). Decoupled
+  because cloud's API lives elsewhere than its router; dev's two coincide.
+
+This is the fix for the cloud team's report that the old hardcoded
+`/__scenetest` routing + in-widget `pushState` rewrote the host's URL to a path
+its router and worker shell didn't serve (tab clicks lied; reload / deep-link
+404'd) — by deferring to the host's own router instead of running a second one.
+
 ## Phasing
 
 1. **✅ Done.** Multi-run collection model: rows carry `runId`, projections
@@ -149,7 +211,11 @@ scenetest-cloud's `architecture.md`.
    view. The Runner folds the shared collection **projections** + `attributeToScene`
    directly into Preact state (the bundling prerequisite, #215, landed first).
 4. **Cloud** (pending): implement the data source against D1/R2/DO behind
-   `Transport`; reorganize URLs run → PR; render `<Dashboard>`.
+   `Transport`; render `<Dashboard>`. The routing seam landed early — the
+   dashboard reads cloud's own `preact-iso` `LocationProvider`, so cloud mounts
+   `<Dashboard basePath={prMount} />` under its PR route per
+   [Routing](#routing-one-preact-iso-router-owned-by-the-host); what remains
+   here is the transport + the report loader (phase 2).
 
 ## What stays out of `Transport`
 

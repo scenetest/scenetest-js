@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'preact/hooks'
+import { useRoute } from 'preact-iso'
 import { createCollection } from '@tanstack/db'
 import {
   createRunSource,
@@ -15,6 +16,12 @@ import { useRunSlice } from './use-run-slice.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardTheme, Transport } from './types.js'
 import type { DashboardCollections } from './select-helpers.js'
+
+/** Routing props preact-iso passes if the dashboard is used as a route child. */
+interface RoutableProps {
+  path?: string
+  default?: boolean
+}
 
 /** Build the inline `--st-*` custom properties for the theming surface. */
 function themeVars(theme?: DashboardTheme): Record<string, string> {
@@ -58,36 +65,27 @@ function useDashboardStore(transport: Transport): { store: DashboardStore; conne
   return { store, connection }
 }
 
-// ── Routing ───────────────────────────────────────────────────────
-type Tab = 'home' | 'runner' | 'waterfall'
-
-// Both hosts mount the dashboard (and its dev middleware endpoints) here. It's
-// a single constant rather than a prop: the routing and the Runner's data
-// fetches must agree, and nothing in-tree mounts it anywhere else.
-const BASE = '/__scenetest'
-
-function tabForPath(pathname: string): Tab {
-  if (pathname.startsWith(`${BASE}/runner`)) return 'runner'
-  if (pathname.startsWith(`${BASE}/waterfall`)) return 'waterfall'
-  return 'home'
-}
-
-const PATH_FOR_TAB: Record<Tab, string> = {
-  home: BASE,
-  runner: `${BASE}/runner`,
-  waterfall: `${BASE}/waterfall`,
-}
-
 /**
  * The Dashboard app — Home / Runner / Waterfall views over one read-only
- * `@tanstack/db` read model, routed on `location.pathname`. A plain Preact
- * component rendering into the light DOM under a single `.scenetest-dashboard`
- * root class; the shipped stylesheet scopes everything to it. Dev and cloud
- * render the same component — only the injected `transport` differs.
+ * `@tanstack/db` read model. A plain Preact component rendering into the light
+ * DOM under a single `.scenetest-dashboard` root class; the shipped stylesheet
+ * scopes everything to it.
  *
- *   /__scenetest            → Home
- *   /__scenetest/runner     → Runner (filterable scene log)
- *   /__scenetest/waterfall  → Waterfall (live timeline)
+ * **Routing rides on `preact-iso`.** The host mounts the dashboard on a single
+ * route with an *optional* trailing param — `{base}/:view?` — which matches the
+ * base **and** each view in one pattern (`:view?` is how a scoped router handles
+ * its own exact base). preact-iso hands back the matched segment as a param;
+ * the dashboard reads `useRoute().params.view` and renders it. The surrounding
+ * `LocationProvider` (the host's, or the one `BrowserDashboard` supplies) owns
+ * the URL and intercepts the tab `<a>` clicks. Because the match is a route
+ * param, the *same* component works whether it's the whole app (dev) or mounted
+ * on a per-PR route of a bigger preact-iso app (scenetest-cloud, at
+ * `/repo/:owner/:name/pr/:number/:view?`) — one router, owned by the host.
+ *
+ * `basePath` is only used to build the absolute, deep-linkable tab hrefs;
+ * `apiBase` (default `basePath`) bases the Runner's server fetches, decoupled
+ * because cloud's API lives elsewhere than its router. `path` / `default` are
+ * accepted so the dashboard can also be a preact-iso route child directly.
  *
  * The collections are the single store: the component builds them from the run
  * stream and every view reads from them (`selectWaterfall`, `selectSnapshot`).
@@ -95,62 +93,59 @@ const PATH_FOR_TAB: Record<Tab, string> = {
 export function Dashboard({
   transport,
   theme,
+  basePath,
+  apiBase,
 }: {
   transport: Transport
   theme?: DashboardTheme
-}) {
+  /** The mount the tab anchors point under — the host always supplies it. */
+  basePath: string
+  /**
+   * Base path for the Runner's server-endpoint fetches (`/runs`, `/source`,
+   * `/__open-in-editor`). Defaults to `basePath` — the symmetric self-hosted
+   * case where the dashboard's URLs and its API share a mount. Cloud, whose API
+   * lives elsewhere than its router, overrides it.
+   */
+  apiBase?: string
+} & RoutableProps) {
   const { store, connection } = useDashboardStore(transport)
-  const [tab, setTab] = useState<Tab>(() => tabForPath(location.pathname))
+  const { params } = useRoute()
 
-  useEffect(() => {
-    const onPop = () => setTab(tabForPath(location.pathname))
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-
-  // Client-side navigation via real <a> links, delegated on the app root.
-  // Modifier-clicks fall through to the browser as normal links.
-  const onNavigate = (e: MouseEvent) => {
-    const a = (e.target as Element | null)?.closest('a')
-    const href = a?.getAttribute('href')
-    if (!href || !href.startsWith(BASE)) return
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-    e.preventDefault()
-    history.pushState(null, '', href + location.search)
-    setTab(tabForPath(href))
-  }
+  const base = basePath.replace(/\/+$/, '')
+  const apiB = (apiBase ?? basePath).replace(/\/+$/, '')
+  // The matched `:view?` segment; absent at the base → Home.
+  const view = params.view === 'runner' || params.view === 'waterfall' ? params.view : 'home'
+  const tabClass = (t: string) => 'tab' + (view === t ? ' active' : '')
 
   const send = (command: Command) => {
     void transport.sendCommand(command)
   }
 
-  const tabClass = (t: Tab) => 'tab' + (tab === t ? ' active' : '')
-
   return (
-    <div class="scenetest-dashboard" style={themeVars(theme)} onClick={onNavigate}>
+    <div class="scenetest-dashboard" style={themeVars(theme)}>
       <nav class="dashboard-nav">
         <h1>
           <span class="logo">🎬</span> Scenetest
         </h1>
         <div class="tabs">
-          <a class={tabClass('home')} href={PATH_FOR_TAB.home}>
+          <a class={tabClass('home')} href={base || '/'}>
             Home
           </a>
-          <a class={tabClass('runner')} href={PATH_FOR_TAB.runner}>
+          <a class={tabClass('runner')} href={`${base}/runner`}>
             Runner
           </a>
-          <a class={tabClass('waterfall')} href={PATH_FOR_TAB.waterfall}>
+          <a class={tabClass('waterfall')} href={`${base}/waterfall`}>
             Waterfall
           </a>
         </div>
       </nav>
       <div class="view">
-        {tab === 'home' ? (
-          <Home />
-        ) : tab === 'runner' ? (
-          <RunnerView collections={store} connection={connection} base={BASE} />
+        {view === 'runner' ? (
+          <RunnerView collections={store} connection={connection} base={apiB} />
+        ) : view === 'waterfall' ? (
+          <WaterfallHost collections={store} connection={connection} send={send} apiBase={apiB} />
         ) : (
-          <WaterfallHost collections={store} connection={connection} send={send} />
+          <Home basePath={base} />
         )}
       </div>
     </div>
@@ -158,7 +153,7 @@ export function Dashboard({
 }
 
 // ── Home ──────────────────────────────────────────────────────────
-function Home() {
+function Home({ basePath }: { basePath: string }) {
   return (
     <div class="index">
       <h1>
@@ -166,11 +161,11 @@ function Home() {
       </h1>
       <p class="lede">Pick a view.</p>
       <div class="cards">
-        <a class="card" href={PATH_FOR_TAB.runner}>
+        <a class="card" href={`${basePath}/runner`}>
           <div class="name">Scene runner →</div>
           <div class="desc">Live and past runs: scene tree, status, failure log, spec snippets.</div>
         </a>
-        <a class="card" href={PATH_FOR_TAB.waterfall}>
+        <a class="card" href={`${basePath}/waterfall`}>
           <div class="name">Waterfall →</div>
           <div class="desc">Live timeline of actors and inline check() / should() assertions.</div>
         </a>
@@ -187,21 +182,46 @@ function WaterfallHost({
   collections,
   connection,
   send,
+  apiBase,
 }: {
   collections: DashboardCollections
   connection: ConnectionStatus
   send: (c: Command) => void
+  apiBase: string
 }) {
   const slice = useRunSlice(collections)
   const view = useMemo(
     () => selectWaterfall(slice),
     [slice.runId, slice.run, slice.scenes, slice.assertions, slice.actions]
   )
-  const state = { ...view, connection }
+  // Configured teams for the replay picker (so it lists teams that haven't run
+  // yet). Falls back to teams observed in events when the endpoint is absent.
+  const configuredTeams = useConfiguredTeams(apiBase)
+  const teams = configuredTeams.length ? configuredTeams : view.teams
+  const state = { ...view, teams, connection }
 
   return (
     <div class="waterfall-host">
       <Waterfall state={state} send={send} />
     </div>
   )
+}
+
+/** Fetch configured team names from `<apiBase>/teams` once. Empty on failure. */
+function useConfiguredTeams(apiBase: string): string[] {
+  const [teams, setTeams] = useState<string[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${apiBase}/teams`)
+      .then((r) => r.json())
+      .then((data: { teams?: Array<{ name?: string }> }) => {
+        if (cancelled || !Array.isArray(data?.teams)) return
+        setTeams(data.teams.map((t) => t.name).filter((n): n is string => !!n))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [apiBase])
+  return teams
 }

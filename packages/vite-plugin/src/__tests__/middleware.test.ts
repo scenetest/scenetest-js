@@ -233,12 +233,35 @@ describe('scenetest middleware', () => {
       )
       expect(res.statusCode).toBe(200)
       const args = vi.mocked(spawn).mock.calls[0][1] as string[]
-      // spawn('npx', ['scenetest', ...args]) — drop the leading 'scenetest'
+      // spawn('npx', ['scenetest', '--command-file', <tmp>, '--team', …, <file>])
       expect(args[0]).toBe('scenetest')
-      expect(args[1]).toBe('--team')
-      expect(args[2]).toBe('Spanish')
-      expect(args[3]).toContain('login.spec.ts')
-      expect(args[3]).toContain(path.join('scenetest', 'scenes'))
+      expect(args).toContain('--command-file')
+      const teamIdx = args.indexOf('--team')
+      expect(args[teamIdx + 1]).toBe('Spanish')
+      const fileArg = args.find((a) => a.includes('login.spec.ts'))
+      expect(fileArg).toContain(path.join('scenetest', 'scenes'))
+      // --team comes before the resolved scene file path
+      expect(teamIdx).toBeLessThan(args.indexOf(fileArg as string))
+    })
+
+    it('spawns the runner with --command-file so pause/resume reach the CLI', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      await callWithBody(mw, 'POST', '/__scenetest/replay', '{}')
+      const args = vi.mocked(spawn).mock.calls[0][1] as string[]
+      const idx = args.indexOf('--command-file')
+      expect(idx).toBeGreaterThanOrEqual(0)
+      expect(args[idx + 1]).toMatch(/\.commands\.jsonl$/)
+    })
+  })
+
+  describe('POST /__scenetest/pause and /resume', () => {
+    it('accept the verb and respond ok:true (written to the command file)', async () => {
+      const mw = createScenetestMiddleware(stubServer(), tmp)
+      for (const url of ['/__scenetest/pause', '/__scenetest/resume']) {
+        const res = await callWithBody(mw, 'POST', url, '')
+        expect(res.statusCode).toBe(200)
+        expect(JSON.parse(res.body)).toEqual({ ok: true })
+      }
     })
   })
 })

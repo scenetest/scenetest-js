@@ -4,7 +4,7 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## 2026-06-15 — @scenetest/scenes 0.16.0
+## 2026-07-21 — monorepo 0.18.0 · @scenetest/scenes 0.17.0
 
 **Playwright is now a peer dependency.** `@scenetest/scenes` drives the
 consumer's Playwright instead of bundling its own copy, so a project that
@@ -12,7 +12,7 @@ already uses Playwright (for its own tests, or another tool) shares **one**
 version and **one** set of browser binaries — no duplicate install, and no
 ambiguity about which version `playwright install` targets.
 
-### @scenetest/scenes 0.16.0
+### @scenetest/scenes 0.17.0
 
 * **Breaking — `playwright` moved from a dependency to a `peerDependency`**
   (`^1.40.0`). Add it to your project (`pnpm add -D playwright`) and install a
@@ -26,6 +26,57 @@ ambiguity about which version `playwright install` targets.
   is resolved lazily at launch (and `devices.ts` no longer imports it at all —
   its device descriptors are inlined), so a missing peer surfaces as that
   message rather than a load-time crash.
+
+---
+
+## 2026-06-22 — monorepo 0.17.0 · @scenetest/scenes 0.16.0, @scenetest/vite-plugin 0.17.0, @scenetest/dashboard 0.14.0, @scenetest/protocol 0.12.0, @scenetest/receiver 0.12.0
+
+**Dashboard control plane.** The dashboard can pause/resume/stop a run and re-run a team. Directions reach the CLI the same way in dev and cloud (receiver → `onCommand` → the run) and their effects come back as events. Commands target the active run; the only protocol change is two events plus a flag.
+
+### @scenetest/protocol 0.12.0
+* `run:paused` / `run:resumed` events, and an optional `cancelled` flag on `run:end` (set when a run is stopped; the summary still reflects what ran). Additive; `PROTOCOL_VERSION` unchanged.
+
+### @scenetest/scenes 0.16.0
+* `--command-file` (and `SCENETEST_COMMAND_FILE`) tails a JSONL file for inbound commands: pause/resume park/release at scene boundaries; stop ends cooperatively, emitting the final `run:end` (partial summary + `cancelled`) so it's never lost; replay relaunches.
+* New `RunController`, `watchCommandFile()`, `SceneRunner.attachController()`, and a `teams --json` subcommand.
+
+### @scenetest/vite-plugin 0.17.0
+* Dashboard pause/resume/stop now work — routed to the CLI via `--command-file` (matching cloud), replacing the old `SIGSTOP`-the-shell that never reached the process. Adds `GET /__scenetest/teams` and the unified `POST /__scenetest/commands`. No consumer-API change.
+
+### @scenetest/receiver 0.12.0
+* `createReceiverApp({ sinks, onCommand? })` + `POST /commands` — decode a `Command`, hand it to `onCommand` (`runId` is metadata, never the address). Always 200. New `CommandHandler`/`CommandMeta`.
+
+### @scenetest/dashboard 0.14.0
+* Pause/Resume toggle and a "stopped" marker driven by the new events/flag; the replay team picker lists configured teams from `GET /__scenetest/teams` instead of only those seen in events.
+
+---
+
+## 2026-06-22 — monorepo 0.16.1 · @scenetest/checks 0.13.1
+
+### @scenetest/checks 0.13.1
+
+**Fix the observer panel's "dashboard" button + add a demo mode.** The button linked to `/__scenetest/dashboard`, a path that stopped existing when the dashboard's views were renamed — the live dashboard (Home) now mounts at the base `/__scenetest`, with `/__scenetest/runner` and `/__scenetest/waterfall` for the other views. The button now points at `/__scenetest`, so under a dev server it opens the live dashboard again instead of 404'ing. (Reference docs that pointed at the old URL are corrected too.)
+
+For standalone hosts with no dev server behind them (the docs site), set `window.__scenetest_demo = true` and the "dashboard" button pops the fullscreen assertion viewer — the same window an assertion click opens — instead of following the dead link. The flag is read at click time, so it can be set any time after the panel mounts.
+
+---
+
+## 2026-06-18 — monorepo 0.16.0 · @scenetest/dashboard 0.13.0, @scenetest/vite-plugin 0.16.0
+
+**Embedded routing fix.** `<Dashboard>` no longer runs its own router against a hardcoded `/__scenetest` base — it defers to the host's `preact-iso` router, so it embeds correctly inside another app (scenetest-cloud, mounted per-PR at `/repo/:owner/:name/pr/:number`) without rewriting the browser URL. `@scenetest/dashboard` (breaking) bumps to 0.13.0 and `@scenetest/vite-plugin` (which bundles the dev dashboard) to 0.16.0; other packages are unchanged.
+
+### @scenetest/dashboard 0.13.0
+
+* **Breaking — routing is owned by the host's `preact-iso` `LocationProvider`.** The dashboard mounts on a single route with an optional trailing param, `{base}/:view?`, which matches the base *and* each view in one pattern; it reads the matched view from `useRoute().params.view` and never touches `history`/`location` itself. This replaces the old hardcoded `/__scenetest` routing + in-widget `pushState`, which rewrote the host's URL when the dashboard was embedded (tab clicks lied; reload / deep-link 404'd). `preact-iso` is now a runtime dependency.
+* **`basePath` is now required**, and only builds the absolute, deep-linkable tab hrefs (view selection is the route param). `apiBase` (default `basePath`) bases the Runner's server-endpoint fetches, decoupled because an embedding host's API may live elsewhere than its router. The old internal `BASE` constant and the unreleased `viewForPath` / `viewHref` helpers are gone.
+* **New `BrowserDashboard` export** — the standalone entry point that supplies the one `LocationProvider` + `Router` a top-level app must own: `render(<BrowserDashboard transport={…} />)`. An app that already owns a `LocationProvider` (cloud) renders the bare `<Dashboard basePath={…} />` under its own `:view?` route instead.
+* **Stable mount across views.** Because every view matches the one route, `<Dashboard>` stays mounted when you switch tabs, so the TanStack DB read model and the event stream are built once and survive navigation — no reconnect, re-fold, or lost filter state.
+
+### @scenetest/vite-plugin 0.16.0
+
+* **Dev dashboard shell renders `BrowserDashboard`** and ships the rebuilt dashboard with host-owned routing. No change to the plugin's consumer API (`strip` / `devPanel` / `demo` / `csp`).
+
+---
 
 ## 2026-06-15 — @scenetest/dashboard 0.12.0, @scenetest/vite-plugin 0.15.0
 

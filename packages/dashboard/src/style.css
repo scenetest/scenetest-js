@@ -354,10 +354,28 @@
     padding: 4px 14px;
     color: var(--text2);
     display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tree-file:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .tree-caret {
+    flex: none;
+    width: 10px;
+    font-size: 9px;
+    color: var(--text2);
+  }
+  .tree-file .tree-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .tree-file .fail {
+    flex: none;
     color: var(--red);
   }
   .tree-scene {
