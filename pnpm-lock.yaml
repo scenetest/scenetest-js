@@ -362,6 +362,9 @@ importers:
         specifier: 1.56.1
         version: 1.56.1
     devDependencies:
+      '@tanstack/intent':
+        specifier: ^0.0.41
+        version: 0.0.41
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.30

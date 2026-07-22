@@ -124,6 +124,7 @@ The dashboard UI was extracted from the Vite plugin's inline HTML string so dev 
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
 - `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
 - `recorder/` — the scene recorder panel (capture, reverse-selector, panel UI), subpath export `./recorder`, auto-initializing on import. Pure DOM code with no Vite coupling; the Vite plugin injects it when `recorder: true`
+- `skills/scene-authoring/SKILL.md` + `skills/team-configuration/SKILL.md` — two shippable Agent Skills (TanStack Intent). `scene-authoring` teaches writing scene specs (the three authoring models, the actor DSL, selectors, multi-actor coordination, `expectConsoleError`, the `.spec.md` format); `team-configuration` teaches `scenetest/actors/**` teams, the `ActorConfig` shape, seed-data mapping, `warmup` auth caching, `cleanup:`/`setup:` directives, and `config.ts`. Shipped in the npm tarball (`files` includes `skills` + `!skills/_artifacts`, `tanstack-intent` keyword). Validate with `pnpm -C packages/scenes skills:validate`. Consumers discover them via `npx @tanstack/intent list` and load `@scenetest/scenes#scene-authoring` / `#team-configuration`. Keep in sync with `docs/public/reference/text-dsl.md`, `docs/public/guides/writing-scene-specs.md`, and `docs/public/guides/building-teams.md`.
 
 ### Vite Plugin (`packages/vite-plugin/src/`)
 - `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)
