@@ -308,7 +308,7 @@ const KNOWN_ACTIONS = [
   'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
   'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
   'warnIf', 'up', 'prev', 'scrollToBottom', 'if', 'pressKey', 'ifClick',
-  'scope',
+  'scope', 'expectConsoleError',
 ]
 
 /** Check if a line looks like a DSL action or macro invocation */

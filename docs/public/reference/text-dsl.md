@@ -22,6 +22,9 @@ Assertions (do NOT change scope):
   notSee <selector>               Wait for element hidden
   seeText <text>                  Wait for text visible
   seeToast <selector>             Wait for element appear then disappear
+  expectConsoleError <pattern>    Wait for an expected console error / uncaught
+                                  exception (substring or /regex/) — a success,
+                                  and kept out of the run's error surface
 
 Scope:
   scope <selector>                Wait for element visible and SET it as scope
@@ -54,9 +57,49 @@ Control:
 |----------|---------|--------------|
 | **Changes scope** | `scope`, `up`, `prev` | `scope` pushes onto the scope stack and narrows. `up` widens — bare `up` resets to page root, `up <selector>` climbs to a matching ancestor. `prev` pops the stack, returning to the previous scope. |
 | **Resets scope** | `openTo`, `reload`, `goBack`, `goForward`, `switchDevice` | Clears scope entirely — back to page root. |
-| **Leaves scope alone** | `click`, `ifClick`, `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom` | Scope stays where it is. Even when `click` causes navigation, the scope stack is left intact; the runtime walks up to the nearest surviving ancestor before the next action. |
+| **Leaves scope alone** | `click`, `ifClick`, `see`, `seeInView`, `notSee`, `seeText`, `seeToast`, `expectConsoleError`, `typeInto`, `check`, `select`, `wait`, `emit`, `waitFor`, `pressKey`, `warnIf`, `scrollToBottom` | Scope stays where it is. Even when `click` causes navigation, the scope stack is left intact; the runtime walks up to the nearest surviving ancestor before the next action. |
 
 **`see` vs `scope`:** `see` is a pure assertion — it checks that an element is visible but does not narrow scope. Use `scope` when you need subsequent actions (like `typeInto` or `check`) to resolve within a specific container.
+
+### Expecting console errors
+
+Scenetest captures browser console errors and uncaught exceptions and surfaces them at the end of a run. But sometimes a scene *wants* one — logging in with the wrong password should make the server return a `400`, and it would be a bug if it didn't. `expectConsoleError <pattern>` asserts that such an error happens: it waits (up to the action timeout) for a captured error matching `<pattern>`, marks it **expected**, and fails the scene if none arrives.
+
+Expected errors are reported as a success (`✓ N expected console error(s)`) and are excluded from the `🔴 browser console error(s)` surface and the run summary's error count.
+
+```scenetest
+learner:
+- openTo /login
+- typeInto email learner@test.com
+- typeInto password wrong-password
+- click sign-in
+- expectConsoleError Invalid login credentials
+- expectConsoleError /status of 4\d\d/
+- seeText Wrong email or password
+```
+
+The pattern is a **case-insensitive substring** by default, or a `/regex/flags` literal for finer control. Each call claims a **single** error (the earliest unclaimed match for that actor), so write one `expectConsoleError` per console message a failure emits — a failed request that logs both a resource error and an uncaught exception needs two.
+
+#### Named aliases
+
+Like selector aliases, you can name the console errors a suite expects in config, so specs read in domain terms instead of repeating brittle message fragments:
+
+```ts
+// scenetest/config.ts
+export default defineConfig({
+  consoleErrorAliases: {
+    'bad-password': 'Invalid login credentials',
+    'not-found': /status of 404/,
+  },
+})
+```
+
+```scenetest
+- expectConsoleError bad-password     # bare name resolves to the alias
+- expectConsoleError ~bad-password    # explicit ~ form — errors on a typo
+```
+
+A bare argument that exactly matches an alias name resolves to its pattern; otherwise it's treated as a literal substring. Prefix with `~` to force alias resolution (a `~typo` that names no alias throws, catching mistakes early).
 
 **Selector resolution is strict.** Selectors resolve against the current scope only; if nothing matches, you get a diagnostic error naming the action, the selector, and the scope rather than a silent fallback. If you need to reach an element outside the current scope, widen with `up` or `prev` first. If multiple elements match in scope, resolution is also strict — disambiguate with an Nth-element token (`#1`, `#2`, `#3`…) appended to the selector.
 

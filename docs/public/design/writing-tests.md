@@ -136,6 +136,11 @@ export default defineConfig({
     modal: '[role=dialog]',
     nav: '[role=navigation]',
   },
+  // Name the console errors scenes deliberately trigger, so specs can
+  // claim them by domain term: `expectConsoleError bad-password`.
+  consoleErrorAliases: {
+    'bad-password': 'Invalid login credentials',
+  },
   reportDir: './scenetest-reports',
   reportFormat: 'html',
 

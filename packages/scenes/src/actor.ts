@@ -5,6 +5,7 @@ import { tabToElement, pressEnter, pressSpace, clearAndType, keyboardSelectOptio
 import { MessageBus } from './message-bus.js'
 import { resolveSelector, buildSelectorMissError } from './selectors.js'
 import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
+import { waitForConsoleError, describeMissingConsoleError, resolveConsoleErrorPattern } from './console-errors.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
@@ -309,6 +310,18 @@ class ActionChainImpl implements ActionChain {
       await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
       await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
       // Don't update scope for toasts since they disappear
+    })
+  }
+
+  expectConsoleError(pattern: string | RegExp): ActionChain {
+    const target = typeof pattern === 'string' ? pattern : String(pattern)
+    return this.addAction('expectConsoleError', target, async () => {
+      const resolved = resolveConsoleErrorPattern(pattern)
+      const errors = this.actor.getConsoleErrors()
+      const claimed = await waitForConsoleError(errors, this.actor.role, resolved, this.actionTimeout)
+      if (!claimed) {
+        throw new Error(describeMissingConsoleError(errors, this.actor.role, resolved, this.actionTimeout))
+      }
     })
   }
 
@@ -872,6 +885,14 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
   }
 
   /**
+   * The session's shared console-error buffer (used by ActionChainImpl for
+   * `expectConsoleError()` to find and claim a matching error).
+   */
+  getConsoleErrors(): ConsoleError[] {
+    return this.consoleErrors
+  }
+
+  /**
    * Clear all registered watchers (called after each await)
    * Note: Warning triggers persist across the entire scene
    */
@@ -921,6 +942,10 @@ export class SequentialActorHandleImpl implements SequentialActorHandle {
 
   seeToast(selector: Selector): ActionChain {
     return this.createChain().seeToast(selector)
+  }
+
+  expectConsoleError(pattern: string | RegExp): ActionChain {
+    return this.createChain().expectConsoleError(pattern)
   }
 
   scope(selector: Selector): ActionChain {

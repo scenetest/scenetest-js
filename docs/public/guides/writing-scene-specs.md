@@ -47,6 +47,29 @@ user:
 
 `seeToast` waits for the element to appear _and then disappear_ — perfect for toast notifications that auto-dismiss.
 
+## Expecting Console Errors
+
+Some scenes deliberately exercise an error path — logging in with the wrong password, submitting an invalid form. The server *should* return an error there, and Scenetest would otherwise flag the resulting console error as a problem. Use `expectConsoleError` to declare it a success instead:
+
+```scenetest
+learner:
+- typeInto password wrong-password
+- click sign-in
+- expectConsoleError Invalid login credentials
+- seeText Wrong email or password
+```
+
+It waits for a browser console error (or uncaught exception) matching the pattern — a case-insensitive substring, or a `/regex/` — and **fails the scene if none appears**. Matched errors are reported as `✓ expected console error(s)` and kept out of the run's error surface. Each call claims one error, so add one line per console message the failure emits.
+
+You can also name expected errors in `scenetest/config.ts` and reference them by domain term — handy when several specs expect the same error:
+
+```ts
+consoleErrorAliases: {
+  'bad-password': 'Invalid login credentials',
+}
+// then in a spec:  - expectConsoleError bad-password
+```
+
 ## Scope Navigation
 
 `scope` narrows the actor's **current scope** — subsequent actions search within the matched element. `see` is a pure assertion that checks visibility but does **not** change scope.
@@ -288,6 +311,7 @@ For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#clean
 - Use `seeInView` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
 - Use `seeToast` for transient notifications
+- Use `expectConsoleError` when a scene deliberately triggers a server/console error (e.g. a wrong-password login)
 - Use `pressKey` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
 - Use `cleanup:` and `setup:` directives in markdown specs for database state management
 - Use `if` for conditional handling, `ifClick` to dismiss optional elements, and `warnIf` for flagging unexpected paths

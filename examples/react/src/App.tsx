@@ -142,8 +142,12 @@ function ProfileForm() {
           setTimeout(() => runAssertions('settled'), 100)
         },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : 'Update failed')
-          failed('mutation failed with error', { error: err instanceof Error ? err.message : String(err) })
+          const message = err instanceof Error ? err.message : 'Update failed'
+          setError(message)
+          // Surface the failure to the browser console, like a real app would.
+          // A scene exercising this path asserts it with expectConsoleError
+          // rather than seeing it flagged as an unexpected error.
+          console.error('Profile update failed:', message)
         },
       }
     )

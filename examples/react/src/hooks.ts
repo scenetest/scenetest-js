@@ -39,6 +39,12 @@ export function useUpdateProfile() {
       // Simulate network delay
       await new Promise((resolve) => setTimeout(resolve, 200))
 
+      // Simulate a server-side rejection for a reserved name. This is a
+      // deliberate error path — a scene can assert it with expectConsoleError.
+      if (updates.name?.toLowerCase() === 'taken') {
+        throw new Error('the name "taken" is already in use (409)')
+      }
+
       const current = getProfileFromDb()
       const updated = saveProfileToDb({ ...current, ...updates })
       return updated

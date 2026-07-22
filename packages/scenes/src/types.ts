@@ -172,6 +172,23 @@ export interface ScenetestConfig extends BaseConfig {
    */
   aliases?: Record<string, string>
 
+  /**
+   * Console-error aliases — name the browser console errors a suite expects,
+   * so specs can claim them by domain term with `expectConsoleError`. A pattern
+   * is a case-insensitive substring or a `RegExp`. Reference an alias by bare
+   * name, or with a `~` prefix to fail loudly on a typo.
+   *
+   * @example
+   * ```ts
+   * consoleErrorAliases: {
+   *   'bad-password': 'Invalid login credentials',
+   *   'not-found': /status of 404/,
+   * }
+   * // in a scene:  - expectConsoleError bad-password
+   * ```
+   */
+  consoleErrorAliases?: Record<string, string | RegExp>
+
   /** Report output directory */
   reportDir?: string
 
@@ -349,6 +366,13 @@ export interface ConsoleError {
   url?: string
   /** The CSS selector that matched (only present when source is 'selector') */
   selector?: string
+  /**
+   * Set when a scene claimed this error via `expectConsoleError()`. Expected
+   * errors are a success — the scene asserted the error *should* happen — so
+   * the reporter excludes them from the "browser console error(s)" surface and
+   * the run summary's error count.
+   */
+  expected?: boolean
 }
 
 /**
@@ -671,6 +695,19 @@ export interface SequentialActorHandle extends ActorConfig {
   seeToast(selector: Selector): ActionChain
 
   /**
+   * Wait for a browser console error (or uncaught exception) matching
+   * `pattern` to occur, and mark it as expected so it is reported as a success
+   * rather than a problem. Fails the scene if no matching error appears within
+   * the action timeout. Use when a scene deliberately exercises an error path —
+   * e.g. logging in with a wrong password, where a missing 400 would be a bug.
+   *
+   * `pattern` is a case-insensitive substring, or a `RegExp` for finer control.
+   * Claims a single error (the earliest unclaimed match); call it once per
+   * console message you expect.
+   */
+  expectConsoleError(pattern: string | RegExp): ActionChain
+
+  /**
    * Wait for element to be visible and set it as the current scope.
    * Subsequent actions (click, typeInto, etc.) resolve within this scope.
    */
@@ -823,6 +860,14 @@ export interface ActionChain extends PromiseLike<void> {
   /** Wait for element to appear AND disappear (for toasts/notifications) */
   seeToast(selector: Selector): ActionChain
 
+  /**
+   * Wait for a browser console error (or uncaught exception) matching
+   * `pattern`, marking it expected so it reports as a success rather than a
+   * problem. Fails the scene if no matching error appears within the action
+   * timeout. For deliberate error paths (e.g. a wrong-password login).
+   */
+  expectConsoleError(pattern: string | RegExp): ActionChain
+
   /** Wait for element to be visible and set it as the current scope */
   scope(selector: Selector): ActionChain
 
@@ -959,6 +1004,7 @@ export interface DslTarget {
   notSee(selector: Selector): unknown
   seeText(text: string): unknown
   seeToast(selector: Selector): unknown
+  expectConsoleError(pattern: string | RegExp): unknown
   scope(selector: Selector): unknown
   click(selector?: Selector): unknown
   typeInto(selector: Selector, value: string): unknown
@@ -1033,6 +1079,13 @@ export interface ConcurrentActorHandle {
   notSee(selector: Selector): ConcurrentActorHandle
   seeText(text: string): ConcurrentActorHandle
   seeToast(selector: Selector): ConcurrentActorHandle
+  /**
+   * Wait for a browser console error (or uncaught exception) matching
+   * `pattern`, marking it expected so it reports as a success rather than a
+   * problem. Aborts the scene if no matching error appears within the action
+   * timeout. For deliberate error paths (e.g. a wrong-password login).
+   */
+  expectConsoleError(pattern: string | RegExp): ConcurrentActorHandle
 
   // -- Scope --
   /** Wait for element to be visible and set it as the current scope */
