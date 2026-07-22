@@ -292,6 +292,12 @@ defineConfig({
   // Fuzzy-finger touch simulation (OFF by default)
   fuzzyFingers: false,    // Set true to enable imprecise touch (~1 in 5 clicks miss)
 
+  // Named console errors — claim expected errors by domain term with
+  // `expectConsoleError <name>` (pattern is a substring or RegExp)
+  consoleErrorAliases: {
+    'bad-password': 'Invalid login credentials',
+  },
+
   // Actor teams are auto-discovered from actors.ts or actors/*.ts
   // (not defined in config)
 
