@@ -2,13 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Status
+## What Scenetest is
 
-Scenetest is a scene-driven, concurrent-actor end-to-end testing framework for Javascript apps, with inline checks and simpler specs.
+Scenetest is a scene-driven, concurrent-actor end-to-end testing framework for JavaScript apps, with inline checks and simpler specs.
 
-**Scenetest is working implementation, but the API is not stable.**  We have a CLI runner based on Playwright, a simple inline assertion system, actors-based spec DSL, Vite plugin, reporting system, and dev panel. The `serverCheck()` multi-context feature (server-side assertions) is stubbed but not yet wired end-to-end; everything else is functional.
+The API is not stable. Treat a breaking change as normal, and follow the versioning rule below.
 
-Design docs live in `docs/public/design/`. The README.md has the public-facing overview.
+One caveat that changes how you write code: `serverCheck()` (multi-context, server-side assertions) is stubbed. The infrastructure exists, but it is not wired end to end.
+
+The README.md has the public-facing overview. Design docs live in `docs/public/design/`.
+
+## Status and roadmap
+
+Every design doc in `docs/public/design/` opens with its own `**STATUS:**` header, and that header is the source of truth for what is built. Pending work lives in GitHub issues.
+
+Do not restate feature status in this file, and do not record how a subsystem reached its current shape. Both go stale here, and both stay current in the design docs and the issues.
 
 ## Commands
 
@@ -42,6 +50,7 @@ packages/                   # Published packages
 ├── dashboard/              # Embeddable Preact dashboard component — <Dashboard> + transport adapter, shared by dev and cloud
 ├── scenes/                 # CLI runner — scene(), test(), actor DSL, selectors, teams, config; recorder panel UI as ./recorder subpath (vite-free DOM code, versions in lockstep with the DSL it emits)
 ├── vite-plugin/            # Vite plugin — dev panel injection, prod stripping, RPC middleware; injects the observer from @scenetest/checks/panel and the recorder from @scenetest/scenes/recorder (optional peer)
+├── playwright-scenetest/   # @scenetest/playwright — the scenePage Playwright fixture that collects inline assertion results
 ├── eslint-plugin/          # ESLint plugin — prefer-aria-label, inline-server-fn rules
 └── vscode-scenetest/       # VS Code extension — syntax highlighting for .spec.md scene specs
 
@@ -68,84 +77,118 @@ examples/                   # Private workspace apps (never published) — the d
 - `runtime.ts` — `__scenetest_rpc()` client for multi-context assertions
 - `types.ts` — `AssertionResult`, `ServerContext`, RPC types, `ScenetestReporter` + the `window.__scenetest_report` global declaration
 - `index.ts` — public exports
-- `react.ts` / `preact.ts` / `vue.ts` / `solid.ts` / `svelte.ts` — framework bindings (`useCheck` for react and preact, `watchCheck`, `createCheck`, `checkEffect`), published as subpath exports with optional peer deps; each re-exports the core API so app code imports from one place
-- `panel/` — the floating observer panel (panel, fullscreen viewer, history, audio), subpath export `./panel`, auto-initializing on import. Dependency-free DOM code hooking `window.__scenetest_report` — works under any bundler with no Vite; the Vite plugin injects it in dev, and the docs site imports it directly
-- `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. Consumers discover it via `npx @tanstack/intent list` and load `@scenetest/checks#inline-assertions`. Keep it in sync with `docs/public/guides/writing-inline-assertions.md`.
+- `react.ts` / `preact.ts` / `vue.ts` / `solid.ts` / `svelte.ts` — framework bindings (`useCheck` for react and preact, `watchCheck`, `createCheck`, `checkEffect`). Each re-exports the core API, so app code imports from one place
+- `panel/` — the observer panel (panel, fullscreen viewer, history, audio), subpath export `./panel`, auto-initializing on import. Dependency-free DOM code hooking `window.__scenetest_report`, so it works under any bundler with no Vite. User-facing docs: `docs/public/reference/observer-panel.md`
+- `skills/inline-assertions/SKILL.md` — shippable Agent Skill (TanStack Intent) teaching `should()`/`failed()`/`serverCheck()` authoring. Shipped in the npm tarball (`files` includes `skills`, `tanstack-intent` keyword). Validate with `pnpm -C packages/checks skills:validate`. **Keep it in sync with `docs/public/guides/writing-inline-assertions.md`**
 
 ### Protocol (`packages/protocol/src/`)
-- `events.ts` — `RunEvent` union (`run:start` … `run:end`, the `run:progress` rollup, and `run:paused`/`run:resumed` — past-tense facts emitted when a pause/resume command is enacted), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`. Every event carries a required `runId` (the `run:start` timestamp; producers stamp it via `dashboardSend`) so consumers partition a PR's whole history by run and attach mid-stream without inferring run from order — required in the strict shape/codec like `name`/`file`, but not in the lenient `isEventShaped` relay envelope
-- `commands.ts` — `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`)
-- `codec.ts` — `encodeEvent()`/`decodeEvent()` (strict, never throws), `isEventShaped()` (envelope-only check so relays pass through event types newer than themselves)
+- `events.ts` — the `RunEvent` union (`run:start` … `run:end`, the `run:progress` rollup, `run:paused`/`run:resumed`), `TeamMeta`, `RunSummary`, `PROTOCOL_VERSION`
+- `commands.ts` — the `Command` union (`run:replay`, `run:stop`, `run:pause`, `run:resume`)
+- `codec.ts` — `encodeEvent()`/`decodeEvent()` (strict, never throws), `isEventShaped()` (envelope-only, so relays pass through event types newer than themselves)
 
-Zero-dependency package; the seam between the dev tool and scenetest-cloud. Producers (CLI, injected listener) and consumers (dashboard, recorders, cloud worker) share this vocabulary, and wire-format changes route through a published release so version skew stays visible. `@scenetest/scenes` re-exports `RunEvent` as `DashboardEvent` for backwards compatibility.
+Constraints:
+- Every event carries a required `runId` — the `run:start` timestamp, stamped by producers via `dashboardSend`. It is required in the strict shape and codec like `name`/`file`, but **not** in the lenient `isEventShaped` relay envelope.
+- `run:paused`/`run:resumed` are past-tense facts, emitted when a pause or resume command is enacted — never when one is received.
+- Zero-dependency package, and the seam between the dev tool and scenetest-cloud. Route wire-format changes through a published release so version skew stays visible.
+- `@scenetest/scenes` re-exports `RunEvent` as `DashboardEvent` for backwards compatibility.
 
 ### Receiver (`packages/receiver/src/`)
-- `app.ts` — `createReceiverApp({ sinks, onCommand? })`, a Hono app with `POST /events` (envelope-validated via `isEventShaped()`, always responds 200, calls sink `clear?.()` on `run:start`) and `POST /commands` (the inbound mirror — decodes a protocol `Command` strictly via `decodeCommand`, body `{ command, runId? }` or a bare command, dispatches to `onCommand` with `{ runId }` metadata). `ReceiverAppType` for `hono/client`
-- `sink.ts` — `Sink` interface (`write()`, optional `clear()`), `JsonlSink` (one protocol event per JSON line, lazy open, `close()`)
-- `command.ts` — `CommandHandler`/`CommandMeta`: the host-supplied handler the `/commands` route dispatches to. The receiver only decodes/routes; actuation is process-local (dev: child process; box/CLI: `RunController`). `runId` is metadata, never an address — commands target the active run
-- `node.ts` — `toNodeHandler(app)` via `@hono/node-server`'s `getRequestListener`, for mounting in connect-style servers (Vite dev server)
+- `app.ts` — `createReceiverApp({ sinks, onCommand? })`, a Hono app with `POST /events` (envelope-validated via `isEventShaped()`, calls sink `clear?.()` on `run:start`) and `POST /commands` (decodes a `Command` strictly via `decodeCommand`, dispatches to `onCommand` with `{ runId }` metadata). `ReceiverAppType` for `hono/client`
+- `sink.ts` — the `Sink` interface (`write()`, optional `clear()`) and `JsonlSink` (one protocol event per JSON line, lazy open, `close()`)
+- `command.ts` — `CommandHandler`/`CommandMeta`, the host-supplied handler that `/commands` dispatches to
+- `node.ts` — `toNodeHandler(app)` via `@hono/node-server`'s `getRequestListener`, for mounting in connect-style servers
 
-The receiver core extracted from the Vite middleware, framework-agnostic so scenetest-cloud can mount the same app. It is a relay: envelope-only validation passes through event types newer than itself, and responses are always `200` (`{"ok":true}`/`{"ok":false}`) because the producers on both paths are fire-and-forget. The Vite middleware delegates `POST /__scenetest/events` to it with the SSE `EventHub` as a sink (serving SSE itself stays in the middleware — a dev-transport concern) and `POST /__scenetest/commands` to its `/commands` route with an `onCommand` that drives the dev child process. A direction reaches the **same `onCommand`** through a transport-specific door — HTTP in dev (the dashboard is a browser), the box's WS in cloud (held by the receiver, so it's a direct in-process call, no internal HTTP) — then one host-owned hop crosses to the separate CLI process; the receiver never logs commands (only their *effects* re-enter the event stream). See `packages/receiver/README.md`. Only this package depends on `hono`/`@hono/node-server`.
+Constraints:
+- It is a relay. Envelope-only validation passes through event types newer than itself, and **every response is 200** (`{"ok":true}`/`{"ok":false}`), because producers on both paths are fire-and-forget.
+- The receiver decodes and routes only. Actuation is process-local — a child process in dev, a `RunController` in the box/CLI.
+- `runId` is metadata, never an address. Commands target the active run.
+- The receiver never logs commands. Only their *effects* re-enter the event stream.
+- Only this package may depend on `hono`/`@hono/node-server`.
+
+The command path (one `onCommand`, reached through a transport-specific door) is explained in `packages/receiver/README.md`.
 
 ### Dashboard (`packages/dashboard/src/`)
 
-**Nomenclature:** the **Dashboard** is the *entire* Preact app and all its views — **Home**, **Runner**, **Waterfall**. (There is no "Console" — that name is retired.) Every view reads from one read-only `@tanstack/db` read model (the collections); there is no bespoke fold anymore.
+**Nomenclature:** the *Dashboard* is the whole Preact app and all three of its views — **Home**, **Runner**, **Waterfall**. There is no "Console"; that name is retired.
 
-The views are **TSX/JSX** (the package has a build step, so no htm), and read the store reactively with **`useLiveQuery`** (`use-live-query.ts`) — no hand-rolled `subscribeChanges`. Navigation is real `<a>` links, delegated on the app root (the widget carries **no router** — it intercepts in-base link clicks and reports them; see below). It's a **plain light-DOM app** — no shadow root; CSS ships as `style.css` scoped under `.scenetest-dashboard`, imported by the host (`import '@scenetest/dashboard/style.css'`). (The observer panel in `@scenetest/checks/panel` still uses its own shadow root; the dashboard does not.)
+It is a plain light-DOM Preact app written in TSX (the package has a build step, so no htm). CSS ships as `style.css` scoped under `.scenetest-dashboard`, imported by the host as `@scenetest/dashboard/style.css`. The observer panel in `@scenetest/checks/panel` keeps its own shadow root; the dashboard has none. Views read the collections reactively through `useLiveQuery`, never a hand-rolled `subscribeChanges`. Dev and cloud render this same component, and only the transport differs.
 
-- `dashboard.tsx` / `browser-dashboard.tsx` — routing rides on **one `preact-iso` router owned by the host**, so there's no second router/binding and nesting is native. The dashboard mounts on a **single route with an optional trailing param, `{base}/:view?`** — that one pattern matches the base *and* each view (the accepted way a scoped router handles its own exact base; no separate index route or redirect), and the dashboard reads the matched segment via `useRoute().params.view`. **`Dashboard`** (`dashboard.tsx`) stays mounted across view changes (store survives) since every view matches the one route. Props `{ transport, theme?, basePath?, apiBase?, path?, default? }`. The surrounding `LocationProvider` does the hard parts (history, scoped `<a>`-click interception, nesting-aware `useLocation`); the dashboard's only view↔URL logic is the tail check, so there's no `viewForPath`/`viewHref` scheme to drift. **`BrowserDashboard`** (`browser-dashboard.tsx`) wraps `<Dashboard>` in the single `LocationProvider` (scoped to `basePath`) that a top-level app must own — so standalone hosts get a complete, deep-linkable app from `render(<BrowserDashboard transport={…} />)` (the dev shell `vite-plugin/app/main.tsx`). A host that already owns a `LocationProvider` (cloud, under preact-iso) adds `:view?` to its own PR route and renders the bare `<Dashboard basePath={prMount} />` under it — it reads the same `useRoute().params.view` and nests with no extra wiring. `basePath` (default `/__scenetest`) only builds the absolute, deep-linkable tab `<a>` hrefs (view *selection* is relative); `apiBase` (defaults to `basePath`) bases the Runner's server-endpoint fetches, decoupled because cloud's API lives elsewhere than its router. (Earlier the widget hardcoded `BASE = '/__scenetest'` and pushState'd literal paths, which broke embedding — cloud's report; `@scenetest/dashboard` now depends on `preact-iso`. See `docs/public/design/unified-console.md`.) Renders into the light DOM under a `.scenetest-dashboard` root (theme applied as inline `--st-*` custom properties). The routing is covered by `src/__tests__/routing.test.tsx` (jsdom: deep-link to each view, click-to-navigate, non-default base). **`useDashboardStore(transport)` builds the four collections once** (`scenesProjection`/`assertionsProjection`/`actionsProjection`/`runsProjection` via `createCollection` + `runCollectionOptions`, sharing one `createRunSource`) and passes them down; the root only tracks connection liveness. Each view reads the tables it needs via `useLiveQuery`, so re-renders are scoped. The Waterfall view (`WaterfallHost`) is now just a Preact subtree under `.waterfall-host` (the stylesheet scopes its bare-element styles there) reading the same store. Dev + cloud render this same component; only the transport differs. Replaced `vite-plugin/src/analyze-app.ts` (deleted).
-- `runner.tsx` — the Runner view: `RunnerView` + `Tree`/`ListPane`/`Detail`/`SpecSnippet`/`CopyButton`. Live reads the latest-run slice via `useRunSlice` → `selectSnapshot`; past runs map a `/__scenetest/runs/:id` report. (Status chips + text filter + section grouping stay reactive selectors over the sliced rows — the chips must not move the header summary, the text search matches the attributed assertions, and groupBy yields aggregates, not bucketed lists.)
-- `select-runner.ts` — Runner selectors: `selectSnapshot(slice)` takes a latest-run `RunSlice` and derives per-scene assertions/timeline via `attributeToScene` + the run rollup; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape.
-- `app.tsx` — `Waterfall` view component `{ state, send }` + `Header`/`SceneCard` + `sceneSummary()`. A pure view — `WaterfallHost` passes `state` (from `selectWaterfall(slice)`).
-- `select-waterfall.ts` — `selectWaterfall(slice)`: takes a latest-run `RunSlice` and derives the Waterfall's view data (lanes by actor, attributed assertions, run rollup) — a `DashboardState` minus `connection`, which the host (`WaterfallHost`) spreads in since a pure projection can't know it. (Replaced the old `applyEvent` event-fold.) + `completedSceneCount`.
-- `use-run-slice.ts` — `useRunSlice(collections)`: the latest-run slice (`where runId = latest`, scenes/actions `orderBy startTime`) built as **`createLiveQueryCollection`** derived collections instead of re-scanning every run's rows in JS each render. Reads the small `runs` table to pick the latest runId (a reactive aggregate, so the derived collections rebuild only when a new run starts), then reads the slices via `useLiveQuery` and hands a `RunSlice` to the pure selectors. `runSliceCollections(collections, runId)` is the pure (no-hook) builder, tested against `latestRunSlice`. Interactive filters + attribution stay JS for the reasons above.
-- `use-live-query.ts` — `useLiveQuery(collection)`: subscribe a TanStack DB collection (base or `createLiveQueryCollection`) and read its rows reactively. The Preact analogue of `@tanstack/react-db`'s hook.
-- `select-helpers.ts` — `latestRunId(runs, scenes?)` (newest `run:start`) + `latestRunSlice(...)` (the pure multi-run→`where runId = latest` slice, used by tests and as the reference semantics for `useRunSlice`) + the `DashboardCollections`/`RunSlice` types.
-- `dev-transport.ts` — `createDevTransport()`: fetch + SSE adapter; maps `Command`s to `/__scenetest/replay|stop|pause|resume`
+- `dashboard.tsx` — `<Dashboard>`, mounted on a single route with an optional trailing param, `{base}/:view?`. That one pattern matches the base and each view, and the component reads the matched segment via `useRoute().params.view`. Props `{ transport, theme?, basePath?, apiBase?, path?, default? }`
+- `browser-dashboard.tsx` — `<BrowserDashboard>` wraps `<Dashboard>` in the one `LocationProvider` a top-level app must own, so `render(<BrowserDashboard transport={…} />)` gives a standalone host a complete, deep-linkable app
+- `runner.tsx` — the Runner view: `RunnerView` + `Tree`/`ListPane`/`Detail`/`SpecSnippet`/`CopyButton`
+- `select-runner.ts` — `selectSnapshot(slice)` derives per-scene assertions and timeline via `attributeToScene`; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape
+- `app.tsx` — the Waterfall view `{ state, send }` + `Header`/`SceneCard` + `sceneSummary()`. A pure view
+- `select-waterfall.ts` — `selectWaterfall(slice)` derives the Waterfall's lanes by actor, attributed assertions, and run rollup + `completedSceneCount`
+- `use-run-slice.ts` — `useRunSlice(collections)` builds the latest-run slice as `createLiveQueryCollection` derived collections. `runSliceCollections(collections, runId)` is the pure builder
+- `use-live-query.ts` — `useLiveQuery(collection)`, the Preact analogue of `@tanstack/react-db`'s hook
+- `select-helpers.ts` — `latestRunId()`, `latestRunSlice()`, and the `DashboardCollections`/`RunSlice` types
+- `dev-transport.ts` — `createDevTransport()`: fetch + SSE adapter, mapping `Command`s to `/__scenetest/replay|stop|pause|resume`
 - `types.ts` — `Transport`, `DashboardState`, `Scene`, `DashboardTheme`, `ConnectionStatus`
-- `style.css` — the whole app's stylesheet (nav/Home/Runner/Waterfall), scoped under `.scenetest-dashboard`, with the Waterfall's bare-element rules confined to `.waterfall-host`. Shipped via the `./style.css` export (build copies it into `dist/`) and imported by the host. Theming surface is `--st-bg`/`--st-accent`/`--st-font`/`--st-font-size` only
-- `collections/` — the read-only TanStack DB read model over the run stream, subpath export `./collections`, and now **the store the whole dashboard reads from** (dev and cloud). **Multi-run:** rows are partitioned by `runId`, spanning a whole PR's history; a new `run:start` opens a new partition and does **not** truncate. `createRunSource(transport)` wraps the transport as one shared fan-out stream; `runCollectionOptions({ source, projection })` returns a `CollectionConfig` for `createCollection`. Many collections share one source = one connection, many tables. Projections (`scenesProjection`, `assertionsProjection`, `actionsProjection`, `runsProjection`) are the sole writers, folding `RunEvent`s into a tiny `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`), testable without TanStack DB; client mutations throw. `attributeToScene` joins assertions/actions to scenes: stamped scene id when present, else actor + time-window (#215 / 2a). **`@tanstack/db` is a runtime `dependency`** (the dashboard uses `createCollection` at runtime). The `./collections` subpath itself still only `import type`s `CollectionConfig`, so a cloud consumer may build collections with its *own* `@tanstack/db` instance (single instance for joins with their `useLiveQuery`). See `docs/public/design/unified-console.md`.
+- `style.css` — the whole app's stylesheet, scoped under `.scenetest-dashboard`, with the Waterfall's bare-element rules confined to `.waterfall-host`
+- `collections/` — the read-only TanStack DB read model over the run stream, subpath export `./collections`
 
-The dashboard UI was extracted from the Vite plugin's inline HTML string so dev and scenetest-cloud render the same `<Dashboard>` component; the dev/cloud difference is confined to the transport adapter (dev: fetch+SSE; cloud: fetch+WebSocket). The dev shell is a **real Vite app** — `packages/vite-plugin/app/` (a ~10-line shell: `render(<Dashboard transport={createDevTransport()} />, root)` in `main.tsx`, with `esbuild.jsxImportSource: 'preact'` in its vite config) — built by the plugin's `build` (`tsc && vite build -c app/vite.config.ts`) to `packages/vite-plugin/dist-app/` and served as **static files** at all view routes by the middleware. Because the shell is a normal Vite build, `@tanstack/db` bundles natively — no hand-rolled esbuild, importmap, or vendored-module routes (all deleted, along with `analyze-app.ts`). scenetest-cloud has its own equally-thin shell rendering the same `<Dashboard>` with a WebSocket transport. The remaining unified-console work is the cloud transport + the PR-history report loader (design phases 2 & 4).
+Constraints:
+
+- **Routing rides on one `preact-iso` router owned by the host.** A host that already owns a `LocationProvider` (cloud) adds `:view?` to its own PR route and renders the bare `<Dashboard basePath={prMount} />`. Because every view matches the one route, `<Dashboard>` stays mounted across view changes and the store survives.
+- **Two bases, on purpose.** `basePath` (default `/__scenetest`) only builds the absolute, deep-linkable tab `<a>` hrefs — view selection itself is relative. `apiBase` (defaults to `basePath`) bases the Runner's server-endpoint fetches, because cloud's API lives somewhere other than its router.
+- **`useDashboardStore(transport)` builds the four collections once** (`scenesProjection`/`assertionsProjection`/`actionsProjection`/`runsProjection`, sharing one `createRunSource`) and passes them down. Each view reads only the tables it needs, so re-renders stay scoped.
+- **Rows are partitioned by `runId`** and span a whole PR's history. A new `run:start` opens a new partition and does **not** truncate.
+- **Projections are the sole writers.** They fold `RunEvent`s into a small `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`) and are testable without TanStack DB. Client mutations throw.
+- **`@tanstack/db` is a runtime `dependency`**, but the `./collections` subpath only `import type`s `CollectionConfig`. That is deliberate: a cloud consumer can build collections with its *own* `@tanstack/db` instance and join them against its own `useLiveQuery`.
+- `attributeToScene` joins assertions and actions to scenes by stamped scene id when present, and otherwise by actor plus time window.
+- The dev shell is a real Vite app at `packages/vite-plugin/app/` (~10 lines), built to `packages/vite-plugin/dist-app/` and served as static files at all view routes. Keep it a normal Vite build so `@tanstack/db` bundles natively.
+- Routing is covered by `src/__tests__/routing.test.tsx` (jsdom: deep-link to each view, click-to-navigate, non-default base).
+
+Design doc: `docs/public/design/unified-console.md`.
 
 ### Scenes (`packages/scenes/src/`)
-- `scene.ts` — `test()` registration (await-driven), shared `registerScene()` helper, `runScene()`, session accessors
-- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods, `ActionChainImpl` with scope tracking (await-driven `test()` model)
-- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (reactive queue-building model)
+- `scene.ts` — `test()` registration (await-driven), the shared `registerScene()` helper, `runScene()`, session accessors
+- `actor.ts` — `SequentialActorHandleImpl` with all DSL methods; `ActionChainImpl` with scope tracking (the await-driven `test()` model)
+- `reactive.ts` — `ConcurrentActorHandleImpl`, `drainAll()`, `scene()` registration (the reactive queue-building model)
 - `selectors.ts` — `resolveSelector()`, `explainSelector()`, alias registry
-- `dsl.ts` — `runDsl()`, `defineMacro()`, `runMacro()`, text DSL parser
+- `dsl.ts` — `runDsl()`, `defineMacro()`, `runMacro()`, the text DSL parser
 - `message-bus.ts` — `MessageBus` with sticky messages
 - `team-manager.ts` — `TeamManager` with pool acquire/release for parallel execution
-- `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks; `attachController()` wires a `RunController` consulted at each scene boundary (`gate()` parks while paused, `isStopped` breaks the loop → graceful `run:end`)
-- `run-controller.ts` — `RunController`: the in-process actuator for inbound protocol commands (consumer end of the dashboard→runner path). `dispatch(command, meta?)` → cooperative `gate()`/`pause`/`resume`/`stop`; `onPaused`/`onResumed` hooks let the CLI emit `run:paused`/`run:resumed` events on real transitions. `run:replay` is a no-op (relaunch is the supervisor's job). Run-agnostic — there's no run id; `meta.runId` is logged, never gates the action
-- `command-channel.ts` — `watchCommandFile(path, onCommand)`: tails a JSONL command file (the inbound mirror of `--report-url`/`JsonlSink`), decoding each appended `Command` line; buffers partial lines, tolerates a not-yet-created file, handles truncation, skips malformed lines
-- `cli.ts` — CLI entry point, report generation (JSON). `--command-file`/`SCENETEST_COMMAND_FILE` builds a `RunController` + `watchCommandFile`, attaches the controller, and wires its hooks to emit `run:paused`/`run:resumed` (guarded by an active run) so `run:pause`/`resume`/`stop` steer the active run for its duration. `run:replay` relaunches the CLI (driver's job, like dev). The `teams` subcommand (`--json`) lists configured teams for the dashboard picker
-- `keyboard.ts` — `NavigationModeRotation`, `tabToElement()`, `pressEnter()`, `clearAndType()`, fuzzy-finger helpers (`fuzzyFingerClick`, `fuzzyFingerFill`, `fuzzyFingerCheck`), `FuzzyFingerError`
+- `runner.ts` — `SceneRunner` with scene discovery, browser init, lifecycle hooks. `attachController()` wires a `RunController` consulted at each scene boundary
+- `run-controller.ts` — `RunController`: the in-process actuator for inbound commands. `dispatch(command, meta?)` → cooperative `gate()`/`pause`/`resume`/`stop`; `onPaused`/`onResumed` hooks let the CLI emit events on real transitions
+- `command-channel.ts` — `watchCommandFile(path, onCommand)` tails a JSONL command file, decoding each appended `Command` line
+- `cli.ts` — CLI entry point and JSON report generation. `--command-file`/`SCENETEST_COMMAND_FILE` builds a `RunController` + `watchCommandFile` and wires its hooks. The `teams` subcommand (`--json`) lists configured teams for the dashboard picker
+- `keyboard.ts` — `NavigationModeRotation`, `tabToElement()`, `pressEnter()`, `clearAndType()`, fuzzy-finger helpers, `FuzzyFingerError`
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
-- `types.ts` — All type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`, etc.)
-- `recorder/` — the scene recorder panel (capture, reverse-selector, panel UI), subpath export `./recorder`, auto-initializing on import. Pure DOM code with no Vite coupling; the Vite plugin injects it when `recorder: true`
+- `types.ts` — all type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`)
+- `recorder/` — the scene recorder panel (capture, reverse-selector, panel UI), subpath export `./recorder`, auto-initializing on import. Pure DOM code with no Vite coupling
+
+Constraints:
+- Stop is cooperative. `isStopped` breaks the run loop, so the CLI emits a graceful `run:end` with a partial summary; `gate()` parks the loop while paused.
+- `RunController` is run-agnostic. There is no run id, and `meta.runId` is logged but never gates the action.
+- `run:replay` is a no-op inside `RunController`. Relaunching is the supervisor's job — the CLI in dev, the driver in cloud.
+- `watchCommandFile` buffers partial lines, tolerates a not-yet-created file, handles truncation, and skips malformed lines.
 
 ### Vite Plugin (`packages/vite-plugin/src/`)
-- `index.ts` — Main plugin (dev: inject observer + middleware; prod: strip)
+- `index.ts` — main plugin (dev: inject observer + middleware; prod: strip)
 - `strip.ts` — AST-based removal of scenetest imports and calls
-- `transform.ts` — Extract `serverCheck()` serverFn bodies for RPC
-- `middleware.ts` — `/__scenetest/run` endpoint (AsyncLocalStorage for result collection), the run controls, and `GET /__scenetest/teams` (config-backed picker list via `scenetest teams --json`). Controls: `/replay` spawns the CLI with `--command-file`; `/pause`+`/resume`+`/stop` append commands to that file (reaching the CLI's `RunController`); the unified `/commands` route delegates to the receiver core. Stop is cooperative — the CLI emits its final `run:end` (partial summary + `cancelled`) and exits; the process-group kill remains only to discard a prior run on replay. (All verbs go through the CLI like cloud — no `SIGSTOP`/kill-as-Stop.)
-- `virtual-module.ts` — Virtual module system for extracted assertions
-- `config.ts` — Plugin config loading
-- The panels the plugin injects live elsewhere: observer in `@scenetest/checks/panel` (hard dep), recorder in `@scenetest/scenes/recorder` (optional peer, opt-in via `recorder: true`)
+- `transform.ts` — extract `serverCheck()` serverFn bodies for RPC
+- `middleware.ts` — the `/__scenetest/run` endpoint (AsyncLocalStorage for result collection), the run controls, and `GET /__scenetest/teams`
+- `virtual-module.ts` — virtual module system for extracted assertions
+- `config.ts` — plugin config loading
+
+Constraints:
+- The panels the plugin injects live elsewhere: the observer in `@scenetest/checks/panel` (hard dep), the recorder in `@scenetest/scenes/recorder` (optional peer, opt-in via `recorder: true`).
+- Every run control goes through the CLI, the same as cloud. `/replay` spawns the CLI with `--command-file`; `/pause`, `/resume` and `/stop` append commands to that file. There is no `SIGSTOP` and no kill-as-Stop. The process-group kill remains only to discard a prior run on replay.
+- The middleware delegates `POST /__scenetest/events` to the receiver core with the SSE `EventHub` as a sink, and `POST /__scenetest/commands` to the receiver's `/commands` route. Serving SSE stays in the middleware, because that is a dev-transport concern.
 
 ### ESLint Plugin (`packages/eslint-plugin/src/`)
-- `index.ts` — Plugin entry, `recommended` flat config preset
-- `rules/prefer-aria-label.ts` — Rule: prefer `aria-label` over `data-testid` for selectors
-- `rules/inline-server-fn.ts` — Rule: `serverCheck()`'s server function must be an inline function literal (the Vite plugin extracts it statically; a variable reference can't be)
+- `index.ts` — plugin entry, `recommended` flat config preset
+- `rules/prefer-aria-label.ts` — prefer `aria-label` over `data-testid` for selectors
+- `rules/inline-server-fn.ts` — `serverCheck()`'s server function must be an inline function literal, because the Vite plugin extracts it statically and cannot follow a variable reference
 
 ### VS Code Extension (`packages/vscode-scenetest/`)
-- `package.json` — Extension manifest (language ID `scenetest-spec`, grammar registration)
+- `package.json` — extension manifest (language ID `scenetest-spec`, grammar registration)
 - `syntaxes/scenetest-spec.tmLanguage.json` — TextMate grammar for `.spec.md` scene specs
-- `language-configuration.json` — Comment toggling, folding, bracket config
+- `language-configuration.json` — comment toggling, folding, bracket config
 
 ### Example App (`examples/react/src/`)
-- `App.tsx` — Working example with `should()`, `failed()`, `useCheck`, multi-context comparisons
+- `App.tsx` — working example with `should()`, `failed()`, `useCheck`, multi-context comparisons
 
 ---
 
@@ -183,24 +226,6 @@ The plugin keeps a wide vite peer range (`^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0`)
 
 **Maintenance:** review `MIN_SECURE_VITE_BY_MAJOR` roughly every 3–4 months, or whenever a new vite advisory appears at https://github.com/vitejs/vite/security/advisories. Bump the per-major floor to the lowest patch in that line that carries the fix. Drop a major from the map once we decide it's unsupported and the warning no longer applies (e.g. if vite 5 is fully EOL and we want to stay quiet for those users, or conversely bump the floor to an impossibly-high value to always warn).
 
-## Observer Dev Panel
-
-- Floating panel with pass/fail counts and expandable assertion list
-- Assertions batched into groups by timing (50ms threshold)
-- Three view modes: grouped, by location, sequence
-- History tracking with "(N prior, M after)" stats and flaky detection
-- Context shown in tooltip (panel) or inline (fullscreen)
-- Click-to-editor via Vite's `/__open-in-editor`
-- Audio feedback with mute/volume controls
-- Fullscreen viewer
-
-## Playwright Fixtures
-
-- Custom `scenePage` fixture with `page.exposeFunction('__scenetest_report')`
-- Provides `.assertions`, `.passed`, `.failed` arrays
-- `waitForAssertions(timeout)` polls for pending RPC calls
-- Logs failures at end of test
-
 ---
 
 ## Docs Site (`docs/`)
@@ -210,6 +235,7 @@ TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs
 **Cloudflare Workers Builds config** (dashboard, not repo): Workers Builds auto-installs the entire workspace before the build command — including the `examples/*` apps the docs don't need. The dashboard is configured with the build variable `SKIP_DEPENDENCY_INSTALL=true` and build command `pnpm install --filter "@scenetest/docs..." && pnpm run build` so only the docs app and its dependency chain are installed. If docs builds ever fail with missing workspace deps, check that this variable and command are still set.
 
 - Markdown pages (home, `/guides/*`, `/reference/*`, `/faq/*`) live in `docs/public/**/*.md` and are also served as raw `.md` for `llms.txt` / copy-markdown.
+- A new page needs two edits: the markdown file under `docs/public/`, and an entry in `docs/app/sections.ts` so it appears in the nav.
 - **Markdown is loaded server-side for SSR**, so LLMs and crawlers see the content without running JS. The route loader calls `getMarkdown(path)` from `docs/app/lib/markdown.ts`, which reads from an `import.meta.glob('../../public/**/*.md', { query: '?raw', eager: true })` map. Content is bundled at build time — no runtime fs access, which Workers wouldn't have anyway.
 - `MarkdownSection` takes the markdown as a `content` prop and renders synchronously. It has no fetch path — if a new route needs markdown, wire the loader.
 - `vite-plugin-llms-txt.ts` emits `/llms.txt` + `/llms-full.txt` by scanning `public/`.
@@ -217,15 +243,17 @@ TanStack Start + Nitro app, deployed to **Cloudflare Workers** via `pnpm -C docs
 
 ---
 
-## What's Not Yet Implemented
+## Writing style for Humans
 
-| Feature | Status | Design doc |
-|---------|--------|-----------|
-| `serverCheck()` multi-context (server-side assertions) | Stubbed, infrastructure scaffolded, not wired E2E | `server-actions.md` |
-| Network layer (`network.fail()`, `network.mock()`) | Design only | `cli-v2.md` section 7 |
-| Snapshots (`snapshot()`, `expectSnapshot()`) | Design only | `cli-v2.md` section 8 |
-| Dashboard & JSONL reports | **Dev: done** — `@scenetest/dashboard` (Home/Runner/Waterfall) served by the Vite middleware, `JsonlSink` + the `/__scenetest/runs[/:id]` report endpoints + the Runner's past-run viewer all wired. Cloud PR-history loader pending. | `dashboard.md` |
-| Receiver core as a cloud-mountable Hono app (D1/DO sinks) | `@scenetest/receiver` landed; cloud worker mounting pending | `architecture.md` in scenetest-cloud |
-| Cloud WebSocket transport adapter for `@scenetest/dashboard` | `<Dashboard>` component + dev (SSE) adapter landed; cloud adapter lives in scenetest-cloud | `architecture.md` in scenetest-cloud |
-| Interactive UI mode (`--ui`) | Stub only | `cli-v2.md` |
-| Visualization (timeline/musical) | Conceptual | `cli-v2.md` section 10 |
+Applies to every string a human reads: chat, commit messages, PR bodies, code
+comments, UI copy, errors, docs.
+
+- **One word per meaning.** One action, one verb, everywhere — button, toast, error, docs, commit message.
+- **Say which one you mean.** "The Vite build", not "the build" — even when there's only one build.
+- **Active voice, simple tense, one claim per sentence.** Under ~25 words. Lists for 3+ steps.
+- **Condition before consequence.** "If the deck is empty, the button stays disabled."
+- **Name the specific thing.** "Deck saved" beats "Success"; "Keep editing" beats "OK". Cut "please", "simply", "just".
+- **Match the channel.** A commit says why. A code comment says only what a cold maintainer needs. UI copy uses the user's words, never the codebase's.
+- **No hype, no flattery, no dunking.** State the observation and stop.
+- **Hedge honestly.** Say when you don't know. Mark estimates "≈". Report failures with the output.
+- **State the options and recommend one** when the decision is mine. Don't settle it silently.

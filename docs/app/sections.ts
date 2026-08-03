@@ -70,6 +70,12 @@ export const reference: SectionItem[] = [
     description:
       'Real-time swim-lane timeline at /__scenetest showing actor actions, assertions, and timing as scenes run.',
   },
+  {
+    slug: 'observer-panel',
+    title: 'Observer Panel',
+    description:
+      'The floating dev panel that shows every inline assertion as it fires: view modes, history, flaky detection, click-to-editor, and audio.',
+  },
 ]
 
 export const faqs: SectionItem[] = [
