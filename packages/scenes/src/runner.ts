@@ -1,4 +1,4 @@
-import { chromium, firefox, webkit, type Browser } from 'playwright'
+import type { Browser } from 'playwright'
 import { glob } from 'glob'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -174,12 +174,39 @@ export class SceneRunner {
    */
   async init(): Promise<void> {
     const browserType = this.config.browser || 'chromium'
-    const launcher = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium
 
-    this.browser = await launcher.launch({
-      headless: !this.config.headed,
-      slowMo: this.config.slowMo,
-    })
+    // Playwright is a peer dependency — scenetest drives the consumer's copy —
+    // so resolve it at run time and turn the two ways it can be absent into
+    // actionable messages instead of a bare module/launch error.
+    let playwright: typeof import('playwright')
+    try {
+      playwright = await import('playwright')
+    } catch {
+      throw new Error(
+        `Playwright isn't installed. scenetest drives your project's Playwright (a peer dependency).\n` +
+          `  Install it:        pnpm add -D playwright\n` +
+          `  Then the browser:  pnpm exec playwright install ${browserType}`
+      )
+    }
+
+    const launcher =
+      browserType === 'firefox' ? playwright.firefox : browserType === 'webkit' ? playwright.webkit : playwright.chromium
+
+    try {
+      this.browser = await launcher.launch({
+        headless: !this.config.headed,
+        slowMo: this.config.slowMo,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (/Executable doesn't exist|playwright install/i.test(message)) {
+        throw new Error(
+          `Playwright's ${browserType} browser isn't installed.\n` +
+            `  Run:  pnpm exec playwright install ${browserType}`
+        )
+      }
+      throw err
+    }
 
     this.teamManager.setBrowser(this.browser)
   }

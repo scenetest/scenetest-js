@@ -13,7 +13,17 @@ _Evaluate your product, not your tests. A Javascript testing framework with inli
 ## Installation
 
 ```bash
-pnpm add @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
+pnpm add -D @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
+```
+
+The CLI runner drives **Playwright**, which `@scenetest/scenes` declares as a
+peer dependency — so scenetest uses the same Playwright (and the same browsers)
+as the rest of your project rather than bundling its own version. Add it and
+install a browser if you don't have it already:
+
+```bash
+pnpm add -D playwright
+pnpm exec playwright install chromium   # or: firefox / webkit / (no arg = all)
 ```
 
 Framework bindings ship as subpaths of `@scenetest/checks` — import from
