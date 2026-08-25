@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { TeamManager } from '../team-manager.js'
+import { DeviceRotation } from '../devices.js'
 import type { ResolvedTeam } from '../types.js'
 import type { StorageState } from '../warmup.js'
 
@@ -218,5 +219,88 @@ describe('TeamManager.getTeams', () => {
     ]
     const manager = new TeamManager(teams)
     expect(manager.getTeams()).toBe(teams)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Config-wide contextOptions passthrough
+// ---------------------------------------------------------------------------
+
+describe('TeamManager contextOptions passthrough', () => {
+  const teams = (): ResolvedTeam[] => [{ actors: { user: { key: 'u1' } }, meta: {} }]
+
+  it('applies config contextOptions to the actor context', async () => {
+    const browser = mockBrowser()
+    const manager = new TeamManager(teams())
+    manager.setBrowser(browser as any)
+    manager.setContextOptions({ permissions: ['clipboard-read', 'clipboard-write'] })
+    const session = await manager.createSession(0, 5000, 500, 'http://localhost:3000')
+
+    await session.getActor('user')
+
+    const opts = browser.newContext.mock.calls[0][0]
+    expect(opts.permissions).toEqual(['clipboard-read', 'clipboard-write'])
+    expect(opts.baseURL).toBe('http://localhost:3000')
+  })
+
+  it('applies config contextOptions via createPage', async () => {
+    const browser = mockBrowser()
+    const manager = new TeamManager(teams())
+    manager.setBrowser(browser as any)
+    manager.setContextOptions({ locale: 'fr-FR', offline: true })
+    const session = await manager.createSession(0, 5000, 500, 'http://localhost:3000')
+
+    await session.createPage('user')
+
+    const opts = browser.newContext.mock.calls[0][0]
+    expect(opts.locale).toBe('fr-FR')
+    expect(opts.offline).toBe(true)
+  })
+
+  it('lets a device profile override a key the config sets', async () => {
+    const browser = mockBrowser()
+    const manager = new TeamManager(teams())
+    manager.setBrowser(browser as any)
+    manager.setContextOptions({ locale: 'fr-FR', viewport: { width: 100, height: 100 } })
+    manager.setDeviceRotation(new DeviceRotation([
+      { name: 'Small', category: 'mobile', contextOptions: { viewport: { width: 390, height: 844 } } },
+    ]))
+    const session = await manager.createSession(0, 5000, 500, 'http://localhost:3000')
+
+    await session.getActor('user')
+
+    const opts = browser.newContext.mock.calls[0][0]
+    // Device wins on viewport, config keeps the keys the device leaves alone
+    expect(opts.viewport).toEqual({ width: 390, height: 844 })
+    expect(opts.locale).toBe('fr-FR')
+  })
+
+  it('applies config contextOptions to the warmup context', async () => {
+    const browser = mockBrowser()
+    const manager = new TeamManager([{
+      actors: { user: { key: 'u1', warmup: async () => {} } },
+      meta: {},
+    }])
+    manager.setBrowser(browser as any)
+    manager.setContextOptions({ permissions: ['clipboard-write'] })
+    const session = await manager.createSession(0, 5000, 500, 'http://localhost:3000')
+
+    await session.getActor('user')
+
+    // First context is the warmup one, second is the actor's
+    const warmupOpts = browser.newContext.mock.calls[0][0]
+    expect(warmupOpts.permissions).toEqual(['clipboard-write'])
+    expect(warmupOpts.baseURL).toBe('http://localhost:3000')
+  })
+
+  it('leaves context options untouched when the config sets none', async () => {
+    const browser = mockBrowser()
+    const manager = new TeamManager(teams())
+    manager.setBrowser(browser as any)
+    const session = await manager.createSession(0, 5000, 500, 'http://localhost:3000')
+
+    await session.getActor('user')
+
+    expect(browser.newContext.mock.calls[0][0]).toEqual({ baseURL: 'http://localhost:3000' })
   })
 })

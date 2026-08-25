@@ -1,4 +1,4 @@
-import type { Page, BrowserContext, Browser } from 'playwright'
+import type { Page, BrowserContext, Browser, BrowserContextOptions } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { RunEvent, RunSummary, TeamMeta } from '@scenetest/protocol'
 import type { DeviceProfile } from './devices.js'
@@ -191,6 +191,49 @@ export interface ScenetestConfig extends BaseConfig {
    * Overridden by the `SCENETEST_REPORT_TOKEN` env var.
    */
   reportToken?: string
+
+  /**
+   * Playwright browser-context options applied to every actor context.
+   *
+   * A passthrough to `browser.newContext()` for settings scenetest has no
+   * option of its own for — permissions, geolocation, locale, timezone,
+   * color scheme, offline.
+   *
+   * Merged below `baseUrl`, the active device profile, and the storage state
+   * built from warmup and actor `localStorage`, so all four still win on a key
+   * they set.
+   *
+   * For permissions, prefer the `permissions` option — it composes with the
+   * ones scenetest grants by default. A `permissions` array set here is passed
+   * to Playwright as written and overrides it.
+   *
+   * @example
+   * ```ts
+   * contextOptions: { geolocation: { latitude: 48.85, longitude: 2.35 } }
+   * ```
+   */
+  contextOptions?: BrowserContextOptions
+
+  /**
+   * Browser permissions to grant every actor, by name.
+   *
+   * A record of deltas, not a list: clipboard access is granted by default, so
+   * a list would mean restating it to add anything else. `{ geolocation: true }`
+   * adds geolocation and keeps the clipboard.
+   *
+   * Permission names are Playwright's. A name the configured browser doesn't
+   * support is skipped with a warning rather than failing the run — firefox has
+   * no clipboard permission at all, and webkit has only `clipboard-read`.
+   *
+   * @example
+   * ```ts
+   * permissions: {
+   *   geolocation: true,          // grant on top of the defaults
+   *   'clipboard-read': false,    // and drop one of them
+   * }
+   * ```
+   */
+  permissions?: Record<string, boolean>
 
   /**
    * Device rotation: assign each actor a rotating device profile.

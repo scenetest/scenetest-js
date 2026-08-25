@@ -8,10 +8,16 @@ All notable changes to Scenetest are documented here.
 
 **playwright is a peer dependency.** Your project supplies playwright, so its bin is linked in `node_modules/.bin` and one copy backs both the browser download and the run. `scenetest install` downloads the browser builds through the playwright scenetest itself resolves.
 
+**Actors can use the clipboard.** A "copy link" button works without configuration, and a new `permissions` option grants anything else the browser supports.
+
 ### @scenetest/scenes 0.17.0
 * **Breaking:** `playwright` moved from `dependencies` to `peerDependencies` (`>=1.40.0`, not optional). Add it to your project: `pnpm add -D playwright`. Under pnpm's default isolated layout a nested playwright never linked its bin, so `pnpm exec playwright install` failed once a project stopped depending on playwright directly.
 * New `scenetest install [args...]` subcommand — runs `playwright install` against scenetest's own resolved playwright, so the browser builds match the library that launches them. Arguments pass straight through (`scenetest install chromium --with-deps`).
 * A missing playwright or a missing browser build now prints the command that fixes it instead of a module-resolution or launch stack trace.
+* **Actors can use the clipboard by default.** A "copy link" button works without configuration; before, `navigator.clipboard.writeText()` rejected, the app showed an error, and the scene failed on something that works for a real user. ([#243](https://github.com/scenetest/scenetest-js/issues/243))
+* New `permissions` config option — a record of deltas against the defaults, not a list, so adding one permission doesn't revoke the others: `{ geolocation: true }` grants geolocation and keeps the clipboard, `{ 'clipboard-read': false }` drops just that one. Set both clipboard names to `false` to opt out entirely.
+* Permission support differs per browser (chromium has both clipboard permissions, webkit only `clipboard-read`, firefox neither), and Playwright throws `Unknown permission` for a name its map doesn't carry. Scenetest now checks against the configured browser and skips an unsupported name with a warning instead of failing the run at context creation.
+* New `contextOptions` config option — a passthrough to Playwright's `browser.newContext()` for settings scenetest has no option of its own for (geolocation, locale, timezoneId, colorScheme, offline). It merges below `baseUrl`, the active device profile, and warmup storage state, and applies to every context an actor gets, including the temp context warmup runs in. Its own `permissions` key, if set, is passed through as written and overrides `permissions`.
 
 ---
 

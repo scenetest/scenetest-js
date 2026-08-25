@@ -101,6 +101,24 @@ export default defineConfig({
   reportDir: './scenetest-reports',
   reportFormat: 'html',         // 'html' | 'json' | 'both'
 
+  // Browser permissions, as deltas against the defaults (see below)
+  permissions: {
+    geolocation: true,          // grant on top of the defaults
+    // 'clipboard-read': false, // or drop one of them
+  },
+
+  // Playwright browser-context options, applied to every actor context.
+  // A passthrough for settings scenetest has no option of its own for.
+  // baseUrl, the active device profile, and warmup storage state all
+  // override a key they set.
+  contextOptions: {
+    locale: 'fr-FR',
+    // timezoneId: 'Europe/Paris',
+    // colorScheme: 'dark',
+    // offline: true,
+    // geolocation: { latitude: 48.85, longitude: 2.35 },
+  },
+
   // Device rotation
   devices: true,                // Use built-in device pool
   // Or provide custom devices:
@@ -134,6 +152,60 @@ export default defineConfig({
   afterEach: async (scene, report) => { /* per-scene teardown */ },
 })
 ```
+
+### Permissions
+
+Actors can read and write the clipboard by default, so a "copy link" button
+works without configuration. Without the permission
+`navigator.clipboard.writeText()` rejects with `NotAllowedError`, the app
+catches it and shows an error, and the scene fails on something that works for
+a real user.
+
+`permissions` is a record rather than a list, because a list would mean
+restating the defaults to add anything — `['geolocation']` would silently
+revoke the clipboard. Each entry is a delta:
+
+```typescript
+export default defineConfig({
+  permissions: {
+    geolocation: true,          // granted, and the clipboard stays granted
+    'clipboard-read': false,    // drop just this one
+  },
+})
+```
+
+To turn the defaults off entirely, set both to `false`:
+
+```typescript
+permissions: { 'clipboard-read': false, 'clipboard-write': false }
+```
+
+Worth doing when a scene needs to exercise the denied path — an app that shows
+a "grant clipboard access" prompt never reaches it with the permission granted.
+
+Permission names are [Playwright's](https://playwright.dev/docs/api/class-browsercontext#browser-context-grant-permissions).
+Support differs per browser, and a name the browser doesn't recognise is
+skipped with a warning rather than failing the run:
+
+| Permission | chromium | firefox | webkit |
+|------------|----------|---------|--------|
+| `clipboard-read` | yes | — | yes |
+| `clipboard-write` | yes | — | — |
+| `geolocation` | yes | yes | yes |
+| `notifications` | yes | yes | yes |
+| `camera`, `microphone` | yes | — | — |
+| `persistent-storage`, `push` | — | yes | — |
+
+Firefox has no clipboard permission at all — it gates clipboard writes on a
+user gesture, which a real click satisfies.
+
+The clipboard is a browser-wide resource, not a per-context one. A headless run
+(the default) keeps it inside the browser process. A headed run uses the real
+system clipboard: writes overwrite what you have copied, and `clipboard-read`
+exposes it to the app under test.
+
+For an exact list handed straight to Playwright, set `contextOptions.permissions`
+— it is a passthrough and overrides `permissions` entirely.
 
 ## Team Discovery
 
