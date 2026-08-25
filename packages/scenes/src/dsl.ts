@@ -17,7 +17,7 @@ import type { DslTarget, Selector } from './types.js'
  *   seeInView <selector>            - Wait for element visible AND in viewport (no scroll)
  *   notSee <selector>               - Wait for element hidden
  *   seeText <text>                  - Wait for text visible
- *   seeToast <selector>             - Wait for element appear then disappear
+ *   seeToast <selector>             - Wait for a NEW toast matching the selector
  *
  * Scope (changes current scope):
  *   scope <selector>                - Wait for element visible and SET as current scope

@@ -73,6 +73,7 @@ import { registerScene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
+import { waitForNewToast } from './toast.js'
 
 // ---------------------------------------------------------------------------
 // Interpolation helpers
@@ -545,8 +546,7 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
       // Toasts are rendered as portals/overlays at the document root,
       // so always resolve from page root regardless of current scope
       const locator = resolveSelector(this.page, selector)
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
+      await waitForNewToast(locator, selector, this.actionTimeout)
     })
   }
 

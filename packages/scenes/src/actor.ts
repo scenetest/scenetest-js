@@ -8,6 +8,7 @@ import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
+import { waitForNewToast } from './toast.js'
 
 /**
  * Action to be executed in a chain
@@ -306,9 +307,8 @@ class ActionChainImpl implements ActionChain {
       // Toasts are rendered as portals/overlays at the document root,
       // so always resolve from page root regardless of current scope
       const locator = resolveSelector(this.page, selector)
-      await locator.waitFor({ state: 'visible', timeout: this.actionTimeout })
-      await locator.waitFor({ state: 'hidden', timeout: this.actionTimeout })
-      // Don't update scope for toasts since they disappear
+      await waitForNewToast(locator, target, this.actionTimeout)
+      // Don't update scope for toasts since they come and go
     })
   }
 
