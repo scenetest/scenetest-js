@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from 'playwright'
+import type { Browser, BrowserContext, BrowserContextOptions, Page } from 'playwright'
 import type { TeamConfig, ActorConfig, AssertionResult, TimelineEntry, ScriptWarning, ConsoleError, ErrorSelector, ResolvedTeam, TeamMeta, PageFactory } from './types.js'
 import type { DeviceProfile } from './devices.js'
 import type { StorageState } from './warmup.js'
@@ -23,6 +23,7 @@ export class TeamManager {
   private deviceRotation: DeviceRotation | null = null
   private warmupCache = new WarmupCache()
   private navigationModeRotation: NavigationModeRotation | null = null
+  private contextOptions: BrowserContextOptions | null = null
 
   constructor(teams: ResolvedTeam[]) {
     this.teams = teams
@@ -68,6 +69,14 @@ export class TeamManager {
    */
   getNavigationModeRotation(): NavigationModeRotation | null {
     return this.navigationModeRotation
+  }
+
+  /**
+   * Set the browser-context options applied to every actor context.
+   * Device profiles and warmup storage state still override them.
+   */
+  setContextOptions(options: BrowserContextOptions): void {
+    this.contextOptions = options
   }
 
   /**
@@ -213,7 +222,8 @@ export class TeamManager {
       fuzzyFingers,
       noPanel,
       consoleErrors,
-      errorSelectors
+      errorSelectors,
+      this.contextOptions
     )
   }
 }
@@ -256,7 +266,8 @@ export class TeamSession {
     private fuzzyFingers: boolean = false,
     private noPanel?: boolean,
     consoleErrors?: boolean | 'error' | 'warn',
-    errorSelectors?: ErrorSelector[]
+    errorSelectors?: ErrorSelector[],
+    private contextOptions?: BrowserContextOptions | null
   ) {
     this.meta = meta
     // Default: capture errors
@@ -299,15 +310,16 @@ export class TeamSession {
   }
 
   /**
-   * Build context options for a role, merging device emulation, baseURL,
-   * warmup storageState (lazy — runs on first use), and actor localStorage.
+   * Build context options for a role, merging the config-wide contextOptions,
+   * baseURL, device emulation, warmup storageState (lazy — runs on first use),
+   * and actor localStorage.
    */
   private async buildContextOptions(role: string, device: DeviceProfile | null): Promise<Record<string, unknown>> {
     const config = this.team[role]
 
     // Lazy warmup: runs on first use, cached for subsequent scenes
     const warmupState = config
-      ? await this.warmupCache.ensure(this.browser, config, this.baseUrl ?? '', this.actionTimeout)
+      ? await this.warmupCache.ensure(this.browser, config, this.baseUrl ?? '', this.actionTimeout, this.contextOptions)
       : undefined
     const hasLocalStorage = config?.localStorage && Object.keys(config.localStorage).length > 0
 
@@ -340,6 +352,7 @@ export class TeamSession {
     }
 
     return {
+      ...(this.contextOptions ?? {}),
       ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
       ...(device ? device.contextOptions : {}),
       ...(storageState ? { storageState } : {}),
@@ -494,6 +507,7 @@ export class TeamSession {
       const deviceName = resolvedDevice?.name
 
       const contextOptions = {
+        ...(this.contextOptions ?? {}),
         ...(this.baseUrl ? { baseURL: this.baseUrl } : {}),
         ...(resolvedDevice ? resolvedDevice.contextOptions : {}),
       }

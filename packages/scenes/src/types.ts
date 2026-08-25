@@ -1,4 +1,4 @@
-import type { Page, BrowserContext, Browser } from 'playwright'
+import type { Page, BrowserContext, Browser, BrowserContextOptions } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { RunEvent, RunSummary, TeamMeta } from '@scenetest/protocol'
 import type { DeviceProfile } from './devices.js'
@@ -191,6 +191,24 @@ export interface ScenetestConfig extends BaseConfig {
    * Overridden by the `SCENETEST_REPORT_TOKEN` env var.
    */
   reportToken?: string
+
+  /**
+   * Playwright browser-context options applied to every actor context.
+   *
+   * A passthrough to `browser.newContext()` for settings scenetest has no
+   * option of its own for — permissions, geolocation, locale, timezone,
+   * color scheme, offline.
+   *
+   * Merged below `baseUrl`, the active device profile, and the storage state
+   * built from warmup and actor `localStorage`, so all four still win on a key
+   * they set.
+   *
+   * @example
+   * ```ts
+   * contextOptions: { permissions: ['clipboard-read', 'clipboard-write'] }
+   * ```
+   */
+  contextOptions?: BrowserContextOptions
 
   /**
    * Device rotation: assign each actor a rotating device profile.

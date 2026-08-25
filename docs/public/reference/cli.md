@@ -101,6 +101,18 @@ export default defineConfig({
   reportDir: './scenetest-reports',
   reportFormat: 'html',         // 'html' | 'json' | 'both'
 
+  // Playwright browser-context options, applied to every actor context.
+  // A passthrough for settings scenetest has no option of its own for.
+  // baseUrl, the active device profile, and warmup storage state all
+  // override a key they set.
+  contextOptions: {
+    permissions: ['clipboard-read', 'clipboard-write'],
+    // locale: 'fr-FR',
+    // timezoneId: 'Europe/Paris',
+    // colorScheme: 'dark',
+    // offline: true,
+  },
+
   // Device rotation
   devices: true,                // Use built-in device pool
   // Or provide custom devices:

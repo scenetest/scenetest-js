@@ -146,6 +146,11 @@ export class SceneRunner {
       }
     }
 
+    // Pass Playwright context options through to every actor context
+    if (config.contextOptions) {
+      this.teamManager.setContextOptions(config.contextOptions)
+    }
+
     // Set up device rotation if configured
     if (config.devices) {
       const devices = Array.isArray(config.devices) ? config.devices : undefined

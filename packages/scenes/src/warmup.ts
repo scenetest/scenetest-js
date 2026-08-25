@@ -7,7 +7,7 @@
  * stores the result. Same actor key in a later scene gets the cached state.
  */
 
-import type { Browser, Page } from 'playwright'
+import type { Browser, BrowserContextOptions, Page } from 'playwright'
 import type { ActorConfig } from './types.js'
 import { getMacro } from './dsl.js'
 import { resolveSelector } from './selectors.js'
@@ -55,7 +55,8 @@ export class WarmupCache {
     browser: Browser,
     config: ActorConfig,
     baseUrl: string,
-    actionTimeout: number
+    actionTimeout: number,
+    contextOptions?: BrowserContextOptions | null
   ): Promise<StorageState | undefined> {
     if (!config.warmup) return undefined
 
@@ -63,7 +64,7 @@ export class WarmupCache {
     if (existing) return existing
 
     const start = Date.now()
-    const promise = runActorWarmup(browser, config, baseUrl, actionTimeout)
+    const promise = runActorWarmup(browser, config, baseUrl, actionTimeout, contextOptions)
       .then(state => {
         console.log(`    ✓ warmup: ${config.key} (${Date.now() - start}ms)`)
         return state
@@ -212,9 +213,11 @@ export async function runActorWarmup(
   browser: Browser,
   config: ActorConfig,
   baseUrl: string,
-  actionTimeout: number
+  actionTimeout: number,
+  contextOptions?: BrowserContextOptions | null
 ): Promise<StorageState> {
   const context = await browser.newContext({
+    ...(contextOptions ?? {}),
     baseURL: baseUrl,
   })
 
