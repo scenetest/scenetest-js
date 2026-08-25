@@ -4,6 +4,17 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-08-25 — monorepo 0.18.0 · @scenetest/scenes 0.17.0
+
+**playwright is a peer dependency.** Your project supplies playwright, so its bin is linked in `node_modules/.bin` and one copy backs both the browser download and the run. `scenetest install` downloads the browser builds through the playwright scenetest itself resolves.
+
+### @scenetest/scenes 0.17.0
+* **Breaking:** `playwright` moved from `dependencies` to `peerDependencies` (`>=1.40.0`, not optional). Add it to your project: `pnpm add -D playwright`. Under pnpm's default isolated layout a nested playwright never linked its bin, so `pnpm exec playwright install` failed once a project stopped depending on playwright directly.
+* New `scenetest install [args...]` subcommand — runs `playwright install` against scenetest's own resolved playwright, so the browser builds match the library that launches them. Arguments pass straight through (`scenetest install chromium --with-deps`).
+* A missing playwright or a missing browser build now prints the command that fixes it instead of a module-resolution or launch stack trace.
+
+---
+
 ## 2026-08-25 — monorepo 0.17.1 · @scenetest/scenes 0.16.1, vscode-scenetest 0.10.1
 
 **Markdown scenes can navigate.** `reload`, `goBack`, `goForward`, and `switchDevice` were documented DSL actions that `.spec.md` files could not reach.

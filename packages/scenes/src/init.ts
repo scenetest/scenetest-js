@@ -57,5 +57,6 @@ export default [
   }
 
   console.log('Created scenetest/ directory')
-  console.log('Run `npx scenetest` to start running scene specs.')
+  console.log('Run `npx scenetest install` to download the browser builds.')
+  console.log('Then run `npx scenetest` to start running scene specs.')
 }

@@ -11,6 +11,41 @@ scenetest --headed             # Run with visible browser
 scenetest --swarm              # Run swarm mode (all teams, all scenes)
 ```
 
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `scenetest install [args...]` | Install the browser builds scenes run in (see [Browsers](#browsers)) |
+| `scenetest init` | Create the `scenetest/` folder structure (`--force` overwrites) |
+| `scenetest prompt <type>` | Generate an LLM prompt for teams or seed data (`teams`, `seeds`, `both`) |
+| `scenetest teams` | List the configured actor teams (`--json` for machine output) |
+
+## Browsers
+
+Scenetest drives the browser through playwright, and declares it as a **peer
+dependency**:
+
+```bash
+pnpm add -D playwright
+```
+
+Your project supplies playwright, so its `playwright` bin is linked and one copy
+backs both the browser download and the run. Two copies — one nested under
+scenetest, one your own — download browsers for one version and launch scenes
+with the other.
+
+Download the browser builds with:
+
+```bash
+scenetest install                 # Every browser playwright supports
+scenetest install chromium        # One browser
+scenetest install --with-deps     # Also the OS packages the browsers need (CI)
+```
+
+`scenetest install` forwards its arguments to the playwright that scenetest
+itself resolves, so the builds it downloads are the ones your scenes launch.
+`pnpm exec playwright install` does the same job through your own copy.
+
 ## Command-Line Options
 
 | Flag | Description |
