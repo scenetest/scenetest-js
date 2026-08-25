@@ -150,6 +150,24 @@ describe('ConcurrentActorHandleImpl', () => {
   })
 
   describe('drain (execution phase)', () => {
+    it('claims standing toasts before an interaction, not before an assertion', async () => {
+      const { actor, page } = createTestActor()
+      const order: string[] = []
+
+      page.evaluate.mockImplementation(async () => { order.push('claim') })
+      page._locator.click.mockImplementation(async () => { order.push('click') })
+      page._locator.waitFor.mockImplementation(async () => { order.push('waitFor') })
+
+      actor.see('nav')          // assertion — must not claim
+      actor.click('save')       // interaction — claims first
+
+      await actor.drain()
+
+      // see() waits and claims nothing; click() claims, then waits for its
+      // own target before clicking it
+      expect(order).toEqual(['waitFor', 'claim', 'waitFor', 'click'])
+    })
+
     it('executes queued actions in order', async () => {
       const order: string[] = []
 

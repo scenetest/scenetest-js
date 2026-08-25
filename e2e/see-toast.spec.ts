@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { waitForNewToast } from '../packages/scenes/dist/toast.js'
+import { waitForNewToast, claimStandingToasts } from '../packages/scenes/dist/toast.js'
 
 /**
  * E2E tests for `seeToast` — the assertion runs in a real browser, so the
@@ -12,19 +12,23 @@ import { waitForNewToast } from '../packages/scenes/dist/toast.js'
 const TOASTER = `<!doctype html><body>
 <div id="toaster" style="position:fixed;bottom:0;right:0;padding:20px"
      onmouseenter="hover=true" onmouseleave="hover=false"></div>
+<div id="shadow-host"></div>
 <script>
   let hover = false
-  function toast(duration = 1500) {
+  const shadow = document.getElementById('shadow-host').attachShadow({ mode: 'open' })
+  function toast(duration = 1500, root = toaster) {
     const el = document.createElement('div')
     el.setAttribute('data-testid', 'toast-success')
     el.textContent = 'Saved'
-    toaster.appendChild(el)
+    root.appendChild(el)
     const expire = () => (hover ? setTimeout(expire, 100) : el.remove())
     setTimeout(expire, duration)
   }
+  function shadowToast() { toast(10_000, shadow) }
 </script></body>`
 
 declare const toast: (duration?: number) => void
+declare const shadowToast: () => void
 
 test.describe('seeToast', () => {
   test.beforeEach(async ({ page }) => {
@@ -52,7 +56,9 @@ test.describe('seeToast', () => {
 
     // The action under test toasts nothing. The first toast is still on
     // screen, and must not stand in for the toast that never came.
-    await expect(waitForNewToast(toasts, 'toast-success', 700)).rejects.toThrow(/already claimed it/)
+    await expect(waitForNewToast(toasts, 'toast-success', 700)).rejects.toThrow(
+      /already there before the last action/
+    )
     await expect(toasts).toBeVisible()
   })
 
@@ -80,6 +86,36 @@ test.describe('seeToast', () => {
     // Still up, long past its 1500ms duration, because hover paused it
     await page.waitForTimeout(2500)
     await expect(toasts).toBeVisible()
+  })
+
+  test('a toast standing before the interaction does not satisfy the next step', async ({ page }) => {
+    const toasts = page.locator('[data-testid="toast-success"]')
+
+    // The app toasts on load — nothing to do with the action under test
+    await page.evaluate(() => toast(10_000))
+    await claimStandingToasts(page)
+
+    // …and the action under test toasts nothing
+    await expect(waitForNewToast(toasts, 'toast-success', 700)).rejects.toThrow(
+      /already there before the last action/
+    )
+
+    // The toast the action does produce still passes
+    await page.evaluate(() => toast(10_000))
+    await waitForNewToast(toasts, 'toast-success', 3000)
+  })
+
+  test('claims toasts inside an open shadow root', async ({ page }) => {
+    const toasts = page.locator('[data-testid="toast-success"]')
+
+    // Playwright's selectors pierce open shadow roots, so the sweep must too
+    await page.evaluate(() => shadowToast())
+    await expect(toasts).toBeVisible()
+    await claimStandingToasts(page)
+
+    await expect(waitForNewToast(toasts, 'toast-success', 700)).rejects.toThrow(
+      /already there before the last action/
+    )
   })
 
   test('fails with a clear message when no toast appears', async ({ page }) => {

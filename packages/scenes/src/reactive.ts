@@ -73,7 +73,7 @@ import { registerScene, getCurrentSession } from './scene.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
-import { waitForNewToast } from './toast.js'
+import { waitForNewToast, claimStandingToasts, INTERACTIONS } from './toast.js'
 
 // ---------------------------------------------------------------------------
 // Interpolation helpers
@@ -311,7 +311,15 @@ export class ConcurrentActorHandleImpl implements ConcurrentActorHandle {
     target: string | undefined,
     execute: () => Promise<void>
   ): this {
-    this.queue.push({ name, target, execute })
+    // An interaction claims whatever is on screen before it runs, so the
+    // toast a later seeToast accepts is one this action produced.
+    const run = INTERACTIONS.has(name)
+      ? async () => {
+          if (this._page) await claimStandingToasts(this._page)
+          await execute()
+        }
+      : execute
+    this.queue.push({ name, target, execute: run })
     return this
   }
 

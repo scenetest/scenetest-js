@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Locator } from 'playwright'
-import { waitForNewToast } from '../toast.js'
+import { waitForNewToast, INTERACTIONS } from '../toast.js'
 
 // ---------------------------------------------------------------------------
 // Helpers — a fake DOM just rich enough for the in-page claim function
@@ -66,7 +66,7 @@ describe('waitForNewToast', () => {
 
     // The same toast, still visible, must not satisfy the next step
     await expect(waitForNewToast(locator, 'toast-success', 100)).rejects.toThrow(
-      /no new toast appeared.*already claimed it/s
+      /no new toast appeared.*already there before the last action/s
     )
 
     // A fresh element — what a toast library mounts for the next toast — does
@@ -103,5 +103,22 @@ describe('waitForNewToast', () => {
     await expect(waitForNewToast(locator, 'toast-success', 150)).rejects.toThrow()
 
     expect(stub.calls).toBeGreaterThan(1)
+  })
+})
+
+describe('INTERACTIONS', () => {
+  it('covers the actions that can produce a toast', () => {
+    for (const action of ['click', 'ifClick', 'typeInto', 'check', 'select', 'pressKey', 'do',
+                          'openTo', 'reload', 'goBack', 'goForward', 'switchDevice', 'scrollToBottom']) {
+      expect(INTERACTIONS.has(action)).toBe(true)
+    }
+  })
+
+  it('excludes assertions, waits and scope moves', () => {
+    // Claiming on one of these would discard the toast the scene is asserting
+    for (const action of ['see', 'seeInView', 'seeText', 'seeToast', 'notSee',
+                          'scope', 'up', 'prev', 'wait', 'waitFor', 'emit']) {
+      expect(INTERACTIONS.has(action)).toBe(false)
+    }
   })
 })

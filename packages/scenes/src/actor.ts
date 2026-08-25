@@ -8,7 +8,7 @@ import { parseDslLines, parseAction, applyDslAction } from './dsl.js'
 import { findDevice } from './devices.js'
 import { dashboardSend } from './dashboard-reporter.js'
 import { settle } from './settle.js'
-import { waitForNewToast } from './toast.js'
+import { waitForNewToast, claimStandingToasts, INTERACTIONS } from './toast.js'
 
 /**
  * Action to be executed in a chain
@@ -103,7 +103,15 @@ class ActionChainImpl implements ActionChain {
   }
 
   private addAction(name: string, target: string | undefined, execute: () => Promise<void>): ActionChain {
-    this.actions.push({ name, target, execute })
+    // An interaction claims whatever is on screen before it runs, so the
+    // toast a later seeToast accepts is one this action produced.
+    const run = INTERACTIONS.has(name)
+      ? async () => {
+          await claimStandingToasts(this.page)
+          await execute()
+        }
+      : execute
+    this.actions.push({ name, target, execute: run })
     return this
   }
 

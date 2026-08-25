@@ -49,6 +49,8 @@ user:
 
 `seeToast` waits for a **new** toast to appear. Each step claims one toast element, so the save toast can't satisfy the publish step — even while it's still on screen. If `publish` stops toasting, the second step fails.
 
+A toast only counts if it appeared after the last interaction started. Every `click`, `typeInto`, `check`, `select`, `pressKey` and navigation claims whatever is already on screen, so a toast left over from page load can't stand in for the one your action should have produced. Assertions and `wait` claim nothing, so `click save`, `wait 100`, `seeToast ok` still works.
+
 `seeToast` returns as soon as the toast appears; it does not wait for the toast to dismiss. Dismissal timing is a UI detail, and a toast library that pauses on hover can leave a toast up indefinitely. When the toast covers the next element you click, say so:
 
 ```scenetest
