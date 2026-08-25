@@ -13,8 +13,13 @@ _Evaluate your product, not your tests. A Javascript testing framework with inli
 ## Installation
 
 ```bash
-pnpm add @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
+pnpm add @scenetest/checks @scenetest/vite-plugin @scenetest/scenes playwright
+pnpm exec scenetest install
 ```
+
+Scenetest drives the browser through playwright, and declares it as a peer
+dependency: your project supplies it, so one copy backs both the browser
+download and the run. `scenetest install` downloads the browser builds.
 
 Framework bindings ship as subpaths of `@scenetest/checks` — import from
 `@scenetest/checks/react`, `/vue`, `/solid`, or `/svelte`.

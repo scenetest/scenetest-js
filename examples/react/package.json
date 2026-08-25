@@ -21,6 +21,7 @@
     "typescript": "^5.3.3",
     "vite": "^6.4.2",
     "@scenetest/vite-plugin": "workspace:*",
-    "@scenetest/scenes": "workspace:*"
+    "@scenetest/scenes": "workspace:*",
+    "playwright": "^1.40.0"
   }
 }

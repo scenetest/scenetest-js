@@ -156,9 +156,11 @@ Design doc: `docs/public/design/unified-console.md`.
 - `keyboard.ts` — `NavigationModeRotation`, `tabToElement()`, `pressEnter()`, `clearAndType()`, fuzzy-finger helpers, `FuzzyFingerError`
 - `config.ts` — `loadConfig()`, `findConfigFile()`, `defineConfig()`, team discovery
 - `types.ts` — all type definitions (`ScenetestConfig`, `SequentialActorHandle`, `ActionChain`, `ConcurrentActorHandle`, `SceneContext`)
+- `playwright-install.ts` — `resolvePlaywrightCli()`, `installBrowsers()`, and the two setup-failure predicates behind `scenetest install`
 - `recorder/` — the scene recorder panel (capture, reverse-selector, panel UI), subpath export `./recorder`, auto-initializing on import. Pure DOM code with no Vite coupling
 
 Constraints:
+- **playwright is a peer dependency.** The consumer supplies it, so its bin is linked and one copy backs both the browser download and the run. `cli.ts` therefore imports `runner.js` lazily — the runner imports playwright at module scope, and `scenetest install` has to stay reachable on a project that has not installed it yet.
 - Stop is cooperative. `isStopped` breaks the run loop, so the CLI emits a graceful `run:end` with a partial summary; `gate()` parks the loop while paused.
 - `RunController` is run-agnostic. There is no run id, and `meta.runId` is logged but never gates the action.
 - `run:replay` is a no-op inside `RunController`. Relaunching is the supervisor's job — the CLI in dev, the driver in cloud.

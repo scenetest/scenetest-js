@@ -5,7 +5,13 @@ import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { loadConfig, filterTeamsByName } from './config.js'
-import { SceneRunner, printSummary } from './runner.js'
+import {
+  installBrowsers,
+  isMissingBrowserError,
+  isMissingPlaywrightError,
+  MISSING_BROWSER_MESSAGE,
+  MISSING_PLAYWRIGHT_MESSAGE,
+} from './playwright-install.js'
 import { init } from './init.js'
 import {
   ReportUrlReporter,
@@ -28,6 +34,32 @@ import type { CLIOptions, RunReport } from './types.js'
 // the installed package instead of a hand-maintained literal that drifts.
 const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json')
 const version = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version as string
+
+/**
+ * The runner imports playwright at module scope, and playwright is a peer
+ * dependency. Loading the runner lazily keeps the rest of the CLI — above all
+ * `scenetest install` — reachable on a project that has not installed it yet.
+ */
+function loadRunner(): Promise<typeof import('./runner.js')> {
+  return import('./runner.js')
+}
+
+/**
+ * Report a broken playwright setup as the instruction that fixes it. Both
+ * failures reach the user through the CLI: a missing peer while the run loads
+ * playwright, a missing browser build while it launches one.
+ */
+function reportSetupError(err: unknown): boolean {
+  if (isMissingPlaywrightError(err)) {
+    console.error(MISSING_PLAYWRIGHT_MESSAGE)
+    return true
+  }
+  if (isMissingBrowserError(err)) {
+    console.error(MISSING_BROWSER_MESSAGE)
+    return true
+  }
+  return false
+}
 
 const program = new Command()
 
@@ -110,6 +142,7 @@ program
       }
 
       // Create runner
+      const { SceneRunner, printSummary } = await loadRunner()
       const runner = new SceneRunner(config, teams)
 
       // Initialize browser
@@ -206,7 +239,9 @@ program
         process.exit(exitCode)
       }
     } catch (err) {
-      console.error('Error:', err instanceof Error ? err.message : err)
+      if (!reportSetupError(err)) {
+        console.error('Error:', err instanceof Error ? err.message : err)
+      }
       process.exit(1)
     }
   })
@@ -254,6 +289,23 @@ async function writeReport(
   }
 }
 
+
+program
+  .command('install')
+  .description('Install the browser builds scenetest runs scenes in')
+  .argument('[args...]', 'Passed through to `playwright install` (e.g. chromium, --with-deps, --force)')
+  .allowUnknownOption()
+  .action(async (args: string[]) => {
+    // Forward to the playwright scenetest itself resolves, so the browser
+    // builds match the library that will drive them.
+    try {
+      const code = await installBrowsers(args)
+      if (code !== 0) process.exit(code)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err)
+      process.exit(1)
+    }
+  })
 
 program
   .command('init')

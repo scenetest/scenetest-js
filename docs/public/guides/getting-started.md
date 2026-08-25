@@ -4,10 +4,18 @@ This guide walks you through adding Scenetest to an existing Vite project. By th
 
 ## 1. Install and Set Up
 
-Install the three Scenetest packages:
+Install the three Scenetest packages, plus playwright:
 
 ```bash
-pnpm add -D @scenetest/checks @scenetest/vite-plugin @scenetest/scenes
+pnpm add -D @scenetest/checks @scenetest/vite-plugin @scenetest/scenes playwright
+```
+
+Scenetest drives the browser through playwright, and declares it as a peer
+dependency: your project supplies it, so one copy backs both the browser
+download and the run. Download the browser builds:
+
+```bash
+pnpm exec scenetest install
 ```
 
 Framework bindings are subpaths of `@scenetest/checks`: import from
