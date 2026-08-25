@@ -427,7 +427,9 @@ switchDevice phone
   })
 
   it('treats every DSL action as an action line', () => {
-    // Guards against the Markdown parser's vocabulary drifting from the DSL's.
+    // The allow-list is derived from DSL_ACTIONS, so what this checks is the
+    // rest of the parser: no earlier branch (comment, `if`, actor cue, the
+    // cleanup/setup directives) claims a line that starts with a DSL verb.
     const content = `
 # test
 

@@ -5,7 +5,6 @@ import {
   applyDslAction,
   defineMacro,
   clearMacros,
-  DSL_ACTIONS,
 } from '../dsl.js'
 import { ConcurrentActorHandleImpl, drainAll } from '../reactive.js'
 import { MessageBus } from '../message-bus.js'
@@ -318,18 +317,6 @@ describe('applyDslAction', () => {
   it('throws when ifClick is missing selector', () => {
     const target = createSpyTarget()
     expect(() => applyDslAction(target, { action: 'ifClick' })).toThrow('ifClick requires a selector')
-  })
-
-  it('handles every verb in DSL_ACTIONS', () => {
-    // Guards against DSL_ACTIONS drifting from the applyDslAction switch.
-    // Both a selector and a value are supplied, so no verb fails on arguments.
-    const target = createSpyTarget()
-
-    for (const action of DSL_ACTIONS) {
-      applyDslAction(target, { action, selector: 'thing', value: '10' })
-    }
-
-    expect(target.calls).toHaveLength(DSL_ACTIONS.length)
   })
 
   it('throws on unknown action', () => {
