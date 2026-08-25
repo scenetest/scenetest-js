@@ -52,6 +52,19 @@ user:
 - scrollToBottom
 - click
 
+## page navigation
+user:
+- openTo /community
+- click affirm-community-norms-button
+- reload
+- notSee intro-message-section
+- goBack
+- goForward
+- switchDevice phone
+- scope settings-modal
+- pressKey Escape
+- ifClick dismiss-button
+
 ## conditional flow
 admin:
 - openTo /admin

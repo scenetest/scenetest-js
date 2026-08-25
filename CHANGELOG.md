@@ -4,6 +4,19 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-08-25 — monorepo 0.17.1 · @scenetest/scenes 0.16.1, vscode-scenetest 0.10.1
+
+**Markdown scenes can navigate.** `reload`, `goBack`, `goForward`, and `switchDevice` were documented DSL actions that `.spec.md` files could not reach.
+
+### @scenetest/scenes 0.16.1
+* Fix: `reload`, `goBack`, `goForward`, and `switchDevice` now run in Markdown scenes. The Markdown parser kept its own list of action verbs, which was missing all four, so each line was read as a macro invocation and failed with "Macro not found: reload". The parser now reads the DSL's own vocabulary, so a verb added to `applyDslAction` reaches both surfaces at once.
+* The "Macro not found" error says the name is not a DSL action either, and lists the actions that are.
+
+### vscode-scenetest 0.10.1
+* Highlight the verbs the grammar was missing in `.spec.md` files: `reload`, `goBack`, `goForward`, `switchDevice`, `scope`, `pressKey`, and `ifClick`. The docs site's highlighter gets the same verbs.
+
+---
+
 ## 2026-06-22 — monorepo 0.17.0 · @scenetest/scenes 0.16.0, @scenetest/vite-plugin 0.17.0, @scenetest/dashboard 0.14.0, @scenetest/protocol 0.12.0, @scenetest/receiver 0.12.0
 
 **Dashboard control plane.** The dashboard can pause/resume/stop a run and re-run a team. Directions reach the CLI the same way in dev and cloud (receiver → `onCommand` → the run) and their effects come back as events. Commands target the active run; the only protocol change is two events plus a flag.

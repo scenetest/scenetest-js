@@ -56,6 +56,33 @@ import type { DslTarget, Selector } from './types.js'
 export type DslAction = string
 
 /**
+ * Every action verb `applyDslAction` handles.
+ *
+ * This list is the DSL's vocabulary. The Markdown parser reads it to tell an
+ * action line from a macro invocation, so a verb added to `applyDslAction`
+ * reaches the text DSL and `.spec.md` scenes at the same time.
+ *
+ * `applyDslAction` switches over `DslActionName`, which makes the two
+ * exhaustive over each other: adding a verb here without a case, or a case
+ * without a verb here, is a type error.
+ */
+export const DSL_ACTIONS = [
+  // Navigation (resets scope to page root)
+  'openTo', 'reload', 'goBack', 'goForward', 'switchDevice',
+  // Assertions
+  'see', 'seeInView', 'notSee', 'seeText', 'seeToast',
+  // Scope
+  'scope', 'up', 'prev',
+  // Interactions
+  'click', 'typeInto', 'check', 'select', 'ifClick', 'pressKey',
+  // Control
+  'wait', 'emit', 'waitFor', 'warnIf', 'scrollToBottom',
+] as const
+
+export type DslActionName = (typeof DSL_ACTIONS)[number]
+
+
+/**
  * Extract the last token from a string.
  * A token is either a quoted string ('...' or "...") or a single word.
  *
@@ -190,7 +217,13 @@ export function parseDslLines(text: string): string[] {
  * way the caller doesn't inspect the return value.
  */
 export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
-  const { action, selector, value } = parsed
+  const { selector, value } = parsed
+
+  // Narrowing to DslActionName makes the switch exhaustive over DSL_ACTIONS:
+  // a verb in the list with no case fails the `never` assignment below, and a
+  // case for a verb missing from the list is not comparable to the union.
+  // An action arriving from a spec file is still any string, hence the default.
+  const action = parsed.action as DslActionName
 
   switch (action) {
     case 'openTo':
@@ -310,8 +343,10 @@ export function applyDslAction(target: DslTarget, parsed: ParsedAction): void {
       target.ifClick(selector)
       break
 
-    default:
-      throw new Error(`Unknown DSL action: ${action}`)
+    default: {
+      const unhandled: never = action
+      throw new Error(`Unknown DSL action: ${unhandled}`)
+    }
   }
 }
 
