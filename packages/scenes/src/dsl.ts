@@ -56,6 +56,29 @@ import type { DslTarget, Selector } from './types.js'
 export type DslAction = string
 
 /**
+ * Every action verb `applyDslAction` handles.
+ *
+ * This list is the DSL's vocabulary. The Markdown parser reads it to tell an
+ * action line from a macro invocation, so a verb added to `applyDslAction`
+ * reaches the text DSL and `.spec.md` scenes at the same time.
+ */
+export const DSL_ACTIONS = [
+  // Navigation (resets scope to page root)
+  'openTo', 'reload', 'goBack', 'goForward', 'switchDevice',
+  // Assertions
+  'see', 'seeInView', 'notSee', 'seeText', 'seeToast',
+  // Scope
+  'scope', 'up', 'prev',
+  // Interactions
+  'click', 'typeInto', 'check', 'select', 'ifClick', 'pressKey',
+  // Control
+  'wait', 'emit', 'waitFor', 'warnIf', 'scrollToBottom',
+] as const
+
+export type DslActionName = (typeof DSL_ACTIONS)[number]
+
+
+/**
  * Extract the last token from a string.
  * A token is either a quoted string ('...' or "...") or a single word.
  *

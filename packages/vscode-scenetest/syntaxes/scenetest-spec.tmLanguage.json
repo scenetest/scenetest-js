@@ -32,7 +32,7 @@
       "patterns": [
         {
           "comment": "Actor cue with inline action: user: openTo /login",
-          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?([a-zA-Z][a-zA-Z0-9_-]*):\\s+(openTo|see|seeInView|notSee|seeText|seeToast|click|typeInto|check|select|wait|emit|waitFor|warnIf|up|prev|scrollToBottom|if)(?:\\s+(.*))?$",
+          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?([a-zA-Z][a-zA-Z0-9_-]*):\\s+(openTo|reload|goBack|goForward|switchDevice|seeInView|seeText|seeToast|see|notSee|scope|up|prev|ifClick|click|typeInto|check|select|pressKey|wait|emit|waitFor|warnIf|scrollToBottom|if)(?:\\s+(.*))?$",
           "captures": {
             "1": { "name": "variable.other.actor.scenetest" },
             "2": { "name": "entity.name.function.action.scenetest" },
@@ -84,6 +84,22 @@
           }
         },
         {
+          "comment": "Device switch with a device name: switchDevice phone",
+          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(switchDevice)\\s+(.*)$",
+          "captures": {
+            "1": { "name": "entity.name.function.action.scenetest" },
+            "2": { "patterns": [{ "include": "#value-with-interpolation" }] }
+          }
+        },
+        {
+          "comment": "Key press: pressKey Escape",
+          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(pressKey)\\s+(.*)$",
+          "captures": {
+            "1": { "name": "entity.name.function.action.scenetest" },
+            "2": { "patterns": [{ "include": "#value-with-interpolation" }] }
+          }
+        },
+        {
           "comment": "Wait action with number",
           "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(wait)\\s+(\\d+)$",
           "captures": {
@@ -118,15 +134,15 @@
           }
         },
         {
-          "comment": "Bare scope actions: click, up, prev, scrollToBottom (no arguments)",
-          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(click|up|prev|scrollToBottom)\\s*$",
+          "comment": "Bare actions: click, up, prev, scrollToBottom, reload, goBack, goForward, switchDevice (no arguments)",
+          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(click|up|prev|scrollToBottom|reload|goBack|goForward|switchDevice)\\s*$",
           "captures": {
             "1": { "name": "entity.name.function.action.scenetest" }
           }
         },
         {
-          "comment": "Selector actions: see, seeInView, notSee, seeToast, click, check, up",
-          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(see|seeInView|notSee|seeToast|click|check|up)\\s+(.*)$",
+          "comment": "Selector actions: see, seeInView, notSee, seeToast, scope, ifClick, click, check, up",
+          "match": "^\\s*(?:-\\s*|\\d+\\.\\s*)?(see|seeInView|notSee|seeToast|scope|ifClick|click|check|up)\\s+(.*)$",
           "captures": {
             "1": { "name": "entity.name.function.action.scenetest" },
             "2": { "patterns": [{ "include": "#selector-chain" }] }

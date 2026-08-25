@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { parseMarkdownScenes, registerMarkdownScenes } from '../markdown-scene.js'
+import { DSL_ACTIONS } from '../dsl.js'
 import { sceneRegistry } from '../scene.js'
 
 // ---------------------------------------------------------------------------
@@ -399,6 +400,43 @@ see main-content
     const scenes = parseMarkdownScenes(content, '/test/bare-up.spec.md')
     const actions = scenes[0].blocks[0].actions
     expect(actions[2]).toEqual({ type: 'action', line: 'up' })
+  })
+
+  it('parses the navigation actions as actions, not macros', () => {
+    const content = `
+# test
+
+user:
+click affirm-button
+reload
+notSee intro-message-section
+goBack
+goForward
+switchDevice phone
+`
+    const scenes = parseMarkdownScenes(content, '/test/navigation.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions).toEqual([
+      { type: 'action', line: 'click affirm-button' },
+      { type: 'action', line: 'reload' },
+      { type: 'action', line: 'notSee intro-message-section' },
+      { type: 'action', line: 'goBack' },
+      { type: 'action', line: 'goForward' },
+      { type: 'action', line: 'switchDevice phone' },
+    ])
+  })
+
+  it('treats every DSL action as an action line', () => {
+    // Guards against the Markdown parser's vocabulary drifting from the DSL's.
+    const content = `
+# test
+
+user:
+${DSL_ACTIONS.map((action) => `${action} thing`).join('\n')}
+`
+    const scenes = parseMarkdownScenes(content, '/test/vocabulary.spec.md')
+    const actions = scenes[0].blocks[0].actions
+    expect(actions.map((a) => a.type)).toEqual(DSL_ACTIONS.map(() => 'action'))
   })
 
   it('parses waitFor actions', () => {

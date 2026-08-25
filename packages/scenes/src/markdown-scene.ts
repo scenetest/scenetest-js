@@ -58,7 +58,7 @@
 
 import path from 'path'
 import type { ConcurrentActorHandle } from './types.js'
-import { parseAction, applyDslAction, getMacro } from './dsl.js'
+import { parseAction, applyDslAction, getMacro, DSL_ACTIONS } from './dsl.js'
 import { scene as registerReactiveScene } from './reactive.js'
 import { sceneRegistry, setCurrentFile, getCurrentSession, setNextSceneLine } from './scene.js'
 
@@ -303,13 +303,13 @@ function stripListPrefix(line: string): string {
   return line
 }
 
-/** Known DSL action verbs — used to distinguish actions from actor declarations */
-const KNOWN_ACTIONS = [
-  'openTo', 'see', 'seeInView', 'notSee', 'seeText', 'seeToast', 'click',
-  'typeInto', 'check', 'select', 'wait', 'emit', 'waitFor',
-  'warnIf', 'up', 'prev', 'scrollToBottom', 'if', 'pressKey', 'ifClick',
-  'scope',
-]
+/**
+ * Action verbs a Markdown line can start with.
+ *
+ * This is the text DSL's vocabulary plus `if`, which only Markdown scenes have.
+ * A line starting with anything else is a macro invocation.
+ */
+const KNOWN_ACTIONS: readonly string[] = [...DSL_ACTIONS, 'if']
 
 /** Check if a line looks like a DSL action or macro invocation */
 function isActionLine(line: string): boolean {
@@ -557,7 +557,9 @@ export function registerMarkdownScenes(
               const macro = getMacro(action.name)
               if (!macro) {
                 throw new Error(
-                  `Macro not found: ${action.name} — define it with defineMacro('${action.name}', [...]) in a .ts file`
+                  `Macro not found: ${action.name}. It is not a DSL action either. ` +
+                    `Define it with defineMacro('${action.name}', [...]) in a .ts file. ` +
+                    `Known actions: ${KNOWN_ACTIONS.join(', ')}`
                 )
               }
 
