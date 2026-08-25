@@ -6,6 +6,7 @@ import path from 'path'
 import type { ScenetestConfig, ResolvedTeam, TeamConfig, TeamMeta, RunReport, SceneReport, RegisteredScene } from './types.js'
 import { TeamManager } from './team-manager.js'
 import { DeviceRotation } from './devices.js'
+import { resolveContextOptions } from './permissions.js'
 import { NavigationModeRotation } from './keyboard.js'
 import type { NavigationMode } from './keyboard.js'
 import { sceneRegistry, setCurrentFile, runScene } from './scene.js'
@@ -146,9 +147,15 @@ export class SceneRunner {
       }
     }
 
-    // Pass Playwright context options through to every actor context
-    if (config.contextOptions) {
-      this.teamManager.setContextOptions(config.contextOptions)
+    // Pass Playwright context options through to every actor context, with the
+    // configured browser's default clipboard permissions filled in
+    const contextOptions = resolveContextOptions(
+      config.contextOptions,
+      config.permissions,
+      config.browser ?? 'chromium'
+    )
+    if (contextOptions) {
+      this.teamManager.setContextOptions(contextOptions)
     }
 
     // Set up device rotation if configured

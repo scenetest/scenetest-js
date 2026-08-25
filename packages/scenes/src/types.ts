@@ -203,12 +203,37 @@ export interface ScenetestConfig extends BaseConfig {
    * built from warmup and actor `localStorage`, so all four still win on a key
    * they set.
    *
+   * For permissions, prefer the `permissions` option — it composes with the
+   * ones scenetest grants by default. A `permissions` array set here is passed
+   * to Playwright as written and overrides it.
+   *
    * @example
    * ```ts
-   * contextOptions: { permissions: ['clipboard-read', 'clipboard-write'] }
+   * contextOptions: { geolocation: { latitude: 48.85, longitude: 2.35 } }
    * ```
    */
   contextOptions?: BrowserContextOptions
+
+  /**
+   * Browser permissions to grant every actor, by name.
+   *
+   * A record of deltas, not a list: clipboard access is granted by default, so
+   * a list would mean restating it to add anything else. `{ geolocation: true }`
+   * adds geolocation and keeps the clipboard.
+   *
+   * Permission names are Playwright's. A name the configured browser doesn't
+   * support is skipped with a warning rather than failing the run — firefox has
+   * no clipboard permission at all, and webkit has only `clipboard-read`.
+   *
+   * @example
+   * ```ts
+   * permissions: {
+   *   geolocation: true,          // grant on top of the defaults
+   *   'clipboard-read': false,    // and drop one of them
+   * }
+   * ```
+   */
+  permissions?: Record<string, boolean>
 
   /**
    * Device rotation: assign each actor a rotating device profile.
