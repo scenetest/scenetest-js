@@ -39,7 +39,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
+    "@hono/node-server": "^2.0.10",
     "@scenetest/protocol": "workspace:*",
     "hono": "^4.6.0"
   },
