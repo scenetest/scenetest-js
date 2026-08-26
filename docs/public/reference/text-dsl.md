@@ -21,7 +21,7 @@ Assertions (do NOT change scope):
   seeInView <selector>            Wait for element visible in the viewport
   notSee <selector>               Wait for element hidden
   seeText <text>                  Wait for text visible
-  seeToast <selector>             Wait for element appear then disappear
+  seeToast <selector>             Wait for a NEW toast to appear
 
 Scope:
   scope <selector>                Wait for element visible and SET it as scope

@@ -710,7 +710,7 @@ export interface SequentialActorHandle extends ActorConfig {
   /** Wait for text to be visible (assertion only, does not change scope) */
   seeText(text: string): ActionChain
 
-  /** Wait for element to appear AND disappear (for toasts/notifications) */
+  /** Wait for a NEW toast to appear — one no earlier seeToast claimed. Does not wait for it to dismiss */
   seeToast(selector: Selector): ActionChain
 
   /**
@@ -863,7 +863,7 @@ export interface ActionChain extends PromiseLike<void> {
   /** Wait for text to be visible (assertion only, does not change scope) */
   seeText(text: string): ActionChain
 
-  /** Wait for element to appear AND disappear (for toasts/notifications) */
+  /** Wait for a NEW toast to appear — one no earlier seeToast claimed. Does not wait for it to dismiss */
   seeToast(selector: Selector): ActionChain
 
   /** Wait for element to be visible and set it as the current scope */

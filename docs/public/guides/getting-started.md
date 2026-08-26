@@ -131,7 +131,7 @@ logged-in-user:
 A few things to notice:
 
 - `[self.email]` interpolates the actor's own email from the team config
-- `seeToast` waits for an element to appear _and then disappear_ (perfect for toast notifications)
+- `seeToast` waits for a _new_ toast to appear — a toast an earlier `seeToast` already matched never counts
 - Actions are space-separated tokens that resolve against `data-testid`, `aria-label`, `id`, `data-name`, `data-key`, and `name` attributes. See the [Selectors reference](/reference/selectors)
 
 Run it:
@@ -326,7 +326,7 @@ Available actions:
   seeInView <selector>      — visible AND in viewport
   notSee <selector>         — wait for element hidden
   seeText <text>            — wait for text visible
-  seeToast <selector>       — wait for appear then disappear
+  seeToast <selector>       — wait for a NEW toast to appear
   click [<selector>]        — click (bare click = click current scope)
   typeInto <selector> <value> — fill input
   check <selector>          — check checkbox

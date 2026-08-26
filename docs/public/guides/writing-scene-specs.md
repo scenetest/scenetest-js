@@ -37,15 +37,28 @@ All selector methods support space-separated test IDs for targeting nested eleme
 
 ## Toast/Notification Testing
 
-Use `seeToast` to wait for transient UI elements that appear and then disappear:
+Use `seeToast` to assert that an action produced a toast:
 
 ```scenetest
 user:
 - click save-button
 - seeToast success-notification
+- click publish-button
+- seeToast success-notification
 ```
 
-`seeToast` waits for the element to appear _and then disappear_ — perfect for toast notifications that auto-dismiss.
+`seeToast` waits for a **new** toast to appear. Each step claims one toast element, so the save toast can't satisfy the publish step — even while it's still on screen. If `publish` stops toasting, the second step fails.
+
+A toast only counts if it appeared after the last interaction started. Every `click`, `typeInto`, `check`, `select`, `pressKey` and navigation claims whatever is already on screen, so a toast left over from page load can't stand in for the one your action should have produced. Assertions and `wait` claim nothing, so `click save`, `wait 100`, `seeToast ok` still works.
+
+`seeToast` returns as soon as the toast appears; it does not wait for the toast to dismiss. Dismissal timing is a UI detail, and a toast library that pauses on hover can leave a toast up indefinitely. When the toast covers the next element you click, say so:
+
+```scenetest
+user:
+- seeToast success-notification
+- notSee success-notification
+- click next-button
+```
 
 ## Scope Navigation
 
@@ -287,7 +300,7 @@ For the full syntax, see the [Markdown Spec Reference](/reference/text-dsl#clean
 - Use **scope navigation** (`scope`, `prev`, `up`, bare `up`) to move between scoped contexts
 - Use `seeInView` to check viewport visibility without scrolling
 - Use bare `click` to click the current scope element
-- Use `seeToast` for transient notifications
+- Use `seeToast` to assert an action produced a new toast; add `notSee` when you also need it gone
 - Use `pressKey` to send raw keyboard events (`Escape`, `Enter`, `Tab`, etc.)
 - Use `cleanup:` and `setup:` directives in markdown specs for database state management
 - Use `if` for conditional handling, `ifClick` to dismiss optional elements, and `warnIf` for flagging unexpected paths
