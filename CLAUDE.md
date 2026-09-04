@@ -109,22 +109,20 @@ The command path (one `onCommand`, reached through a transport-specific door) is
 
 ### Dashboard (`packages/dashboard/src/`)
 
-**Nomenclature:** the *Dashboard* is the whole Preact app and all three of its views — **Home**, **Runner**, **Waterfall**. There is no "Console"; that name is retired.
+**Nomenclature:** the *Dashboard* is the whole Preact app and its two views — **Home** and **Runner**. There is no "Console"; that name is retired. The former **Waterfall** view was removed and its two unique parts folded into the Runner: the per-actor lane timeline (into the scene detail) and the run controls — replay-all + team, pause/resume, stop, progress + elapsed clock (into the Runner header).
 
 It is a plain light-DOM Preact app written in TSX (the package has a build step, so no htm). CSS ships as `style.css` scoped under `.scenetest-dashboard`, imported by the host as `@scenetest/dashboard/style.css`. The observer panel in `@scenetest/checks/panel` keeps its own shadow root; the dashboard has none. Views read the collections reactively through `useLiveQuery`, never a hand-rolled `subscribeChanges`. Dev and cloud render this same component, and only the transport differs.
 
 - `dashboard.tsx` — `<Dashboard>`, mounted on a single route with an optional trailing param, `{base}/:view?`. That one pattern matches the base and each view, and the component reads the matched segment via `useRoute().params.view`. Props `{ transport, theme?, basePath?, apiBase?, path?, default? }`
 - `browser-dashboard.tsx` — `<BrowserDashboard>` wraps `<Dashboard>` in the one `LocationProvider` a top-level app must own, so `render(<BrowserDashboard transport={…} />)` gives a standalone host a complete, deep-linkable app
-- `runner.tsx` — the Runner view: `RunnerView` + `Tree`/`ListPane`/`Detail`/`SpecSnippet`/`CopyButton`
-- `select-runner.ts` — `selectSnapshot(slice)` derives per-scene assertions and timeline via `attributeToScene`; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape
-- `app.tsx` — the Waterfall view `{ state, send }` + `Header`/`SceneCard` + `sceneSummary()`. A pure view
-- `select-waterfall.ts` — `selectWaterfall(slice)` derives the Waterfall's lanes by actor, attributed assertions, and run rollup + `completedSceneCount`
+- `runner.tsx` — the Runner view: **two panes** — `RunnerView` + `RunnerHeader`/`RunControls`/`ListPane`/`Detail`/`FileDetail`/`Lanes`/`SpecSnippet`/`CopyButton`. The `ListPane` selects a scene *or* a file (`Selection = { kind: 'scene', id } | { kind: 'file', file }`); `Detail` renders whichever kind is selected — a scene (assertions, actor `Lanes`, spec snippet) or a file overview (`rollupFile`). Grouped-by-file headings and per-row file cells select the file. `RunControls` (live only) sends replay/pause/resume/stop; the header also draws the progress bar + elapsed clock
+- `select-runner.ts` — `selectSnapshot(slice)` derives per-scene assertions, the flat timeline, and per-actor `lanes` via `attributeToScene`, plus the `run` state (running/paused/cancelled/timing) the header controls read; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape (lanes rebuilt from the flat timeline)
 - `use-run-slice.ts` — `useRunSlice(collections)` builds the latest-run slice as `createLiveQueryCollection` derived collections. `runSliceCollections(collections, runId)` is the pure builder
 - `use-live-query.ts` — `useLiveQuery(collection)`, the Preact analogue of `@tanstack/react-db`'s hook
 - `select-helpers.ts` — `latestRunId()`, `latestRunSlice()`, and the `DashboardCollections`/`RunSlice` types
 - `dev-transport.ts` — `createDevTransport()`: fetch + SSE adapter, mapping `Command`s to `/__scenetest/replay|stop|pause|resume`
-- `types.ts` — `Transport`, `DashboardState`, `Scene`, `DashboardTheme`, `ConnectionStatus`
-- `style.css` — the whole app's stylesheet, scoped under `.scenetest-dashboard`, with the Waterfall's bare-element rules confined to `.waterfall-host`
+- `types.ts` — `Transport`, `ConnectionStatus`, `DashboardTheme`, and `Lane`/`ActionItem` (the scene detail's actor-lane shapes)
+- `style.css` — the whole app's stylesheet, scoped under `.scenetest-dashboard`
 - `collections/` — the read-only TanStack DB read model over the run stream, subpath export `./collections`
 
 Constraints:

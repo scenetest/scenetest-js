@@ -1,4 +1,4 @@
-import type { Command, RunEvent, TeamMeta } from '@scenetest/protocol'
+import type { Command, RunEvent } from '@scenetest/protocol'
 
 /**
  * Liveness of the transport's event subscription, surfaced in the header's
@@ -30,7 +30,7 @@ export interface Transport {
   sendCommand(command: Command): Promise<void>
 }
 
-/** A single DSL action on one actor's lane. */
+/** A single DSL action on one actor's lane (one pill in the scene detail's actor timeline). */
 export interface ActionItem {
   action: string
   target?: string
@@ -45,52 +45,6 @@ export interface ActionItem {
 export interface Lane {
   actor: string
   items: ActionItem[]
-}
-
-/** An inline assertion result observed during a scene. */
-export interface AssertionRow {
-  actor?: string
-  description: string
-  result: boolean
-  timestamp: number
-}
-
-/** A scene folded from its lifecycle events. */
-export interface Scene {
-  name: string
-  file: string
-  actors: string[]
-  lanes: Lane[]
-  assertions: AssertionRow[]
-  startTime: number
-  endTime: number | null
-  status: 'running' | 'completed' | 'failed' | 'timeout' | string
-  duration?: number
-  error?: string
-  team: TeamMeta
-  teamIndex: number
-}
-
-/** Everything the widget renders, folded from the protocol event stream. */
-export interface DashboardState {
-  scenes: Scene[]
-  currentSceneIndex: number | null
-  runStartTime: number | null
-  passCount: number
-  failCount: number
-  sceneCount: number
-  /** Team names for the replay filter — configured teams when available, else those seen in `scene:start`. */
-  teams: string[]
-  running: boolean
-  /** Whether the active run is currently paused (from `run:paused`/`run:resumed`). */
-  paused: boolean
-  /** Whether the run ended via a stop (from `run:end`'s `cancelled`). */
-  cancelled: boolean
-  /** Final run duration once `run:end` arrives, else null. */
-  endDurationMs: number | null
-  /** Latest `run:progress` rollup, when the producer emits one. */
-  progress?: { pct: number; failing: number; flaky: number }
-  connection: ConnectionStatus
 }
 
 /** Theming surface — the only knobs a host may set. Versioned with the widget. */

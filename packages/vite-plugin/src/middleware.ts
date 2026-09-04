@@ -276,9 +276,9 @@ export function createScenetestMiddleware(
     // ── Dev dashboard: the built app, served as static files ──
     // One Vite app (app/ → dist-app) serves every view; the client routes on
     // location.pathname. Built assets live under the `/__scenetest/assets/`
-    // base, served off dist-app; the view paths (Home / Runner / Waterfall) all
-    // return index.html. This replaced the old raw-ESM serving — no importmap,
-    // no vendored-module routes.
+    // base, served off dist-app; the view paths (Home / Runner) all return
+    // index.html. This replaced the old raw-ESM serving — no importmap, no
+    // vendored-module routes.
     if (req.method === 'GET' && req.url) {
       const pathname = req.url.split('?')[0]
       if (pathname.startsWith('/__scenetest/assets/')) {
@@ -292,9 +292,7 @@ export function createScenetestMiddleware(
         pathname === '/__scenetest' ||
         pathname === '/__scenetest/' ||
         pathname === '/__scenetest/runner' ||
-        pathname === '/__scenetest/runner/' ||
-        pathname === '/__scenetest/waterfall' ||
-        pathname === '/__scenetest/waterfall/'
+        pathname === '/__scenetest/runner/'
       if (isView) {
         if (serveAppFile(appDir, 'index.html', res)) return
         res.statusCode = 404

@@ -1,5 +1,7 @@
 import type { TeamMeta } from '@scenetest/protocol'
+import type { ActionRecord } from './collections/projections.js'
 import { groupByScene, type RunSlice } from './select-helpers.js'
+import type { ActionItem, Lane } from './types.js'
 
 /**
  * The Runner view's read model — pure selectors over the latest-run `RunSlice`.
@@ -22,7 +24,7 @@ export interface RunnerTimelineEntry {
   error: string | null
 }
 
-/** One scene with its attributed assertions + timeline — the unit the view renders. */
+/** One scene with its attributed assertions + per-actor lanes — the unit the view renders. */
 export interface RunnerScene {
   id: string
   name: string
@@ -35,7 +37,10 @@ export interface RunnerScene {
   teamIndex: number
   actors: string[]
   assertions: RunnerAssertion[]
+  /** Flat, time-ordered action list — used for the clipboard payload. */
   timeline: RunnerTimelineEntry[]
+  /** Per-actor lanes — the concurrent-actor view shown in the scene detail. */
+  lanes: Lane[]
 }
 
 export interface RunnerSummary {
@@ -46,14 +51,37 @@ export interface RunnerSummary {
   warnings: number
 }
 
+/**
+ * Live run controls read this — the state the Runner header needs to drive
+ * pause/resume/stop, the progress bar, and the elapsed clock. (Absorbed from
+ * the retired Waterfall view.)
+ */
+export interface RunnerRunState {
+  running: boolean
+  paused: boolean
+  cancelled: boolean
+  startTime: number | null
+  endDurationMs: number | null
+}
+
 export interface RunnerSnapshot {
   scenes: RunnerScene[]
   summary: RunnerSummary
+  run: RunnerRunState
+}
+
+const EMPTY_RUN: RunnerRunState = {
+  running: false,
+  paused: false,
+  cancelled: false,
+  startTime: null,
+  endDurationMs: null,
 }
 
 export const EMPTY_SNAPSHOT: RunnerSnapshot = {
   scenes: [],
   summary: { scenes: 0, completed: 0, failed: 0, assertions: { total: 0, passed: 0, failed: 0 }, warnings: 0 },
+  run: EMPTY_RUN,
 }
 
 function isCompleted(status: string): boolean {
@@ -62,6 +90,38 @@ function isCompleted(status: string): boolean {
 
 function isFailure(status: string): boolean {
   return status !== 'completed' && status !== 'running'
+}
+
+/** Classify a lane item for its pill colour, matching the old Waterfall. */
+function laneStatus(a: { status: string; duration: number | null; error: string | null }): ActionItem['status'] {
+  if (a.status === 'running') return 'running'
+  if (a.status === 'error' || a.error) return 'error'
+  return a.duration != null && a.duration > 500 ? 'slow' : 'success'
+}
+
+/** Group a scene's actions into per-actor lanes, seeded by the scene's actor list. */
+function buildLanes(actors: string[], actions: ActionRecord[]): Lane[] {
+  const lanes: Lane[] = actors.map((actor) => ({ actor, items: [] }))
+  const laneFor = (actor: string): Lane => {
+    let lane = lanes.find((l) => l.actor === actor)
+    if (!lane) {
+      lane = { actor, items: [] }
+      lanes.push(lane)
+    }
+    return lane
+  }
+  for (const a of actions.slice().sort((x, y) => x.startTime - y.startTime)) {
+    laneFor(a.actor).items.push({
+      action: a.action,
+      target: a.target ?? undefined,
+      startTime: a.startTime,
+      endTime: a.endTime,
+      duration: a.duration,
+      error: a.error,
+      status: laneStatus(a),
+    })
+  }
+  return lanes
 }
 
 /** Build the live snapshot from the latest-run slice: attribute assertions/actions to scenes and roll up the summary. */
@@ -97,6 +157,7 @@ export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
         duration: ac.duration,
         error: ac.error,
       })),
+    lanes: buildLanes(s.actors, actionsByScene.get(s.id) ?? []),
   }))
 
   const summary: RunnerSummary = {
@@ -110,7 +171,14 @@ export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
     },
     warnings: 0,
   }
-  return { scenes: view, summary }
+  const run: RunnerRunState = {
+    running: latestRun ? latestRun.status === 'running' : view.some((s) => s.status === 'running'),
+    paused: latestRun?.paused ?? false,
+    cancelled: latestRun?.cancelled ?? false,
+    startTime: latestRun?.startTime ?? runScenes[0]?.startTime ?? null,
+    endDurationMs: latestRun?.duration ?? null,
+  }
+  return { scenes: view, summary, run }
 }
 
 // ─── Past-run reports ────────────────────────────────────────────────
@@ -155,6 +223,7 @@ export function mapReportToSnapshot(report: unknown): RunnerSnapshot {
         duration: asNum(t.duration),
         error: typeof t.error === 'string' ? t.error : null,
       })),
+      lanes: lanesFromTimeline((Array.isArray(s.timeline) ? s.timeline : []).filter(isObj)),
     }
   })
 
@@ -171,5 +240,43 @@ export function mapReportToSnapshot(report: unknown): RunnerSnapshot {
     },
     warnings: asNum(rs.warnings) ?? 0,
   }
-  return { scenes, summary }
+  // A past run is finished by definition — no live controls, but keep the
+  // final duration/cancelled so the header can show them.
+  const run: RunnerRunState = {
+    running: false,
+    paused: false,
+    cancelled: rs.cancelled === true,
+    startTime: asNum(report.startTime) ?? null,
+    endDurationMs: asNum(rs.duration) ?? asNum(report.duration),
+  }
+  return { scenes, summary, run }
+}
+
+/** Build per-actor lanes from a past run's flat, pre-ordered timeline. */
+function lanesFromTimeline(timeline: Raw[]): Lane[] {
+  const lanes: Lane[] = []
+  const laneFor = (actor: string): Lane => {
+    let lane = lanes.find((l) => l.actor === actor)
+    if (!lane) {
+      lane = { actor, items: [] }
+      lanes.push(lane)
+    }
+    return lane
+  }
+  for (const t of timeline) {
+    const actor = asStr(t.actor)
+    if (!actor) continue
+    const duration = asNum(t.duration)
+    const error = typeof t.error === 'string' ? t.error : null
+    laneFor(actor).items.push({
+      action: asStr(t.action),
+      target: typeof t.target === 'string' ? t.target : undefined,
+      startTime: 0,
+      endTime: null,
+      duration,
+      error,
+      status: error ? 'error' : duration != null && duration > 500 ? 'slow' : 'success',
+    })
+  }
+  return lanes
 }

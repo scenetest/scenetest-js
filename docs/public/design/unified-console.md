@@ -1,8 +1,12 @@
 # Unified Console (dev + cloud)
 
 **STATUS: Dev console landed; cloud + report loader pending.** Phases 1
-(multi-run collection model) and 3 (`<Dashboard>` with Home/Runner/Waterfall,
-replacing the inline `analyze-app.ts`) are done. Routing rides on one
+(multi-run collection model) and 3 (`<Dashboard>`, replacing the inline
+`analyze-app.ts`) are done. The console is now **two views, Home + Runner**: the
+separate **Waterfall** view has been removed and its two distinct capabilities —
+the per-actor lane timeline and the run controls (replay-all + team, pause /
+resume, stop, progress + elapsed clock) — folded into the Runner (the lanes into
+the scene detail, the controls into the Runner header). Routing rides on one
 `preact-iso` `LocationProvider` owned by the host (see
 [Routing](#routing-one-preact-iso-router-owned-by-the-host)): dev wraps it in
 `BrowserDashboard`, cloud renders the bare `<Dashboard>` under its own route. The
@@ -35,19 +39,26 @@ to browse a PR's run history you leave the page.
 
 **One app, many views, organized around a PR.** A PR is the stable
 identity; runs are iterations inside it. One `<Dashboard>` component owns the
-views as tabs — **Home** (index), **Runner** (the filterable scene log), and
-**Waterfall** (the live timeline, the `@scenetest/dashboard` Waterfall demoted
-from a *page* to a *view*). Dev and cloud render the **same** component; only
-the data source differs.
+views as tabs — **Home** (index) and **Runner** (the filterable scene log, which
+selects a scene *or* a file, shows the per-actor lane timeline in its scene
+detail, and carries the run controls in its header). Dev and cloud render the
+**same** component; only the data source differs.
 
 ```
                        <Dashboard transport={…} />
-                       ┌───────────────────────────────┐
-                       │  Home   │  Runner  │ Waterfall │   ← views (tabs)
-                       └───────────────────────────────┘
+                       ┌──────────────────────┐
+                       │  Home   │   Runner   │   ← views (tabs)
+                       └──────────────────────┘
                                      │
                           one read model (collections)
 ```
+
+> **History.** An earlier iteration shipped a third view, **Waterfall** — the
+> live per-actor timeline as its own page. It duplicated most of the Runner
+> (scenes, status, assertions, replay), so it was removed and its two unique
+> parts absorbed into the Runner: the actor lanes into the scene detail, the run
+> controls (replay-all + team, pause / resume, stop, progress + elapsed) into the
+> Runner header.
 
 ## The key idea: the collection *is* the read model, across runs
 
@@ -131,7 +142,7 @@ the filename and stamps `pr` / `branch` onto the `runs` row when it replays.
 | run history | replay `scenetest/.reports/*.json` for the branch/PR | replay from D1 (metadata) + R2 (event log) |
 | live run | SSE (`/__scenetest/events`) | WebSocket (Durable Object) |
 | identity | filename `pr-{num}-{timestamp}-…` | D1 runId + PR row |
-| URL | `/__scenetest{/runner,/waterfall}` (run = `?run=` picker) | `/repo/:owner/:name/pr/:number{/runner,/waterfall}` (run = picker) |
+| URL | `/__scenetest{/runner}` (run = `?run=` picker) | `/repo/:owner/:name/pr/:number{/runner}` (run = picker) |
 | routing | `BrowserDashboard` supplies the `LocationProvider` | host's own `LocationProvider` (preact-iso) |
 | mount | `<BrowserDashboard transport>` | `<Dashboard transport basePath>` (same component) |
 
@@ -204,12 +215,14 @@ its router and worker shell didn't serve (tab clicks lied; reload / deep-link
    past-run picker currently fetches a single report via `/__scenetest/runs/:id`
    and maps it directly — `mapReportToSnapshot` — rather than replaying all of a
    PR's history into the collection.)
-3. **✅ Done.** `<Dashboard>` in `@scenetest/dashboard` — a real Preact app with
-   Home/Runner/Waterfall views, served by the Vite plugin's bundled shell (the
-   `analyze-app.ts` inline string + its raw-ESM `/__scenetest/vendor/*` routes
-   are deleted). The Waterfall is the existing component demoted to a nested
-   view. The Runner folds the shared collection **projections** + `attributeToScene`
-   directly into Preact state (the bundling prerequisite, #215, landed first).
+3. **✅ Done.** `<Dashboard>` in `@scenetest/dashboard` — a real Preact app,
+   served by the Vite plugin's bundled shell (the `analyze-app.ts` inline string
+   + its raw-ESM `/__scenetest/vendor/*` routes are deleted). It shipped with
+   Home / Runner / Waterfall views; the Waterfall was later removed and its
+   actor-lane timeline + run controls folded into the Runner, leaving **Home +
+   Runner**. The Runner folds the shared collection **projections** +
+   `attributeToScene` directly into Preact state (the bundling prerequisite, #215,
+   landed first).
 4. **Cloud** (pending): implement the data source against D1/R2/DO behind
    `Transport`; render `<Dashboard>`. The routing seam landed early — the
    dashboard reads cloud's own `preact-iso` `LocationProvider`, so cloud mounts

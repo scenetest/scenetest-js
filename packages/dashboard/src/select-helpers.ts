@@ -4,10 +4,10 @@ import type { ObservableRows } from './use-live-query.js'
 
 /**
  * The read model's collections, created once at the Dashboard root and passed
- * to every view. Each view reads the tables it needs reactively with
- * `useLiveQuery`, then selects (`selectWaterfall`, `selectSnapshot`). Typed
- * structurally ({@link ObservableRows}) so the concrete `@tanstack/db`
- * `Collection`s satisfy it without leaking their generics.
+ * to the Runner. It reads the tables it needs reactively with `useLiveQuery`,
+ * then selects (`selectSnapshot`). Typed structurally ({@link ObservableRows})
+ * so the concrete `@tanstack/db` `Collection`s satisfy it without leaking their
+ * generics.
  */
 export interface DashboardCollections {
   scenes: ObservableRows<SceneRow>
@@ -18,9 +18,8 @@ export interface DashboardCollections {
 
 /**
  * The read model is multi-run — the collections accumulate every run of the
- * session — so the live views (Waterfall, Runner) render the **latest** run:
- * the `where runId = latest` slice. `RunSlice` is that slice, shared by both
- * selectors so they agree on the "current run". Built incrementally by
+ * session — so the live Runner renders the **latest** run: the
+ * `where runId = latest` slice. `RunSlice` is that slice. Built incrementally by
  * `useRunSlice` (live), or by `latestRunSlice` (the pure reference, for tests).
  */
 export interface RunSlice {

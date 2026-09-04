@@ -29,7 +29,7 @@ describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
   it('deep-link to the base shows Home', () => {
     const root = mountAt('/__scenetest')
     expect(root.querySelector('.index')).not.toBeNull() // Home
-    expect(root.textContent).toContain('Pick a view')
+    expect(root.textContent).toContain('Scene runner')
   })
 
   it('deep-link to {base}/runner shows the Runner (not Home)', () => {
@@ -39,10 +39,10 @@ describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
     expect(root.querySelector('.index')).toBeNull()
   })
 
-  it('deep-link to {base}/waterfall shows the Waterfall (not Home)', () => {
+  it('an unknown view segment falls back to Home', () => {
     const root = mountAt('/__scenetest/waterfall')
-    expect(root.querySelector('.waterfall-host')).not.toBeNull()
-    expect(root.querySelector('.index')).toBeNull()
+    expect(root.querySelector('.index')).not.toBeNull()
+    expect(root.querySelector('.runner')).toBeNull()
   })
 
   it('clicking a tab navigates client-side: view + URL change, no reload', async () => {
@@ -88,11 +88,12 @@ describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
     click('Runner')
     await Promise.resolve()
     expect(root.querySelector('.runner')).not.toBeNull()
-    click('Waterfall')
-    await Promise.resolve()
     click('Home')
     await Promise.resolve()
     expect(root.querySelector('.index')).not.toBeNull()
+    click('Runner')
+    await Promise.resolve()
+    expect(root.querySelector('.runner')).not.toBeNull()
 
     // The stream opened once and was never torn down across three navigations.
     expect(opened).toBe(1)

@@ -9,10 +9,7 @@ import {
   actionsProjection,
   runsProjection,
 } from './collections/index.js'
-import { Waterfall } from './app.js'
-import { selectWaterfall } from './select-waterfall.js'
 import { RunnerView } from './runner.js'
-import { useRunSlice } from './use-run-slice.js'
 import type { Command } from '@scenetest/protocol'
 import type { ConnectionStatus, DashboardTheme, Transport } from './types.js'
 import type { DashboardCollections } from './select-helpers.js'
@@ -66,8 +63,8 @@ function useDashboardStore(transport: Transport): { store: DashboardStore; conne
 }
 
 /**
- * The Dashboard app — Home / Runner / Waterfall views over one read-only
- * `@tanstack/db` read model. A plain Preact component rendering into the light
+ * The Dashboard app — Home + Runner over one read-only `@tanstack/db` read
+ * model. A plain Preact component rendering into the light
  * DOM under a single `.scenetest-dashboard` root class; the shipped stylesheet
  * scopes everything to it.
  *
@@ -88,7 +85,7 @@ function useDashboardStore(transport: Transport): { store: DashboardStore; conne
  * accepted so the dashboard can also be a preact-iso route child directly.
  *
  * The collections are the single store: the component builds them from the run
- * stream and every view reads from them (`selectWaterfall`, `selectSnapshot`).
+ * stream and the Runner reads from them (`selectSnapshot`).
  */
 export function Dashboard({
   transport,
@@ -114,7 +111,7 @@ export function Dashboard({
   const base = basePath.replace(/\/+$/, '')
   const apiB = (apiBase ?? basePath).replace(/\/+$/, '')
   // The matched `:view?` segment; absent at the base → Home.
-  const view = params.view === 'runner' || params.view === 'waterfall' ? params.view : 'home'
+  const view = params.view === 'runner' ? 'runner' : 'home'
   const tabClass = (t: string) => 'tab' + (view === t ? ' active' : '')
 
   const send = (command: Command) => {
@@ -134,16 +131,11 @@ export function Dashboard({
           <a class={tabClass('runner')} href={`${base}/runner`}>
             Runner
           </a>
-          <a class={tabClass('waterfall')} href={`${base}/waterfall`}>
-            Waterfall
-          </a>
         </div>
       </nav>
       <div class="view">
         {view === 'runner' ? (
-          <RunnerView collections={store} connection={connection} base={apiB} />
-        ) : view === 'waterfall' ? (
-          <WaterfallHost collections={store} connection={connection} send={send} apiBase={apiB} />
+          <RunnerView collections={store} connection={connection} base={apiB} send={send} />
         ) : (
           <Home basePath={base} />
         )}
@@ -159,69 +151,16 @@ function Home({ basePath }: { basePath: string }) {
       <h1>
         <span class="logo">🎬</span> Scenetest
       </h1>
-      <p class="lede">Pick a view.</p>
+      <p class="lede">Live and past runs, in one view.</p>
       <div class="cards">
         <a class="card" href={`${basePath}/runner`}>
           <div class="name">Scene runner →</div>
-          <div class="desc">Live and past runs: scene tree, status, failure log, spec snippets.</div>
-        </a>
-        <a class="card" href={`${basePath}/waterfall`}>
-          <div class="name">Waterfall →</div>
-          <div class="desc">Live timeline of actors and inline check() / should() assertions.</div>
+          <div class="desc">
+            Scenes and files, status, failure log, actor timeline, spec snippets — plus run controls (replay, pause,
+            stop).
+          </div>
         </a>
       </div>
     </div>
   )
-}
-
-// ── Waterfall view ─────────────────────────────────────────────────
-// A pure Preact subtree now — its widget styles are scoped to `.waterfall-host`
-// by the stylesheet, so it no longer needs a nested shadow root. Reads the
-// shared store reactively; `selectWaterfall` folds it into the Waterfall shape.
-function WaterfallHost({
-  collections,
-  connection,
-  send,
-  apiBase,
-}: {
-  collections: DashboardCollections
-  connection: ConnectionStatus
-  send: (c: Command) => void
-  apiBase: string
-}) {
-  const slice = useRunSlice(collections)
-  const view = useMemo(
-    () => selectWaterfall(slice),
-    [slice.runId, slice.run, slice.scenes, slice.assertions, slice.actions]
-  )
-  // Configured teams for the replay picker (so it lists teams that haven't run
-  // yet). Falls back to teams observed in events when the endpoint is absent.
-  const configuredTeams = useConfiguredTeams(apiBase)
-  const teams = configuredTeams.length ? configuredTeams : view.teams
-  const state = { ...view, teams, connection }
-
-  return (
-    <div class="waterfall-host">
-      <Waterfall state={state} send={send} />
-    </div>
-  )
-}
-
-/** Fetch configured team names from `<apiBase>/teams` once. Empty on failure. */
-function useConfiguredTeams(apiBase: string): string[] {
-  const [teams, setTeams] = useState<string[]>([])
-  useEffect(() => {
-    let cancelled = false
-    fetch(`${apiBase}/teams`)
-      .then((r) => r.json())
-      .then((data: { teams?: Array<{ name?: string }> }) => {
-        if (cancelled || !Array.isArray(data?.teams)) return
-        setTeams(data.teams.map((t) => t.name).filter((n): n is string => !!n))
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [apiBase])
-  return teams
 }

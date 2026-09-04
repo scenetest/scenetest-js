@@ -1,6 +1,6 @@
 /**
- * The dev shell — a thin host around the `@scenetest/dashboard` app (Home /
- * Runner / Waterfall views over the read-only TanStack DB read model). It
+ * The dev shell — a thin host around the `@scenetest/dashboard` app (Home +
+ * Runner over the read-only TanStack DB read model). It
  * renders `BrowserDashboard` — `<Dashboard>` plus the single `preact-iso`
  * `LocationProvider` a top-level app must own — so the shell stays a one-liner.
  * Cloud, which already owns a `LocationProvider`, renders the bare `<Dashboard>`
