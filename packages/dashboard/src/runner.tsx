@@ -554,7 +554,7 @@ export function Detail({
   }
 
   const failed = scene.status !== 'completed' && scene.status !== 'running'
-  const pills = ['team ' + teamLabel(scene), scene.duration ? scene.duration + 'ms' : '', scene.status].filter(Boolean)
+  const pills = [teamLabel(scene), scene.duration ? scene.duration + 'ms' : '', scene.status].filter(Boolean)
   const editorHref =
     `${base.replace(/__scenetest$/, '')}__open-in-editor?file=` +
     encodeURIComponent(scene.file) +
@@ -670,7 +670,7 @@ function FileDetail({
   const editorHref = `${base.replace(/__scenetest$/, '')}__open-in-editor?file=` + encodeURIComponent(file)
   const pills = [
     `${roll.scenes.length} scene${roll.scenes.length === 1 ? '' : 's'}`,
-    roll.team ? 'team ' + roll.team : '',
+    roll.team ?? '',
     `${roll.checks.total} check${roll.checks.total === 1 ? '' : 's'}`,
   ].filter(Boolean)
 
