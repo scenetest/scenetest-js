@@ -109,35 +109,33 @@ The command path (one `onCommand`, reached through a transport-specific door) is
 
 ### Dashboard (`packages/dashboard/src/`)
 
-**Nomenclature:** the *Dashboard* is the whole Preact app and all three of its views — **Home**, **Runner**, **Waterfall**. There is no "Console"; that name is retired.
+**Nomenclature:** the *Dashboard* is the whole Preact app, which is now a **single Runner view** — there are no tabs and no separate Home. There is no "Console" either; that name is retired. Two earlier views were removed: **Waterfall** (its per-actor lane timeline folded into the Runner's scene detail, its run controls — replay-all + team, pause/resume, stop, progress + elapsed clock — into the Runner header), and **Home** (a one-card landing that only pointed at the Runner).
 
-It is a plain light-DOM Preact app written in TSX (the package has a build step, so no htm). CSS ships as `style.css` scoped under `.scenetest-dashboard`, imported by the host as `@scenetest/dashboard/style.css`. The observer panel in `@scenetest/checks/panel` keeps its own shadow root; the dashboard has none. Views read the collections reactively through `useLiveQuery`, never a hand-rolled `subscribeChanges`. Dev and cloud render this same component, and only the transport differs.
+It is a plain light-DOM Preact app written in TSX (the package has a build step, so no htm). CSS ships as `style.css` scoped under `.scenetest-dashboard`, imported by the host as `@scenetest/dashboard/style.css`. The observer panel in `@scenetest/checks/panel` keeps its own shadow root; the dashboard has none. The Runner reads the collections reactively through `useLiveQuery`, never a hand-rolled `subscribeChanges`. Dev and cloud render this same component, and only the transport differs.
 
-- `dashboard.tsx` — `<Dashboard>`, mounted on a single route with an optional trailing param, `{base}/:view?`. That one pattern matches the base and each view, and the component reads the matched segment via `useRoute().params.view`. Props `{ transport, theme?, basePath?, apiBase?, path?, default? }`
+- `dashboard.tsx` — `<Dashboard>`, which renders the `RunnerView` unconditionally (no view switch). The host still mounts it on `{base}/:view?` so the base and any old trailing segment (`/runner`) resolve to the Runner without a 404; the single unconditional render keeps it mounted and the store alive across any navigation. Props `{ transport, theme?, basePath, apiBase?, path?, default? }`
 - `browser-dashboard.tsx` — `<BrowserDashboard>` wraps `<Dashboard>` in the one `LocationProvider` a top-level app must own, so `render(<BrowserDashboard transport={…} />)` gives a standalone host a complete, deep-linkable app
-- `runner.tsx` — the Runner view: `RunnerView` + `Tree`/`ListPane`/`Detail`/`SpecSnippet`/`CopyButton`
-- `select-runner.ts` — `selectSnapshot(slice)` derives per-scene assertions and timeline via `attributeToScene`; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape
-- `app.tsx` — the Waterfall view `{ state, send }` + `Header`/`SceneCard` + `sceneSummary()`. A pure view
-- `select-waterfall.ts` — `selectWaterfall(slice)` derives the Waterfall's lanes by actor, attributed assertions, and run rollup + `completedSceneCount`
+- `runner.tsx` — the Runner view: **two panes** — `RunnerView` + `RunnerHeader`/`RunControls`/`ListPane`/`Detail`/`FileDetail`/`Lanes`/`SpecSnippet`/`CopyButton`. The `ListPane` selects a scene *or* a file (`Selection = { kind: 'scene', id } | { kind: 'file', file }`); `Detail` renders whichever kind is selected — a scene (assertions, actor `Lanes`, spec snippet) or a file overview (`rollupFile`). Grouped-by-file headings and per-row file cells select the file. `RunControls` (live only) sends replay/pause/resume/stop; the header also draws the progress bar + elapsed clock
+- `select-runner.ts` — `selectSnapshot(slice)` derives per-scene assertions, the flat timeline, and per-actor `lanes` via `attributeToScene`, plus the `run` state (running/paused/cancelled/timing) the header controls read; `mapReportToSnapshot()` adapts a past-run JSON report into the same shape (lanes rebuilt from the flat timeline)
 - `use-run-slice.ts` — `useRunSlice(collections)` builds the latest-run slice as `createLiveQueryCollection` derived collections. `runSliceCollections(collections, runId)` is the pure builder
 - `use-live-query.ts` — `useLiveQuery(collection)`, the Preact analogue of `@tanstack/react-db`'s hook
 - `select-helpers.ts` — `latestRunId()`, `latestRunSlice()`, and the `DashboardCollections`/`RunSlice` types
 - `dev-transport.ts` — `createDevTransport()`: fetch + SSE adapter, mapping `Command`s to `/__scenetest/replay|stop|pause|resume`
-- `types.ts` — `Transport`, `DashboardState`, `Scene`, `DashboardTheme`, `ConnectionStatus`
-- `style.css` — the whole app's stylesheet, scoped under `.scenetest-dashboard`, with the Waterfall's bare-element rules confined to `.waterfall-host`
+- `types.ts` — `Transport`, `ConnectionStatus`, `DashboardTheme`, and `Lane`/`ActionItem` (the scene detail's actor-lane shapes)
+- `style.css` — the whole app's stylesheet, scoped under `.scenetest-dashboard`
 - `collections/` — the read-only TanStack DB read model over the run stream, subpath export `./collections`
 
 Constraints:
 
-- **Routing rides on one `preact-iso` router owned by the host.** A host that already owns a `LocationProvider` (cloud) adds `:view?` to its own PR route and renders the bare `<Dashboard basePath={prMount} />`. Because every view matches the one route, `<Dashboard>` stays mounted across view changes and the store survives.
-- **Two bases, on purpose.** `basePath` (default `/__scenetest`) only builds the absolute, deep-linkable tab `<a>` hrefs — view selection itself is relative. `apiBase` (defaults to `basePath`) bases the Runner's server-endpoint fetches, because cloud's API lives somewhere other than its router.
-- **`useDashboardStore(transport)` builds the four collections once** (`scenesProjection`/`assertionsProjection`/`actionsProjection`/`runsProjection`, sharing one `createRunSource`) and passes them down. Each view reads only the tables it needs, so re-renders stay scoped.
+- **Routing rides on one `preact-iso` router owned by the host.** A host that already owns a `LocationProvider` (cloud) adds `:view?` to its own PR route and renders the bare `<Dashboard basePath={prMount} />`. The dashboard renders the Runner unconditionally, so it stays mounted and the store survives regardless of the URL.
+- **`basePath` and `apiBase`.** `basePath` is the router mount the dashboard lives under and the default for `apiBase`. `apiBase` (defaults to `basePath`) bases the Runner's server-endpoint fetches, because cloud's API lives somewhere other than its router.
+- **`useDashboardStore(transport)` builds the four collections once** (`scenesProjection`/`assertionsProjection`/`actionsProjection`/`runsProjection`, sharing one `createRunSource`) and passes them to the Runner, which reads only the tables it needs so re-renders stay scoped.
 - **Rows are partitioned by `runId`** and span a whole PR's history. A new `run:start` opens a new partition and does **not** truncate.
 - **Projections are the sole writers.** They fold `RunEvent`s into a small `RowOp` vocabulary (`insert`/`update`/`delete`/`reset`) and are testable without TanStack DB. Client mutations throw.
 - **`@tanstack/db` is a runtime `dependency`**, but the `./collections` subpath only `import type`s `CollectionConfig`. That is deliberate: a cloud consumer can build collections with its *own* `@tanstack/db` instance and join them against its own `useLiveQuery`.
 - `attributeToScene` joins assertions and actions to scenes by stamped scene id when present, and otherwise by actor plus time window.
-- The dev shell is a real Vite app at `packages/vite-plugin/app/` (~10 lines), built to `packages/vite-plugin/dist-app/` and served as static files at all view routes. Keep it a normal Vite build so `@tanstack/db` bundles natively.
-- Routing is covered by `src/__tests__/routing.test.tsx` (jsdom: deep-link to each view, click-to-navigate, non-default base).
+- The dev shell is a real Vite app at `packages/vite-plugin/app/` (~10 lines), built to `packages/vite-plugin/dist-app/` and served as static files at the base and `/runner`. Keep it a normal Vite build so `@tanstack/db` bundles natively.
+- Routing is covered by `src/__tests__/routing.test.tsx` (jsdom: base and `/runner` both render the Runner, no tabs, stable mount, non-default cloud base).
 
 Design doc: `docs/public/design/unified-console.md`.
 
