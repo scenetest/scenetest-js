@@ -213,16 +213,15 @@ function RunnerHeader({
   isLive: boolean
   send?: (command: Command) => void
 }) {
-  const completed = scenes.filter((s) => s.status === 'completed').length
+  // Read the rolled-up counts straight from the summary (which prefers the
+  // run's authoritative totals), so the progress bar's numerator and
+  // denominator come from one source of truth.
+  const completed = summary.completed
   const a = summary.assertions
   const sceneCount = summary.scenes || scenes.length
   const pct = sceneCount > 0 ? Math.round((completed / sceneCount) * 100) : 0
-  const progressClass =
-    summary.failed > 0
-      ? 'runner-progress has-failures'
-      : completed === sceneCount && sceneCount > 0
-        ? 'runner-progress done'
-        : 'runner-progress'
+  const done = sceneCount > 0 && completed === sceneCount
+  const progressClass = 'runner-progress' + (summary.failed > 0 ? ' has-failures' : done ? ' done' : '')
 
   return (
     <>

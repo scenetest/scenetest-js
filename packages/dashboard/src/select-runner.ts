@@ -1,5 +1,4 @@
 import type { TeamMeta } from '@scenetest/protocol'
-import type { ActionRecord } from './collections/projections.js'
 import { groupByScene, type RunSlice } from './select-helpers.js'
 import type { ActionItem, Lane } from './types.js'
 
@@ -93,33 +92,30 @@ function isFailure(status: string): boolean {
 }
 
 /** Classify a lane item for its pill colour, matching the old Waterfall. */
-function laneStatus(a: { status: string; duration: number | null; error: string | null }): ActionItem['status'] {
+function laneStatus(a: { status?: string; duration: number | null; error: string | null }): ActionItem['status'] {
   if (a.status === 'running') return 'running'
   if (a.status === 'error' || a.error) return 'error'
   return a.duration != null && a.duration > 500 ? 'slow' : 'success'
 }
 
-/** Group a scene's actions into per-actor lanes, seeded by the scene's actor list. */
-function buildLanes(actors: string[], actions: ActionRecord[]): Lane[] {
-  const lanes: Lane[] = actors.map((actor) => ({ actor, items: [] }))
-  const laneFor = (actor: string): Lane => {
-    let lane = lanes.find((l) => l.actor === actor)
+/**
+ * Bucket already-classified items into per-actor lanes, seeded by the scene's
+ * actor list. The one lane layout shared by the live path (actions) and the
+ * past-run path (a report's flat timeline); each caller maps its raw shape into
+ * `ActionItem`s (classifying status via `laneStatus`) and hands them here in the
+ * order it wants preserved.
+ */
+function groupLanes(items: Array<{ actor: string } & ActionItem>, seedActors: string[]): Lane[] {
+  const lanes: Lane[] = seedActors.map((actor) => ({ actor, items: [] }))
+  const byActor = new Map(lanes.map((l) => [l.actor, l]))
+  for (const { actor, ...item } of items) {
+    let lane = byActor.get(actor)
     if (!lane) {
       lane = { actor, items: [] }
+      byActor.set(actor, lane)
       lanes.push(lane)
     }
-    return lane
-  }
-  for (const a of actions.slice().sort((x, y) => x.startTime - y.startTime)) {
-    laneFor(a.actor).items.push({
-      action: a.action,
-      target: a.target ?? undefined,
-      startTime: a.startTime,
-      endTime: a.endTime,
-      duration: a.duration,
-      error: a.error,
-      status: laneStatus(a),
-    })
+    lane.items.push(item)
   }
   return lanes
 }
@@ -131,34 +127,48 @@ export function selectSnapshot(slice: RunSlice): RunnerSnapshot {
   const assertionsByScene = groupByScene(runAssertions, runScenes)
   const actionsByScene = groupByScene(runActions, runScenes)
 
-  const view: RunnerScene[] = runScenes.map((s) => ({
-    id: s.id,
-    name: s.name,
-    file: s.file,
-    status: s.status,
-    duration: s.duration,
-    error: s.error,
-    team: s.team,
-    teamIndex: s.teamIndex,
-    actors: s.actors,
-    assertions: (assertionsByScene.get(s.id) ?? []).map((a) => ({
-      result: a.result,
-      description: a.description,
-      actor: a.actor,
-      timestamp: a.timestamp,
-    })),
-    timeline: (actionsByScene.get(s.id) ?? [])
-      .slice()
-      .sort((a, b) => a.startTime - b.startTime)
-      .map((ac) => ({
+  const view: RunnerScene[] = runScenes.map((s) => {
+    // Sort the scene's actions once; both the flat timeline and the per-actor
+    // lanes want the same ascending-startTime order.
+    const actions = (actionsByScene.get(s.id) ?? []).slice().sort((a, b) => a.startTime - b.startTime)
+    return {
+      id: s.id,
+      name: s.name,
+      file: s.file,
+      status: s.status,
+      duration: s.duration,
+      error: s.error,
+      team: s.team,
+      teamIndex: s.teamIndex,
+      actors: s.actors,
+      assertions: (assertionsByScene.get(s.id) ?? []).map((a) => ({
+        result: a.result,
+        description: a.description,
+        actor: a.actor,
+        timestamp: a.timestamp,
+      })),
+      timeline: actions.map((ac) => ({
         actor: ac.actor,
         action: ac.status === 'running' ? ac.action + ' (in flight)' : ac.action,
         target: ac.target ?? undefined,
         duration: ac.duration,
         error: ac.error,
       })),
-    lanes: buildLanes(s.actors, actionsByScene.get(s.id) ?? []),
-  }))
+      lanes: groupLanes(
+        actions.map((ac) => ({
+          actor: ac.actor,
+          action: ac.action,
+          target: ac.target ?? undefined,
+          startTime: ac.startTime,
+          endTime: ac.endTime,
+          duration: ac.duration,
+          error: ac.error,
+          status: laneStatus(ac),
+        })),
+        s.actors
+      ),
+    }
+  })
 
   const summary: RunnerSummary = {
     scenes: Math.max(latestRun?.sceneCount ?? 0, view.length),
@@ -254,29 +264,21 @@ export function mapReportToSnapshot(report: unknown): RunnerSnapshot {
 
 /** Build per-actor lanes from a past run's flat, pre-ordered timeline. */
 function lanesFromTimeline(timeline: Raw[]): Lane[] {
-  const lanes: Lane[] = []
-  const laneFor = (actor: string): Lane => {
-    let lane = lanes.find((l) => l.actor === actor)
-    if (!lane) {
-      lane = { actor, items: [] }
-      lanes.push(lane)
-    }
-    return lane
-  }
-  for (const t of timeline) {
-    const actor = asStr(t.actor)
-    if (!actor) continue
-    const duration = asNum(t.duration)
-    const error = typeof t.error === 'string' ? t.error : null
-    laneFor(actor).items.push({
-      action: asStr(t.action),
-      target: typeof t.target === 'string' ? t.target : undefined,
-      startTime: 0,
-      endTime: null,
-      duration,
-      error,
-      status: error ? 'error' : duration != null && duration > 500 ? 'slow' : 'success',
+  const items = timeline
+    .map((t) => {
+      const duration = asNum(t.duration)
+      const error = typeof t.error === 'string' ? t.error : null
+      return {
+        actor: asStr(t.actor),
+        action: asStr(t.action),
+        target: typeof t.target === 'string' ? t.target : undefined,
+        startTime: 0,
+        endTime: null,
+        duration,
+        error,
+        status: laneStatus({ duration, error }),
+      }
     })
-  }
-  return lanes
+    .filter((it) => it.actor) // drop actor-less rows (nothing to attribute)
+  return groupLanes(items, [])
 }
