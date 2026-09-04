@@ -4,6 +4,24 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-09-04 — monorepo 0.19.0 · @scenetest/dashboard 0.15.0, @scenetest/vite-plugin 0.18.0
+
+**The dashboard is one view now.** The Runner is the whole app. Pick a scene or a whole file on the left; the right pane shows that scene (its assertions, per-actor timeline, and spec snippet) or a file overview (its scenes and a pass/fail roll-up). Replay a scene's file or a whole file, and drive the run — replay-all, pause, resume, stop — from the header.
+
+**The Waterfall and Home views are gone.** The Waterfall duplicated most of the Runner, so its two unique parts moved into the Runner: the per-actor lane timeline into the scene detail, the run controls into the header. With one view left, the Home landing and the nav tabs went too — the base URL renders the Runner directly.
+
+### @scenetest/dashboard 0.15.0
+* **Breaking:** the Waterfall view is removed. The exports `selectWaterfall`, `completedSceneCount`, `sceneSummary`, and the types `DashboardState`, `Scene`, `AssertionRow` are gone. `Lane` and `ActionItem` remain — they now type the Runner scene detail's actor lanes.
+* **Breaking:** the dashboard renders a single Runner view. There is no Home view and no nav tabs; `<Dashboard>` renders the Runner unconditionally under the host's route, so the base and a trailing `/runner` both resolve to it.
+* The Runner is two panes. The list pane selects a scene *or* a file (grouped-by-file headings and per-row file cells select the file); the detail pane renders whichever is selected — a scene, or a file overview built by `rollupFile`.
+* The scene detail shows the per-actor lane timeline (absorbed from the Waterfall) in place of the old flat timeline. `selectSnapshot` now derives per-scene `lanes` and the run state (running/paused/cancelled/timing) the header controls read; `mapReportToSnapshot` rebuilds lanes from a past run's flat timeline.
+* Replay a scene's file or a whole file from the list or the detail; the header carries replay-all + team, pause/resume, stop, a progress bar, and an elapsed clock, for live runs.
+
+### @scenetest/vite-plugin 0.18.0
+* The dev middleware no longer serves the `/__scenetest/waterfall` route; it serves the base and `/__scenetest/runner` (both render the Runner). The bundled dev shell drops the removed views to match `@scenetest/dashboard` 0.15.0.
+
+---
+
 ## 2026-08-25 — monorepo 0.18.0 · @scenetest/scenes 0.17.0
 
 **playwright is a peer dependency.** Your project supplies playwright, so its bin is linked in `node_modules/.bin` and one copy backs both the browser download and the run. `scenetest install` downloads the browser builds through the playwright scenetest itself resolves.
