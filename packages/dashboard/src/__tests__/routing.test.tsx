@@ -25,45 +25,29 @@ function mountAt(path: string): HTMLElement {
   return root
 }
 
-describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
-  it('deep-link to the base shows Home', () => {
+describe('Dashboard routing: single Runner view on `{base}/:view?`', () => {
+  it('renders the Runner at the base', () => {
     const root = mountAt('/__scenetest')
-    expect(root.querySelector('.index')).not.toBeNull() // Home
-    expect(root.textContent).toContain('Scene runner')
-  })
-
-  it('deep-link to {base}/runner shows the Runner (not Home)', () => {
-    const root = mountAt('/__scenetest/runner')
     expect(root.querySelector('.runner')).not.toBeNull()
     expect(root.querySelector('#run-select')).not.toBeNull() // Runner's run picker
+  })
+
+  it('renders the Runner at a trailing segment too (old deep-links resolve, no 404)', () => {
+    const root = mountAt('/__scenetest/runner')
+    expect(root.querySelector('.runner')).not.toBeNull()
+  })
+
+  it('has no nav tabs (the Runner is the whole app)', () => {
+    const root = mountAt('/__scenetest')
+    expect(root.querySelector('.dashboard-nav')).toBeNull()
+    expect(root.querySelector('.tabs')).toBeNull()
     expect(root.querySelector('.index')).toBeNull()
   })
 
-  it('an unknown view segment falls back to Home', () => {
-    const root = mountAt('/__scenetest/waterfall')
-    expect(root.querySelector('.index')).not.toBeNull()
-    expect(root.querySelector('.runner')).toBeNull()
-  })
-
-  it('clicking a tab navigates client-side: view + URL change, no reload', async () => {
-    const root = mountAt('/__scenetest')
-    expect(root.querySelector('.index')).not.toBeNull() // Home
-
-    const runnerTab = Array.from(root.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Runner')!
-    runnerTab.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
-    await Promise.resolve()
-
-    expect(location.pathname).toBe('/__scenetest/runner') // URL changed
-    expect(root.querySelector('.runner')).not.toBeNull() // view changed
-    expect(root.querySelector('.index')).toBeNull() // not a full reload to Home
-  })
-
-  it('survives view changes without tearing down the store/SSE (stable mount)', async () => {
-    // Count stream opens/closes: createRunSource calls transport.subscribe once
-    // and its returned unsubscribe on close. If <Dashboard> remounted on a tab
-    // change, we'd see a second open (and a close) — the read model + SSE
-    // rebuilt from scratch on every click. The single `:view?` route keeps it
-    // mounted, so this stays 1 / 0.
+  it('builds the store once and never tears it down (stable mount)', () => {
+    // createRunSource calls transport.subscribe once and its returned
+    // unsubscribe on close. A single unconditionally-rendered view keeps the
+    // component mounted, so this stays 1 / 0.
     let opened = 0
     let closed = 0
     const transport: Transport = {
@@ -79,23 +63,7 @@ describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     render(<BrowserDashboard transport={transport} />, root)
-    expect(opened).toBe(1)
-
-    const click = (label: string) => {
-      const a = Array.from(root.querySelectorAll('a')).find((x) => x.textContent?.trim() === label)!
-      a.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
-    }
-    click('Runner')
-    await Promise.resolve()
     expect(root.querySelector('.runner')).not.toBeNull()
-    click('Home')
-    await Promise.resolve()
-    expect(root.querySelector('.index')).not.toBeNull()
-    click('Runner')
-    await Promise.resolve()
-    expect(root.querySelector('.runner')).not.toBeNull()
-
-    // The stream opened once and was never torn down across three navigations.
     expect(opened).toBe(1)
     expect(closed).toBe(0)
   })
@@ -116,8 +84,5 @@ describe('Dashboard routing: single preact-iso `{base}/:view?` route', () => {
       root
     )
     expect(root.querySelector('.runner')).not.toBeNull()
-    // The tab anchors are absolute under the PR mount, so they're deep-linkable.
-    const runnerTab = Array.from(root.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Runner')
-    expect(runnerTab?.getAttribute('href')).toBe(`${base}/runner`)
   })
 })

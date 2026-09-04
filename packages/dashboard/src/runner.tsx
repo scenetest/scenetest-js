@@ -227,6 +227,9 @@ function RunnerHeader({
   return (
     <>
       <div class="runner-bar">
+        <span class="brand" title="Scenetest">
+          <span class="logo">🎬</span> Scenetest
+        </span>
         <div class="run-picker">
           <label for="run-select">Run</label>
           <select id="run-select" value={runId} onChange={(e) => onRunChange((e.target as HTMLSelectElement).value)}>

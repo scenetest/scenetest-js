@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'preact/hooks'
-import { useRoute } from 'preact-iso'
 import { createCollection } from '@tanstack/db'
 import {
   createRunSource,
@@ -63,25 +62,21 @@ function useDashboardStore(transport: Transport): { store: DashboardStore; conne
 }
 
 /**
- * The Dashboard app — Home + Runner over one read-only `@tanstack/db` read
- * model. A plain Preact component rendering into the light
- * DOM under a single `.scenetest-dashboard` root class; the shipped stylesheet
- * scopes everything to it.
+ * The Dashboard app — a single **Runner** view over one read-only `@tanstack/db`
+ * read model. A plain Preact component rendering into the light DOM under a
+ * single `.scenetest-dashboard` root class; the shipped stylesheet scopes
+ * everything to it.
  *
- * **Routing rides on `preact-iso`.** The host mounts the dashboard on a single
- * route with an *optional* trailing param — `{base}/:view?` — which matches the
- * base **and** each view in one pattern (`:view?` is how a scoped router handles
- * its own exact base). preact-iso hands back the matched segment as a param;
- * the dashboard reads `useRoute().params.view` and renders it. The surrounding
- * `LocationProvider` (the host's, or the one `BrowserDashboard` supplies) owns
- * the URL and intercepts the tab `<a>` clicks. Because the match is a route
- * param, the *same* component works whether it's the whole app (dev) or mounted
- * on a per-PR route of a bigger preact-iso app (scenetest-cloud, at
- * `/repo/:owner/:name/pr/:number/:view?`) — one router, owned by the host.
+ * **One view, mounted on the host's router.** There are no tabs anymore — the
+ * Runner *is* the dashboard. The host still mounts it on `{base}/:view?` (dev via
+ * `BrowserDashboard`, cloud on its own PR route), so both the base and any
+ * trailing segment (`/runner`, an old deep-link) resolve to the same Runner
+ * without a 404. Because a single component is rendered unconditionally, it stays
+ * mounted and the store survives across any navigation.
  *
- * `basePath` is only used to build the absolute, deep-linkable tab hrefs;
- * `apiBase` (default `basePath`) bases the Runner's server fetches, decoupled
- * because cloud's API lives elsewhere than its router. `path` / `default` are
+ * `apiBase` (default `basePath`) bases the Runner's server fetches (`/runs`,
+ * `/source`, `/__open-in-editor`), decoupled because cloud's API lives elsewhere
+ * than its router. `basePath` is the fallback for it. `path` / `default` are
  * accepted so the dashboard can also be a preact-iso route child directly.
  *
  * The collections are the single store: the component builds them from the run
@@ -95,7 +90,7 @@ export function Dashboard({
 }: {
   transport: Transport
   theme?: DashboardTheme
-  /** The mount the tab anchors point under — the host always supplies it. */
+  /** The router mount the dashboard lives under; the host always supplies it. */
   basePath: string
   /**
    * Base path for the Runner's server-endpoint fetches (`/runs`, `/source`,
@@ -106,13 +101,8 @@ export function Dashboard({
   apiBase?: string
 } & RoutableProps) {
   const { store, connection } = useDashboardStore(transport)
-  const { params } = useRoute()
 
-  const base = basePath.replace(/\/+$/, '')
   const apiB = (apiBase ?? basePath).replace(/\/+$/, '')
-  // The matched `:view?` segment; absent at the base → Home.
-  const view = params.view === 'runner' ? 'runner' : 'home'
-  const tabClass = (t: string) => 'tab' + (view === t ? ' active' : '')
 
   const send = (command: Command) => {
     void transport.sendCommand(command)
@@ -120,47 +110,7 @@ export function Dashboard({
 
   return (
     <div class="scenetest-dashboard" style={themeVars(theme)}>
-      <nav class="dashboard-nav">
-        <h1>
-          <span class="logo">🎬</span> Scenetest
-        </h1>
-        <div class="tabs">
-          <a class={tabClass('home')} href={base || '/'}>
-            Home
-          </a>
-          <a class={tabClass('runner')} href={`${base}/runner`}>
-            Runner
-          </a>
-        </div>
-      </nav>
-      <div class="view">
-        {view === 'runner' ? (
-          <RunnerView collections={store} connection={connection} base={apiB} send={send} />
-        ) : (
-          <Home basePath={base} />
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Home ──────────────────────────────────────────────────────────
-function Home({ basePath }: { basePath: string }) {
-  return (
-    <div class="index">
-      <h1>
-        <span class="logo">🎬</span> Scenetest
-      </h1>
-      <p class="lede">Live and past runs, in one view.</p>
-      <div class="cards">
-        <a class="card" href={`${basePath}/runner`}>
-          <div class="name">Scene runner →</div>
-          <div class="desc">
-            Scenes and files, status, failure log, actor timeline, spec snippets — plus run controls (replay, pause,
-            stop).
-          </div>
-        </a>
-      </div>
+      <RunnerView collections={store} connection={connection} base={apiB} send={send} />
     </div>
   )
 }

@@ -274,9 +274,9 @@ export function createScenetestMiddleware(
 
   return async (req, res, next) => {
     // ── Dev dashboard: the built app, served as static files ──
-    // One Vite app (app/ → dist-app) serves every view; the client routes on
-    // location.pathname. Built assets live under the `/__scenetest/assets/`
-    // base, served off dist-app; the view paths (Home / Runner) all return
+    // One Vite app (app/ → dist-app) serves the dashboard (a single Runner
+    // view). Built assets live under the `/__scenetest/assets/` base, served off
+    // dist-app; the base and the legacy `/runner` deep-link both return
     // index.html. This replaced the old raw-ESM serving — no importmap, no
     // vendored-module routes.
     if (req.method === 'GET' && req.url) {
