@@ -1,11 +1,8 @@
 /*
- * Dashboard stylesheet — the whole app (nav · Home · Runner · Waterfall),
- * scoped under the single root class `.scenetest-dashboard`. There is no shadow
- * root anymore: this ships as a normal stylesheet the host imports
+ * Dashboard stylesheet — the whole app (nav · Home · Runner), scoped under the
+ * single root class `.scenetest-dashboard`. There is no shadow root anymore:
+ * this ships as a normal stylesheet the host imports
  * (`import '@scenetest/dashboard/style.css'`), the way one would style any app.
- * The Waterfall view's widget styles live under `.waterfall-host` so their
- * bare-element rules (header, h1, button, …) stay confined to that subtree
- * instead of leaking into the chrome or the host page.
  *
  * Theming surface: a host may set `--st-bg`, `--st-accent`, `--st-font`,
  * `--st-font-size` on the root element (inline — `<Dashboard theme={…} />`
@@ -44,26 +41,22 @@
     box-sizing: border-box;
   }
 
-  /* ── Nav ──────────────────────────────────────────────── */
-  .dashboard-nav {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 10px 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .dashboard-nav h1 {
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
+  /* ── Brand (compact, in the Runner bar) ───────────────── */
+  .brand {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    padding-right: 6px;
+    margin-right: 4px;
+    border-right: 1px solid var(--border);
   }
   .logo {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 6px;
     background: rgba(80, 70, 229, 0.15);
     box-shadow: inset 0 1px 4px rgba(80, 70, 229, 0.3);
@@ -71,38 +64,6 @@
     align-items: center;
     justify-content: center;
     font-size: 13px;
-  }
-  .tabs {
-    display: flex;
-    gap: 4px;
-  }
-  .tab {
-    padding: 5px 12px;
-    background: transparent;
-    color: var(--text2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font: inherit;
-    cursor: pointer;
-    font-size: 12px;
-    display: inline-block;
-    text-decoration: none;
-  }
-  .tab:hover {
-    color: var(--text);
-    border-color: var(--text2);
-  }
-  .tab.active {
-    background: var(--bg3);
-    color: var(--text);
-    border-color: var(--text2);
-  }
-
-  .view {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   /* ── Runner ───────────────────────────────────────────── */
@@ -155,6 +116,7 @@
     font-size: 12px;
     color: var(--text2);
     display: flex;
+    align-items: center;
     gap: 14px;
   }
   .status-bar .ok {
@@ -163,22 +125,71 @@
   .status-bar .fail {
     color: var(--red);
   }
+  .status-bar .stopped {
+    color: var(--amber);
+  }
+
+  /* ── Run controls (replay-all, team, pause/resume, stop, clock) ── */
+  .run-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .run-controls .team-select {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 12px;
+  }
+  .run-controls .btn.stop {
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  .run-controls .btn.stop:hover {
+    background: rgba(239, 68, 68, 0.12);
+  }
+  .run-controls .btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .run-controls .elapsed {
+    font-size: 12px;
+    color: var(--text2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Full-width progress bar under the run bar (live runs only). */
+  .runner-progress {
+    height: 3px;
+    background: var(--bg3);
+    flex-shrink: 0;
+  }
+  .runner-progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--blue);
+    transition: width 0.2s ease;
+  }
+  .runner-progress.done .runner-progress-fill {
+    background: var(--green);
+  }
+  .runner-progress.has-failures .runner-progress-fill {
+    background: var(--red);
+  }
 
   .runner main {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) minmax(320px, 420px);
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
     flex: 1;
     min-height: 0;
   }
-  .runner aside.tree,
   .runner aside.detail {
     background: var(--bg2);
-    border-right: 1px solid var(--border);
-    overflow: auto;
-  }
-  .runner aside.detail {
-    border-right: none;
     border-left: 1px solid var(--border);
+    overflow: auto;
     padding: 14px;
   }
   .list-pane {
@@ -344,60 +355,51 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 240px;
+    cursor: pointer;
+  }
+  .row .file:hover {
+    color: var(--blue);
+    text-decoration: underline;
+  }
+  .row .file.selected {
+    color: var(--blue);
   }
 
-  .tree {
-    padding: 10px 0;
-    font-size: 12px;
-  }
-  .tree-file {
-    padding: 4px 14px;
-    color: var(--text2);
+  /* File heading acts as a selectable row (opens the file overview). */
+  .group-header.file-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .tree-file:hover {
-    background: rgba(255, 255, 255, 0.03);
-  }
-  .tree-caret {
-    flex: none;
-    width: 10px;
-    font-size: 9px;
-    color: var(--text2);
-  }
-  .tree-file .tree-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .tree-file .fail {
-    flex: none;
-    color: var(--red);
-  }
-  .tree-scene {
-    padding: 3px 14px 3px 28px;
-    color: var(--text);
-    display: flex;
     justify-content: space-between;
     gap: 8px;
     cursor: pointer;
   }
-  .tree-scene:hover {
-    background: rgba(255, 255, 255, 0.03);
+  .group-header.file-header:hover {
+    background: var(--bg2);
+    color: var(--text);
   }
-  .tree-scene.failed,
-  .tree-scene.timeout {
-    color: var(--red);
+  .group-header.file-header.selected {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--text);
   }
-  .tree-scene.running {
+  .group-header .gh-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .group-header .gh-replay {
+    flex: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .group-header .gh-replay:hover {
     color: var(--blue);
-  }
-  .tree-scene.selected {
-    background: rgba(59, 130, 246, 0.08);
+    border-color: var(--blue);
   }
 
   .detail h3 {
@@ -417,6 +419,13 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 1px 8px;
+  }
+  .detail .meta-row .pill.file-link {
+    cursor: pointer;
+  }
+  .detail .meta-row .pill.file-link:hover {
+    color: var(--blue);
+    border-color: var(--blue);
   }
   .detail .err {
     background: rgba(239, 68, 68, 0.08);
@@ -449,13 +458,57 @@
   .detail .alist .fail {
     color: var(--red);
   }
-  .detail .timeline li {
-    font-size: 11px;
-    color: var(--text2);
-    padding: 2px 0;
+  /* Actor lanes — the concurrent-actor timeline, absorbed from the Waterfall. */
+  .detail .lanes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .detail .timeline .err-step {
+  .detail .lane {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .detail .lane-actor {
+    color: var(--text2);
+    min-width: 76px;
+    font-size: 11px;
+    padding-top: 3px;
+  }
+  .detail .lane-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .detail .lane-empty {
+    color: var(--text3);
+    font-size: 11px;
+    padding-top: 3px;
+  }
+  .detail .lanes .pill {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text);
+  }
+  .detail .lanes .pill.running {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .detail .lanes .pill.success {
+    border-color: var(--green);
+  }
+  .detail .lanes .pill.slow {
+    border-color: var(--amber);
+  }
+  .detail .lanes .pill.error {
+    border-color: var(--red);
     color: var(--red);
+  }
+  .detail .lanes .pill .tgt {
+    color: var(--text2);
   }
   .detail .actions {
     display: flex;
@@ -463,9 +516,76 @@
     margin-bottom: 10px;
     flex-wrap: wrap;
   }
+  .btn.replay {
+    color: var(--blue);
+    border-color: var(--blue);
+  }
+  .btn.replay:hover {
+    background: rgba(59, 130, 246, 0.12);
+  }
   .detail .empty {
     color: var(--text2);
     font-size: 12px;
+  }
+
+  /* ── File overview (right pane when a file is selected) ── */
+  .detail .file-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .detail .file-stats .ok {
+    color: var(--green);
+  }
+  .detail .file-stats .fail {
+    color: var(--red);
+  }
+  .detail .file-stats .run {
+    color: var(--blue);
+  }
+  .detail ul.file-scenes {
+    list-style: none;
+  }
+  .detail .file-scene {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 6px;
+    border-bottom: 1px solid rgba(46, 49, 64, 0.4);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .detail .file-scene:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .detail .file-scene .icon {
+    font-weight: 700;
+  }
+  .detail .file-scene .icon.completed {
+    color: var(--green);
+  }
+  .detail .file-scene .icon.failed {
+    color: var(--red);
+  }
+  .detail .file-scene .icon.timeout {
+    color: var(--amber);
+  }
+  .detail .file-scene .icon.running {
+    color: var(--blue);
+  }
+  .detail .file-scene .fs-name {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .detail .file-scene .fs-meta {
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
   }
 
   pre.snippet {
@@ -492,405 +612,5 @@
   }
   pre.snippet .row-line.hl {
     background: rgba(239, 68, 68, 0.12);
-  }
-
-  /* ── Home ─────────────────────────────────────────────── */
-  .index {
-    padding: 48px 32px;
-    max-width: 720px;
-    margin: 0 auto;
-  }
-  .index h1 {
-    font-size: 22px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  .index .lede {
-    color: var(--text2);
-    font-size: 13px;
-    margin-bottom: 32px;
-  }
-  .index .cards {
-    display: grid;
-    gap: 14px;
-    grid-template-columns: 1fr 1fr;
-  }
-  .index .card {
-    display: block;
-    text-align: left;
-    width: 100%;
-    padding: 20px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg2);
-    color: var(--text);
-    font: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    transition:
-      border-color 0.15s,
-      background 0.15s;
-  }
-  .index .card:hover {
-    border-color: var(--text2);
-    background: var(--bg3);
-  }
-  .index .card .name {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-  .index .card .desc {
-    font-size: 12px;
-    color: var(--text2);
-    line-height: 1.5;
-  }
-
-  /* ── Waterfall view ───────────────────────────────────────
-   * Its own palette (so `--blue` tracks `--st-accent`, as the widget always
-   * has) and bare-element rules, all confined to this subtree. */
-  .waterfall-host {
-    --bg: var(--st-bg, #0f1117);
-    --bg2: #1a1d27;
-    --bg3: #252833;
-    --border: #2e3140;
-    --text: #e1e4ed;
-    --text2: #8b8fa3;
-    --green: #22c55e;
-    --red: #ef4444;
-    --amber: #f59e0b;
-    --blue: var(--st-accent, #3b82f6);
-
-    flex: 1;
-    min-height: 0;
-    display: block;
-    overflow: auto;
-    font-family: var(--st-font, 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace);
-    font-size: var(--st-font-size, 13px);
-    color: var(--text);
-    background: var(--bg);
-
-    .root {
-      min-height: 100%;
-      background: var(--bg);
-    }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      padding: 12px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg2);
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-    header.running .logo {
-      animation: pulse 1.2s ease-in-out infinite;
-    }
-
-    h1 {
-      font-size: 15px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 5px;
-      background: var(--blue);
-      color: #fff;
-      font-weight: 700;
-      box-shadow: none;
-    }
-
-    button {
-      font-family: inherit;
-      font-size: 12px;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--bg3);
-      color: var(--text);
-      padding: 5px 10px;
-      border-radius: 5px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    button:hover:not(:disabled) {
-      border-color: var(--blue);
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .replay-all-btn {
-      color: var(--green);
-    }
-    .stop-btn {
-      color: var(--red);
-    }
-
-    .team-select-wrap {
-      font-size: 12px;
-      color: var(--text2);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    select {
-      font-family: inherit;
-      font-size: 12px;
-      background: var(--bg3);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 4px 6px;
-    }
-
-    .spacer {
-      flex: 1;
-    }
-
-    .stats {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 12px;
-    }
-    .stat {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .stat .label {
-      color: var(--text2);
-    }
-    .stat .value {
-      font-weight: 600;
-    }
-    .stat.pass .value {
-      color: var(--green);
-    }
-    .stat.fail .value {
-      color: var(--red);
-    }
-
-    .conn {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--text2);
-    }
-    .conn.connected {
-      background: var(--green);
-    }
-    .conn.disconnected {
-      background: var(--red);
-    }
-
-    .progress {
-      flex-basis: 100%;
-      height: 3px;
-      background: var(--bg3);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      width: 0;
-      background: var(--blue);
-      transition: width 0.2s ease;
-    }
-    .progress.done .progress-fill {
-      background: var(--green);
-    }
-    .progress.has-failures .progress-fill {
-      background: var(--red);
-    }
-
-    main {
-      padding: 16px 20px;
-    }
-    .waiting {
-      text-align: center;
-      color: var(--text2);
-      padding: 60px 20px;
-    }
-    .waiting h2 {
-      font-size: 16px;
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-    .waiting code {
-      background: var(--bg3);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    .scene {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg2);
-      margin-bottom: 14px;
-      overflow: hidden;
-    }
-    .scene.failed {
-      border-color: var(--red);
-    }
-    .scene-head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg3);
-    }
-    .scene-status {
-      font-weight: 700;
-    }
-    .scene-status.completed {
-      color: var(--green);
-    }
-    .scene-status.failed,
-    .scene-status.timeout {
-      color: var(--red);
-    }
-    .scene-status.running {
-      color: var(--amber);
-    }
-    .scene-name {
-      font-weight: 600;
-    }
-    .scene-file {
-      color: var(--text2);
-      font-size: 11px;
-    }
-    .scene-team {
-      font-size: 11px;
-      color: var(--blue);
-      border: 1px solid var(--border);
-      padding: 1px 6px;
-      border-radius: 10px;
-    }
-    .scene-dur {
-      color: var(--text2);
-      font-size: 11px;
-      margin-left: auto;
-    }
-    .copy-btn {
-      padding: 3px 7px;
-      font-size: 11px;
-    }
-    .copy-btn.copied {
-      color: var(--green);
-      border-color: var(--green);
-    }
-
-    .lanes {
-      padding: 8px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .lane {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    .lane-actor {
-      color: var(--text2);
-      min-width: 90px;
-      font-size: 11px;
-      padding-top: 3px;
-    }
-    .lane-items {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-    .pill {
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      background: var(--bg3);
-      color: var(--text);
-    }
-    .pill.running {
-      border-color: var(--amber);
-      color: var(--amber);
-    }
-    .pill.success {
-      border-color: var(--green);
-    }
-    .pill.slow {
-      border-color: var(--amber);
-    }
-    .pill.error {
-      border-color: var(--red);
-      color: var(--red);
-    }
-    .pill .tgt {
-      color: var(--text2);
-    }
-
-    .assertions {
-      padding: 0 14px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .assert {
-      font-size: 12px;
-      display: flex;
-      gap: 6px;
-      align-items: baseline;
-    }
-    .assert .mark {
-      font-weight: 700;
-    }
-    .assert.ok .mark {
-      color: var(--green);
-    }
-    .assert.bad .mark {
-      color: var(--red);
-    }
-    .assert .who {
-      color: var(--text2);
-    }
-
-    .scene-error {
-      margin: 0 14px 12px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid var(--red);
-      color: var(--red);
-      font-size: 12px;
-      white-space: pre-wrap;
-      cursor: pointer;
-    }
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
   }
 }
