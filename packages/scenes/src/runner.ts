@@ -1,4 +1,4 @@
-import { chromium, firefox, webkit, type Browser } from 'playwright'
+import { chromium, firefox, webkit, type Browser, type LaunchOptions } from 'playwright'
 import { glob } from 'glob'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -122,6 +122,24 @@ function formatConsoleEntry(actor: string, label: string, message: string, bodyL
 }
 
 /**
+ * Build the options scenetest launches the browser with.
+ *
+ * `headless` and `slowMo` come last, so scenetest's own `headed` and `slowMo`
+ * win over a `headless` or `slowMo` set in `launchOptions`. There is no
+ * fallback to the passthrough for those two: `loadConfig()` defaults both, so
+ * they are always set by the time a run reaches here.
+ */
+export function resolveLaunchOptions(
+  config: Pick<ScenetestConfig, 'headed' | 'slowMo' | 'launchOptions'>
+): LaunchOptions {
+  return {
+    ...config.launchOptions,
+    headless: !config.headed,
+    slowMo: config.slowMo,
+  }
+}
+
+/**
  * Main scene runner
  */
 export class SceneRunner {
@@ -188,10 +206,7 @@ export class SceneRunner {
     const browserType = this.config.browser || 'chromium'
     const launcher = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium
 
-    this.browser = await launcher.launch({
-      headless: !this.config.headed,
-      slowMo: this.config.slowMo,
-    })
+    this.browser = await launcher.launch(resolveLaunchOptions(this.config))
 
     this.teamManager.setBrowser(this.browser)
   }

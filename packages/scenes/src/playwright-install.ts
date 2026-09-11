@@ -28,6 +28,11 @@ export const MISSING_BROWSER_MESSAGE = [
   'Install the browsers playwright needs:',
   '',
   '  pnpm exec scenetest install',
+  '',
+  'If a browser is already on this machine, point scenetest at it instead:',
+  '',
+  '  // scenetest/config.ts',
+  "  launchOptions: { executablePath: '/path/to/chrome' }",
 ].join('\n')
 
 /** True if `err` is Node failing to resolve the playwright package. */

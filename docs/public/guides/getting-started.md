@@ -18,6 +18,10 @@ download and the run. Download the browser builds:
 pnpm exec scenetest install
 ```
 
+If the machine already has a browser — a CI image or cloud sandbox that ships
+its own Chromium — point scenetest at it with
+[`launchOptions`](/reference/cli#launch-options) and skip the download.
+
 Framework bindings are subpaths of `@scenetest/checks`: import from
 `@scenetest/checks/react`, `@scenetest/checks/vue`, `@scenetest/checks/solid`,
 or `@scenetest/checks/svelte` depending on your framework.
