@@ -60,14 +60,13 @@ afterEach(async () => {
 
 describe('dashboard: built app served as static files', () => {
   it('serves the built index.html at every view route', async () => {
-    // One SPA serves Home / Runner / Waterfall; the client routes by pathname.
+    // One SPA serves the single Runner view; the base and the legacy /runner
+    // deep-link both return index.html.
     const views = [
       '/__scenetest',
       '/__scenetest/',
       '/__scenetest/runner',
       '/__scenetest/runner/',
-      '/__scenetest/waterfall',
-      '/__scenetest/waterfall/',
       '/__scenetest/?run=report-x',
     ]
     for (const url of views) {
