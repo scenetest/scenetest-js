@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { runCleanup, runSetup } from '../runner.js'
+import { runCleanup, runSetup, resolveLaunchOptions } from '../runner.js'
 import type { RegisteredScene } from '../types.js'
 
 // ---------------------------------------------------------------------------
@@ -227,5 +227,30 @@ describe('runSetup', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('setup failed'))
     expect(calls).toEqual(['ok'])
     warnSpy.mockRestore()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveLaunchOptions
+// ---------------------------------------------------------------------------
+
+describe('resolveLaunchOptions', () => {
+  it('passes launchOptions through to playwright, and launches headless', () => {
+    const resolved = resolveLaunchOptions({
+      launchOptions: { executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] },
+    })
+    expect(resolved.executablePath).toBe('/opt/pw-browsers/chromium')
+    expect(resolved.args).toEqual(['--no-sandbox'])
+    expect(resolved.headless).toBe(true)
+  })
+
+  it('lets headed win over a headless set in launchOptions', () => {
+    expect(resolveLaunchOptions({ headed: true, launchOptions: { headless: true } }).headless).toBe(false)
+    expect(resolveLaunchOptions({ headed: false, launchOptions: { headless: false } }).headless).toBe(true)
+  })
+
+  it('lets slowMo win over a slowMo set in launchOptions', () => {
+    expect(resolveLaunchOptions({ slowMo: 50, launchOptions: { slowMo: 200 } }).slowMo).toBe(50)
+    expect(resolveLaunchOptions({ slowMo: 0, launchOptions: { slowMo: 200 } }).slowMo).toBe(0)
   })
 })

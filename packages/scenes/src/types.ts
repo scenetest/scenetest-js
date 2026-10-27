@@ -1,4 +1,4 @@
-import type { Page, BrowserContext, Browser, BrowserContextOptions } from 'playwright'
+import type { Page, BrowserContext, Browser, BrowserContextOptions, LaunchOptions } from 'playwright'
 import type { ScenetestConfig as BaseConfig } from '@scenetest/checks'
 import type { RunEvent, RunSummary, TeamMeta } from '@scenetest/protocol'
 import type { DeviceProfile } from './devices.js'
@@ -213,6 +213,23 @@ export interface ScenetestConfig extends BaseConfig {
    * ```
    */
   contextOptions?: BrowserContextOptions
+
+  /**
+   * Playwright browser-launch options, applied when scenetest launches the
+   * browser.
+   *
+   * A passthrough to `browserType.launch()` for settings scenetest has no
+   * option of its own for — `executablePath`, `channel`, `args`, `proxy`.
+   *
+   * `headed` and `slowMo` are applied after it, so a `headless` or `slowMo`
+   * set here is ignored — use those options instead.
+   *
+   * @example
+   * ```ts
+   * launchOptions: { executablePath: process.env.CHROMIUM_PATH }
+   * ```
+   */
+  launchOptions?: LaunchOptions
 
   /**
    * Browser permissions to grant every actor, by name.

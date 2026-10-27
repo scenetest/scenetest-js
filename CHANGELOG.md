@@ -4,6 +4,17 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-09-07 — monorepo 0.19.0 · @scenetest/scenes 0.18.0
+
+**Point scenetest at a browser you already have.** A new `launchOptions` config field passes `executablePath`, `channel`, `args` and the rest of Playwright's launch options straight through, so a CI image or cloud sandbox that ships its own Chromium runs scenes without downloading another one.
+
+### @scenetest/scenes 0.18.0
+* New `launchOptions` config option — a passthrough to Playwright's `browserType.launch()` for launch settings scenetest has no option of its own for: `executablePath`, `channel`, `args`, `proxy`. Before, a machine with a working Chromium under `PLAYWRIGHT_BROWSERS_PATH` still had to download a ≈170 MB browser build, and a build one revision behind the pinned Playwright failed the run outright. ([#256](https://github.com/scenetest/scenetest-js/issues/256))
+* `headed` and `slowMo` are applied after `launchOptions`, so a `headless` or `slowMo` set there is ignored — set those options instead. A config file cannot take the window away from `--headed`.
+* The missing-browser message now names `launchOptions.executablePath` alongside `scenetest install`.
+
+---
+
 ## 2026-08-25 — monorepo 0.18.0 · @scenetest/scenes 0.17.0
 
 **playwright is a peer dependency.** Your project supplies playwright, so its bin is linked in `node_modules/.bin` and one copy backs both the browser download and the run. `scenetest install` downloads the browser builds through the playwright scenetest itself resolves.

@@ -119,6 +119,15 @@ export default defineConfig({
     // geolocation: { latitude: 48.85, longitude: 2.35 },
   },
 
+  // Playwright browser-launch options.
+  // A passthrough for launch settings scenetest has no option of its own for.
+  // `headed` and `slowMo` above are applied after it and win.
+  launchOptions: {
+    executablePath: process.env.CHROMIUM_PATH,
+    // channel: 'chrome',
+    // args: ['--no-sandbox'],
+  },
+
   // Device rotation
   devices: true,                // Use built-in device pool
   // Or provide custom devices:
@@ -206,6 +215,39 @@ exposes it to the app under test.
 
 For an exact list handed straight to Playwright, set `contextOptions.permissions`
 — it is a passthrough and overrides `permissions` entirely.
+
+### Launch options
+
+`launchOptions` is handed to Playwright's `browserType.launch()`. Use it for
+launch settings scenetest has no option of its own for — `executablePath`,
+`channel`, `args`, `proxy`.
+
+The common case is a machine that already has a browser. A CI image or cloud
+sandbox often ships its own Chromium, sometimes a revision behind the one
+Playwright expects. Point scenetest at it and the run skips the 170 MB
+download:
+
+```typescript
+export default defineConfig({
+  launchOptions: {
+    executablePath: process.env.CHROMIUM_PATH,
+  },
+})
+```
+
+Scenetest does not read `CHROMIUM_PATH` itself — that is your own variable,
+read by your own config file, so a CI image can export a path without every
+project hard-coding one.
+
+To drive a Chrome or Edge install instead of a Playwright build, set a channel:
+
+```typescript
+launchOptions: { channel: 'chrome' }
+```
+
+`headed` and `slowMo` are applied after `launchOptions`, so a `headless` or
+`slowMo` set there is ignored — set `headed` and `slowMo` instead. This keeps
+`--headed` working: a config file cannot take the window away from the flag.
 
 ## Team Discovery
 
