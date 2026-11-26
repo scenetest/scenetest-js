@@ -6,9 +6,9 @@ import { fileURLToPath } from 'url'
 /**
  * Playwright is a peer dependency of @scenetest/scenes: the consumer declares
  * it, so its bin is linked and exactly one copy backs both the browser
- * download and the run. This module turns the two ways that contract breaks —
- * no playwright, no browser binaries — into instructions instead of a stack
- * trace, and backs `scenetest install`.
+ * download and the run. This module turns the ways that contract breaks —
+ * no playwright, no browser binaries, a sandbox the machine can't start —
+ * into instructions instead of a stack trace, and backs `scenetest install`.
  */
 
 export const MISSING_PLAYWRIGHT_MESSAGE = [
@@ -35,6 +35,17 @@ export const MISSING_BROWSER_MESSAGE = [
   "  launchOptions: { executablePath: '/path/to/chrome' }",
 ].join('\n')
 
+export const SANDBOX_FAILURE_MESSAGE = [
+  'Chromium could not start its sandbox.',
+  '',
+  'Scenetest turns the Chromium sandbox on unless it runs as root. Some',
+  'containers block the kernel features the sandbox needs. Allow unprivileged',
+  'user namespaces in the container, or launch without the sandbox:',
+  '',
+  '  // scenetest/config.ts',
+  '  launchOptions: { chromiumSandbox: false }',
+].join('\n')
+
 /** True if `err` is Node failing to resolve the playwright package. */
 export function isMissingPlaywrightError(err: unknown): boolean {
   const code = (err as { code?: string } | null)?.code
@@ -48,6 +59,12 @@ export function isMissingBrowserError(err: unknown): boolean {
   return /Executable doesn't exist|please run the following command to download new browsers/i.test(
     message
   )
+}
+
+/** True if `err` is Chromium failing to start its sandbox at launch. */
+export function isSandboxFailureError(err: unknown): boolean {
+  const message = (err as Error | null)?.message ?? ''
+  return /Chromium sandboxing failed/i.test(message)
 }
 
 /**

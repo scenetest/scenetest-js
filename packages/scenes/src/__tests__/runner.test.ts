@@ -253,6 +253,19 @@ describe('resolveLaunchOptions', () => {
     expect(resolveLaunchOptions({ slowMo: 50, launchOptions: { slowMo: 200 } }).slowMo).toBe(50)
     expect(resolveLaunchOptions({ slowMo: 0, launchOptions: { slowMo: 200 } }).slowMo).toBe(0)
   })
+
+  it('turns the chromium sandbox on for a non-root user', () => {
+    expect(resolveLaunchOptions({}, false).chromiumSandbox).toBe(true)
+  })
+
+  it('leaves the chromium sandbox off for root, which chromium refuses to sandbox', () => {
+    expect(resolveLaunchOptions({}, true).chromiumSandbox).toBe(false)
+  })
+
+  it('lets launchOptions override the sandbox default', () => {
+    expect(resolveLaunchOptions({ launchOptions: { chromiumSandbox: false } }, false).chromiumSandbox).toBe(false)
+    expect(resolveLaunchOptions({ launchOptions: { chromiumSandbox: true } }, true).chromiumSandbox).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -180,11 +180,18 @@ function formatConsoleEntry(actor: string, label: string, message: string, bodyL
  * win over a `headless` or `slowMo` set in `launchOptions`. There is no
  * fallback to the passthrough for those two: `loadConfig()` defaults both, so
  * they are always set by the time a run reaches here.
+ *
+ * `chromiumSandbox` comes first, so `launchOptions` can override it.
  */
 export function resolveLaunchOptions(
-  config: Pick<ScenetestConfig, 'headed' | 'slowMo' | 'launchOptions'>
+  config: Pick<ScenetestConfig, 'headed' | 'slowMo' | 'launchOptions'>,
+  isRoot: boolean = process.getuid?.() === 0
 ): LaunchOptions {
   return {
+    // Chromium refuses to start its sandbox as root, and CI containers and
+    // cloud sandboxes usually run as root. Defaulting to `true` there fails
+    // every run at launch.
+    chromiumSandbox: !isRoot,
     ...config.launchOptions,
     headless: !config.headed,
     slowMo: config.slowMo,
