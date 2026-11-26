@@ -249,6 +249,31 @@ launchOptions: { channel: 'chrome' }
 `slowMo` set there is ignored — set `headed` and `slowMo` instead. This keeps
 `--headed` working: a config file cannot take the window away from the flag.
 
+### Browser security
+
+Playwright launches Chromium with its sandbox off by default. Scenetest turns
+the sandbox on unless it runs as root. Chromium refuses to start its sandbox as
+root, and most CI containers and cloud sandboxes run as root. Set
+`chromiumSandbox` in `launchOptions` to override the default either way:
+
+```typescript
+launchOptions: { chromiumSandbox: false }
+```
+
+If a container blocks the kernel features the sandbox needs, the run stops at
+launch and scenetest prints this fix.
+
+Playwright's Chromium build changes only when Playwright releases, so it can
+trail Chrome's security fixes by weeks. Two ways to close that gap:
+
+- Update playwright when it ships a new browser build, then run
+  `scenetest install` to download the build that matches.
+- Drive the Chrome already installed on the machine, which updates itself:
+  `launchOptions: { channel: 'chrome' }`.
+
+Both matter most when the app under test loads content you don't control, such
+as third-party scripts, user-generated content, or OAuth redirects.
+
 ## Team Discovery
 
 Teams are auto-discovered from actor files relative to your config:

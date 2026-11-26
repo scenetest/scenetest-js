@@ -224,6 +224,9 @@ export interface ScenetestConfig extends BaseConfig {
    * `headed` and `slowMo` are applied after it, so a `headless` or `slowMo`
    * set here is ignored — use those options instead.
    *
+   * `chromiumSandbox` defaults to `true`, or `false` when running as root,
+   * where Chromium cannot start its sandbox. A value set here wins.
+   *
    * @example
    * ```ts
    * launchOptions: { executablePath: process.env.CHROMIUM_PATH }

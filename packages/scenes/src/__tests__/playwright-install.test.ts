@@ -5,9 +5,11 @@ import {
   installBrowsers,
   isMissingBrowserError,
   isMissingPlaywrightError,
+  isSandboxFailureError,
   resolvePlaywrightCli,
   MISSING_BROWSER_MESSAGE,
   MISSING_PLAYWRIGHT_MESSAGE,
+  SANDBOX_FAILURE_MESSAGE,
 } from '../playwright-install.js'
 
 describe('resolvePlaywrightCli', () => {
@@ -71,10 +73,25 @@ describe('isMissingBrowserError', () => {
   })
 })
 
+describe('isSandboxFailureError', () => {
+  it("recognizes chromium's sandbox failure in playwright's launch error", () => {
+    const err = new Error(
+      'browserType.launch: Target page, context or browser has been closed\nBrowser logs:\nChromium sandboxing failed!'
+    )
+    expect(isSandboxFailureError(err)).toBe(true)
+  })
+
+  it('ignores an unrelated launch failure', () => {
+    expect(isSandboxFailureError(new Error('browserType.launch: Timeout 30000ms exceeded'))).toBe(false)
+    expect(isSandboxFailureError(null)).toBe(false)
+  })
+})
+
 describe('setup messages', () => {
   it('name the command that fixes each failure', () => {
     expect(MISSING_PLAYWRIGHT_MESSAGE).toContain('pnpm add -D playwright')
     expect(MISSING_PLAYWRIGHT_MESSAGE).toContain('scenetest install')
     expect(MISSING_BROWSER_MESSAGE).toContain('scenetest install')
+    expect(SANDBOX_FAILURE_MESSAGE).toContain('chromiumSandbox: false')
   })
 })

@@ -29,4 +29,22 @@ It adds four members to `page`:
 
 If a test ends with failed assertions, the fixture logs them, so you see which check failed without adding your own reporting.
 
+## Browser launch settings
+
+The fixture runs under your own Playwright config, so the browser launches with
+whatever that config sets. Playwright leaves the Chromium sandbox off by default.
+To turn it on, or to drive the Chrome installed on the machine instead of
+Playwright's build:
+
+```js
+// playwright.config.ts
+use: {
+  channel: 'chrome',
+  launchOptions: { chromiumSandbox: true },
+}
+```
+
+Chromium cannot start its sandbox as root, so leave it off in containers that
+run as root.
+
 See the [monorepo](https://github.com/scenetest/scenetest-js) for full documentation.
