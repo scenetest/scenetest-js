@@ -302,6 +302,28 @@ describe('formatFileSummary', () => {
     expect(lines[2]).toBe('  ❌❌❌ 2/3 scenes failed · 1/3 assertions failed')
   })
 
+  it('adds a console-error line to a passing file', () => {
+    const consoleError = { actor: 'user', type: 'error', message: 'boom' } as SceneReport['consoleErrors'][number]
+    const lines = formatFileSummary(
+      'auth.spec.md',
+      [makeReport({ consoleErrors: [consoleError, consoleError] }), makeReport({ consoleErrors: [consoleError] })],
+      2,
+    )
+    expect(lines).toEqual([
+      '',
+      '  ✅✅✅ auth.spec.md is looking good',
+      '  ✅✅✅ 2 scenes · 2 assertions',
+      '  ⚠️⚠️⚠️ 3 console errors, see above',
+      '',
+    ])
+  })
+
+  it('leaves the console-error line off a failing file', () => {
+    const consoleError = { actor: 'user', type: 'error', message: 'boom' } as SceneReport['consoleErrors'][number]
+    const lines = formatFileSummary('auth.spec.md', [makeReport({ status: 'failed', consoleErrors: [consoleError] })], 1)
+    expect(lines).toHaveLength(4)
+  })
+
   it('marks a file the run stopped partway through', () => {
     const lines = formatFileSummary('auth.spec.md', [makeReport()], 4)
     expect(lines[1]).toBe('  ■■■ auth.spec.md stopped before it finished')

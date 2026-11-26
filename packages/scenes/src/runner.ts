@@ -58,7 +58,13 @@ export function formatFileSummary(file: string, reports: SceneReport[], expected
     headline = `✅✅✅ ${file} is looking good`
     stats = `✅✅✅ ${plural(reports.length, 'scene')} · ${plural(assertions, 'assertion')}`
   }
-  return ['', `  ${headline}`, `  ${stats}`, '']
+  const lines = ['', `  ${headline}`, `  ${stats}`]
+  const consoleErrors = reports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
+  if (failedScenes === 0 && consoleErrors > 0) {
+    lines.push(`  ⚠️⚠️⚠️ ${plural(consoleErrors, 'console error')}, see above`)
+  }
+  lines.push('')
+  return lines
 }
 
 /**
