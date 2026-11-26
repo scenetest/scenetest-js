@@ -277,6 +277,8 @@ describe('formatFileSummary', () => {
     }
   }
 
+  const consoleError = { actor: 'user', type: 'error', message: 'boom' } as SceneReport['consoleErrors'][number]
+
   it('reports a fully passing file', () => {
     const lines = formatFileSummary('auth.spec.md', [makeReport({}, [true, true]), makeReport()], 2)
     expect(lines).toEqual([
@@ -299,11 +301,10 @@ describe('formatFileSummary', () => {
       3,
     )
     expect(lines[1]).toBe('  ❌❌❌ auth.spec.md is not passing, see the failures above ⚠️')
-    expect(lines[2]).toBe('  ❌❌❌ 2/3 scenes failed · 1/3 assertions failed')
+    expect(lines[2]).toBe('  ❌❌❌ 2/3 scenes not passing · 1/3 assertions failed')
   })
 
   it('adds a console-error line to a passing file', () => {
-    const consoleError = { actor: 'user', type: 'error', message: 'boom' } as SceneReport['consoleErrors'][number]
     const lines = formatFileSummary(
       'auth.spec.md',
       [makeReport({ consoleErrors: [consoleError, consoleError] }), makeReport({ consoleErrors: [consoleError] })],
@@ -319,7 +320,6 @@ describe('formatFileSummary', () => {
   })
 
   it('leaves the console-error line off a failing file', () => {
-    const consoleError = { actor: 'user', type: 'error', message: 'boom' } as SceneReport['consoleErrors'][number]
     const lines = formatFileSummary('auth.spec.md', [makeReport({ status: 'failed', consoleErrors: [consoleError] })], 1)
     expect(lines).toHaveLength(4)
   })
@@ -332,6 +332,6 @@ describe('formatFileSummary', () => {
 
   it('still reports failure when the run stopped partway through', () => {
     const lines = formatFileSummary('auth.spec.md', [makeReport({ status: 'failed' })], 4)
-    expect(lines[2]).toBe('  ❌❌❌ 1/1 scene failed · 1 assertion passed (stopped after 1/4 scenes)')
+    expect(lines[2]).toBe('  ❌❌❌ 1/1 scene not passing · 1 assertion passed (stopped after 1/4 scenes)')
   })
 })

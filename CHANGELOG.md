@@ -7,7 +7,7 @@ All notable changes to Scenetest are documented here.
 ## Unreleased
 
 ### @scenetest/scenes
-* After the last scene of each file, the CLI prints a pass/fail banner, so a long log can be skimmed file by file. A passing file gets `✅✅✅ <file> is looking good` and its scene and assertion counts, plus a `⚠️⚠️⚠️ N console errors, see above` line when its scenes logged console errors. A failing file gets `❌❌❌ <file> is not passing, see the failures above ⚠️` and its failed scene and assertion counts. If a stop command ends the run partway through a file, the banner says how many of its scenes ran.
+* After the last scene of each file, the CLI prints a pass/fail banner, so a long log can be skimmed file by file. A passing file gets `✅✅✅ <file> is looking good` and its scene and assertion counts, plus a `⚠️⚠️⚠️ N console errors, see above` line when its scenes logged console errors. A failing file gets `❌❌❌ <file> is not passing, see the failures above ⚠️` and how many of its scenes are not passing and how many assertions failed. If a stop command ends the run partway through a file, the banner says how many of its scenes ran.
 
 ---
 

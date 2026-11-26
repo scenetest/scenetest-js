@@ -19,6 +19,10 @@ import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashbo
 import { tick as soundTick, fail as soundFail } from './sound.js'
 import type { RunController } from './run-controller.js'
 
+function sceneRelativePath(file: string): string {
+  return path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), file)
+}
+
 function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
   const name = meta?.name
   return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
@@ -38,29 +42,34 @@ function plural(n: number, word: string): string {
  * reports than that means the run was stopped partway through the file.
  */
 export function formatFileSummary(file: string, reports: SceneReport[], expected: number): string[] {
-  const failedScenes = reports.filter((r) => !scenePassed(r)).length
-  const assertions = reports.reduce((sum, r) => sum + r.assertions.length, 0)
-  const failedAssertions = reports.reduce((sum, r) => sum + r.assertions.filter((a) => !a.result).length, 0)
+  const notPassing = reports.filter((r) => !scenePassed(r)).length
+  const assertions = reports.flatMap((r) => r.assertions)
+  const failedAssertions = assertions.filter((a) => !a.result).length
+  const consoleErrors = reports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
   const partial = reports.length < expected ? ` (stopped after ${reports.length}/${expected} scenes)` : ''
+  const scenes = plural(reports.length, 'scene')
+  const checks = plural(assertions.length, 'assertion')
 
+  let icon: string
   let headline: string
   let stats: string
-  if (failedScenes > 0) {
-    headline = `❌❌❌ ${file} is not passing, see the failures above ⚠️`
-    const assertionPart = failedAssertions > 0
-      ? `${failedAssertions}/${plural(assertions, 'assertion')} failed`
-      : `${plural(assertions, 'assertion')} passed`
-    stats = `❌❌❌ ${failedScenes}/${plural(reports.length, 'scene')} failed · ${assertionPart}${partial}`
+  if (notPassing > 0) {
+    icon = '❌❌❌'
+    headline = `${file} is not passing, see the failures above ⚠️`
+    const assertionPart = failedAssertions > 0 ? `${failedAssertions}/${checks} failed` : `${checks} passed`
+    stats = `${notPassing}/${scenes} not passing · ${assertionPart}${partial}`
   } else if (partial) {
-    headline = `■■■ ${file} stopped before it finished`
-    stats = `■■■ ${plural(reports.length, 'scene')} · ${plural(assertions, 'assertion')} passed${partial}`
+    icon = '■■■'
+    headline = `${file} stopped before it finished`
+    stats = `${scenes} · ${checks} passed${partial}`
   } else {
-    headline = `✅✅✅ ${file} is looking good`
-    stats = `✅✅✅ ${plural(reports.length, 'scene')} · ${plural(assertions, 'assertion')}`
+    icon = '✅✅✅'
+    headline = `${file} is looking good`
+    stats = `${scenes} · ${checks}`
   }
-  const lines = ['', `  ${headline}`, `  ${stats}`]
-  const consoleErrors = reports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
-  if (failedScenes === 0 && consoleErrors > 0) {
+
+  const lines = ['', `  ${icon} ${headline}`, `  ${icon} ${stats}`]
+  if (notPassing === 0 && consoleErrors > 0) {
     lines.push(`  ⚠️⚠️⚠️ ${plural(consoleErrors, 'console error')}, see above`)
   }
   lines.push('')
@@ -322,16 +331,13 @@ export class SceneRunner {
 
     dashboardSend({ type: 'run:start', timestamp: Date.now(), sceneCount: sceneRegistry.length })
 
-    const scenesPerFile = new Map<string, number>()
-    for (const r of sceneRegistry) {
-      scenesPerFile.set(r.file, (scenesPerFile.get(r.file) ?? 0) + 1)
-    }
     let currentFile: string | undefined
-    let fileReports: SceneReport[] = []
+    let fileStart = 0
     const flushFileSummary = () => {
+      const fileReports = sceneReports.slice(fileStart)
       if (currentFile === undefined || fileReports.length === 0) return
-      const relative = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), currentFile)
-      for (const line of formatFileSummary(relative, fileReports, scenesPerFile.get(currentFile) ?? fileReports.length)) {
+      const expected = sceneRegistry.filter((r) => r.file === currentFile).length
+      for (const line of formatFileSummary(sceneRelativePath(currentFile), fileReports, expected)) {
         console.log(line)
       }
     }
@@ -340,7 +346,7 @@ export class SceneRunner {
       if (registered.file !== currentFile) {
         flushFileSummary()
         currentFile = registered.file
-        fileReports = []
+        fileStart = sceneReports.length
       }
 
       // Command checkpoint: gate() parks while paused; stop ends the run
@@ -372,7 +378,7 @@ export class SceneRunner {
           const resolvedTeam = this.teamManager.getTeam(teamIndex)
 
           // Log which scene is starting (with team label for concurrency debugging)
-          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
+          const relativeFile = sceneRelativePath(registered.file)
           const fileWithLine = registered.line !== undefined ? `${relativeFile}:${registered.line}` : relativeFile
           const teamLabel = formatTeamLabel(teamIndex, resolvedTeam.meta)
           console.log(`▶ ${registered.name} (${fileWithLine}) ${teamLabel}`)
@@ -416,7 +422,6 @@ export class SceneRunner {
           }
 
           sceneReports.push(report)
-          fileReports.push(report)
 
           // Run afterEach hook
           if (this.config.afterEach) {
