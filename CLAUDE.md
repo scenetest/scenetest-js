@@ -27,7 +27,10 @@ pnpm dev              # Start example app dev server
 pnpm dev:rebuild      # Rebuild plugin then start dev server
 pnpm typecheck        # Type check all packages
 pnpm -r test          # Run all unit tests across packages
+pnpm test:e2e         # Run the Playwright e2e suite against the React example
 ```
+
+The e2e suite needs the Chromium build that matches the pinned Playwright. In a Claude cloud session, run `pnpm exec playwright install chromium` first (≈10 s): the image preinstalls a build for an older Playwright, and the pin does not follow it. CI gets the matching build from its container image, whose tag in `.github/workflows/tests.yml` must equal the pin in the root `package.json`.
 
 ## Releasing & Versioning
 
