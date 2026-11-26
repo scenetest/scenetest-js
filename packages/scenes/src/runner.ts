@@ -24,6 +24,43 @@ function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string 
   return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
 }
 
+export function scenePassed(report: SceneReport): boolean {
+  return report.status === 'completed' && report.assertions.every((a) => a.result)
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`
+}
+
+/**
+ * Banner printed after the last scene of a file, so a long log can be skimmed
+ * file by file. `expected` is how many scenes the file registered; fewer
+ * reports than that means the run was stopped partway through the file.
+ */
+export function formatFileSummary(file: string, reports: SceneReport[], expected: number): string[] {
+  const failedScenes = reports.filter((r) => !scenePassed(r)).length
+  const assertions = reports.reduce((sum, r) => sum + r.assertions.length, 0)
+  const failedAssertions = reports.reduce((sum, r) => sum + r.assertions.filter((a) => !a.result).length, 0)
+  const partial = reports.length < expected ? ` (stopped after ${reports.length}/${expected} scenes)` : ''
+
+  let headline: string
+  let stats: string
+  if (failedScenes > 0) {
+    headline = `❌❌❌ ${file} is not passing, see the failures above ⚠️`
+    const assertionPart = failedAssertions > 0
+      ? `${failedAssertions}/${plural(assertions, 'assertion')} failed`
+      : `${plural(assertions, 'assertion')} passed`
+    stats = `❌❌❌ ${failedScenes}/${plural(reports.length, 'scene')} failed · ${assertionPart}${partial}`
+  } else if (partial) {
+    headline = `■■■ ${file} stopped before it finished`
+    stats = `■■■ ${plural(reports.length, 'scene')} · ${plural(assertions, 'assertion')} passed${partial}`
+  } else {
+    headline = `✅✅✅ ${file} is looking good`
+    stats = `✅✅✅ ${plural(reports.length, 'scene')} · ${plural(assertions, 'assertion')}`
+  }
+  return ['', `  ${headline}`, `  ${stats}`, '']
+}
+
 /**
  * Find the first stack frame pointing into the user's scene file, falling
  * back to the first frame that isn't inside scenetest itself or node_modules.
@@ -279,7 +316,27 @@ export class SceneRunner {
 
     dashboardSend({ type: 'run:start', timestamp: Date.now(), sceneCount: sceneRegistry.length })
 
+    const scenesPerFile = new Map<string, number>()
+    for (const r of sceneRegistry) {
+      scenesPerFile.set(r.file, (scenesPerFile.get(r.file) ?? 0) + 1)
+    }
+    let currentFile: string | undefined
+    let fileReports: SceneReport[] = []
+    const flushFileSummary = () => {
+      if (currentFile === undefined || fileReports.length === 0) return
+      const relative = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), currentFile)
+      for (const line of formatFileSummary(relative, fileReports, scenesPerFile.get(currentFile) ?? fileReports.length)) {
+        console.log(line)
+      }
+    }
+
     for (const registered of sceneRegistry) {
+      if (registered.file !== currentFile) {
+        flushFileSummary()
+        currentFile = registered.file
+        fileReports = []
+      }
+
       // Command checkpoint: gate() parks while paused; stop ends the run
       // gracefully, falling through to run:end with whatever completed.
       if (this.controller) {
@@ -353,6 +410,7 @@ export class SceneRunner {
           }
 
           sceneReports.push(report)
+          fileReports.push(report)
 
           // Run afterEach hook
           if (this.config.afterEach) {
@@ -373,7 +431,7 @@ export class SceneRunner {
           // Log progress
           const failedAssertions = report.assertions.filter((a) => !a.result)
           const sceneFailed = report.status !== 'completed'
-          const passed = !sceneFailed && failedAssertions.length === 0
+          const passed = scenePassed(report)
           const statusIcon = passed ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
 
           if (passed) {
@@ -450,6 +508,8 @@ export class SceneRunner {
         this.teamManager.release(teamIndex)
       }
     }
+
+    flushFileSummary()
 
     // Run afterAll hook
     if (this.config.afterAll) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { runCleanup, runSetup, resolveLaunchOptions } from '../runner.js'
-import type { RegisteredScene } from '../types.js'
+import { runCleanup, runSetup, resolveLaunchOptions, formatFileSummary } from '../runner.js'
+import type { RegisteredScene, SceneReport } from '../types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -252,5 +252,64 @@ describe('resolveLaunchOptions', () => {
   it('lets slowMo win over a slowMo set in launchOptions', () => {
     expect(resolveLaunchOptions({ slowMo: 50, launchOptions: { slowMo: 200 } }).slowMo).toBe(50)
     expect(resolveLaunchOptions({ slowMo: 0, launchOptions: { slowMo: 200 } }).slowMo).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// formatFileSummary
+// ---------------------------------------------------------------------------
+
+describe('formatFileSummary', () => {
+  function makeReport(overrides: Partial<SceneReport> = {}, results: boolean[] = [true]): SceneReport {
+    return {
+      name: 'scene',
+      file: '/test/auth.spec.md',
+      status: 'completed',
+      teamIndex: 0,
+      team: {},
+      actors: {},
+      assertions: results.map((result) => ({ result, description: 'check' }) as SceneReport['assertions'][number]),
+      warnings: [],
+      consoleErrors: [],
+      timeline: [],
+      duration: 10,
+      ...overrides,
+    }
+  }
+
+  it('reports a fully passing file', () => {
+    const lines = formatFileSummary('auth.spec.md', [makeReport({}, [true, true]), makeReport()], 2)
+    expect(lines).toEqual([
+      '',
+      '  ✅✅✅ auth.spec.md is looking good',
+      '  ✅✅✅ 2 scenes · 3 assertions',
+      '',
+    ])
+  })
+
+  it('uses singular nouns for one scene and one assertion', () => {
+    const lines = formatFileSummary('a.spec.md', [makeReport()], 1)
+    expect(lines[2]).toBe('  ✅✅✅ 1 scene · 1 assertion')
+  })
+
+  it('reports failing scenes and assertions', () => {
+    const lines = formatFileSummary(
+      'auth.spec.md',
+      [makeReport({}, [true, false]), makeReport({ status: 'timeout' }, []), makeReport()],
+      3,
+    )
+    expect(lines[1]).toBe('  ❌❌❌ auth.spec.md is not passing, see the failures above ⚠️')
+    expect(lines[2]).toBe('  ❌❌❌ 2/3 scenes failed · 1/3 assertions failed')
+  })
+
+  it('marks a file the run stopped partway through', () => {
+    const lines = formatFileSummary('auth.spec.md', [makeReport()], 4)
+    expect(lines[1]).toBe('  ■■■ auth.spec.md stopped before it finished')
+    expect(lines[2]).toBe('  ■■■ 1 scene · 1 assertion passed (stopped after 1/4 scenes)')
+  })
+
+  it('still reports failure when the run stopped partway through', () => {
+    const lines = formatFileSummary('auth.spec.md', [makeReport({ status: 'failed' })], 4)
+    expect(lines[2]).toBe('  ❌❌❌ 1/1 scene failed · 1 assertion passed (stopped after 1/4 scenes)')
   })
 })
