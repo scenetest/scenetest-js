@@ -10,7 +10,7 @@ import type {
 } from './types.js'
 import type { TeamManager } from './team-manager.js'
 import { runScene } from './scene.js'
-import { runCleanup, runSetup } from './runner.js'
+import { runCleanup, runSetup, scenePassed } from './runner.js'
 
 /**
  * Default swarm configuration values
@@ -63,7 +63,7 @@ export class SwarmTrigger {
    */
   recordRun(report: RunReport): void {
     for (const scene of report.scenes) {
-      const passed = scene.status === 'completed' && scene.assertions.every((a) => a.result)
+      const passed = scenePassed(scene)
       let record = this.records.get(scene.name)
       if (!record) {
         record = { name: scene.name, history: [], consecutiveFailures: 0 }

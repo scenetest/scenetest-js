@@ -19,9 +19,61 @@ import { DashboardReporter, setDashboardReporter, dashboardSend } from './dashbo
 import { tick as soundTick, fail as soundFail } from './sound.js'
 import type { RunController } from './run-controller.js'
 
+function sceneRelativePath(file: string): string {
+  return path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), file)
+}
+
 function formatTeamLabel(teamIndex: number, meta: TeamMeta | undefined): string {
   const name = meta?.name
   return name ? `[team: ${name} #${teamIndex}]` : `[team: #${teamIndex}]`
+}
+
+export function scenePassed(report: SceneReport): boolean {
+  return report.status === 'completed' && report.assertions.every((a) => a.result)
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`
+}
+
+/**
+ * Banner printed after the last scene of a file, so a long log can be skimmed
+ * file by file. `expected` is how many scenes the file registered; fewer
+ * reports than that means the run was stopped partway through the file.
+ */
+export function formatFileSummary(file: string, reports: SceneReport[], expected: number): string[] {
+  const notPassing = reports.filter((r) => !scenePassed(r)).length
+  const assertions = reports.flatMap((r) => r.assertions)
+  const failedAssertions = assertions.filter((a) => !a.result).length
+  const consoleErrors = reports.reduce((sum, r) => sum + r.consoleErrors.length, 0)
+  const partial = reports.length < expected ? ` (stopped after ${reports.length}/${expected} scenes)` : ''
+  const scenes = plural(reports.length, 'scene')
+  const checks = plural(assertions.length, 'assertion')
+
+  let icon: string
+  let headline: string
+  let stats: string
+  if (notPassing > 0) {
+    icon = '❌❌❌'
+    headline = `${file} is not passing, see the failures above ⚠️`
+    const assertionPart = failedAssertions > 0 ? `${failedAssertions}/${checks} failed` : `${checks} passed`
+    stats = `${notPassing}/${scenes} not passing · ${assertionPart}${partial}`
+  } else if (partial) {
+    icon = '■■■'
+    headline = `${file} stopped before it finished`
+    stats = `${scenes} · ${checks} passed${partial}`
+  } else {
+    icon = '✅✅✅'
+    headline = `${file} is looking good`
+    stats = `${scenes} · ${checks}`
+  }
+
+  const lines = ['', `  ${icon} ${headline}`, `  ${icon} ${stats}`]
+  if (notPassing === 0 && consoleErrors > 0) {
+    lines.push(`  ⚠️⚠️⚠️ ${plural(consoleErrors, 'console error')}, see above`)
+  }
+  lines.push('')
+  return lines
 }
 
 /**
@@ -279,7 +331,24 @@ export class SceneRunner {
 
     dashboardSend({ type: 'run:start', timestamp: Date.now(), sceneCount: sceneRegistry.length })
 
+    let currentFile: string | undefined
+    let fileStart = 0
+    const flushFileSummary = () => {
+      const fileReports = sceneReports.slice(fileStart)
+      if (currentFile === undefined || fileReports.length === 0) return
+      const expected = sceneRegistry.filter((r) => r.file === currentFile).length
+      for (const line of formatFileSummary(sceneRelativePath(currentFile), fileReports, expected)) {
+        console.log(line)
+      }
+    }
+
     for (const registered of sceneRegistry) {
+      if (registered.file !== currentFile) {
+        flushFileSummary()
+        currentFile = registered.file
+        fileStart = sceneReports.length
+      }
+
       // Command checkpoint: gate() parks while paused; stop ends the run
       // gracefully, falling through to run:end with whatever completed.
       if (this.controller) {
@@ -309,7 +378,7 @@ export class SceneRunner {
           const resolvedTeam = this.teamManager.getTeam(teamIndex)
 
           // Log which scene is starting (with team label for concurrency debugging)
-          const relativeFile = path.relative(path.join(process.cwd(), 'scenetest', 'scenes'), registered.file)
+          const relativeFile = sceneRelativePath(registered.file)
           const fileWithLine = registered.line !== undefined ? `${relativeFile}:${registered.line}` : relativeFile
           const teamLabel = formatTeamLabel(teamIndex, resolvedTeam.meta)
           console.log(`▶ ${registered.name} (${fileWithLine}) ${teamLabel}`)
@@ -373,7 +442,7 @@ export class SceneRunner {
           // Log progress
           const failedAssertions = report.assertions.filter((a) => !a.result)
           const sceneFailed = report.status !== 'completed'
-          const passed = !sceneFailed && failedAssertions.length === 0
+          const passed = scenePassed(report)
           const statusIcon = passed ? '✓' : report.status === 'timeout' ? '⏱' : '✗'
 
           if (passed) {
@@ -450,6 +519,8 @@ export class SceneRunner {
         this.teamManager.release(teamIndex)
       }
     }
+
+    flushFileSummary()
 
     // Run afterAll hook
     if (this.config.afterAll) {

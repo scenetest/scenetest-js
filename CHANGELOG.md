@@ -4,6 +4,13 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## Unreleased
+
+### @scenetest/scenes
+* After the last scene of each file, the CLI prints a pass/fail banner, so a long log can be skimmed file by file. A passing file gets `✅✅✅ <file> is looking good` and its scene and assertion counts, plus a `⚠️⚠️⚠️ N console errors, see above` line when its scenes logged console errors. A failing file gets `❌❌❌ <file> is not passing, see the failures above ⚠️` and how many of its scenes are not passing and how many assertions failed. If a stop command ends the run partway through a file, the banner says how many of its scenes ran.
+
+---
+
 ## 2026-09-07 — monorepo 0.19.0 · @scenetest/scenes 0.18.0
 
 **Point scenetest at a browser you already have.** A new `launchOptions` config field passes `executablePath`, `channel`, `args` and the rest of Playwright's launch options straight through, so a CI image or cloud sandbox that ships its own Chromium runs scenes without downloading another one.
