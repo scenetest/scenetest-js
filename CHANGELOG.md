@@ -4,6 +4,17 @@ All notable changes to Scenetest are documented here.
 
 ---
 
+## 2026-11-26 — monorepo 0.20.0 · @scenetest/scenes 0.19.0
+
+**The Chromium sandbox is on by default.** Playwright launches Chromium without its sandbox. Scenetest now turns the sandbox on unless it runs as root, so an exploit in the browser under test stays inside the browser.
+
+### @scenetest/scenes 0.19.0
+* **Behavior change:** scenetest launches Chromium with `chromiumSandbox: true` unless it runs as root. Chromium cannot start its sandbox as root, and most CI containers and cloud sandboxes run as root, so those keep launching without it. Set `launchOptions.chromiumSandbox` to override the default either way.
+* If a container blocks the kernel features the sandbox needs, the run stops at launch and the CLI prints the `launchOptions: { chromiumSandbox: false }` fix instead of a stack trace.
+* New "Browser security" section in the CLI reference: the sandbox default, and `launchOptions: { channel: 'chrome' }` to drive a Chrome that updates itself instead of Playwright's build, which changes only when Playwright releases.
+
+---
+
 ## 2026-09-07 — monorepo 0.19.0 · @scenetest/scenes 0.18.0
 
 **Point scenetest at a browser you already have.** A new `launchOptions` config field passes `executablePath`, `channel`, `args` and the rest of Playwright's launch options straight through, so a CI image or cloud sandbox that ships its own Chromium runs scenes without downloading another one.
