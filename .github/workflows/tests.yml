@@ -47,7 +47,7 @@ jobs:
     # them. The "Verify Playwright/image version match" step below fails loudly
     # if they ever drift.
     container:
-      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
 
     steps:
       # The container runs as a different user than the one that owns the
@@ -78,7 +78,7 @@ jobs:
       # instead with a clear message.
       - name: Verify Playwright/image version match
         run: |
-          IMAGE_TAG=v1.56.1-noble
+          IMAGE_TAG=v1.65.1-noble
           INSTALLED=$(pnpm exec playwright --version | awk '{print $2}')
           EXPECTED=${IMAGE_TAG#v}; EXPECTED=${EXPECTED%-noble}
           echo "Image tag: $IMAGE_TAG (expects Playwright $EXPECTED)"

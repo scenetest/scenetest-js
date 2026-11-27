@@ -9,8 +9,10 @@ import {
   installBrowsers,
   isMissingBrowserError,
   isMissingPlaywrightError,
+  isSandboxFailureError,
   MISSING_BROWSER_MESSAGE,
   MISSING_PLAYWRIGHT_MESSAGE,
+  SANDBOX_FAILURE_MESSAGE,
 } from './playwright-install.js'
 import { init } from './init.js'
 import {
@@ -45,9 +47,9 @@ function loadRunner(): Promise<typeof import('./runner.js')> {
 }
 
 /**
- * Report a broken playwright setup as the instruction that fixes it. Both
- * failures reach the user through the CLI: a missing peer while the run loads
- * playwright, a missing browser build while it launches one.
+ * Report a broken playwright setup as the instruction that fixes it. Each
+ * failure reaches the user through the CLI: a missing peer while the run loads
+ * playwright, a missing browser build or a failed sandbox while it launches one.
  */
 function reportSetupError(err: unknown): boolean {
   if (isMissingPlaywrightError(err)) {
@@ -56,6 +58,10 @@ function reportSetupError(err: unknown): boolean {
   }
   if (isMissingBrowserError(err)) {
     console.error(MISSING_BROWSER_MESSAGE)
+    return true
+  }
+  if (isSandboxFailureError(err)) {
+    console.error(SANDBOX_FAILURE_MESSAGE)
     return true
   }
   return false

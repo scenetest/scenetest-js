@@ -4,9 +4,16 @@ All notable changes to Scenetest are documented here.
 
 ---
 
-## Unreleased
+## 2026-11-27 — monorepo 0.20.0 · @scenetest/scenes 0.19.0
 
-### @scenetest/scenes
+**The Chromium sandbox is on by default.** Playwright launches Chromium without its sandbox. Scenetest now turns the sandbox on unless it runs as root, so an exploit in the browser under test stays inside the browser.
+
+**A pass/fail banner after each scene file.** A long log can be skimmed file by file.
+
+### @scenetest/scenes 0.19.0
+* **Behavior change:** scenetest launches Chromium with `chromiumSandbox: true` unless it runs as root. Chromium cannot start its sandbox as root, and most CI containers and cloud sandboxes run as root, so those keep launching without it. Set `launchOptions.chromiumSandbox` to override the default either way.
+* If a container blocks the kernel features the sandbox needs, the run stops at launch and the CLI prints the `launchOptions: { chromiumSandbox: false }` fix instead of a stack trace.
+* New "Browser security" section in the CLI reference: the sandbox default, and `launchOptions: { channel: 'chrome' }` to drive a Chrome that updates itself instead of Playwright's build, which changes only when Playwright releases.
 * After the last scene of each file, the CLI prints a pass/fail banner, so a long log can be skimmed file by file. A passing file gets `✅✅✅ <file> is looking good` and its scene and assertion counts, plus a `⚠️⚠️⚠️ N console errors, see above` line when its scenes logged console errors. A failing file gets `❌❌❌ <file> is not passing, see the failures above ⚠️` and how many of its scenes are not passing and how many assertions failed. If a stop command ends the run partway through a file, the banner says how many of its scenes ran.
 
 ---
