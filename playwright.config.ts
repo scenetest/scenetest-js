@@ -10,6 +10,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // Chromium refuses to start its sandbox as root, and the CI container
+    // runs as root.
+    launchOptions: { chromiumSandbox: process.getuid?.() !== 0 },
   },
   projects: [
     {
